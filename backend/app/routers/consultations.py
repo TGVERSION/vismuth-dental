@@ -1,7 +1,9 @@
 from datetime import datetime, timezone
+from typing import List
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, Query, status
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..db import get_db
@@ -33,6 +35,24 @@ from ..schemas.consultation import (
 
 
 router = APIRouter(prefix="/consultations", tags=["consultations"])
+
+
+@router.get(
+    "",
+    response_model=List[ConsultationRead],
+)
+async def list_consultations_for_user(
+    service_user: UUID = Query(..., description="ID пользователя сервиса"),
+    db: AsyncSession = Depends(get_db),
+) -> List[ConsultationRead]:
+    stmt = (
+        select(Consultation)
+        .where(Consultation.service_user == service_user)
+        .order_by(Consultation.consultation_datetime.desc().nullslast())
+    )
+    result = await db.execute(stmt)
+    consultations = result.scalars().all()
+    return consultations
 
 
 @router.post(
@@ -100,6 +120,23 @@ async def create_consultation_protocol(
     return obj
 
 
+@router.get(
+    "/{consultation_id}/protocols",
+    response_model=List[ConsultationProtocolRead],
+)
+async def get_consultation_protocols(
+    consultation_id: UUID,
+    db: AsyncSession = Depends(get_db),
+) -> List[ConsultationProtocolRead]:
+    stmt = (
+        select(ConsultationProtocols)
+        .where(ConsultationProtocols.consultation_id == consultation_id)
+        .order_by(ConsultationProtocols.created_at)
+    )
+    result = await db.execute(stmt)
+    return result.scalars().all()
+
+
 @router.post(
     "/{consultation_id}/habits",
     response_model=ConsultationHabitRead,
@@ -123,6 +160,23 @@ async def create_consultation_habit(
     await db.refresh(obj)
 
     return obj
+
+
+@router.get(
+    "/{consultation_id}/habits",
+    response_model=List[ConsultationHabitRead],
+)
+async def get_consultation_habits(
+    consultation_id: UUID,
+    db: AsyncSession = Depends(get_db),
+) -> List[ConsultationHabitRead]:
+    stmt = (
+        select(ConsultationHabit)
+        .where(ConsultationHabit.consultation_id == consultation_id)
+        .order_by(ConsultationHabit.created_at)
+    )
+    result = await db.execute(stmt)
+    return result.scalars().all()
 
 
 @router.post(
@@ -151,6 +205,23 @@ async def create_consultation_allergy_manifestation(
     return obj
 
 
+@router.get(
+    "/{consultation_id}/allergy-manifestations",
+    response_model=List[ConsultationAllergyManifestationRead],
+)
+async def get_consultation_allergy_manifestations(
+    consultation_id: UUID,
+    db: AsyncSession = Depends(get_db),
+) -> List[ConsultationAllergyManifestationRead]:
+    stmt = (
+        select(ConsultationAllergyManifestation)
+        .where(ConsultationAllergyManifestation.consultation_id == consultation_id)
+        .order_by(ConsultationAllergyManifestation.created_at)
+    )
+    result = await db.execute(stmt)
+    return result.scalars().all()
+
+
 @router.post(
     "/{consultation_id}/vital-signs",
     response_model=ConsultationVitalSignRead,
@@ -175,6 +246,23 @@ async def create_consultation_vital_sign(
     await db.refresh(obj)
 
     return obj
+
+
+@router.get(
+    "/{consultation_id}/vital-signs",
+    response_model=List[ConsultationVitalSignRead],
+)
+async def get_consultation_vital_signs(
+    consultation_id: UUID,
+    db: AsyncSession = Depends(get_db),
+) -> List[ConsultationVitalSignRead]:
+    stmt = (
+        select(ConsultationVitalSign)
+        .where(ConsultationVitalSign.consultation_id == consultation_id)
+        .order_by(ConsultationVitalSign.created_at)
+    )
+    result = await db.execute(stmt)
+    return result.scalars().all()
 
 
 @router.post(
@@ -204,6 +292,23 @@ async def create_consultation_clinical_scale(
     return obj
 
 
+@router.get(
+    "/{consultation_id}/clinical-scales",
+    response_model=List[ConsultationClinicalScaleRead],
+)
+async def get_consultation_clinical_scales(
+    consultation_id: UUID,
+    db: AsyncSession = Depends(get_db),
+) -> List[ConsultationClinicalScaleRead]:
+    stmt = (
+        select(ConsultationClinicalScale)
+        .where(ConsultationClinicalScale.consultation_id == consultation_id)
+        .order_by(ConsultationClinicalScale.created_at)
+    )
+    result = await db.execute(stmt)
+    return result.scalars().all()
+
+
 @router.post(
     "/{consultation_id}/diagnoses",
     response_model=ConsultationDiagnosisRead,
@@ -230,4 +335,21 @@ async def create_consultation_diagnosis(
     await db.refresh(obj)
 
     return obj
+
+
+@router.get(
+    "/{consultation_id}/diagnoses",
+    response_model=List[ConsultationDiagnosisRead],
+)
+async def get_consultation_diagnoses(
+    consultation_id: UUID,
+    db: AsyncSession = Depends(get_db),
+) -> List[ConsultationDiagnosisRead]:
+    stmt = (
+        select(ConsultationDiagnosis)
+        .where(ConsultationDiagnosis.consultation_id == consultation_id)
+        .order_by(ConsultationDiagnosis.created_at)
+    )
+    result = await db.execute(stmt)
+    return result.scalars().all()
 

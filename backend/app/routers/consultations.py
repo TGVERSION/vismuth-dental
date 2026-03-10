@@ -47,10 +47,10 @@ async def create_consultation(
     now = datetime.now(timezone.utc)
 
     consultation = Consultation(
-        external_system=None,
-        external_patient_id=None,
-        external_doctor_id=None,
-        external_visit_id=None,
+        external_system=payload.external_system,
+        external_patient_id=payload.external_patient_id,
+        external_doctor_id=payload.external_doctor_id,
+        external_visit_id=payload.external_visit_id,
         consultation_datetime=payload.consultation_datetime,
         complaints=payload.complaints,
         disease_anamnesis=payload.disease_anamnesis,

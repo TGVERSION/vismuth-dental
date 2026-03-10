@@ -6,6 +6,22 @@ from pydantic import BaseModel, Field
 
 
 class ConsultationCreate(BaseModel):
+    external_system: Optional[int] = Field(
+        default=None,
+        description="Идентификатор внешней системы (EMR/МИС)",
+    )
+    external_patient_id: Optional[int] = Field(
+        default=None,
+        description="Внешний ID пациента",
+    )
+    external_doctor_id: Optional[int] = Field(
+        default=None,
+        description="Внешний ID врача",
+    )
+    external_visit_id: Optional[int] = Field(
+        default=None,
+        description="Внешний ID визита/обращения",
+    )
     consultation_datetime: Optional[datetime] = Field(
         default=None,
         description="Дата и время консультации",
@@ -38,6 +54,10 @@ class ConsultationCreate(BaseModel):
 
 class ConsultationRead(BaseModel):
     id: UUID
+    external_system: Optional[int]
+    external_patient_id: Optional[int]
+    external_doctor_id: Optional[int]
+    external_visit_id: Optional[int]
     consultation_datetime: Optional[datetime]
     complaints: Optional[str]
     disease_anamnesis: Optional[str]

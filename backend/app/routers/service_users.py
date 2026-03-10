@@ -7,10 +7,40 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..db import get_db
 from ..models.service_user import ServiceUser
-from ..schemas.service_user import ServiceUserRead, ServiceUserUpdate
+from ..schemas.service_user import ServiceUserCreate, ServiceUserRead, ServiceUserUpdate
 
 
 router = APIRouter(prefix="/service-users", tags=["service_users"])
+
+
+@router.post(
+    "",
+    response_model=ServiceUserRead,
+    status_code=status.HTTP_201_CREATED,
+)
+async def create_service_user(
+    payload: ServiceUserCreate,
+    db: AsyncSession = Depends(get_db),
+) -> ServiceUserRead:
+    now = datetime.now(timezone.utc)
+
+    user = ServiceUser(
+        login=payload.login,
+        password_hash=payload.password_hash,
+        first_name=payload.first_name,
+        last_name=payload.last_name,
+        role=payload.role or "admin",
+        is_active=True if payload.is_active is None else payload.is_active,
+        created_at=now,
+        updated_at=None,
+        deleted_at=None,
+    )
+
+    db.add(user)
+    await db.commit()
+    await db.refresh(user)
+
+    return user
 
 
 @router.put(
@@ -51,4 +81,28 @@ async def update_service_user(
     await db.refresh(user)
 
     return user
+
+
+@router.delete(
+    "/{service_user_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+)
+async def delete_service_user(
+    service_user_id: UUID,
+    db: AsyncSession = Depends(get_db),
+) -> None:
+    stmt = select(ServiceUser).where(ServiceUser.id == service_user_id)
+    result = await db.execute(stmt)
+    user = result.scalar_one_or_none()
+
+    if user is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Service user not found",
+        )
+
+    await db.delete(user)
+    await db.commit()
+
+    return None
 

@@ -263,6 +263,30 @@ async def create_consultation_habit(
     return obj
 
 
+@router.delete(
+    "/{consultation_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+)
+async def delete_consultation(
+    consultation_id: UUID,
+    db: AsyncSession = Depends(get_db),
+) -> None:
+    stmt = select(Consultation).where(Consultation.id == consultation_id)
+    result = await db.execute(stmt)
+    consultation = result.scalar_one_or_none()
+
+    if consultation is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Consultation not found",
+        )
+
+    await db.delete(consultation)
+    await db.commit()
+
+    return None
+
+
 @router.get(
     "/{consultation_id}/habits",
     response_model=List[ConsultationHabitRead],

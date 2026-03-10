@@ -20,6 +20,30 @@ class ServiceUserRead(BaseModel):
         from_attributes = True
 
 
+class ServiceUserCreate(BaseModel):
+    login: str = Field(..., description="Логин пользователя")
+    password_hash: str = Field(
+        ...,
+        description="Хэш пароля (для тестов можно передавать произвольную строку)",
+    )
+    first_name: Optional[str] = Field(
+        default=None,
+        description="Имя пользователя",
+    )
+    last_name: Optional[str] = Field(
+        default=None,
+        description="Фамилия пользователя",
+    )
+    role: Optional[str] = Field(
+        default="admin",
+        description="Роль пользователя (admin/operator/viewer)",
+    )
+    is_active: Optional[bool] = Field(
+        default=True,
+        description="Флаг активности пользователя",
+    )
+
+
 class ServiceUserUpdate(BaseModel):
     login: Optional[str] = Field(
         default=None,

@@ -1,9 +1,12 @@
 from fastapi import FastAPI
 
 from .config import settings
+from .routers.consultations import router as consultations_router
 
 
 app = FastAPI(title="Vismuth Clinical Decision Support")
+
+app.include_router(consultations_router)
 
 
 @app.get("/health", tags=["system"])

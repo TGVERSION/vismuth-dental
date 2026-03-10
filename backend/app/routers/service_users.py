@@ -1,0 +1,54 @@
+from datetime import datetime, timezone
+from uuid import UUID
+
+from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from ..db import get_db
+from ..models.service_user import ServiceUser
+from ..schemas.service_user import ServiceUserRead, ServiceUserUpdate
+
+
+router = APIRouter(prefix="/service-users", tags=["service_users"])
+
+
+@router.put(
+    "/{service_user_id}",
+    response_model=ServiceUserRead,
+)
+async def update_service_user(
+    service_user_id: UUID,
+    payload: ServiceUserUpdate,
+    db: AsyncSession = Depends(get_db),
+) -> ServiceUserRead:
+    stmt = select(ServiceUser).where(ServiceUser.id == service_user_id)
+    result = await db.execute(stmt)
+    user = result.scalar_one_or_none()
+
+    if user is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Service user not found",
+        )
+
+    if payload.login is not None:
+        user.login = payload.login
+    if payload.password_hash is not None:
+        user.password_hash = payload.password_hash
+    if payload.first_name is not None:
+        user.first_name = payload.first_name
+    if payload.last_name is not None:
+        user.last_name = payload.last_name
+    if payload.role is not None:
+        user.role = payload.role
+    if payload.is_active is not None:
+        user.is_active = payload.is_active
+
+    user.updated_at = datetime.now(timezone.utc)
+
+    await db.commit()
+    await db.refresh(user)
+
+    return user
+

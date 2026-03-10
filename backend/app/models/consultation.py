@@ -18,6 +18,12 @@ class Consultation(Base):
         default=uuid4,
     )
 
+    service_user: Mapped[Optional[UUID]] = mapped_column(
+        PG_UUID(as_uuid=True),
+        ForeignKey("service_user.id"),
+        nullable=True,
+    )
+
     external_system: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
     external_patient_id: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
     external_doctor_id: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)

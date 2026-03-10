@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 
+from . import models  # noqa: F401
 from .config import settings
 from .routers.consultations import router as consultations_router
 

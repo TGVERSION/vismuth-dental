@@ -47,6 +47,7 @@ async def create_consultation(
     now = datetime.now(timezone.utc)
 
     consultation = Consultation(
+        service_user=payload.service_user,
         external_system=payload.external_system,
         external_patient_id=payload.external_patient_id,
         external_doctor_id=payload.external_doctor_id,

@@ -6,6 +6,10 @@ from pydantic import BaseModel, Field
 
 
 class ConsultationCreate(BaseModel):
+    service_user: Optional[UUID] = Field(
+        default=None,
+        description="ID пользователя сервиса (service_user.id)",
+    )
     external_system: Optional[int] = Field(
         default=None,
         description="Идентификатор внешней системы (EMR/МИС)",
@@ -54,6 +58,7 @@ class ConsultationCreate(BaseModel):
 
 class ConsultationRead(BaseModel):
     id: UUID
+    service_user: Optional[UUID]
     external_system: Optional[int]
     external_patient_id: Optional[int]
     external_doctor_id: Optional[int]

@@ -237,6 +237,8 @@ COMMENT ON COLUMN ref_disease_character.id IS 'Идентификатор из �
 
 CREATE TABLE IF NOT EXISTS consultation (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    
+    service_user UUID REFERENCES service_user(id),
 
     -- Интеграция с внешней клинической системой (заполняется при интеграции)
     external_system INTEGER, -- идентификатор внешней системы (EMR/МИС)
@@ -364,4 +366,72 @@ COMMENT ON TABLE consultation_diagnosis IS 'Диагнозы в рамках к�
 
 CREATE INDEX IF NOT EXISTS idx_consultation_diagnosis_consultation
     ON consultation_diagnosis (consultation_id);
+
+
+
+
+-- =========================================
+-- Сущности для пользователей
+-- =========================================
+
+-- Таблица пользователя сервиса
+CREATE TABLE IF NOT EXISTS service_user (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+
+    login VARCHAR(255) UNIQUE NOT NULL, -- логин пользователя
+    password_hash TEXT NOT NULL, -- хэш пароля
+
+    first_name VARCHAR(255),
+    last_name VARCHAR(255),
+
+    role VARCHAR(50) NOT NULL DEFAULT 'admin', -- роль пользователя (admin/operator/viewer)
+
+    is_active BOOLEAN NOT NULL DEFAULT true, -- активен ли пользователь
+
+    created_at TIMESTAMPTZ DEFAULT now(),
+    updated_at TIMESTAMPTZ,
+    deleted_at TIMESTAMPTZ
+);
+
+COMMENT ON TABLE service_user IS 'Пользователи сервиса (администраторы, операторы системы)';
+COMMENT ON COLUMN service_user.password_hash IS 'Хэш пароля пользователя';
+COMMENT ON COLUMN service_user.role IS 'Роль пользователя сервиса';
+
+CREATE INDEX IF NOT EXISTS idx_service_user_email
+    ON service_user (login);
+
+
+
+--
+--ALTER TABLE consultation
+--ADD COLUMN author_id UUID REFERENCES service_user(id);
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 

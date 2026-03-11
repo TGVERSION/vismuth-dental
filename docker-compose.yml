@@ -33,10 +33,22 @@ services:
     networks:
       - vismuth-net
 
+  ml-service:
+    build:
+      context: ./ml-service
+      dockerfile: Dockerfile
+    container_name: vismuth-ml
+    restart: unless-stopped
+    ports:
+      - "8001:8000"
+    volumes:
+      - "/home/odmin/models/finetuned_autocomplete_kaggle:/app/autocomplete_model"
+    networks:
+      - vismuth-net
+
 volumes:
   vismuth_pg_data:
 
 networks:
   vismuth-net:
     driver: bridge
-

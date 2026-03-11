@@ -94,8 +94,3 @@ def get_completions(field: str, prefix: str, num_sequences: int = 5) -> list:
 async def complete(request: CompletionRequest):
     suggestions = get_completions(request.field, request.prefix, request.num_sequences)
     return CompletionResponse(suggestions=suggestions)
-
-
-@router.get('/')
-async def my_function():
-    return {"message": "Hello from my endpoint!"}

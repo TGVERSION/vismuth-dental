@@ -93,4 +93,5 @@ def get_completions(field: str, prefix: str, num_sequences: int = 5) -> list:
 @router.post("/complete", response_model=CompletionResponse)
 async def complete(request: CompletionRequest):
     suggestions = get_completions(request.field, request.prefix, request.num_sequences)
-    return CompletionResponse(suggestions=suggestions)
+    full_suggestions = [f"{request.prefix}{s}" for s in suggestions]
+    return CompletionResponse(suggestions=full_suggestions)

@@ -20,6 +20,10 @@ class ServiceUserRead(BaseModel):
         from_attributes = True
 
 
+class ServiceUserIdRead(BaseModel):
+    id: UUID
+
+
 class ServiceUserCreate(BaseModel):
     login: str = Field(..., description="Логин пользователя")
     password_hash: str = Field(

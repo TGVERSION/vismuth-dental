@@ -33,6 +33,17 @@ services:
     networks:
       - vismuth-net
 
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: vismuth-frontend
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    networks:
+      - vismuth-net
+
   ml-service:
     build:
       context: ./ml-service

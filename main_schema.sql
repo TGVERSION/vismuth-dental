@@ -237,7 +237,7 @@ COMMENT ON COLUMN ref_disease_character.id IS 'Идентификатор из �
 
 CREATE TABLE IF NOT EXISTS consultation (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    
+
     service_user UUID REFERENCES service_user(id),
 
     -- Интеграция с внешней клинической системой (заполняется при интеграции)
@@ -248,126 +248,60 @@ CREATE TABLE IF NOT EXISTS consultation (
 
     consultation_datetime TIMESTAMPTZ, -- дата/время консультации
 
-    complaints TEXT, -- Жалобы
-    disease_anamnesis TEXT, -- Анамнез заболевания
-    recommendations TEXT, -- Рекомендации
-    prescriptions TEXT, -- Назначения
-    disease_history TEXT, -- История заболевания (раздел протокола)
+    -- 1. Жалобы
+    complaints TEXT,
+
+    -- 2. Анамнез заболевания
+    disease_anamnesis TEXT,
+
+    -- 3. История заболевания
+    disease_history TEXT,
+
+    -- 4. Состояние пациента
+    patient_condition TEXT,
+
+    -- 5. Анамнез жизни
+    life_anamnesis TEXT,
+
+    -- 6. Вредные привычки и зависимости
+    bad_habits TEXT,
+
+    -- 7. Аллергологический анамнез
+    allergy_anamnesis TEXT,
+
+    -- 8. Витальные параметры
+    vital_parameters TEXT,
+
+    -- 9. Объективные данные
+    objective_data TEXT,
+
+    -- 10. Объективизированная оценка состояния
+    clinical_assessment TEXT,
+
+    -- 11. Заключение консультации
+    consultation_conclusion TEXT,
+
+    -- 12. Диагнозы: основной и сопутствующие
+    main_diagnosis TEXT,
+    comorbid_diagnoses TEXT,
+
+    -- 13. Рекомендации
+    recommendations TEXT,
+
+    -- 14. Назначения
+    prescriptions TEXT,
 
     -- Служебные поля
     status_protocol VARCHAR(255), -- статус протокола (draft/active/cancelled/archived и т.п.)
-    created_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ DEFAULT now(),
     updated_at TIMESTAMPTZ,
     deleted_at TIMESTAMPTZ
 );
 
-COMMENT ON TABLE consultation IS 'Протоколы консультаций';
+COMMENT ON TABLE consultation IS 'Протоколы консультаций (объединённая сущность, все разделы протокола в одной таблице)';
 
 CREATE INDEX IF NOT EXISTS idx_consultation_datetime
     ON consultation (consultation_datetime);
-
-
--- =========================================
--- Связанные сущности протокола
--- =========================================
-
--- Сведения о консультации
-CREATE TABLE IF NOT EXISTS consultation_protocols (
-    id BIGSERIAL PRIMARY KEY,
-    consultation_id UUID NOT NULL REFERENCES consultation(id) ON DELETE CASCADE,
-    patient_condition VARCHAR(255),
-    objective_data VARCHAR(255),
-    consultation_conclusion VARCHAR(255),
-    pathology_code VARCHAR(255), -- код выявленной патологии (OID: 1.2.643.5.1.13.13.11.1473)
-    comment VARCHAR(255),
-    created_at TIMESTAMPTZ
-);
-
-COMMENT ON TABLE consultation_protocols IS 'Сведения о консультации';
-
-CREATE INDEX IF NOT EXISTS idx_consultation_protocols_consultation
-    ON consultation_protocols (consultation_id);
-
-
--- Вредные привычки и зависимости
-CREATE TABLE IF NOT EXISTS consultation_habit (
-    id BIGSERIAL PRIMARY KEY,
-    consultation_id UUID NOT NULL REFERENCES consultation(id) ON DELETE CASCADE,
-    bad_habits VARCHAR(255),
-    created_at TIMESTAMPTZ
-);
-
-COMMENT ON TABLE consultation_habit IS 'Анамнез жизни: вредные привычки и зависимости';
-
-CREATE INDEX IF NOT EXISTS idx_consultation_habit_consultation
-    ON consultation_habit (consultation_id);
-
-
--- Аллергологический анамнез
-CREATE TABLE IF NOT EXISTS consultation_allergy_manifestation (
-    id BIGSERIAL PRIMARY KEY,
-    consultation_id UUID NOT NULL REFERENCES consultation(id) ON DELETE CASCADE,
-    reaction_type VARCHAR(255), -- Тип реакции
-    clinical_manifestations VARCHAR(255), -- Клинические проявления
-    created_at TIMESTAMPTZ
-);
-
-COMMENT ON TABLE consultation_allergy_manifestation IS 'Аллергологический анамнез';
-
-CREATE INDEX IF NOT EXISTS idx_consultation_allergy_manifestation_consultation
-    ON consultation_allergy_manifestation (consultation_id);
-
-
--- Витальные параметры
-CREATE TABLE IF NOT EXISTS consultation_vital_sign (
-    id BIGSERIAL PRIMARY KEY,
-    consultation_id UUID NOT NULL REFERENCES consultation(id) ON DELETE CASCADE,
-    parameter_code VARCHAR(255), -- Код параметра
-    unit_code VARCHAR(255), -- Единицы измерения
-    created_at TIMESTAMPTZ
-);
-
-COMMENT ON TABLE consultation_vital_sign IS 'Витальные параметры пациента в рамках консультации';
-COMMENT ON COLUMN consultation_vital_sign.parameter_code IS 'Код параметра витальных показателей (справочник OID 1.2.643.5.1.13.13.99.2.262).';
-COMMENT ON COLUMN consultation_vital_sign.unit_code IS 'Код единицы измерения (справочник OID 1.2.643.5.1.13.13.11.1358).';
-
-CREATE INDEX IF NOT EXISTS idx_consultation_vital_sign_consultation
-    ON consultation_vital_sign (consultation_id);
-
-
--- Объективизированная оценка состояния
-CREATE TABLE IF NOT EXISTS consultation_clinical_scale (
-    id BIGSERIAL PRIMARY KEY,
-    consultation_id UUID NOT NULL REFERENCES consultation(id) ON DELETE CASCADE,
-    scale_type VARCHAR(255), -- Тип клинической шкалы
-    unit_code VARCHAR(255), -- Единицы измерения
-    scale_parameter VARCHAR(255), -- Параметр клинической шкалы
-    created_at TIMESTAMPTZ
-);
-
-COMMENT ON TABLE consultation_clinical_scale IS 'Объективизированная оценка состояния пациента';
-
-CREATE INDEX IF NOT EXISTS idx_consultation_clinical_scale_consultation
-    ON consultation_clinical_scale (consultation_id);
-
-
--- Диагнозы
-CREATE TABLE IF NOT EXISTS consultation_diagnosis (
-    id BIGSERIAL PRIMARY KEY,
-    consultation_id UUID NOT NULL REFERENCES consultation(id) ON DELETE CASCADE,
-    diagnosis_type VARCHAR(255), -- Вид нозологической единицы диагноза
-    icd10_code VARCHAR(255), -- Код диагноза по МКБ-10
-    diagnosis_validity VARCHAR(255), -- Степень обоснованности диагноза
-    disease_nature VARCHAR(255), -- Характер заболевания
-    created_at TIMESTAMPTZ
-);
-
-COMMENT ON TABLE consultation_diagnosis IS 'Диагнозы в рамках консультации';
-
-CREATE INDEX IF NOT EXISTS idx_consultation_diagnosis_consultation
-    ON consultation_diagnosis (consultation_id);
-
-
 
 
 -- =========================================

@@ -1,4 +1,5 @@
 from datetime import datetime, timezone
+from typing import List
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -7,10 +8,48 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..db import get_db
 from ..models.service_user import ServiceUser
-from ..schemas.service_user import ServiceUserCreate, ServiceUserRead, ServiceUserUpdate
+from ..schemas.service_user import (
+    ServiceUserCreate,
+    ServiceUserIdRead,
+    ServiceUserRead,
+    ServiceUserUpdate,
+)
 
 
 router = APIRouter(prefix="/service-users", tags=["service_users"])
+
+
+@router.get(
+    "",
+    response_model=List[ServiceUserIdRead],
+)
+async def list_service_users(
+    db: AsyncSession = Depends(get_db),
+) -> List[ServiceUserIdRead]:
+    stmt = select(ServiceUser).order_by(ServiceUser.created_at.desc())
+    result = await db.execute(stmt)
+    return result.scalars().all()
+
+
+@router.get(
+    "/{service_user_id}",
+    response_model=ServiceUserRead,
+)
+async def get_service_user(
+    service_user_id: UUID,
+    db: AsyncSession = Depends(get_db),
+) -> ServiceUserRead:
+    stmt = select(ServiceUser).where(ServiceUser.id == service_user_id)
+    result = await db.execute(stmt)
+    user = result.scalar_one_or_none()
+
+    if user is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Service user not found",
+        )
+
+    return user
 
 
 @router.post(

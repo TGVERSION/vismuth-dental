@@ -63,3 +63,6 @@ docker-compose.override.yml
 *.db
 *.sqlite3
 data/local/
+
+# ML models (large binaries)
+ml-service/finetuned_autocomplete_kaggle/model.safetensors

@@ -1,12 +1,14 @@
 'use client';
 
 import { SectionInput } from '@/components/SectionInput';
-import { useState, ChangeEvent } from 'react';
+import { Sidebar } from '@/components/Sidebar';
+import { useState, ChangeEvent, useRef, useEffect, useCallback } from 'react';
 
 interface SectionData {
   id: number;
   label: string;
   value: string;
+  sectionKey: string;
 }
 
 export default function Home() {
@@ -15,20 +17,82 @@ export default function Home() {
   );
 
   const [sections, setSections] = useState<SectionData[]>([
-    { id: 1, label: 'Жалобы', value: '' },
-    { id: 2, label: 'Анамнез заболевания', value: '' },
-    { id: 3, label: 'История заболевания', value: '' },
-    { id: 4, label: 'Анамнез жизни', value: '' },
-    { id: 5, label: 'Вредные привычки и зависимости', value: '' },
-    { id: 6, label: 'Аллергологический анамнез', value: '' },
-    { id: 7, label: 'Витальные параметры', value: '' },
-    { id: 8, label: 'Объективные данные', value: '' },
-    { id: 9, label: 'Объективизированная оценка состояния', value: '' },
-    { id: 10, label: 'Заключение консультации', value: '' },
-    { id: 11, label: 'Диагнозы', value: '' },
-    { id: 12, label: 'Рекомендации', value: '' },
-    { id: 13, label: 'Назначения', value: '' },
+    { id: 1, label: 'Жалобы', value: '', sectionKey: 'complaints' },
+    {
+      id: 2,
+      label: 'Анамнез заболевания',
+      value: '',
+      sectionKey: 'disease_anamnesis',
+    },
+    {
+      id: 3,
+      label: 'История заболевания',
+      value: '',
+      sectionKey: 'disease_history',
+    },
+    {
+      id: 4,
+      label: 'Анамнез жизни',
+      value: '',
+      sectionKey: 'life_anamnesis',
+    },
+    {
+      id: 5,
+      label: 'Вредные привычки и зависимости',
+      value: '',
+      sectionKey: 'bad_habits',
+    },
+    {
+      id: 6,
+      label: 'Аллергологический анамнез',
+      value: '',
+      sectionKey: 'allergy_anamnesis',
+    },
+    {
+      id: 7,
+      label: 'Витальные параметры',
+      value: '',
+      sectionKey: 'vital_parameters',
+    },
+    {
+      id: 8,
+      label: 'Объективные данные',
+      value: '',
+      sectionKey: 'objective_data',
+    },
+    {
+      id: 9,
+      label: 'Объективизированная оценка состояния',
+      value: '',
+      sectionKey: 'clinical_assessment',
+    },
+    {
+      id: 10,
+      label: 'Заключение консультации',
+      value: '',
+      sectionKey: 'consultation_conclusion',
+    },
+    {
+      id: 11,
+      label: 'Диагнозы',
+      value: '',
+      sectionKey: 'main_diagnosis',
+    },
+    {
+      id: 12,
+      label: 'Рекомендации',
+      value: '',
+      sectionKey: 'recommendations',
+    },
+    {
+      id: 13,
+      label: 'Назначения',
+      value: '',
+      sectionKey: 'prescriptions',
+    },
   ]);
+  const [activeSection, setActiveSection] = useState<string>('complaints');
+  const sectionRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
   const handleLabelChange = (id: number, newLabel: string) => {
     setSections((prev) =>
@@ -37,6 +101,46 @@ export default function Home() {
       ),
     );
   };
+  useEffect(() => {
+    const handleScroll = () => {
+      const scrollPosition = window.scrollY + 300;
+      let currentSection = activeSection;
+
+      sections.forEach((section) => {
+        const element = sectionRefs.current[section.sectionKey];
+        if (element) {
+          const offsetTop = element.offsetTop;
+          const offsetHeight = element.offsetHeight;
+
+          if (
+            scrollPosition >= offsetTop &&
+            scrollPosition < offsetTop + offsetHeight
+          ) {
+            currentSection = section.sectionKey;
+          }
+        }
+      });
+
+      if (currentSection !== activeSection) {
+        setActiveSection(currentSection);
+      }
+    };
+
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, [sections, activeSection]);
+
+  const handleSectionClick = useCallback((sectionKey: string) => {
+    const element = sectionRefs.current[sectionKey];
+    if (element) {
+      const offsetTop = element.offsetTop - 100;
+      window.scrollTo({
+        top: offsetTop,
+        behavior: 'smooth',
+      });
+      setActiveSection(sectionKey);
+    }
+  }, []);
 
   const handleValueChange = (id: number, newValue: string) => {
     setSections((prev) =>
@@ -44,6 +148,7 @@ export default function Home() {
         section.id === id ? { ...section, value: newValue } : section,
       ),
     );
+    setActiveSection(sections.find((sec) => sec.id === id)?.label ?? '');
   };
 
   const handleSave = () => {
@@ -60,6 +165,11 @@ export default function Home() {
     console.log('Сохраненные данные:', dataToSave);
   };
 
+  const sidebarSections = sections.map((section) => ({
+    id: section.sectionKey,
+    label: section.label,
+    hasContent: section.value.trim().length > 0,
+  }));
   return (
     <>
       <div className="mx-3 w-85.75">
@@ -68,13 +178,12 @@ export default function Home() {
         </button>
       </div>
       <div className="bg-white rounded-[15px] w-full max-w-372.75 py-6.25 flex flex-row gap-16">
-        <div className="fixed w-62.5 flex flex-col ml-5 gap-6">
-          {sections.map((section) => (
-            <p className="text-[15px]" key={section.id}>
-              {section.label}
-            </p>
-          ))}
-        </div>
+        <Sidebar
+          sections={sidebarSections}
+          activeSection={activeSection}
+          onSectionClick={handleSectionClick}
+        />
+
         <div className="flex flex-col gap-12 ml-84.75 w-216 ">
           <input
             type="text"
@@ -87,14 +196,22 @@ export default function Home() {
 
           <div className="flex gap-9 flex-col">
             {sections.map((section) => (
-              <SectionInput
+              <div
                 key={section.id}
-                id={section.id}
-                label={section.label}
-                value={section.value}
-                onLabelChange={handleLabelChange}
-                onValueChange={handleValueChange}
-              />
+                ref={(el) => {
+                  sectionRefs.current[section.sectionKey] = el;
+                }}
+                className="scroll-mt-24"
+              >
+                <SectionInput
+                  key={section.id}
+                  id={section.id}
+                  label={section.label}
+                  value={section.value}
+                  onLabelChange={handleLabelChange}
+                  onValueChange={handleValueChange}
+                />
+              </div>
             ))}
           </div>
 

@@ -35,6 +35,12 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
+      args:
+        - API_MAIN_URL=${API_MAIN_URL}
+        - API_ML_URL=${API_ML_URL}
+    environment:
+      - API_MAIN_URL=${API_MAIN_URL}
+      - API_ML_URL=${API_ML_URL}
     container_name: vismuth-frontend
     restart: unless-stopped
     ports:

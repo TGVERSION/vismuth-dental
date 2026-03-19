@@ -5,12 +5,19 @@ interface AutocompleteSuggestionsProps {
   highlightedIndex: number;
   onSelect: (value: string) => void;
   isOpen: boolean;
+  loading?: boolean;
 }
 
 export const AutocompleteSuggestions: React.FC<
   AutocompleteSuggestionsProps
-> = ({ suggestions, highlightedIndex, onSelect, isOpen }) => {
-  if (!isOpen || suggestions.length === 0) return null;
+> = ({ suggestions, highlightedIndex, onSelect, isOpen, loading = false }) => {
+  if (!isOpen) return null;
+
+  if (loading) {
+    return null;
+  }
+
+  if (suggestions.length === 0) return null;
 
   return (
     <ul className="absolute z-50 w-full -mt-2 ml-6 bg-[#F2F4F7] border-0 rounded-lg max-h-60 overflow-auto">
@@ -21,7 +28,7 @@ export const AutocompleteSuggestions: React.FC<
           className={`px-4 py-2 cursor-pointer text-sm transition-colors ${
             index === highlightedIndex
               ? 'bg-[#e6efff] text-[#202020]'
-              : 'hover:bg-[#F4E6FF] text-[#202020]'
+              : 'hover:bg-[#e6efff] text-[#202020]'
           }`}
         >
           {suggestion}

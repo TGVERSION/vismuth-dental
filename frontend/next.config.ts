@@ -1,19 +1,47 @@
 import type { NextConfig } from 'next';
 
+const API_MAIN_URL = process.env.API_MAIN_URL;
+const API_ML_URL = process.env.API_ML_URL;
+
+if (process.env.NODE_ENV !== 'production') {
+  console.log('API_MAIN_URL:', API_MAIN_URL);
+  console.log('API_ML_URL:', API_ML_URL);
+}
+
 const nextConfig: NextConfig = {
   output: 'standalone',
-  /* config options here */
   async rewrites() {
     return [
       {
-        source: '/api/:path*',
-        destination:
-          process.env.NODE_ENV === 'development'
-            ? 'http://127.0.0.1:8000/api/:path*'
-            : '/api/',
+        source: '/api/main/:path*',
+        destination: `${API_MAIN_URL}/:path*`,
+      },
+      {
+        source: '/api/ml/:path*',
+        destination: `${API_ML_URL}/:path*`,
       },
     ];
   },
+  async headers() {
+    return [
+      {
+        source: '/api/:path*',
+        headers: [
+          { key: 'Access-Control-Allow-Origin', value: '*' },
+          {
+            key: 'Access-Control-Allow-Methods',
+            value: 'GET,POST,PUT,DELETE,OPTIONS',
+          },
+          {
+            key: 'Access-Control-Allow-Headers',
+            value: 'Content-Type,Authorization',
+          },
+        ],
+      },
+    ];
+  },
+  compress: true,
+  reactStrictMode: process.env.NODE_ENV !== 'production',
 };
 
 export default nextConfig;

@@ -210,6 +210,7 @@ export default function Home() {
                   value={section.value}
                   onLabelChange={handleLabelChange}
                   onValueChange={handleValueChange}
+                  sectionKey={section.sectionKey}
                 />
               </div>
             ))}

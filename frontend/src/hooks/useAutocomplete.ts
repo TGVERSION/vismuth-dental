@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
-import { CompletePayload, mlApi } from '@/lib/api';
+import { CompletePayload, mlApi } from '@/api';
 
 interface UseAutocompleteOptions {
   sectionKey: string;

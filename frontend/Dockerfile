@@ -1,3 +1,6 @@
+ARG API_MAIN_URL
+ARG API_ML_URL
+
 FROM node:20-alpine AS deps
 WORKDIR /app
 
@@ -5,6 +8,13 @@ COPY package.json package-lock.json* ./
 RUN npm ci
 
 FROM node:20-alpine AS builder
+
+ARG API_MAIN_URL
+ARG API_ML_URL
+
+ENV API_MAIN_URL=${API_MAIN_URL}
+ENV API_ML_URL=${API_ML_URL}
+
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
@@ -14,6 +24,13 @@ ENV NEXT_TELEMETRY_DISABLED 1
 RUN npm run build
 
 FROM node:20-alpine AS runner
+
+ARG API_MAIN_URL
+ARG API_ML_URL
+
+ENV API_MAIN_URL=${API_MAIN_URL}
+ENV API_ML_URL=${API_ML_URL}
+
 WORKDIR /app
 
 ENV NODE_ENV production

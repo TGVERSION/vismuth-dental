@@ -1,82 +1,78 @@
-import { useMemo, useState, useCallback } from 'react';
-import {
-  autocompleteDictionary,
-  SectionKey,
-} from '../app/autocomplete-dictionary';
+import { useState, useCallback, useEffect, useRef } from 'react';
+import { CompletePayload, mlApi } from '@/api';
 
-export const useAutocomplete = (sectionLabel: string, query: string) => {
+interface UseAutocompleteOptions {
+  sectionKey: string;
+  debounceMs?: number;
+  maxSuggestions?: number;
+}
+
+export const useAutocomplete = (
+  query: string,
+  { sectionKey, debounceMs = 300, maxSuggestions = 8 }: UseAutocompleteOptions,
+) => {
   const [isOpen, setIsOpen] = useState(false);
   const [highlightedIndex, setHighlightedIndex] = useState(-1);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [suggestions, setSuggestions] = useState<string[]>([]);
 
-  const lastCommaIndex = useMemo(() => {
-    return query.lastIndexOf(',');
-  }, [query]);
+  const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
 
-  const lastWord = useMemo(() => {
-    if (!query.trim()) return '';
-
-    if (lastCommaIndex === -1) {
-      return query.trim();
+  useEffect(() => {
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current);
     }
 
-    const afterComma = query.substring(lastCommaIndex + 1);
-    return afterComma.trim();
-  }, [query, lastCommaIndex]);
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
 
-  const suggestions = useMemo(() => {
-    const key = sectionLabel as SectionKey;
-    const dictionary = autocompleteDictionary[key];
+    if (!query.trim()) {
+      setSuggestions([]);
+      setLoading(false);
+      return;
+    }
 
-    if (!dictionary) return [];
-    if (!lastWord.trim()) {
-      if (key === 'Диагнозы') {
-        return dictionary;
-      } else {
-        return [];
+    debounceTimerRef.current = setTimeout(async () => {
+      abortControllerRef.current = new AbortController();
+
+      try {
+        setLoading(true);
+        setError(null);
+
+        const payload: CompletePayload = {
+          field: sectionKey,
+          prefix: query,
+          num_sequences: maxSuggestions,
+        };
+
+        const response = await mlApi.search(payload);
+        setSuggestions(response.suggestions || []);
+      } catch (err: unknown) {
+        const errorMessage = err instanceof Error ? err.message : 'API Error';
+        setError(errorMessage);
+        setSuggestions([]);
+      } finally {
+        setLoading(false);
       }
-    }
+    }, debounceMs);
 
-    return dictionary
-      .filter((term: string) =>
-        term.toLowerCase().includes(lastWord.toLowerCase()),
-      )
-      .slice(0, 7);
-  }, [sectionLabel, lastWord]);
-
-  const prefixText = useMemo(() => {
-    if (lastCommaIndex === -1) return '';
-    return query.substring(0, lastCommaIndex + 1);
-  }, [query, lastCommaIndex]);
-
-  const spaceAfterComma = useMemo(() => {
-    if (lastCommaIndex === -1) return '';
-    if (lastCommaIndex >= query.length - 1) return '';
-
-    const charAfterComma = query[lastCommaIndex + 1];
-    return charAfterComma === ' ' ? ' ' : '';
-  }, [query, lastCommaIndex]);
+    return () => {
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+      }
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+    };
+  }, [query, sectionKey, debounceMs, maxSuggestions]);
 
   const handleSelect = useCallback((suggestion: string) => {
     setIsOpen(false);
     setHighlightedIndex(-1);
   }, []);
-
-  const getFullValueAfterSelect = useCallback(
-    (suggestion: string) => {
-      if (prefixText) {
-        const hasSpace = spaceAfterComma === ' ';
-        const hasLastWord = lastWord.trim().length > 0;
-
-        if (hasLastWord) {
-          return `${prefixText}${hasSpace ? ' ' : ''}${suggestion}`;
-        } else {
-          return `${prefixText} ${suggestion}`;
-        }
-      }
-      return suggestion;
-    },
-    [prefixText, spaceAfterComma, lastWord],
-  );
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent, onSelect: (value: string) => void) => {
@@ -98,10 +94,7 @@ export const useAutocomplete = (sectionLabel: string, query: string) => {
         case 'Enter':
           e.preventDefault();
           if (highlightedIndex >= 0 && suggestions[highlightedIndex]) {
-            const fullValue = getFullValueAfterSelect(
-              suggestions[highlightedIndex],
-            );
-            onSelect(fullValue);
+            onSelect(suggestions[highlightedIndex]);
             handleSelect(suggestions[highlightedIndex]);
           }
           break;
@@ -111,13 +104,7 @@ export const useAutocomplete = (sectionLabel: string, query: string) => {
           break;
       }
     },
-    [
-      isOpen,
-      suggestions,
-      highlightedIndex,
-      handleSelect,
-      getFullValueAfterSelect,
-    ],
+    [isOpen, suggestions, highlightedIndex, handleSelect],
   );
 
   return {
@@ -128,9 +115,7 @@ export const useAutocomplete = (sectionLabel: string, query: string) => {
     setHighlightedIndex,
     handleSelect,
     handleKeyDown,
-    getFullValueAfterSelect,
-    lastWord,
-    prefixText,
-    spaceAfterComma,
+    loading,
+    error,
   };
 };

@@ -6,10 +6,6 @@ from pydantic import BaseModel, Field
 
 
 class ConsultationBase(BaseModel):
-    service_user: Optional[UUID] = Field(
-        default=None,
-        description="ID пользователя сервиса (service_user.id)",
-    )
     external_system: Optional[int] = Field(
         default=None,
         description="Идентификатор внешней системы (EMR/МИС)",
@@ -109,6 +105,10 @@ class ConsultationUpdate(ConsultationBase):
 
 class ConsultationRead(ConsultationBase):
     id: UUID
+    service_user: Optional[UUID] = Field(
+        default=None,
+        description="ID пользователя сервиса (service_user.id)",
+    )
     created_at: datetime
     updated_at: Optional[datetime]
     deleted_at: Optional[datetime]

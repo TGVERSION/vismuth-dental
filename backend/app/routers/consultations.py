@@ -2,12 +2,14 @@ from datetime import datetime, timezone
 from typing import List
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..db import get_db
+from ..deps import get_current_user
 from ..models.consultation import Consultation
+from ..models.service_user import ServiceUser
 from ..schemas.consultation import (
     ConsultationCreate,
     ConsultationIdRead,
@@ -19,17 +21,34 @@ from ..schemas.consultation import (
 router = APIRouter(prefix="/consultations", tags=["consultations"])
 
 
+def _ensure_consultation_owner(
+    consultation: Consultation | None,
+    user_id: UUID,
+) -> Consultation:
+    if consultation is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Consultation not found",
+        )
+    if consultation.service_user != user_id:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Consultation not found",
+        )
+    return consultation
+
+
 @router.get(
     "",
     response_model=List[ConsultationIdRead],
 )
 async def list_consultations_for_user(
-    service_user: UUID = Query(..., description="ID пользователя сервиса"),
+    current_user: ServiceUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> List[ConsultationIdRead]:
     stmt = (
         select(Consultation)
-        .where(Consultation.service_user == service_user)
+        .where(Consultation.service_user == current_user.id)
         .order_by(Consultation.created_at.desc())
     )
     result = await db.execute(stmt)
@@ -44,12 +63,13 @@ async def list_consultations_for_user(
 )
 async def create_consultation(
     payload: ConsultationCreate,
+    current_user: ServiceUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> ConsultationRead:
     now = datetime.now(timezone.utc)
 
     consultation = Consultation(
-        service_user=payload.service_user,
+        service_user=current_user.id,
         external_system=payload.external_system,
         external_patient_id=payload.external_patient_id,
         external_doctor_id=payload.external_doctor_id,
@@ -89,19 +109,14 @@ async def create_consultation(
 )
 async def get_consultation(
     consultation_id: UUID,
+    current_user: ServiceUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> ConsultationRead:
     stmt = select(Consultation).where(Consultation.id == consultation_id)
     result = await db.execute(stmt)
     consultation = result.scalar_one_or_none()
 
-    if consultation is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Consultation not found",
-        )
-
-    return consultation
+    return _ensure_consultation_owner(consultation, current_user.id)
 
 
 @router.put(
@@ -111,20 +126,14 @@ async def get_consultation(
 async def update_consultation(
     consultation_id: UUID,
     payload: ConsultationUpdate,
+    current_user: ServiceUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> ConsultationRead:
     stmt = select(Consultation).where(Consultation.id == consultation_id)
     result = await db.execute(stmt)
     consultation = result.scalar_one_or_none()
+    consultation = _ensure_consultation_owner(consultation, current_user.id)
 
-    if consultation is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Consultation not found",
-        )
-
-    if payload.service_user is not None:
-        consultation.service_user = payload.service_user
     if payload.external_system is not None:
         consultation.external_system = payload.external_system
     if payload.external_patient_id is not None:
@@ -182,20 +191,15 @@ async def update_consultation(
 )
 async def delete_consultation(
     consultation_id: UUID,
+    current_user: ServiceUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> None:
     stmt = select(Consultation).where(Consultation.id == consultation_id)
     result = await db.execute(stmt)
     consultation = result.scalar_one_or_none()
+    consultation = _ensure_consultation_owner(consultation, current_user.id)
 
-    if consultation is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Consultation not found",
-        )
-
-    await db.delete(consultation)
+    db.delete(consultation)
     await db.commit()
 
     return None
-

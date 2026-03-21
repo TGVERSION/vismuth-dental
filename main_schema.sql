@@ -341,7 +341,34 @@ CREATE INDEX IF NOT EXISTS idx_service_user_email
 --ADD COLUMN author_id UUID REFERENCES service_user(id);
 
 
+-- Ожидающая регистрация: до подтверждения кода строки в service_user нет
+CREATE TABLE IF NOT EXISTS registration_pending (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
 
+    login VARCHAR(255) NOT NULL,
+    -- Хэш пароля для будущей записи service_user (как в service_user.password_hash)
+    password_hash TEXT NOT NULL,
+    -- Хэш одноразового кода из письма (не хранить код в открытом виде)
+    code_hash TEXT NOT NULL,
+
+    expires_at TIMESTAMPTZ NOT NULL,
+    code_attempts SMALLINT NOT NULL DEFAULT 0,
+
+    created_at TIMESTAMPTZ DEFAULT now()
+);
+
+COMMENT ON TABLE registration_pending IS
+    'Временные заявки на регистрацию до подтверждения email; после успеха — запись в service_user, строка удаляется';
+COMMENT ON COLUMN registration_pending.login IS
+    'Email пользователя; совпадает с будущим service_user.login';
+COMMENT ON COLUMN registration_pending.code_attempts IS
+    'Число неудачных попыток ввода кода (защита от перебора)';
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_registration_pending_login
+    ON registration_pending (login);
+
+CREATE INDEX IF NOT EXISTS idx_registration_pending_expires_at
+    ON registration_pending (expires_at);
 
 
 

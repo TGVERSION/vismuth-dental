@@ -21,7 +21,7 @@ export default function RootLayout({
   return (
     <html lang="ru">
       <body className={`${onest.className} text-black`}>
-        <div className="flex min-h-screen items-center justify-center bg-[#F3F4F8]">
+        <div className="flex min-h-screen items-center justify-center w-full bg-[#F3F4F8]">
           <header className="header">
             <div className="header__container">
               <Image

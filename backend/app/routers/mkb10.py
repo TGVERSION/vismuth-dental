@@ -6,7 +6,9 @@ from sqlalchemy.exc import ProgrammingError, SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..db import get_db
+from ..deps import get_current_user
 from ..models.mkb10 import Mkb10
+from ..models.service_user import ServiceUser
 from ..schemas.mkb10 import Mkb10ItemRead, Mkb10SearchResponse
 
 
@@ -21,8 +23,11 @@ async def search_mkb10(
         None,
         description="Строка для поиска по названию диагноза (частичное совпадение)",
     ),
+    current_user: ServiceUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> Mkb10SearchResponse:
+    # Зависимость нужна для обязательной проверки Bearer-токена.
+    _ = current_user
     offset = (page - 1) * size
 
     filters = []

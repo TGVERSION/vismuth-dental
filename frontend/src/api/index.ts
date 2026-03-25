@@ -1,6 +1,9 @@
 export { mainApi } from './main-api';
 export { mlApi } from './ml-api';
 
+export interface ApiError {
+  detail: string;
+}
 export interface CompletePayload {
   field: string;
   prefix: string;
@@ -39,4 +42,28 @@ export interface ConsultationsResponse extends ConsultationsRequest {
 
 export interface ListConsultationsResponse {
   id: string;
+}
+
+export interface LoginRequest {
+  login: string;
+  password: string;
+}
+export interface LoginResponse {
+  detail: string;
+}
+
+export interface RegisterConfirmRequest {
+  login: string;
+  code: string;
+}
+export interface TokenResponse {
+  access_token: string;
+  token_type: string;
+  user: UserData;
+}
+
+export interface UserData {
+  id: string;
+  role: string;
+  login: string;
 }

@@ -3,6 +3,7 @@ import { Onest } from 'next/font/google';
 import './globals.css';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+import ProtectedRoute from '@/components/ProtectedRoute';
 
 const onest = Onest({ subsets: ['cyrillic', 'latin'] });
 
@@ -19,7 +20,8 @@ export default function RootLayout({
   return (
     <html lang="ru">
       <body className={`${onest.className} text-black bg-[#F3F4F8]`}>
-        {children}
+        <ProtectedRoute>{children}</ProtectedRoute>
+
         <ToastContainer
           position="top-right"
           autoClose={4000}

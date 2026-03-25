@@ -2,12 +2,12 @@
 
 import { useState, useEffect, useRef } from 'react';
 import Image from 'next/image';
-import { LoginRequest, mainApi, RegisterConfirmRequest } from '@/api';
-import { useRouter } from 'next/navigation';
+import { LoginRequest, mainApi } from '@/api';
 import { toast } from 'react-toastify';
+import { useAuth } from '@/hooks/useAuth';
 type AuthMode = 'login' | 'register' | 'verify';
 export default function AuthForms() {
-  const router = useRouter();
+  const { handleLogin, handleRegister, handleConfirmRegistration } = useAuth();
 
   const [mode, setMode] = useState<AuthMode>('login');
   const [userData, setUserData] = useState<LoginRequest>({
@@ -121,71 +121,45 @@ export default function AuthForms() {
     }
   };
 
-  const handleLogin = async (e: React.FormEvent) => {
+  const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    setError(null);
 
-    try {
-      const response = await mainApi.serviceUsers.login(userData);
-      mainApi.setToken(response.access_token);
-      localStorage.setItem('user', JSON.stringify(response.user));
-      router.push('/');
-    } catch (err) {
-      setError('Ошибка входа');
+    await handleLogin(userData);
 
-      toast.error('Ошибка входа');
-    } finally {
-      setLoading(false);
-    }
+    setLoading(false);
   };
 
-  const handleRegister = async (e: React.FormEvent) => {
+  const handleRegisterSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    setError(null);
 
-    try {
-      await mainApi.serviceUsers.register(userData);
-      toast.info('Код подтверждения отправлен на почту');
+    const result = await handleRegister(userData);
+
+    if (result.success) {
       setMode('verify');
       setTimer(300);
-    } catch (err) {
-      setError('Ошибка регистрации');
-      toast.error('Пользователь уже существует');
-    } finally {
-      setLoading(false);
     }
+    setLoading(false);
   };
 
-  const handleVerify = async (e: React.FormEvent) => {
+  const handleVerifySubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const fullCode = code.join('');
+
     if (fullCode.length !== 4) {
-      setError('Введите 4-значный код');
       toast.warning('Введите 4-значный код');
       return;
     }
 
     setLoading(true);
-    setError(null);
 
-    try {
-      const payload: RegisterConfirmRequest = {
-        login: userData.login,
-        code: fullCode,
-      };
-      const response = await mainApi.serviceUsers.confirm(payload);
-      localStorage.setItem('access_token', response.access_token);
-      localStorage.setItem('user', JSON.stringify(response.user));
-      router.push('/');
-    } catch (err) {
-      setError('Неверный код подтверждения');
-      toast.error('Неверный код подтверждения');
+    const result = await handleConfirmRegistration(userData.login, fullCode);
+
+    if (result.success) {
       setCode(['', '', '', '']);
-    } finally {
-      setLoading(false);
     }
+    setLoading(false);
   };
 
   const handleResendCode = async () => {
@@ -242,7 +216,7 @@ export default function AuthForms() {
         {mode === 'login' && (
           <>
             <h2 className="text-center text-[#6F6F6F] mb-8.75">Вход</h2>
-            <form onSubmit={handleLogin} className="space-y-5">
+            <form onSubmit={handleLoginSubmit} className="space-y-5">
               <div>
                 <label className="block text-sm text-[#6C757D] mb-1.25">
                   Почта
@@ -306,7 +280,7 @@ export default function AuthForms() {
         {mode === 'register' && (
           <>
             <h2 className="text-center text-[#6C757D] mb-8.75">Регистрация</h2>
-            <form onSubmit={handleRegister} className="space-y-5">
+            <form onSubmit={handleRegisterSubmit} className="space-y-5">
               <div>
                 <label className="block text-sm text-[#6C757D] mb-1.25">
                   Почта
@@ -384,7 +358,7 @@ export default function AuthForms() {
               </p>
             </div>
 
-            <form onSubmit={handleVerify} className="space-y-5">
+            <form onSubmit={handleVerifySubmit} className="space-y-5">
               <div className="flex justify-center gap-3">
                 {code.map((digit, index) => (
                   <input

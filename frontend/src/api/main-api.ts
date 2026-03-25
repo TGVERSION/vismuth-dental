@@ -1,3 +1,4 @@
+import { useAuthStore } from '@/store/authStore';
 import type {
   ConsultationsRequest,
   ConsultationsResponse,
@@ -10,26 +11,26 @@ import type {
 
 const API_BASE_URL = '/api/main';
 
-const getAccessToken = (): string | null => {
-  if (typeof window !== 'undefined') {
-    return localStorage.getItem('access_token');
-  }
-  return null;
-};
-
 async function request<T>(endpoint: string, options?: RequestInit): Promise<T> {
-  const token = getAccessToken();
+  const accessToken = useAuthStore.getState().accessToken;
 
   const response = await fetch(`${API_BASE_URL}${endpoint}`, {
     ...options,
     headers: {
       'Content-Type': 'application/json',
-      ...(token && { Authorization: `Bearer ${token}` }),
+      ...(accessToken && { Authorization: `Bearer ${accessToken}` }),
       ...options?.headers,
     },
   });
 
   if (!response.ok) {
+    if (response.status === 401) {
+      useAuthStore.getState().clearAuth();
+      localStorage.removeItem('access_token');
+      if (typeof window !== 'undefined') {
+        window.location.href = '/login';
+      }
+    }
     const error = await response.json().catch(() => ({}));
     throw new Error(error.detail || `HTTP error! status: ${response.status}`);
   }

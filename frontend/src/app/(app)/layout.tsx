@@ -4,25 +4,15 @@ import { useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { useRouter } from 'next/navigation';
-
-interface UserData {
-  name: string;
-  role: string;
-  email: string;
-}
+import { mainApi, UserData } from '@/api';
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const hideTimerRef = useRef<NodeJS.Timeout | null>(null);
-
-  const currentUser: UserData = {
-    name: 'Системный администратор',
-    role: 'Администратор',
-    email: 'admin@medprotocol.ru',
-  };
-
+  //TODO: Добавить store для хранения текущего пользователя
+  //const currentUser = localStorage.getItem('user');
   const hideHeader = ['/login', '/register'].includes(pathname);
 
   const handleProfileEnter = () => {
@@ -40,6 +30,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   };
 
   const handleLogout = () => {
+    mainApi.clearToken();
     console.log('Logout');
     router.push('/login');
   };
@@ -78,11 +69,13 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
               {showProfileMenu && (
                 <div className="absolute right-0 top-full mt-2 w-65 bg-white rounded-xl shadow-custom p-5 z-50">
-                  <div className=" pb-6.25">
-                    <p className="text-[#202020] text-base truncate">
-                      {currentUser.name}
-                    </p>
-                  </div>
+                  {/* {currentUser && (
+                    <div className=" pb-6.25">
+                      <p className="text-[#202020] text-base truncate">
+                        {JSON.parse(currentUser).login}
+                      </p>
+                    </div>
+                  )} */}
 
                   <button
                     onClick={handleLogout}

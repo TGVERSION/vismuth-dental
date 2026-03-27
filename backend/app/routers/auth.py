@@ -8,11 +8,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..config import settings
 from ..db import get_db
+from ..deps import get_current_user
 from ..email import send_registration_code
 from ..models.registration_pending import RegistrationPending
 from ..models.service_user import ServiceUser
 from ..schemas.auth import (
     LoginRequest,
+    MessageResponse,
     RegisterConfirmRequest,
     RegisterRequest,
     RegisterResponse,
@@ -240,3 +242,10 @@ async def login(
         access_token=token,
         user=UserPublic.model_validate(user),
     )
+
+
+@router.post("/logout", response_model=MessageResponse)
+async def logout(
+    _: ServiceUser = Depends(get_current_user),
+) -> MessageResponse:
+    return MessageResponse(detail="logged_out")

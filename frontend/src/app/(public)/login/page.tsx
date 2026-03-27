@@ -9,6 +9,8 @@ type AuthMode = 'login' | 'register' | 'verify';
 export default function AuthForms() {
   const { handleLogin, handleRegister, handleConfirmRegistration } = useAuth();
 
+  const [showPasswordLogin, setShowPasswordLogin] = useState(false);
+  const [showPasswordRegist, setShowPasswordRegist] = useState(false);
   const [mode, setMode] = useState<AuthMode>('login');
   const [userData, setUserData] = useState<LoginRequest>({
     login: '',
@@ -237,18 +239,43 @@ export default function AuthForms() {
                 <label className="block text-sm text-[#6C757D] mb-1.25">
                   Пароль
                 </label>
-                <input
-                  type="password"
-                  value={userData.password}
-                  minLength={8}
-                  onChange={(e) =>
-                    setUserData({ ...userData, password: e.target.value })
-                  }
-                  placeholder="Введите..."
-                  className="w-full px-3 py-2 bg-[#F3F4F8] border-0 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#5D8CF1] transition-all"
-                  required
-                  disabled={loading}
-                />
+                <div className="relative">
+                  <input
+                    type={showPasswordLogin ? 'text' : 'password'}
+                    value={userData.password}
+                    minLength={8}
+                    onChange={(e) =>
+                      setUserData({ ...userData, password: e.target.value })
+                    }
+                    placeholder="Введите..."
+                    className="w-full px-3 py-2 pr-10 bg-[#F3F4F8] border-0 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#5D8CF1] transition-all"
+                    required
+                    disabled={loading}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPasswordLogin(!showPasswordLogin)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 p-1 cursor-pointer rounded transition-colors disabled:opacity-50"
+                    disabled={loading}
+                    aria-label={
+                      showPasswordLogin ? 'Скрыть пароль' : 'Показать пароль'
+                    }
+                  >
+                    <Image
+                      src={
+                        showPasswordLogin
+                          ? '/showPassIcon.svg'
+                          : '/hidePassIcon.svg'
+                      }
+                      alt={
+                        showPasswordLogin ? 'Скрыть пароль' : 'Показать пароль'
+                      }
+                      width={20}
+                      height={20}
+                      className="w-5 h-5"
+                    />
+                  </button>
+                </div>
               </div>
               <button
                 type="submit"
@@ -301,18 +328,43 @@ export default function AuthForms() {
                 <label className="block text-sm text-[#6C757D] mb-1.25">
                   Пароль
                 </label>
-                <input
-                  type="password"
-                  value={userData.password}
-                  minLength={8}
-                  onChange={(e) =>
-                    setUserData({ ...userData, password: e.target.value })
-                  }
-                  placeholder="Введите..."
-                  className="w-full px-3 py-2 bg-[#F3F4F8] border-0 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#5D8CF1] transition-all"
-                  required
-                  disabled={loading}
-                />
+                <div className="relative">
+                  <input
+                    type={showPasswordRegist ? 'text' : 'password'}
+                    value={userData.password}
+                    minLength={8}
+                    onChange={(e) =>
+                      setUserData({ ...userData, password: e.target.value })
+                    }
+                    placeholder="Введите..."
+                    className="w-full px-3 py-2 pr-10 bg-[#F3F4F8] border-0 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#5D8CF1] transition-all"
+                    required
+                    disabled={loading}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPasswordRegist(!showPasswordRegist)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 p-1 cursor-pointer rounded transition-colors disabled:opacity-50"
+                    disabled={loading}
+                    aria-label={
+                      showPasswordRegist ? 'Скрыть пароль' : 'Показать пароль'
+                    }
+                  >
+                    <Image
+                      src={
+                        showPasswordRegist
+                          ? '/showPassIcon.svg'
+                          : '/hidePassIcon.svg'
+                      }
+                      alt={
+                        showPasswordRegist ? 'Скрыть пароль' : 'Показать пароль'
+                      }
+                      width={20}
+                      height={20}
+                      className="w-5 h-5"
+                    />
+                  </button>
+                </div>
               </div>
               <button
                 type="submit"
@@ -338,7 +390,7 @@ export default function AuthForms() {
             <button
               onClick={switchToRegister}
               disabled={loading}
-              className="relative -top-22 -left-8 text-gray-600 hover:text-gray-800 transition-colors"
+              className="relative cursor-pointer -top-22 -left-8 text-gray-600 hover:text-gray-800 transition-colors"
             >
               <Image
                 alt="back"

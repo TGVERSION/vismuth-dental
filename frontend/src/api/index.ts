@@ -15,7 +15,11 @@ export interface CompleteResponse {
 }
 
 export interface ConsultationsRequest {
-  service_user: string;
+  id: number;
+  external_system: number;
+  external_patient_id: number;
+  external_doctor_id: number;
+  external_visit_id: number;
   consultation_datetime: string;
   complaints: string;
   disease_anamnesis: string;

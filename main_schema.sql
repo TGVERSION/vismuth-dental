@@ -318,7 +318,7 @@ CREATE TABLE IF NOT EXISTS service_user (
     first_name VARCHAR(255),
     last_name VARCHAR(255),
 
-    role VARCHAR(50) NOT NULL DEFAULT 'admin', -- роль пользователя (admin/operator/viewer)
+    role VARCHAR(50) NOT NULL DEFAULT 'doctor', -- роль пользователя (admin/head of department/doctor)
 
     is_active BOOLEAN NOT NULL DEFAULT true, -- активен ли пользователь
 

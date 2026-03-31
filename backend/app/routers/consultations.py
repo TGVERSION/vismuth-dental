@@ -49,7 +49,7 @@ async def list_consultations_for_user(
     stmt = (
         select(Consultation)
         .where(Consultation.service_user == current_user.id)
-        .order_by(Consultation.created_at.desc())
+        .order_by(Consultation.updated_at.desc())
     )
     result = await db.execute(stmt)
     consultations = result.scalars().all()

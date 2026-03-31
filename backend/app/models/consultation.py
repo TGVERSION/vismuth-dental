@@ -50,6 +50,7 @@ class Consultation(Base):
     recommendations: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     prescriptions: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
 
+    protocol_name: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     status_protocol: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
 
     created_at: Mapped[datetime] = mapped_column(

@@ -86,6 +86,10 @@ class ConsultationBase(BaseModel):
         default=None,
         description="Назначения",
     )
+    protocol_name: Optional[str] = Field(
+        default=None,
+        description="Название протокола",
+    )
     status_protocol: Optional[str] = Field(
         default="draft",
         description="Статус протокола",

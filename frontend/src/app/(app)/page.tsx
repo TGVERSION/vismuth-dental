@@ -1,8 +1,10 @@
 'use client';
 
+import { ConsultationsRequest, mainApi } from '@/api';
 import { SectionInput } from '@/components/SectionInput';
 import { Sidebar } from '@/components/Sidebar';
 import { useState, ChangeEvent, useRef, useEffect, useCallback } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 
 interface SectionData {
   id: number;
@@ -12,10 +14,26 @@ interface SectionData {
 }
 
 export default function Home() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const [templateTitle, setTemplateTitle] = useState<string>(
     'Протокол консультации терапевта №1',
   );
-
+  const SECTION_TO_API_FIELD: Record<string, keyof ConsultationsRequest> = {
+    complaints: 'complaints',
+    disease_anamnesis: 'disease_anamnesis',
+    disease_history: 'disease_history',
+    life_anamnesis: 'life_anamnesis',
+    bad_habits: 'bad_habits',
+    allergy_anamnesis: 'allergy_anamnesis',
+    vital_parameters: 'vital_parameters',
+    objective_data: 'objective_data',
+    clinical_assessment: 'clinical_assessment',
+    consultation_conclusion: 'consultation_conclusion',
+    main_diagnosis: 'main_diagnosis',
+    recommendations: 'recommendations',
+    prescriptions: 'prescriptions',
+  };
   const [sections, setSections] = useState<SectionData[]>([
     { id: 1, label: 'Жалобы', value: '', sectionKey: 'complaints' },
     {
@@ -92,8 +110,131 @@ export default function Home() {
     },
   ]);
   const [activeSection, setActiveSection] = useState<string>('complaints');
+  const [protocolId, setProtocolId] = useState<string | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
+  const [lastSavedData, setLastSavedData] = useState<string>('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const sectionRefs = useRef<Record<string, HTMLDivElement | null>>({});
+  const saveTimerRef = useRef<NodeJS.Timeout | null>(null);
 
+  const loadProtocol = async (id: string) => {
+    setIsLoading(true);
+    setLoadError(null);
+
+    try {
+      const response = await mainApi.consultations.getConsultation(id);
+      setSections((prev) =>
+        prev.map((section) => {
+          const apiField = SECTION_TO_API_FIELD[section.sectionKey];
+
+          if (!apiField) {
+            return section;
+          }
+
+          const apiValue = response[apiField];
+
+          return {
+            ...section,
+            value: typeof apiValue === 'string' ? apiValue : '',
+          };
+        }),
+      );
+
+      console.log('Протокол загружен:', id);
+    } catch (error) {
+      console.error('Ошибка загрузки протокола:', error);
+      setLoadError('Не удалось загрузить протокол');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  useEffect(() => {
+    const id = searchParams.get('id');
+    if (id) {
+      setProtocolId(id);
+      loadProtocol(id);
+    }
+  }, [searchParams]);
+
+  useEffect(() => {
+    if (!protocolId) return;
+    const currentData = JSON.stringify({ templateTitle, sections });
+    if (currentData === lastSavedData) return;
+
+    if (saveTimerRef.current) {
+      clearTimeout(saveTimerRef.current);
+    }
+
+    saveTimerRef.current = setTimeout(async () => {
+      await autoSave();
+      setLastSavedData(currentData);
+    }, 600);
+
+    return () => {
+      if (saveTimerRef.current) {
+        clearTimeout(saveTimerRef.current);
+      }
+    };
+  }, [templateTitle, sections, protocolId, lastSavedData]);
+
+  const autoSave = async () => {
+    if (!protocolId || isSaving) return;
+
+    setIsSaving(true);
+
+    try {
+      const dataToUpdate: ConsultationsRequest = {
+        id: protocolId,
+        external_system: 0,
+        external_patient_id: 0,
+        external_doctor_id: 0,
+        external_visit_id: 0,
+        consultation_datetime: new Date().toISOString(),
+        complaints:
+          sections.find((s) => s.sectionKey === 'complaints')?.value || '',
+        disease_anamnesis:
+          sections.find((s) => s.sectionKey === 'disease_anamnesis')?.value ||
+          '',
+        disease_history:
+          sections.find((s) => s.sectionKey === 'disease_history')?.value || '',
+        patient_condition: '',
+        life_anamnesis:
+          sections.find((s) => s.sectionKey === 'life_anamnesis')?.value || '',
+        bad_habits:
+          sections.find((s) => s.sectionKey === 'bad_habits')?.value || '',
+        allergy_anamnesis:
+          sections.find((s) => s.sectionKey === 'allergy_anamnesis')?.value ||
+          '',
+        vital_parameters:
+          sections.find((s) => s.sectionKey === 'vital_parameters')?.value ||
+          '',
+        objective_data:
+          sections.find((s) => s.sectionKey === 'objective_data')?.value || '',
+        clinical_assessment:
+          sections.find((s) => s.sectionKey === 'clinical_assessment')?.value ||
+          '',
+        consultation_conclusion:
+          sections.find((s) => s.sectionKey === 'consultation_conclusion')
+            ?.value || '',
+        main_diagnosis:
+          sections.find((s) => s.sectionKey === 'main_diagnosis')?.value || '',
+        comorbid_diagnoses: '',
+        recommendations:
+          sections.find((s) => s.sectionKey === 'recommendations')?.value || '',
+        prescriptions:
+          sections.find((s) => s.sectionKey === 'prescriptions')?.value || '',
+        status_protocol: 'draft',
+      };
+
+      await mainApi.consultations.update(protocolId, dataToUpdate);
+      console.log('Авто-сохранение:', protocolId);
+    } catch (error) {
+      console.error('Ошибка авто-сохранения:', error);
+    } finally {
+      setIsSaving(false);
+    }
+  };
   const handleLabelChange = (id: number, newLabel: string) => {
     setSections((prev) =>
       prev.map((section) =>
@@ -133,7 +274,7 @@ export default function Home() {
   const handleSectionClick = useCallback((sectionKey: string) => {
     const element = sectionRefs.current[sectionKey];
     if (element) {
-      const offsetTop = element.offsetTop - 100;
+      const offsetTop = element.offsetTop - 300;
       window.scrollTo({
         top: offsetTop,
         behavior: 'smooth',
@@ -151,18 +292,12 @@ export default function Home() {
     setActiveSection(sections.find((sec) => sec.id === id)?.label ?? '');
   };
 
-  const handleSave = () => {
-    const sectionsData: Record<string, string> = Object.fromEntries(
-      sections.map((section) => [section.label, section.value]),
-    );
-
-    const dataToSave = {
-      templateTitle,
-      timestamp: new Date().toISOString(),
-      ...sectionsData,
-    };
-
-    console.log('Сохраненные данные:', dataToSave);
+  const handleSave = async () => {
+    if (protocolId) {
+      await autoSave();
+    } else {
+      await createNew();
+    }
   };
 
   const sidebarSections = sections.map((section) => ({
@@ -170,10 +305,69 @@ export default function Home() {
     label: section.label,
     hasContent: section.value.trim().length > 0,
   }));
+
+  const createNew = async () => {
+    try {
+      const localDate = new Date();
+      const consultation_datetime = new Date(
+        localDate.getTime() - localDate.getTimezoneOffset() * 60000,
+      ).toISOString();
+
+      const dataToSend: ConsultationsRequest = {
+        id: '',
+        external_system: 0,
+        external_patient_id: 0,
+        external_doctor_id: 0,
+        external_visit_id: 0,
+        consultation_datetime,
+        complaints: '',
+        disease_anamnesis: '',
+        disease_history: '',
+        patient_condition: '',
+        life_anamnesis: '',
+        bad_habits: '',
+        allergy_anamnesis: '',
+        vital_parameters: '',
+        objective_data: '',
+        clinical_assessment: '',
+        consultation_conclusion: '',
+        main_diagnosis: '',
+        comorbid_diagnoses: '',
+        recommendations: '',
+        prescriptions: '',
+        status_protocol: 'draft',
+      };
+
+      const response = await mainApi.consultations.create(dataToSend);
+
+      const newId = response.id?.toString() || response.id;
+      if (newId) {
+        setProtocolId(newId);
+
+        const params = new URLSearchParams(window.location.search);
+        params.set('id', newId);
+        router.replace(`?${params.toString()}`, { scroll: false });
+
+        console.log('Протокол создан, ID:', newId);
+      }
+    } catch (error) {
+      console.error('Ошибка создания протокола:', error);
+    }
+  };
+  useEffect(() => {
+    return () => {
+      if (saveTimerRef.current) {
+        clearTimeout(saveTimerRef.current);
+      }
+    };
+  }, []);
   return (
     <>
       <div className="fixed ml-3 mr-5 left-0 top-20 h-[92vh] w-85.75 flex flex-col bg-[#F3F4F8] z-30">
-        <button className="shrink-0 w-full mb-6 hover:text-[#769CEF] bg-white rounded-xl h-13 cursor-pointer text-[#5D8CF1] px-6 transition-colors">
+        <button
+          onClick={createNew}
+          className="shrink-0 w-full mb-6 hover:text-[#769CEF] bg-white rounded-xl h-13 cursor-pointer text-[#5D8CF1] px-6 transition-colors"
+        >
           Создать новый протокол
         </button>
         <div className="flex-1 overflow-y-auto overflow-x-hidden custom-scrollbar">
@@ -251,53 +445,55 @@ export default function Home() {
           </div>
         </div>
       </div>
-      <div className="bg-white rounded-[15px] ml-93.5 w-full max-w-372.75 py-6.25 flex flex-row gap-16">
-        <Sidebar
-          sections={sidebarSections}
-          activeSection={activeSection}
-          onSectionClick={handleSectionClick}
-        />
-
-        <div className="flex flex-col gap-12 ml-84.75 w-216 ">
-          <input
-            type="text"
-            value={templateTitle}
-            onChange={(e: ChangeEvent<HTMLInputElement>) =>
-              setTemplateTitle(e.target.value)
-            }
-            className="text-[40px] pl-6 font-semibold leading-[150%] bg-transparent border-0 focus:outline-none focus:ring-0 w-full"
+      {protocolId && (
+        <div className="bg-white rounded-[15px] ml-93.5 w-full max-w-372.75 py-6.25 flex flex-row gap-16">
+          <Sidebar
+            sections={sidebarSections}
+            activeSection={activeSection}
+            onSectionClick={handleSectionClick}
           />
 
-          <div className="flex gap-9 flex-col">
-            {sections.map((section) => (
-              <div
-                key={section.id}
-                ref={(el) => {
-                  sectionRefs.current[section.sectionKey] = el;
-                }}
-                className="scroll-mt-24"
-              >
-                <SectionInput
-                  key={section.id}
-                  id={section.id}
-                  label={section.label}
-                  value={section.value}
-                  onLabelChange={handleLabelChange}
-                  onValueChange={handleValueChange}
-                  sectionKey={section.sectionKey}
-                />
-              </div>
-            ))}
-          </div>
+          <div className="flex flex-col gap-12 ml-84.75 w-216 ">
+            <input
+              type="text"
+              value={templateTitle}
+              onChange={(e: ChangeEvent<HTMLInputElement>) =>
+                setTemplateTitle(e.target.value)
+              }
+              className="text-[40px] pl-6 font-semibold leading-[150%] bg-transparent border-0 focus:outline-none focus:ring-0 w-full"
+            />
 
-          <button
-            onClick={handleSave}
-            className="hover:bg-[#769CEF] text-white rounded-xl h-13 ml-6 cursor-pointer bg-[#5D8CF1] px-6 transition-colors"
-          >
-            Сохранить
-          </button>
+            <div className="flex gap-9 flex-col">
+              {sections.map((section) => (
+                <div
+                  key={section.id}
+                  ref={(el) => {
+                    sectionRefs.current[section.sectionKey] = el;
+                  }}
+                  className="scroll-mt-24"
+                >
+                  <SectionInput
+                    key={section.id}
+                    id={section.id}
+                    label={section.label}
+                    value={section.value}
+                    onLabelChange={handleLabelChange}
+                    onValueChange={handleValueChange}
+                    sectionKey={section.sectionKey}
+                  />
+                </div>
+              ))}
+            </div>
+
+            <button
+              onClick={handleSave}
+              className="hover:bg-[#769CEF] text-white rounded-xl h-13 ml-6 cursor-pointer bg-[#5D8CF1] px-6 transition-colors"
+            >
+              Сохранить
+            </button>
+          </div>
         </div>
-      </div>
+      )}
     </>
   );
 }

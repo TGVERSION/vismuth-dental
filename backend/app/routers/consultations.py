@@ -90,6 +90,7 @@ async def create_consultation(
         comorbid_diagnoses=payload.comorbid_diagnoses,
         recommendations=payload.recommendations,
         prescriptions=payload.prescriptions,
+        protocol_name=payload.protocol_name,
         status_protocol=payload.status_protocol or "draft",
         created_at=now,
         updated_at=now,
@@ -174,6 +175,8 @@ async def update_consultation(
         consultation.recommendations = payload.recommendations
     if payload.prescriptions is not None:
         consultation.prescriptions = payload.prescriptions
+    if payload.protocol_name is not None:
+        consultation.protocol_name = payload.protocol_name
     if payload.status_protocol is not None:
         consultation.status_protocol = payload.status_protocol
 

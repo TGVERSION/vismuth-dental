@@ -1,7 +1,7 @@
 import type { NextConfig } from 'next';
 
-const API_MAIN_URL = process.env.API_MAIN_URL;
-const API_ML_URL = process.env.API_ML_URL;
+const API_MAIN_URL = process.env.API_MAIN_URL || 'http://localhost:8000';
+const API_ML_URL = process.env.API_ML_URL || 'http://localhost:8001';
 
 if (process.env.NODE_ENV !== 'production') {
   console.log('API_MAIN_URL:', API_MAIN_URL);

@@ -15,7 +15,7 @@ export interface CompleteResponse {
 }
 
 export interface ConsultationsRequest {
-  id: number;
+  id: string;
   external_system: number;
   external_patient_id: number;
   external_doctor_id: number;
@@ -39,9 +39,9 @@ export interface ConsultationsRequest {
   status_protocol: string;
 }
 export interface ConsultationsResponse extends ConsultationsRequest {
-  deleted_at: Date;
-  created_at: Date;
-  updated_at: Date;
+  deleted_at: string;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface ListConsultationsResponse {

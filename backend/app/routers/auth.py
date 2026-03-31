@@ -175,7 +175,7 @@ async def register_confirm(
         select(ServiceUser).where(func.lower(ServiceUser.login) == login_norm),
     )
     if existing_user.scalar_one_or_none() is not None:
-        db.delete(pending)
+        await db.delete(pending)
         await db.commit()
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
@@ -194,7 +194,7 @@ async def register_confirm(
         deleted_at=None,
     )
     db.add(user)
-    db.delete(pending)
+    await db.delete(pending)
     await db.commit()
     await db.refresh(user)
 

@@ -202,7 +202,7 @@ async def delete_consultation(
     consultation = result.scalar_one_or_none()
     consultation = _ensure_consultation_owner(consultation, current_user.id)
 
-    db.delete(consultation)
+    await db.delete(consultation)
     await db.commit()
 
     return None

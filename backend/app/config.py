@@ -32,7 +32,7 @@ class Settings(BaseModel):
         os.getenv("REGISTRATION_CODE_MAX_ATTEMPTS", "5"),
     )
 
-    default_user_role: str = os.getenv("DEFAULT_USER_ROLE", "operator")
+    default_user_role: str = os.getenv("DEFAULT_USER_ROLE", "doctor")
 
     @property
     def database_url_async(self) -> str:

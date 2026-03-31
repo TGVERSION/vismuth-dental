@@ -320,6 +320,7 @@ CREATE TABLE IF NOT EXISTS consultation (
     prescriptions TEXT,
 
     -- Служебные поля
+    protocol_name VARCHAR(255), -- название протокола
     status_protocol VARCHAR(255), -- статус протокола (draft/active/cancelled/archived и т.п.)
     created_at TIMESTAMPTZ DEFAULT now(),
     updated_at TIMESTAMPTZ,

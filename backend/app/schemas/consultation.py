@@ -123,4 +123,12 @@ class ConsultationRead(ConsultationBase):
 
 class ConsultationIdRead(BaseModel):
     id: UUID
+    protocol_name: Optional[str] = Field(
+        default=None,
+        description="Название протокола",
+    )
+    updated_at: Optional[datetime]
+
+    class Config:
+        from_attributes = True
 

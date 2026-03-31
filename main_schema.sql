@@ -232,6 +232,34 @@ COMMENT ON COLUMN ref_disease_character.id IS 'Идентификатор из �
 
 
 -- =========================================
+-- Справочник МИС (дальше сюда зальются внутренние справочиники)
+-- =========================================
+
+CREATE TABLE ref_mis (
+    row_id bigserial PRIMARY KEY,
+
+    mis_id bigint, --id из МИС
+    mis_name varchar(500), -- название сущности из МИС
+
+    ref_code varchar(255), -- внутренний код (код группы или уже само значение)
+    ref_name varchar(500), -- название (тут или название группы или уже само значение)
+
+    parent_id bigint, -- id родителя
+    is_group boolean NOT NULL DEFAULT false, -- является ли группой
+    is_active boolean NOT NULL DEFAULT true, -- является ли активной
+
+    level int NOT NULL DEFAULT 0, -- уровень вложенности (ускоряет выборки)
+    path text NULL, -- путь (опционально, но может быть полезно) например: /1/5/23/
+
+    attributes jsonb NULL, -- на всякий случай, можно использовать для хранения дополнительных данных
+
+    created_at timestamptz DEFAULT now(),
+    updated_at timestamptz DEFAULT now(),
+    deleted_at timestamptz NULL
+);
+
+
+-- =========================================
 -- Основная сущность: протокол консультации
 -- =========================================
 

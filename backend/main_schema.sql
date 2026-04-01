@@ -418,7 +418,27 @@ CREATE TABLE IF NOT EXISTS template_group (
     deleted_at TIMESTAMPTZ -- дата удаления
 );
 
+CREATE TABLE IF NOT EXISTS protocol_template (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    protocol_name VARCHAR(255), -- название шаблона
+    group_id UUID REFERENCES template_group(id), -- идентификатор группы (ссылка на группу или NULL)
+    creator_id UUID REFERENCES service_user(id), -- идентификатор создателя (ссылка на пользователя)
+    privacy VARCHAR(255), -- приватность ("Общий" или "Личный")
+    created_at TIMESTAMPTZ DEFAULT now(), -- дата создания
+    updated_at TIMESTAMPTZ, -- дата изменения
+    deleted_at TIMESTAMPTZ -- дата удаления
+);
 
+CREATE TABLE IF NOT EXISTS protocol_template_fields (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    protocol_template_id UUID REFERENCES protocol_template(id), -- идентификатор шаблона (ссылка на шаблон)
+    field_name VARCHAR(255), -- название поля
+    field_type VARCHAR(255), -- тип поля
+    field_value TEXT, -- значение поля
+    created_at TIMESTAMPTZ DEFAULT now(), -- дата создания
+    updated_at TIMESTAMPTZ, -- дата изменения
+    deleted_at TIMESTAMPTZ -- дата удаления
+);
 
 
 

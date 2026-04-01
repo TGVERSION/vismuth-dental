@@ -46,6 +46,8 @@ export interface ConsultationsResponse extends ConsultationsRequest {
 
 export interface ListConsultationsResponse {
   id: string;
+  updated_at: string;
+  protocol_name: string;
 }
 
 export interface LoginRequest {

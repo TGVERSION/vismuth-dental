@@ -71,8 +71,7 @@ export const mainApi = {
 
   // Протоколы
   consultations: {
-    getLists: (service_user: string) =>
-      request<ListConsultationsResponse[]>(`/consultations/${service_user}`),
+    getLists: () => request<ListConsultationsResponse[]>(`/consultations`),
     create: (data: ConsultationsRequest) =>
       request<ConsultationsResponse>('/consultations', {
         method: 'POST',

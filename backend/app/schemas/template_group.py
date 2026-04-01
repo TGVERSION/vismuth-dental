@@ -8,6 +8,10 @@ class TemplateGroupCreate(BaseModel):
     group_name: str = Field(..., min_length=1, max_length=255, description="Название группы")
 
 
+class TemplateGroupUpdate(BaseModel):
+    group_name: str = Field(..., min_length=1, max_length=255, description="Новое название группы")
+
+
 class TemplateGroupRead(BaseModel):
     id: UUID
     group_name: str

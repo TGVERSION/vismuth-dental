@@ -418,6 +418,10 @@ CREATE TABLE IF NOT EXISTS template_group (
     deleted_at TIMESTAMPTZ -- дата удаления
 );
 
+CREATE UNIQUE INDEX IF NOT EXISTS idx_template_group_creator_group_name_unique
+    ON template_group (creator_id, lower(group_name))
+    WHERE deleted_at IS NULL;
+
 CREATE TABLE IF NOT EXISTS protocol_template (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     protocol_name VARCHAR(255), -- название шаблона

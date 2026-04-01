@@ -280,9 +280,13 @@ export default function AuthForms() {
               <button
                 type="submit"
                 disabled={loading}
-                className="cursor-pointer w-full py-3 bg-[#5D8CF1] mt-2.5 hover:bg-[#769CEF] text-white rounded-xl transition-colors"
+                className="cursor-pointer h-11.75 w-full py-3 bg-[#5D8CF1] mt-2.5 hover:bg-[#769CEF] text-white rounded-xl transition-colors"
               >
-                {loading ? 'Загрузка...' : 'Войти'}
+                {loading ? (
+                  <div className="animate-spin mx-auto my- rounded-full h-5 w-5 border-b-2 border-white"></div>
+                ) : (
+                  'Войти'
+                )}
               </button>
             </form>
             <div className="flex justify-between mt-7.5 text-sm">
@@ -368,9 +372,13 @@ export default function AuthForms() {
               </div>
               <button
                 type="submit"
-                className="w-full py-3 cursor-pointer bg-[#5D8CF1] hover:bg-[#769CEF] mt-2.5 text-white rounded-xl transition-colors"
+                className="w-full h-11.75 py-3 cursor-pointer bg-[#5D8CF1] hover:bg-[#769CEF] mt-2.5 text-white rounded-xl transition-colors"
               >
-                {loading ? 'Загрузка...' : 'Зарегистрироваться'}
+                {loading ? (
+                  <div className="animate-spin mx-auto my- rounded-full h-5 w-5 border-b-2 border-white"></div>
+                ) : (
+                  'Зарегистрироваться'
+                )}
               </button>
             </form>
             <div className="text-center mt-7.5">
@@ -435,9 +443,13 @@ export default function AuthForms() {
               <button
                 type="submit"
                 disabled={code.some((d) => !d) || loading}
-                className="w-full py-3 bg-[#5D8CF1] hover:bg-[#769CEF] disabled:bg-gray-300 disabled:cursor-not-allowed text-white rounded-xl transition-colors"
+                className="w-full h-11.75 py-3 bg-[#5D8CF1] hover:bg-[#769CEF] disabled:bg-gray-300 disabled:cursor-not-allowed text-white rounded-xl transition-colors"
               >
-                {loading ? 'Проверка...' : 'Продолжить'}
+                {loading ? (
+                  <div className="animate-spin mx-auto my- rounded-full h-5 w-5 border-b-2 border-white"></div>
+                ) : (
+                  'Продолжить'
+                )}
               </button>
             </form>
 

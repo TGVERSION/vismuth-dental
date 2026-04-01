@@ -1,10 +1,15 @@
 'use client';
 
-import { ConsultationsRequest, mainApi } from '@/api';
+import {
+  ConsultationsRequest,
+  mainApi,
+  ListConsultationsResponse,
+} from '@/api';
 import { SectionInput } from '@/components/SectionInput';
 import { Sidebar } from '@/components/Sidebar';
 import { useState, ChangeEvent, useRef, useEffect, useCallback } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { toast } from 'react-toastify';
 
 interface SectionData {
   id: number;
@@ -16,9 +21,11 @@ interface SectionData {
 export default function Home() {
   const router = useRouter();
   const searchParams = useSearchParams();
+
   const [templateTitle, setTemplateTitle] = useState<string>(
     'Протокол консультации терапевта №1',
   );
+
   const SECTION_TO_API_FIELD: Record<string, keyof ConsultationsRequest> = {
     complaints: 'complaints',
     disease_anamnesis: 'disease_anamnesis',
@@ -34,6 +41,7 @@ export default function Home() {
     recommendations: 'recommendations',
     prescriptions: 'prescriptions',
   };
+
   const [sections, setSections] = useState<SectionData[]>([
     { id: 1, label: 'Жалобы', value: '', sectionKey: 'complaints' },
     {
@@ -48,12 +56,7 @@ export default function Home() {
       value: '',
       sectionKey: 'disease_history',
     },
-    {
-      id: 4,
-      label: 'Анамнез жизни',
-      value: '',
-      sectionKey: 'life_anamnesis',
-    },
+    { id: 4, label: 'Анамнез жизни', value: '', sectionKey: 'life_anamnesis' },
     {
       id: 5,
       label: 'Вредные привычки и зависимости',
@@ -90,33 +93,40 @@ export default function Home() {
       value: '',
       sectionKey: 'consultation_conclusion',
     },
-    {
-      id: 11,
-      label: 'Диагнозы',
-      value: '',
-      sectionKey: 'main_diagnosis',
-    },
-    {
-      id: 12,
-      label: 'Рекомендации',
-      value: '',
-      sectionKey: 'recommendations',
-    },
-    {
-      id: 13,
-      label: 'Назначения',
-      value: '',
-      sectionKey: 'prescriptions',
-    },
+    { id: 11, label: 'Диагнозы', value: '', sectionKey: 'main_diagnosis' },
+    { id: 12, label: 'Рекомендации', value: '', sectionKey: 'recommendations' },
+    { id: 13, label: 'Назначения', value: '', sectionKey: 'prescriptions' },
   ]);
+
   const [activeSection, setActiveSection] = useState<string>('complaints');
   const [protocolId, setProtocolId] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [lastSavedData, setLastSavedData] = useState<string>('');
   const [isLoading, setIsLoading] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
+
+  // 🔹 Список протоколов из API
+  const [consultations, setConsultations] = useState<
+    ListConsultationsResponse[]
+  >([]);
+  const [isLoadingList, setIsLoadingList] = useState(false);
+
   const sectionRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const saveTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  const loadConsultationsList = async () => {
+    setIsLoadingList(true);
+    try {
+      const response = await mainApi.consultations.getLists();
+      setConsultations(response || []);
+      console.log('Список протоколов загружен:', response?.length);
+    } catch (error) {
+      console.error('Ошибка загрузки списка:', error);
+      setLoadError('Не удалось загрузить список протоколов');
+    } finally {
+      setIsLoadingList(false);
+    }
+  };
 
   const loadProtocol = async (id: string) => {
     setIsLoading(true);
@@ -124,22 +134,24 @@ export default function Home() {
 
     try {
       const response = await mainApi.consultations.getConsultation(id);
+
       setSections((prev) =>
         prev.map((section) => {
           const apiField = SECTION_TO_API_FIELD[section.sectionKey];
-
-          if (!apiField) {
-            return section;
-          }
+          if (!apiField) return section;
 
           const apiValue = response[apiField];
-
           return {
             ...section,
             value: typeof apiValue === 'string' ? apiValue : '',
           };
         }),
       );
+
+      // Обновляем заголовок если есть
+      // if (response.template_title) {
+      setTemplateTitle(`Протокол №${response.id.slice(-12)}`);
+      // }
 
       console.log('Протокол загружен:', id);
     } catch (error) {
@@ -149,6 +161,11 @@ export default function Home() {
       setIsLoading(false);
     }
   };
+
+  useEffect(() => {
+    loadConsultationsList();
+  }, []);
+
   useEffect(() => {
     const id = searchParams.get('id');
     if (id) {
@@ -159,6 +176,7 @@ export default function Home() {
 
   useEffect(() => {
     if (!protocolId) return;
+
     const currentData = JSON.stringify({ templateTitle, sections });
     if (currentData === lastSavedData) return;
 
@@ -180,7 +198,6 @@ export default function Home() {
 
   const autoSave = async () => {
     if (!protocolId || isSaving) return;
-
     setIsSaving(true);
 
     try {
@@ -235,6 +252,7 @@ export default function Home() {
       setIsSaving(false);
     }
   };
+
   const handleLabelChange = (id: number, newLabel: string) => {
     setSections((prev) =>
       prev.map((section) =>
@@ -242,6 +260,7 @@ export default function Home() {
       ),
     );
   };
+
   useEffect(() => {
     const handleScroll = () => {
       const scrollPosition = window.scrollY + 300;
@@ -289,15 +308,25 @@ export default function Home() {
         section.id === id ? { ...section, value: newValue } : section,
       ),
     );
-    setActiveSection(sections.find((sec) => sec.id === id)?.label ?? '');
+    setActiveSection(sections.find((sec) => sec.id === id)?.sectionKey ?? '');
   };
 
   const handleSave = async () => {
     if (protocolId) {
       await autoSave();
+      toast.success('Протокол сохранён');
     } else {
       await createNew();
     }
+  };
+
+  const handleConsultationClick = (id: string) => {
+    setProtocolId(id);
+    loadProtocol(id);
+
+    const params = new URLSearchParams(window.location.search);
+    params.set('id', id);
+    router.replace(`?${params.toString()}`, { scroll: false });
   };
 
   const sidebarSections = sections.map((section) => ({
@@ -349,11 +378,14 @@ export default function Home() {
         router.replace(`?${params.toString()}`, { scroll: false });
 
         console.log('Протокол создан, ID:', newId);
+
+        loadConsultationsList();
       }
     } catch (error) {
       console.error('Ошибка создания протокола:', error);
     }
   };
+
   useEffect(() => {
     return () => {
       if (saveTimerRef.current) {
@@ -361,91 +393,116 @@ export default function Home() {
       }
     };
   }, []);
+
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('ru-RU', {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric',
+    });
+  };
   return (
     <>
-      <div className="fixed ml-3 mr-5 left-0 top-20 h-[92vh] w-85.75 flex flex-col bg-[#F3F4F8] z-30">
+      {/* Левая панель со списком протоколов */}
+      <div className="fixed ml-3 mr-5 left-0 top-20 custom-height w-85.75 flex flex-col bg-[#F3F4F8] z-30">
         <button
           onClick={createNew}
           className="shrink-0 w-full mb-6 hover:text-[#769CEF] bg-white rounded-xl h-13 cursor-pointer text-[#5D8CF1] px-6 transition-colors"
         >
           Создать новый протокол
         </button>
+
+        {/* Индикатор загрузки списка */}
+        {isLoadingList && (
+          <div className="animate-spin mx-auto my-40 rounded-full h-10 w-10 border-b-2 border-[#5D8CF1]"></div>
+        )}
+
         <div className="flex-1 overflow-y-auto overflow-x-hidden custom-scrollbar">
-          <div className="flex flex-col gap-1.25">
-            <div className="px-3.75 py-2.25 text-[14px] font-semibold">
-              2026
+          {consultations.length > 0 ? (
+            <div className="flex flex-col gap-1.25">
+              {/* Группировка по годам */}
+              {Object.entries(
+                consultations.reduce(
+                  (acc, consultation) => {
+                    const year = new Date(
+                      consultation.updated_at,
+                    ).getFullYear();
+                    if (!acc[year]) acc[year] = [];
+                    acc[year].push(consultation);
+                    return acc;
+                  },
+                  {} as Record<string, ListConsultationsResponse[]>,
+                ),
+              ).map(([year, yearConsultations]) => (
+                <div key={year} className="flex flex-col gap-1.25">
+                  <div className="px-3.75 py-2.25 text-[14px] font-semibold">
+                    {year}
+                  </div>
+
+                  {/* Группировка по месяцам */}
+                  {Object.entries(
+                    yearConsultations.reduce(
+                      (acc, consultation) => {
+                        const month = new Date(
+                          consultation.updated_at,
+                        ).toLocaleDateString('ru-RU', { month: 'long' });
+                        if (!acc[month]) acc[month] = [];
+                        acc[month].push(consultation);
+                        return acc;
+                      },
+                      {} as Record<string, ListConsultationsResponse[]>,
+                    ),
+                  ).map(([month, monthConsultations]) => (
+                    <div key={month} className="flex flex-col gap-1.25">
+                      <div className="px-6.25 py-2.25 text-[14px] font-medium">
+                        {month.charAt(0).toUpperCase() + month.slice(1)}
+                      </div>
+
+                      {monthConsultations.map((consultation) => (
+                        <div
+                          key={consultation.id}
+                          onClick={() =>
+                            handleConsultationClick(consultation.id)
+                          }
+                          className={`ml-6.25 px-2.5 py-2.25 rounded-[15px] transition-all cursor-pointer ${
+                            protocolId === consultation.id
+                              ? 'bg-white'
+                              : 'hover:bg-white'
+                          }`}
+                        >
+                          <p className="text-[14px] font-medium">
+                            {consultation.protocol_name ||
+                              `Протокол №${consultation.id.slice(-12)}`}
+                          </p>
+                          <span className="text-[14px] text-[#6C757D]">
+                            {formatDate(consultation.updated_at)}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  ))}
+                </div>
+              ))}
             </div>
-            <div className="px-6.25 py-2.25 text-[14px] font-medium">Март</div>
-            <div className="ml-6.25 px-2.5 py-2.25 hover:bg-white rounded-[15px] transition-all cursor-pointer">
-              <p className="text-[14px]">Протокол терапевта №6</p>
-              <span className="text-[14px] text-[#6C757D]">1 март 2026</span>
-            </div>
-            <div className="ml-6.25 px-2.5 py-2.25 hover:bg-white rounded-[15px] transition-all cursor-pointer">
-              <p className="text-[14px]">Протокол терапевта №6</p>
-              <span className="text-[14px] text-[#6C757D]">1 март 2026</span>
-            </div>
-            <div className="px-3.75 py-2.25 text-[14px] font-semibold">
-              2025
-            </div>
-            <div className="px-6.25 py-2.25 text-[14px] font-medium">Март</div>
-            <div className="ml-6.25 px-2.5 py-2.25 hover:bg-white rounded-[15px] transition-all cursor-pointer">
-              <p className="text-[14px]">Протокол терапевта №6</p>
-              <span className="text-[14px] text-[#6C757D]">1 март 2025</span>
-            </div>
-            <div className="ml-6.25 px-2.5 py-2.25 hover:bg-white rounded-[15px] transition-all cursor-pointer">
-              <p className="text-[14px]">Протокол терапевта №6</p>
-              <span className="text-[14px] text-[#6C757D]">1 март 2025</span>
-            </div>
-            <div className="px-3.75 py-2.25 text-[14px] font-semibold">
-              2024
-            </div>
-            <div className="px-6.25 py-2.25 text-[14px] font-medium">Март</div>
-            <div className="ml-6.25 px-2.5 py-2.25 hover:bg-white rounded-[15px] transition-all cursor-pointer">
-              <p className="text-[14px]">Протокол терапевта №6</p>
-              <span className="text-[14px] text-[#6C757D]">1 март 2024</span>
-            </div>
-            <div className="ml-6.25 px-2.5 py-2.25 hover:bg-white rounded-[15px] transition-all cursor-pointer">
-              <p className="text-[14px]">Протокол терапевта №6</p>
-              <span className="text-[14px] text-[#6C757D]">1 март 2024</span>
-            </div>
-            <div className="px-6.25 py-2.25 text-[14px] font-medium">
-              Февраль
-            </div>
-            <div className="ml-6.25 px-2.5 py-2.25 hover:bg-white rounded-[15px] transition-all cursor-pointer">
-              <p className="text-[14px]">Протокол терапевта №6</p>
-              <span className="text-[14px] text-[#6C757D]">1 февр 2024</span>
-            </div>
-            <div className="ml-6.25 px-2.5 py-2.25 hover:bg-white rounded-[15px] transition-all cursor-pointer">
-              <p className="text-[14px]">Протокол терапевта №6</p>
-              <span className="text-[14px] text-[#6C757D]">1 февр 2024</span>
-            </div>
-            <div className="px-3.75 py-2.25 text-[14px] font-semibold">
-              2023
-            </div>
-            <div className="px-6.25 py-2.25 text-[14px] font-medium">Март</div>
-            <div className="ml-6.25 px-2.5 py-2.25 hover:bg-white rounded-[15px] transition-all cursor-pointer">
-              <p className="text-[14px]">Протокол терапевта №6</p>
-              <span className="text-[14px] text-[#6C757D]">1 март 2023</span>
-            </div>
-            <div className="ml-6.25 px-2.5 py-2.25 hover:bg-white rounded-[15px] transition-all cursor-pointer">
-              <p className="text-[14px]">Протокол терапевта №6</p>
-              <span className="text-[14px] text-[#6C757D]">1 март 2023</span>
-            </div>
-            <div className="px-6.25 py-2.25 text-[14px] font-medium">
-              Февраль
-            </div>
-            <div className="ml-6.25 px-2.5 py-2.25 hover:bg-white rounded-[15px] transition-all cursor-pointer">
-              <p className="text-[14px]">Протокол терапевта №6</p>
-              <span className="text-[14px] text-[#6C757D]">1 февр 2023</span>
-            </div>
-            <div className="ml-6.25 px-2.5 py-2.25 hover:bg-white rounded-[15px] transition-all cursor-pointer">
-              <p className="text-[14px]">Протокол терапевта №6</p>
-              <span className="text-[14px] text-[#6C757D]">1 февр 2023</span>
-            </div>
-          </div>
+          ) : (
+            !isLoadingList && (
+              <div className="px-4 py-8 text-center text-gray-500 text-sm">
+                Нет сохранённых протоколов
+              </div>
+            )
+          )}
         </div>
       </div>
-      {protocolId && (
+
+      {isLoading && (
+        <div className="bg-white rounded-[15px] ml-93.5 w-full max-w-372.75 py-6.25 flex flex-row gap-16">
+          <div className="animate-spin mx-auto my-40 rounded-full h-10 w-10 border-b-2 border-[#5D8CF1]"></div>
+        </div>
+      )}
+
+      {/* Основной контент */}
+      {protocolId && !isLoading && (
         <div className="bg-white rounded-[15px] ml-93.5 w-full max-w-372.75 py-6.25 flex flex-row gap-16">
           <Sidebar
             sections={sidebarSections}
@@ -453,7 +510,7 @@ export default function Home() {
             onSectionClick={handleSectionClick}
           />
 
-          <div className="flex flex-col gap-12 ml-84.75 w-216 ">
+          <div className="flex flex-col gap-12 ml-84.75 w-216">
             <input
               type="text"
               value={templateTitle}
@@ -487,9 +544,14 @@ export default function Home() {
 
             <button
               onClick={handleSave}
-              className="hover:bg-[#769CEF] text-white rounded-xl h-13 ml-6 cursor-pointer bg-[#5D8CF1] px-6 transition-colors"
+              disabled={isSaving}
+              className="hover:bg-[#769CEF] text-white rounded-xl h-13 ml-6 cursor-pointer bg-[#5D8CF1] px-6 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
-              Сохранить
+              {isSaving ? (
+                <div className="animate-spin mx-auto my- rounded-full h-5 w-5 border-b-2 border-white"></div>
+              ) : (
+                'Сохранить'
+              )}
             </button>
           </div>
         </div>

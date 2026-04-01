@@ -111,3 +111,8 @@ body {
 .animate-slide-out {
   animation: slideOut 0.3s ease-in;
 }
+
+.custom-height {
+  height: calc(100vh - 80px);
+  min-height: calc(100vh - 140px);
+}

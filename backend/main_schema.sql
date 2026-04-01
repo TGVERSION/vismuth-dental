@@ -405,11 +405,18 @@ CREATE INDEX IF NOT EXISTS idx_registration_pending_expires_at
 
 
 
+-- =========================================
+-- Сущности для групп и шаблонов протоколов
+-- =========================================
 
-
-
-
-
+CREATE TABLE IF NOT EXISTS template_group (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    group_name VARCHAR(255), -- название группы
+    creator_id UUID REFERENCES service_user(id), -- идентификатор создателя (ссылка на пользователя)
+    created_at TIMESTAMPTZ DEFAULT now(), -- дата создания
+    updated_at TIMESTAMPTZ, -- дата изменения
+    deleted_at TIMESTAMPTZ -- дата удаления
+);
 
 
 

@@ -18,3 +18,11 @@ class TemplateGroupRead(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+class TemplateGroupIdNameRead(BaseModel):
+    id: UUID
+    group_name: str
+
+    class Config:
+        from_attributes = True

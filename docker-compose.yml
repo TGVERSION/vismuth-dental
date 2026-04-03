@@ -60,8 +60,8 @@ services:
       - "8001:8000"
     volumes:
       - "./ml-service/finetuned_autocomplete_kaggle:/app/autocomplete_model"
-      - "C:/Users/highs/OneDrive/Рабочий стол/PP/rosberta_chromadb:/app/rosberta_chromadb"
-      - "C:/Users/highs/OneDrive/Рабочий стол/PP/ru-en-RoSBERTa:/app/ru-en-RoSBERTa"
+      - "./ml-service/rosberta_chromadb:/app/rosberta_chromadb"
+      - "./ml-service/ru-en-RoSBERTa:/app/ru-en-RoSBERTa"
     networks:
       - vismuth-net
 

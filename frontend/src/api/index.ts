@@ -73,3 +73,19 @@ export interface UserData {
   role: string;
   login: string;
 }
+
+export interface Mkb10Item {
+  code: string;
+  name: string;
+}
+export interface Mkb10Response {
+  page: number;
+  size: number;
+  totalCount: number;
+  items: Mkb10Item[];
+}
+export interface Mkb10Request {
+  page: number;
+  size: number;
+  searchValue?: string;
+}

@@ -503,22 +503,17 @@ export default function Home() {
 
       {/* Основной контент */}
       {protocolId && !isLoading && (
-        <div className="bg-white rounded-[15px] ml-93.5 w-full max-w-372.75 py-6.25 flex flex-row gap-16">
+        <div className="bg-white rounded-[15px] ml-93.5 w-full max-w-372.75 py-6.25 flex flex-row gap-16 pr-5 mr-2">
           <Sidebar
             sections={sidebarSections}
             activeSection={activeSection}
             onSectionClick={handleSectionClick}
           />
 
-          <div className="flex flex-col gap-12 ml-84.75 w-216">
-            <input
-              type="text"
-              value={templateTitle}
-              onChange={(e: ChangeEvent<HTMLInputElement>) =>
-                setTemplateTitle(e.target.value)
-              }
-              className="text-[40px] pl-6 font-semibold leading-[150%] bg-transparent border-0 focus:outline-none focus:ring-0 w-full"
-            />
+          <div className="flex flex-col gap-12 lg:ml-84.75 max-w-216">
+            <div className="text-[40px] pl-6 font-semibold leading-[150%] bg-transparent border-0 focus:outline-none focus:ring-0 w-full">
+              {templateTitle}
+            </div>
 
             <div className="flex gap-9 flex-col">
               {sections.map((section) => (

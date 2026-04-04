@@ -28,7 +28,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   };
 
   return (
-    <nav className="fixed w-62.5 flex flex-col ml-5 gap-6">
+    <nav className="fixed w-62.5 flex-col ml-5 gap-6 hidden lg:flex">
       <div className="sticky top-24">
         <ul className="flex flex-col gap-4">
           {sections.map((section) => (

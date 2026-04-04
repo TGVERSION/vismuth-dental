@@ -5,8 +5,7 @@ import { toast } from 'react-toastify';
 
 export const useAuth = () => {
   const router = useRouter();
-  const { user, accessToken, isAuthenticated, login, logout, clearAuth } =
-    useAuthStore();
+  const { user, accessToken, isAuthenticated, login, logout } = useAuthStore();
 
   const handleLogin = async (credentials: {
     login: string;
@@ -21,7 +20,8 @@ export const useAuth = () => {
 
       return { success: true };
     } catch (error) {
-      toast.error('Ошибка входа');
+      toast.error('Ошибка входа: ' + error);
+      console.log(error);
       return { success: false, error };
     }
   };
@@ -35,7 +35,8 @@ export const useAuth = () => {
       toast.info('Код подтверждения отправлен на почту');
       return { success: true };
     } catch (error) {
-      toast.error('Ошибка регистрации');
+      toast.error('Ошибка регистрации: ' + error);
+      console.log(error);
       return { success: false, error };
     }
   };
@@ -52,15 +53,25 @@ export const useAuth = () => {
 
       return { success: true };
     } catch (error) {
-      toast.error('Неверный код подтверждения');
+      toast.error('Неверный код подтверждения: ' + error);
+      console.log(error);
       return { success: false, error };
     }
   };
 
-  const handleLogout = () => {
-    clearAuth();
-    localStorage.removeItem('access_token');
-    router.push('/login');
+  const handleLogout = async () => {
+    try {
+      await mainApi.serviceUsers.logout();
+      logout();
+      localStorage.removeItem('access_token');
+      router.push('/login');
+
+      return { success: true };
+    } catch (error) {
+      toast.error('Не удалось выйти из профиля: ' + error);
+      console.log(error);
+      return { success: false, error };
+    }
   };
 
   const checkAuth = () => {

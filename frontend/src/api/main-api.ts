@@ -1,4 +1,4 @@
-import { useAuthStore } from '@/store/authStore';
+import { ApiClient } from './base-client';
 import type {
   ConsultationsRequest,
   ConsultationsResponse,
@@ -7,84 +7,54 @@ import type {
   LoginResponse,
   RegisterConfirmRequest,
   TokenResponse,
-} from '.';
+  Mkb10Request,
+  Mkb10Response,
+} from './index';
 
-const API_BASE_URL = '/api/main';
-
-async function request<T>(endpoint: string, options?: RequestInit): Promise<T> {
-  const accessToken = useAuthStore.getState().accessToken;
-
-  const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-    ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      ...(accessToken && { Authorization: `Bearer ${accessToken}` }),
-      ...options?.headers,
-    },
-  });
-
-  if (!response.ok) {
-    if (response.status === 401) {
-      useAuthStore.getState().clearAuth();
-      localStorage.removeItem('access_token');
-      if (typeof window !== 'undefined') {
-        window.location.href = '/login';
-      }
-    }
-    const error = await response.json().catch(() => ({}));
-    throw new Error(error.detail || `HTTP error! status: ${response.status}`);
-  }
-
-  return response.json();
-}
+export const apiClient = new ApiClient({
+  baseUrl: '/api/main',
+  timeout: 10000,
+  retries: 3,
+  retryDelay: 100,
+});
 
 export const mainApi = {
-  setToken: (token: string) => {
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('access_token', token);
-    }
+  mkb10: {
+    diagnisisList: (data: Mkb10Request) =>
+      apiClient.get<Mkb10Response>('/mkb10/', {
+        page: data.page,
+        size: data.size,
+        searchValue: data.searchValue,
+      }),
   },
 
-  clearToken: () => {
-    if (typeof window !== 'undefined') {
-      localStorage.removeItem('access_token');
-    }
-  },
   // Пользователи
   serviceUsers: {
     register: (data: LoginRequest) =>
-      request<LoginResponse>(`/auth/register`, {
-        method: 'POST',
-        body: JSON.stringify(data),
-      }),
+      apiClient.post<LoginResponse>('/auth/register', data),
+
     confirm: (data: RegisterConfirmRequest) =>
-      request<TokenResponse>(`/auth/register/confirm`, {
-        method: 'POST',
-        body: JSON.stringify(data),
-      }),
+      apiClient.post<TokenResponse>('/auth/register/confirm', data),
+
     login: (data: LoginRequest) =>
-      request<TokenResponse>(`/auth/login`, {
-        method: 'POST',
-        body: JSON.stringify(data),
-      }),
+      apiClient.post<TokenResponse>('/auth/login', data),
+    logout: () => apiClient.post<LoginResponse>('/auth/logout'),
   },
 
   // Протоколы
   consultations: {
-    getLists: () => request<ListConsultationsResponse[]>(`/consultations`),
+    getLists: () =>
+      apiClient.get<ListConsultationsResponse[]>('/consultations'),
+
     create: (data: ConsultationsRequest) =>
-      request<ConsultationsResponse>('/consultations', {
-        method: 'POST',
-        body: JSON.stringify(data),
-      }),
+      apiClient.post<ConsultationsResponse>('/consultations', data),
+
     getConsultation: (consultation_id: string) =>
-      request<ConsultationsResponse>(`/consultations/${consultation_id}`),
+      apiClient.get<ConsultationsResponse>(`/consultations/${consultation_id}`),
+
     update: (id: string, data: ConsultationsRequest) =>
-      request<ConsultationsResponse>(`/consultations/${id}`, {
-        method: 'PUT',
-        body: JSON.stringify(data),
-      }),
-    delete: (id: string) =>
-      request<void>(`/consultations/${id}`, { method: 'DELETE' }),
+      apiClient.put<ConsultationsResponse>(`/consultations/${id}`, data),
+
+    delete: (id: string) => apiClient.delete<void>(`/consultations/${id}`),
   },
 };

@@ -3,6 +3,7 @@
 import { ChangeEvent, useEffect, useRef } from 'react';
 import { useAutocomplete } from '@/hooks/useAutocomplete';
 import { AutocompleteSuggestions } from './AutocompleteSuggestions';
+import { DiagnosisInput } from './DiagnosisInput';
 
 interface SectionInputProps {
   id: number;
@@ -67,17 +68,21 @@ export const SectionInput: React.FC<SectionInputProps> = ({
     onValueChange(id, fullValue);
     handleSelect(fullValue);
   };
-
+  if (sectionKey === 'main_diagnosis') {
+    return (
+      <DiagnosisInput
+        id={id}
+        label={label}
+        value={value}
+        onValueChange={onValueChange}
+      />
+    );
+  }
   return (
     <div className="flex gap-2 flex-col relative">
-      <input
-        type="text"
-        value={label}
-        onChange={(e: ChangeEvent<HTMLInputElement>) =>
-          onLabelChange(id, e.target.value)
-        }
-        className="text-[30px] pl-6 font-medium leading-[140%] bg-transparent border-0 focus:outline-none focus:ring-0 w-full"
-      />
+      <div className="text-[30px] pl-6 font-medium leading-[140%] bg-transparent border-0 focus:outline-none focus:ring-0 w-full">
+        {label}
+      </div>
 
       <div className="relative">
         <textarea
@@ -88,11 +93,6 @@ export const SectionInput: React.FC<SectionInputProps> = ({
             setIsOpen(true);
             setHighlightedIndex(-1);
             setTimeout(() => autoResize(), 0);
-          }}
-          onClick={() => {
-            if (label === 'Диагноз') {
-              setIsOpen(true);
-            }
           }}
           onFocus={() => {
             setIsOpen(true);

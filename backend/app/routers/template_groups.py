@@ -3,11 +3,12 @@ from typing import List
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy import func, select
+from sqlalchemy import delete, func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..db import get_db
 from ..deps import get_current_user
+from ..models.protocol_template import ProtocolTemplate
 from ..models.service_user import ServiceUser
 from ..models.template_group import TemplateGroup
 from ..schemas.template_group import (
@@ -132,3 +133,35 @@ async def update_template_group(
     await db.commit()
     await db.refresh(group)
     return group
+
+
+@router.delete(
+    "/{group_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+)
+async def delete_template_group(
+    group_id: UUID,
+    current_user: ServiceUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> None:
+    group_stmt = select(TemplateGroup).where(
+        TemplateGroup.id == group_id,
+        TemplateGroup.creator_id == current_user.id,
+        TemplateGroup.deleted_at.is_(None),
+    )
+    group_result = await db.execute(group_stmt)
+    group = group_result.scalar_one_or_none()
+    if group is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Group not found",
+        )
+
+    now = datetime.now(timezone.utc)
+    await db.execute(
+        update(ProtocolTemplate)
+        .where(ProtocolTemplate.group_id == group_id)
+        .values(group_id=None, updated_at=now)
+    )
+    await db.execute(delete(TemplateGroup).where(TemplateGroup.id == group_id))
+    await db.commit()

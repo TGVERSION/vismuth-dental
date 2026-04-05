@@ -1,5 +1,6 @@
 from datetime import datetime, timezone
 from typing import List
+from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import and_, or_, select
@@ -52,6 +53,63 @@ async def list_protocol_templates(
     result = await db.execute(stmt)
     rows = result.scalars().all()
     return rows
+
+
+@router.get(
+    "/{template_id}",
+    response_model=ProtocolTemplateRead,
+)
+async def get_protocol_template(
+    template_id: UUID,
+    current_user: ServiceUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> ProtocolTemplateRead:
+    """Детали шаблона: общий или личный текущего пользователя (как в списке)."""
+    tpl_stmt = (
+        select(ProtocolTemplate)
+        .where(
+            ProtocolTemplate.id == template_id,
+            ProtocolTemplate.deleted_at.is_(None),
+            or_(
+                ProtocolTemplate.privacy == ProtocolPrivacy.general.value,
+                and_(
+                    ProtocolTemplate.privacy == ProtocolPrivacy.personal.value,
+                    ProtocolTemplate.creator_id == current_user.id,
+                ),
+            ),
+        )
+    )
+    tpl_result = await db.execute(tpl_stmt)
+    template = tpl_result.scalar_one_or_none()
+    if template is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Protocol template not found",
+        )
+
+    fields_stmt = (
+        select(ProtocolTemplateField)
+        .where(
+            ProtocolTemplateField.protocol_template_id == template_id,
+            ProtocolTemplateField.deleted_at.is_(None),
+        )
+        .order_by(ProtocolTemplateField.created_at.asc())
+    )
+    fields_result = await db.execute(fields_stmt)
+    field_rows = fields_result.scalars().all()
+    fields_read = [ProtocolTemplateFieldRead.model_validate(r) for r in field_rows]
+
+    return ProtocolTemplateRead(
+        id=template.id,
+        protocol_name=template.protocol_name,
+        group_id=template.group_id,
+        creator_id=template.creator_id,
+        privacy=template.privacy,
+        created_at=template.created_at,
+        updated_at=template.updated_at,
+        deleted_at=template.deleted_at,
+        fields=fields_read,
+    )
 
 
 @router.post(

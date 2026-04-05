@@ -3,7 +3,7 @@ from typing import List
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy import and_, or_, select
+from sqlalchemy import and_, delete, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..db import get_db
@@ -273,6 +273,49 @@ async def update_protocol_template(
         deleted_at=template.deleted_at,
         fields=fields_read,
     )
+
+
+@router.delete(
+    "/{template_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+)
+async def delete_protocol_template(
+    template_id: UUID,
+    current_user: ServiceUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> None:
+    tpl_stmt = select(ProtocolTemplate).where(
+        ProtocolTemplate.id == template_id,
+        ProtocolTemplate.deleted_at.is_(None),
+    )
+    tpl_result = await db.execute(tpl_stmt)
+    template = tpl_result.scalar_one_or_none()
+    if template is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Protocol template not found",
+        )
+
+    if template.privacy == ProtocolPrivacy.personal.value:
+        if template.creator_id != current_user.id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Cannot delete another user's personal protocol template",
+            )
+    elif template.privacy == ProtocolPrivacy.general.value:
+        if current_user.role not in _ROLES_ALLOWED_GENERAL_PRIVACY:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Insufficient permissions to delete a general protocol template",
+            )
+
+    await db.execute(
+        delete(ProtocolTemplateField).where(
+            ProtocolTemplateField.protocol_template_id == template_id,
+        )
+    )
+    await db.execute(delete(ProtocolTemplate).where(ProtocolTemplate.id == template_id))
+    await db.commit()
 
 
 @router.post(

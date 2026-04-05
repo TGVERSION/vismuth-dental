@@ -1,7 +1,8 @@
 from datetime import datetime, timezone
+from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy import select
+from sqlalchemy import and_, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..db import get_db
@@ -13,12 +14,44 @@ from ..schemas.protocol_template import (
     ProtocolPrivacy,
     ProtocolTemplateCreate,
     ProtocolTemplateFieldRead,
+    ProtocolTemplateListItem,
     ProtocolTemplateRead,
 )
 
 router = APIRouter(prefix="/protocol-templates", tags=["protocol-templates"])
 
 _ROLES_ALLOWED_GENERAL_PRIVACY = frozenset({"head_of_department", "administrator"})
+
+
+@router.get(
+    "",
+    response_model=List[ProtocolTemplateListItem],
+)
+async def list_protocol_templates(
+    current_user: ServiceUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> List[ProtocolTemplateListItem]:
+    """Личные шаблоны текущего пользователя и все общие (`privacy = general`)."""
+    stmt = (
+        select(ProtocolTemplate)
+        .where(
+            ProtocolTemplate.deleted_at.is_(None),
+            or_(
+                ProtocolTemplate.privacy == ProtocolPrivacy.general.value,
+                and_(
+                    ProtocolTemplate.privacy == ProtocolPrivacy.personal.value,
+                    ProtocolTemplate.creator_id == current_user.id,
+                ),
+            ),
+        )
+        .order_by(
+            ProtocolTemplate.updated_at.desc().nulls_last(),
+            ProtocolTemplate.created_at.desc(),
+        )
+    )
+    result = await db.execute(stmt)
+    rows = result.scalars().all()
+    return rows
 
 
 @router.post(

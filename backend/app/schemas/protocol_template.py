@@ -23,6 +23,13 @@ class ProtocolTemplateCreate(BaseModel):
     fields: list[ProtocolTemplateFieldCreate] = Field(default_factory=list)
 
 
+class ProtocolTemplateUpdate(BaseModel):
+    protocol_name: str | None = Field(default=None, min_length=1, max_length=255)
+    privacy: ProtocolPrivacy | None = None
+    group_id: UUID | None = None
+    fields: list[ProtocolTemplateFieldCreate] | None = None
+
+
 class ProtocolTemplateFieldRead(BaseModel):
     id: UUID
     field_name: str | None

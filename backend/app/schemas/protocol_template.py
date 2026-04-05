@@ -49,3 +49,13 @@ class ProtocolTemplateRead(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+class ProtocolTemplateListItem(BaseModel):
+    id: UUID
+    protocol_name: str | None
+    group_id: UUID | None
+    privacy: str | None
+
+    class Config:
+        from_attributes = True

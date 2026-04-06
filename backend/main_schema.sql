@@ -324,7 +324,10 @@ CREATE TABLE IF NOT EXISTS consultation (
     status_protocol VARCHAR(255), -- статус протокола (draft/active/cancelled/archived и т.п.)
     created_at TIMESTAMPTZ DEFAULT now(),
     updated_at TIMESTAMPTZ,
-    deleted_at TIMESTAMPTZ
+    deleted_at TIMESTAMPTZ,
+
+    protocol_template_id UUID REFERENCES protocol_template(id),
+    extra_fields JSONB
 );
 
 COMMENT ON TABLE consultation IS 'Протоколы консультаций (объединённая сущность, все разделы протокола в одной таблице)';
@@ -332,6 +335,8 @@ COMMENT ON TABLE consultation IS 'Протоколы консультаций (�
 CREATE INDEX IF NOT EXISTS idx_consultation_datetime
     ON consultation (consultation_datetime);
 
+CREATE INDEX IF NOT EXISTS idx_consultation_protocol_template_id
+    ON consultation (protocol_template_id);
 
 -- =========================================
 -- Сущности для пользователей

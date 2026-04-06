@@ -1,9 +1,9 @@
 from datetime import datetime, timezone
-from typing import Optional
+from typing import Any, Optional
 from uuid import UUID, uuid4
 
 from sqlalchemy import TIMESTAMP, ForeignKey, String, Text, Integer
-from sqlalchemy.dialects.postgresql import UUID as PG_UUID
+from sqlalchemy.dialects.postgresql import JSONB, UUID as PG_UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from ..db import Base
@@ -52,6 +52,13 @@ class Consultation(Base):
 
     protocol_name: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     status_protocol: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+
+    protocol_template_id: Mapped[Optional[UUID]] = mapped_column(
+        PG_UUID(as_uuid=True),
+        ForeignKey("protocol_template.id"),
+        nullable=True,
+    )
+    extra_fields: Mapped[Optional[dict[str, Any]]] = mapped_column(JSONB, nullable=True)
 
     created_at: Mapped[datetime] = mapped_column(
         TIMESTAMP(timezone=True),

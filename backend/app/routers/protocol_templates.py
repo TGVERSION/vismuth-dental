@@ -19,6 +19,7 @@ from ..schemas.protocol_template import (
     ProtocolTemplateRead,
     ProtocolTemplateUpdate,
 )
+from ..services.protocol_template_access import get_accessible_protocol_template
 
 router = APIRouter(prefix="/protocol-templates", tags=["protocol-templates"])
 
@@ -66,22 +67,11 @@ async def get_protocol_template(
     db: AsyncSession = Depends(get_db),
 ) -> ProtocolTemplateRead:
     """Детали шаблона: общий или личный текущего пользователя (как в списке)."""
-    tpl_stmt = (
-        select(ProtocolTemplate)
-        .where(
-            ProtocolTemplate.id == template_id,
-            ProtocolTemplate.deleted_at.is_(None),
-            or_(
-                ProtocolTemplate.privacy == ProtocolPrivacy.general.value,
-                and_(
-                    ProtocolTemplate.privacy == ProtocolPrivacy.personal.value,
-                    ProtocolTemplate.creator_id == current_user.id,
-                ),
-            ),
-        )
+    template = await get_accessible_protocol_template(
+        db,
+        template_id=template_id,
+        user=current_user,
     )
-    tpl_result = await db.execute(tpl_stmt)
-    template = tpl_result.scalar_one_or_none()
     if template is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,

@@ -1,8 +1,8 @@
 from datetime import datetime
-from typing import Optional
+from typing import Any, Optional
 from uuid import UUID
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class ConsultationBase(BaseModel):
@@ -94,10 +94,16 @@ class ConsultationBase(BaseModel):
         default="draft",
         description="Статус протокола",
     )
+    protocol_template_id: Optional[UUID] = Field(
+        default=None,
+        description="Шаблон протокола (доступен через GET /protocol-templates/{id})",
+    )
 
 
 class ConsultationCreate(ConsultationBase):
-    pass
+    """Неизвестные поля тела запроса считаются дополнительными (extra_fields в БД)."""
+
+    model_config = ConfigDict(extra="allow")
 
 
 class ConsultationUpdate(ConsultationBase):
@@ -113,12 +119,15 @@ class ConsultationRead(ConsultationBase):
         default=None,
         description="ID пользователя сервиса (service_user.id)",
     )
+    extra_fields: Optional[dict[str, Any]] = Field(
+        default=None,
+        description="Сохранённые доп. поля (ключи — не колонки consultation)",
+    )
     created_at: datetime
     updated_at: Optional[datetime]
     deleted_at: Optional[datetime]
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class ConsultationIdRead(BaseModel):
@@ -129,6 +138,28 @@ class ConsultationIdRead(BaseModel):
     )
     updated_at: Optional[datetime]
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
+
+
+class ConsultationViewField(BaseModel):
+    key: str
+    label: str
+    type: str
+    value: Any = None
+    is_extra: bool = False
+
+
+class ConsultationViewResponse(BaseModel):
+    fields: list[ConsultationViewField]
+
+
+class ConsultationViewPatchItem(BaseModel):
+    key: str = Field(..., min_length=1)
+    value: Any = None
+
+
+class ConsultationViewPatchRequest(BaseModel):
+    """Частичное обновление полей в формате, согласованном с GET /consultations/{id}/view."""
+
+    fields: list[ConsultationViewPatchItem] = Field(default_factory=list)
 

@@ -33,6 +33,15 @@ class Settings(BaseModel):
     )
 
     default_user_role: str = os.getenv("DEFAULT_USER_ROLE", "doctor")
+    ml_service_url: str = os.getenv("ML_SERVICE_URL", "http://ml-service:8000")
+
+    redis_host: str = os.getenv("REDIS_HOST", "redis")
+    redis_port: int = int(os.getenv("REDIS_PORT", "6379"))
+    redis_db: int = int(os.getenv("REDIS_DB", "0"))
+    redis_url: str = os.getenv("REDIS_URL", "redis://redis:6379/0")
+    redis_stream_key: str = os.getenv("REDIS_STREAM_KEY", "ml_mkb_code:events")
+    redis_consumer_group: str = os.getenv("REDIS_CONSUMER_GROUP", "ml_mkb_code_group")
+    redis_consumer_name: str = os.getenv("REDIS_CONSUMER_NAME", "backend-worker-1")
 
     @property
     def database_url_async(self) -> str:

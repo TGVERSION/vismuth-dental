@@ -26,8 +26,24 @@ services:
       - .env
     depends_on:
       - db
+      - redis
     ports:
       - "${BACKEND_PORT:-8000}:8000"
+    networks:
+      - vismuth-net
+
+  backend-worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: vismuth-backend-worker
+    restart: unless-stopped
+    env_file:
+      - .env
+    depends_on:
+      - db
+      - redis
+    command: ["python", "-m", "app.workers.ml_mkb_events_worker"]
     networks:
       - vismuth-net
 
@@ -65,8 +81,21 @@ services:
     networks:
       - vismuth-net
 
+  redis:
+    image: redis:7-alpine
+    container_name: vismuth-redis
+    restart: unless-stopped
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - vismuth_redis_data:/data
+    networks:
+      - vismuth-net
+
 volumes:
   vismuth_pg_data:
+  vismuth_redis_data:
 
 networks:
   vismuth-net:

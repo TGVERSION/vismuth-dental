@@ -7,7 +7,7 @@ import {
 } from '@/api';
 import { SectionInput } from '@/components/SectionInput';
 import { Sidebar } from '@/components/Sidebar';
-import { useState, ChangeEvent, useRef, useEffect, useCallback } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { toast } from 'react-toastify';
 

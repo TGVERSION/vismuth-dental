@@ -488,6 +488,131 @@ export const TemplatePopup: React.FC<TemplatePopupProps> = ({
                   />
                 </button>
               </div>
+              {selectedTemplate && (
+                <div>
+                  <div className="flex items-center justify-between pb-6 border-b px-8 border-gray-200 ">
+                    <div className="flex items-center gap-3">
+                      <span
+                        className={`text-md px-2.5 py-1.25 rounded-full ${
+                          selectedTemplate.type === 'personal'
+                            ? 'bg-[#FFD6BF]'
+                            : 'bg-[#CFE5E6]'
+                        }`}
+                      >
+                        {selectedTemplate.type === 'personal'
+                          ? 'Личный'
+                          : 'Общий'}
+                      </span>
+                      <h3 className="text-3xl font-medium text-[#202020]">
+                        {selectedTemplate.name}
+                      </h3>
+                    </div>
+                    <div className="flex items-center w-91.25 justify-end gap-2">
+                      <div className="relative h-8.5">
+                        <button
+                          className="h-8.5 cursor-pointer"
+                          title="Другие действия"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setOpenMenuId(
+                              openMenuId === selectedTemplate.id
+                                ? null
+                                : selectedTemplate.id,
+                            );
+                          }}
+                        >
+                          <Image
+                            alt="more"
+                            src="/more.svg"
+                            width={34}
+                            height={34}
+                          />
+                        </button>
+                        {openMenuId === selectedTemplate.id && (
+                          <div className="absolute right-0 top-full mt-1 bg-white border-0 rounded-lg shadow-lg p-1.5 z-10 template-actions-menu min-w-37.5">
+                            {/* <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setOpenMenuId(null);
+                              }}
+                              className="w-full px-4 py-2 text-left text-sm rounded-md cursor-pointer hover:bg-[#F0F5FF] transition-colors"
+                            >
+                              Редактировать
+                            </button> */}
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleRename(
+                                  selectedTemplate.id,
+                                  'template',
+                                  selectedTemplate.name,
+                                );
+                                setOpenMenuId(null);
+                              }}
+                              className="w-full px-4 py-2 text-left text-sm rounded-md cursor-pointer hover:bg-[#F0F5FF] transition-colors"
+                            >
+                              Переименовать
+                            </button>
+                            {/* <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setOpenMenuId(null);
+                              }}
+                              className="w-full px-4 py-2 text-left text-sm rounded-md cursor-pointer hover:bg-[#F0F5FF] transition-colors"
+                            >
+                              Переместить
+                            </button> */}
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                requestDeleteTemplate(
+                                  selectedTemplate.id,
+                                  selectedTemplate.name,
+                                );
+                              }}
+                              className="w-full px-4 py-2 text-left text-sm rounded-md cursor-pointer hover:bg-[#F0F5FF] transition-colors"
+                            >
+                              Удалить
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                      <button
+                        onClick={handleApply}
+                        className="px-6 py-2 h-9.5 bg-[#5D8CF1] cursor-pointer text-white rounded-lg hover:bg-[#769CEF] transition-colors"
+                      >
+                        Применить
+                      </button>
+                    </div>
+                  </div>
+                  <div className="py-5.25 pl-14 pr-8 flex flex-col gap-9">
+                    {selectedTemplate.content &&
+                      Object.entries(selectedTemplate.content).map(
+                        ([sectionKey, value]) => {
+                          const sectionLabel =
+                            PROTOCOL_SECTIONS.find((s) => s.key === sectionKey)
+                              ?.label || sectionKey;
+
+                          if (!value) return null;
+
+                          return (
+                            <div
+                              key={sectionKey}
+                              className="flex flex-col gap-3"
+                            >
+                              <h4 className="text-3xl font-medium text-[#202020]">
+                                {sectionLabel}
+                              </h4>
+                              <p className="text-md whitespace-pre-wrap">
+                                {value}
+                              </p>
+                            </div>
+                          );
+                        },
+                      )}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>

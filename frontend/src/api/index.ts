@@ -1,5 +1,6 @@
 export { mainApi } from './main-api';
 export { mlApi } from './ml-api';
+export { templateApi } from './template-api';
 
 export interface ApiError {
   detail: string;
@@ -88,4 +89,29 @@ export interface Mkb10Request {
   page: number;
   size: number;
   searchValue?: string;
+}
+
+export interface TemplateGroup {
+  id: string;
+  name: string;
+  type: 'personal' | 'shared';
+  templates?: Template[];
+  isExpanded?: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface Template {
+  id: string;
+  name: string;
+  type: 'personal' | 'shared';
+  groupId?: string | null;
+  content?: Record<string, string>;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface TemplateListResponse {
+  groups: TemplateGroup[];
+  templates: Template[];
 }

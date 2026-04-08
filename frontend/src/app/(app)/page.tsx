@@ -11,6 +11,10 @@ import { useState, ChangeEvent, useRef, useEffect, useCallback } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { toast } from 'react-toastify';
 
+import { TemplatePopup } from '@/components/template/TemplatePopup';
+import type { Template } from '@/api';
+import { CreateTemplatePopup } from '@/components/template/CreateTemplatePopup';
+
 interface SectionData {
   id: number;
   label: string;
@@ -93,7 +97,7 @@ export default function Home() {
       value: '',
       sectionKey: 'consultation_conclusion',
     },
-    { id: 11, label: 'Диагнозы', value: '', sectionKey: 'main_diagnosis' },
+    { id: 11, label: 'Диагноз', value: '', sectionKey: 'main_diagnosis' },
     { id: 12, label: 'Рекомендации', value: '', sectionKey: 'recommendations' },
     { id: 13, label: 'Назначения', value: '', sectionKey: 'prescriptions' },
   ]);
@@ -104,8 +108,27 @@ export default function Home() {
   const [lastSavedData, setLastSavedData] = useState<string>('');
   const [isLoading, setIsLoading] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [showTemplatePopup, setShowTemplatePopup] = useState(false);
 
-  // 🔹 Список протоколов из API
+  const [showSaveAsTemplatePopup, setShowSaveAsTemplatePopup] = useState(false);
+  const [isFromPage, setIsFromPage] = useState(false);
+  const handleApplyTemplate = (template: Template) => {
+    if (template.content) {
+      setSections((prev) =>
+        prev.map((section) => ({
+          ...section,
+          value: template.content?.[section.sectionKey] || section.value,
+        })),
+      );
+    }
+  };
+  const getCurrentProtocolContent = () => {
+    const content: Record<string, string> = {};
+    sections.forEach((section) => {
+      content[section.sectionKey] = section.value;
+    });
+    return content;
+  };
   const [consultations, setConsultations] = useState<
     ListConsultationsResponse[]
   >([]);
@@ -405,7 +428,7 @@ export default function Home() {
   return (
     <>
       {/* Левая панель со списком протоколов */}
-      <div className="fixed ml-3 mr-5 left-0 top-20 custom-height w-85.75 flex flex-col bg-[#F3F4F8] z-30">
+      <div className="fixed ml-3 mr-5 left-0 top-20 custom-height w-85.75 flex flex-col bg-[#F3F4F8]">
         <button
           onClick={createNew}
           className="shrink-0 w-full mb-6 hover:text-[#769CEF] bg-white rounded-xl h-13 cursor-pointer text-[#5D8CF1] px-6 transition-colors"
@@ -510,11 +533,28 @@ export default function Home() {
             onSectionClick={handleSectionClick}
           />
 
-          <div className="flex flex-col gap-12 lg:ml-84.75 max-w-216">
+          <div className="flex flex-col gap-9 lg:ml-84.75 lg:w-full">
             <div className="text-[40px] pl-6 font-semibold leading-[150%] bg-transparent border-0 focus:outline-none focus:ring-0 w-full">
               {templateTitle}
             </div>
 
+            <div className="flex flex-row gap-2.5 w-full">
+              <button
+                onClick={() => setShowTemplatePopup(true)}
+                className="hover:bg-[#769CEF] w-full text-white rounded-xl h-13 ml-6 cursor-pointer bg-[#5D8CF1] px-6 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              >
+                Использовать шаблон
+              </button>
+              <button
+                onClick={() => {
+                  setShowSaveAsTemplatePopup(true);
+                  setIsFromPage(true);
+                }}
+                className="hover:bg-[#F0F5FF] w-full text-[#202020] rounded-xl h-13 ml-6 cursor-pointer bg-[#DCE7FF] px-6 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              >
+                Сохранить как шаблон
+              </button>
+            </div>
             <div className="flex gap-9 flex-col">
               {sections.map((section) => (
                 <div
@@ -551,6 +591,19 @@ export default function Home() {
           </div>
         </div>
       )}
+      <TemplatePopup
+        isOpen={showTemplatePopup}
+        onClose={() => setShowTemplatePopup(false)}
+        onApply={handleApplyTemplate}
+      />
+      <CreateTemplatePopup
+        isOpen={showSaveAsTemplatePopup}
+        onClose={() => setShowSaveAsTemplatePopup(false)}
+        isFromPage={isFromPage}
+        onSuccess={() => setShowSaveAsTemplatePopup(false)}
+        initialContent={getCurrentProtocolContent()}
+        stayInEditor={true}
+      />
     </>
   );
 }

@@ -5,6 +5,7 @@ import Image from 'next/image';
 import { LoginRequest, mainApi } from '@/api';
 import { toast } from 'react-toastify';
 import { useAuth } from '@/hooks/useAuth';
+import { handleClickEmail } from '@/hooks/openEmail';
 type AuthMode = 'login' | 'register' | 'verify';
 export default function AuthForms() {
   const { handleLogin, handleRegister, handleConfirmRegistration } = useAuth();
@@ -408,12 +409,17 @@ export default function AuthForms() {
                 height={25}
               />
             </button>
-            <div className="text-center -mt-8 mb-7.5">
+            <div className="text-center flex flex-col items-center -mt-8 mb-7.5">
               <h2 className="text-[#202020] font-bold mb-2 text-lg">
                 Для завершения регистрации введите код <br />
                 из письма на почте
               </h2>
-              <p className="text-lg text-[#5D8CF1] font-bold">
+              <p
+                className="text-lg w-fit text-[#5D8CF1] hover:text-[#769CEF] font-bold cursor-pointer"
+                onClick={() => {
+                  handleClickEmail(userData.login);
+                }}
+              >
                 {userData.login}
               </p>
             </div>

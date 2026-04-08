@@ -21,7 +21,10 @@ async def search_mkb10(
     size: int = Query(10, ge=1, le=100, description="Размер страницы (1..100)"),
     searchValue: Optional[str] = Query(
         None,
-        description="Строка для поиска по названию диагноза (частичное совпадение)",
+        description=(
+            "Строка для поиска по формату "
+            "'{mkb_code} - {mkb_name}' (частичное совпадение)"
+        ),
     ),
     current_user: ServiceUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
@@ -32,7 +35,8 @@ async def search_mkb10(
 
     filters = []
     if searchValue:
-        filters.append(Mkb10.mkb_name.ilike(f"%{searchValue}%"))
+        full_mkb_value = func.concat(Mkb10.mkb_code, " - ", Mkb10.mkb_name)
+        filters.append(full_mkb_value.ilike(f"%{searchValue}%"))
 
     stmt_count = select(func.count()).select_from(Mkb10)
     if filters:

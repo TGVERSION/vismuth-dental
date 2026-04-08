@@ -66,3 +66,5 @@ data/local/
 
 # ML models (large binaries)
 ml-service/finetuned_autocomplete_kaggle/model.safetensors
+ml-service/ru-en-RoSBERTa/
+ml-service/rosberta_chromadb/

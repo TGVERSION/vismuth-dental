@@ -1,6 +1,6 @@
 'use client';
 
-import { ChangeEvent, useEffect, useRef } from 'react';
+import { ChangeEvent, useEffect, useRef, useState } from 'react';
 import { useAutocomplete } from '@/hooks/useAutocomplete';
 import { AutocompleteSuggestions } from './AutocompleteSuggestions';
 import { DiagnosisInput } from './DiagnosisInput';
@@ -23,6 +23,7 @@ export const SectionInput: React.FC<SectionInputProps> = ({
   onValueChange,
 }) => {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const [hasUserInteracted, setHasUserInteracted] = useState(false);
 
   const {
     suggestions,
@@ -37,6 +38,7 @@ export const SectionInput: React.FC<SectionInputProps> = ({
     sectionKey,
     debounceMs: 300,
     maxSuggestions: 8,
+    enabled: hasUserInteracted,
   });
 
   const autoResize = () => {
@@ -58,6 +60,12 @@ export const SectionInput: React.FC<SectionInputProps> = ({
       autoResize();
     }
   }, []);
+
+  const enableAutocomplete = () => {
+    if (!hasUserInteracted) {
+      setHasUserInteracted(true);
+    }
+  };
 
   const handleSuggestionClick = (suggestion: string) => {
     onValueChange(id, suggestion);
@@ -89,15 +97,18 @@ export const SectionInput: React.FC<SectionInputProps> = ({
           ref={textareaRef}
           value={value}
           onChange={(e: ChangeEvent<HTMLTextAreaElement>) => {
+            enableAutocomplete();
             onValueChange(id, e.target.value);
             setIsOpen(true);
             setHighlightedIndex(-1);
             setTimeout(() => autoResize(), 0);
           }}
           onFocus={() => {
+            enableAutocomplete();
             setIsOpen(true);
           }}
           onBlur={() => {
+            enableAutocomplete();
             setTimeout(() => setIsOpen(false), 200);
           }}
           onKeyDown={(e) => handleKeyDown(e, handleSuggestionSelect)}

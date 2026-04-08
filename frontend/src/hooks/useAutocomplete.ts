@@ -5,11 +5,17 @@ interface UseAutocompleteOptions {
   sectionKey: string;
   debounceMs?: number;
   maxSuggestions?: number;
+  enabled?: boolean;
 }
 
 export const useAutocomplete = (
   query: string,
-  { sectionKey, debounceMs = 300, maxSuggestions = 8 }: UseAutocompleteOptions,
+  {
+    sectionKey,
+    debounceMs = 300,
+    maxSuggestions = 8,
+    enabled = true,
+  }: UseAutocompleteOptions,
 ) => {
   const [isOpen, setIsOpen] = useState(false);
   const [highlightedIndex, setHighlightedIndex] = useState(-1);
@@ -29,7 +35,7 @@ export const useAutocomplete = (
       abortControllerRef.current.abort();
     }
 
-    if (!query.trim()) {
+    if (!enabled || !query.trim()) {
       setSuggestions([]);
       setLoading(false);
       return;
@@ -67,7 +73,7 @@ export const useAutocomplete = (
         abortControllerRef.current.abort();
       }
     };
-  }, [query, sectionKey, debounceMs, maxSuggestions]);
+  }, [query, sectionKey, debounceMs, maxSuggestions, enabled]);
 
   const handleSelect = useCallback((suggestion: string) => {
     setIsOpen(false);

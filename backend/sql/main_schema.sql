@@ -456,6 +456,7 @@ CREATE TABLE IF NOT EXISTS autocomplete_stats (
     prefix TEXT NOT NULL, -- введённый пользователем префикс до запроса
     suggestions_count INTEGER, -- количество предложенных вариантов
     selected_text TEXT, -- выбранный вариант; NULL, если ничего не выбрано
+    event_type VARCHAR(64) NOT NULL, -- тип события (form_click/autocomplete_shown/suggestion_selected)
     shown_at TIMESTAMPTZ(3) NOT NULL DEFAULT now() -- момент показа подсказок пользователю (до миллисекунд)
 );
 
@@ -467,6 +468,9 @@ CREATE INDEX IF NOT EXISTS idx_autocomplete_stats_shown_at
 
 CREATE INDEX IF NOT EXISTS idx_autocomplete_stats_field_name
     ON autocomplete_stats (field_name);
+
+CREATE INDEX IF NOT EXISTS idx_autocomplete_stats_event_type
+    ON autocomplete_stats (event_type);
 
 
 

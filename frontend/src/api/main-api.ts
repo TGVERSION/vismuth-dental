@@ -9,6 +9,12 @@ import type {
   TokenResponse,
   Mkb10Request,
   Mkb10Response,
+  CompletePayload,
+  CompleteResponse,
+  MlMkbCodePayload,
+  MlMkbCodeResponse,
+  MlStatusResponse,
+  MlStatusPayload,
 } from './index';
 
 export const apiClient = new ApiClient({
@@ -19,15 +25,6 @@ export const apiClient = new ApiClient({
 });
 
 export const mainApi = {
-  mkb10: {
-    diagnisisList: (data: Mkb10Request) =>
-      apiClient.get<Mkb10Response>('/mkb10/', {
-        page: data.page,
-        size: data.size,
-        searchValue: data.searchValue,
-      }),
-  },
-
   // Пользователи
   serviceUsers: {
     register: (data: LoginRequest) =>
@@ -56,5 +53,25 @@ export const mainApi = {
       apiClient.put<ConsultationsResponse>(`/consultations/${id}`, data),
 
     delete: (id: string) => apiClient.delete<void>(`/consultations/${id}`),
+  },
+
+  mkb10: {
+    diagnisisList: (data: Mkb10Request) =>
+      apiClient.get<Mkb10Response>('/mkb10/', {
+        page: data.page,
+        size: data.size,
+        searchValue: data.searchValue,
+      }),
+  },
+
+  ml_handlers: {
+    mlMkbCode: (data: MlMkbCodePayload) =>
+      apiClient.post<MlMkbCodeResponse>('/ml_mkb_code', data),
+
+    mlAutocomplete: (data: CompletePayload) =>
+      apiClient.post<CompleteResponse>('/ml_autocomplete', data),
+
+    mlAutocompleteStatus: (data: MlStatusPayload) =>
+      apiClient.post<MlStatusResponse>('/ml_autocomplete_stats', data),
   },
 };

@@ -5,8 +5,10 @@ export { templateApi } from './template-api';
 export interface ApiError {
   detail: string;
 }
+
+//ML
 export interface CompletePayload {
-  field: string;
+  field_name: string;
   prefix: string;
   num_sequences: number;
 }
@@ -15,6 +17,31 @@ export interface CompleteResponse {
   suggestions: string[];
 }
 
+export interface MlMkbCodePayload {
+  field_name: string;
+  description: string;
+  n_candidates: number;
+  use_llm: boolean;
+}
+
+export interface MlMkbCodeResponse {
+  extracted_diagnosis: string;
+  candidates: string[];
+  best_code: string;
+  best_name: string;
+}
+export interface MlStatusPayload {
+  field_name: string;
+  description: string;
+  selected_text: string;
+  n_candidates: number;
+  event_type: string;
+}
+
+export interface MlStatusResponse {
+  detail: string;
+}
+//Main
 export interface ConsultationsRequest {
   id: string;
   external_system: number;

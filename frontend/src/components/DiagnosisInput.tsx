@@ -1,7 +1,8 @@
 'use client';
-import { useState, useRef, useEffect } from 'react';
+
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { useMkb10Diagnoses } from '@/hooks/useMkb10Diagnoses';
-import { Mkb10Item } from '@/api';
+import { CandidatesItem, mainApi, Mkb10Item } from '@/api';
 
 interface DiagnosisInputProps {
   id: number;
@@ -18,6 +19,9 @@ export const DiagnosisInput: React.FC<DiagnosisInputProps> = ({
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [searchValue, setSearchValue] = useState('');
+  const [aiCandidates, setAiCandidates] = useState<CandidatesItem[]>([]);
+  const [aiLoading, setAiLoading] = useState(false);
+
   const containerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -35,7 +39,6 @@ export const DiagnosisInput: React.FC<DiagnosisInputProps> = ({
         setIsOpen(false);
       }
     };
-
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
@@ -46,31 +49,98 @@ export const DiagnosisInput: React.FC<DiagnosisInputProps> = ({
     }
   }, [isOpen]);
 
+  useEffect(() => {
+    if (!isOpen) {
+      setAiCandidates([]);
+      setAiLoading(false);
+    }
+  }, [isOpen]);
+
+  // //  Отправка статуса в ML
+  // const sendMlStatus = useCallback(
+  //   (
+  //     eventType: string,
+  //     selectedText: string = '',
+  //     countSugest: number = -1,
+  //   ) => {
+  //     mainApi.ml_handlers
+  //       .mlAutocompleteStatus({
+  //         field_name: 'main_diagnosis',
+  //         description: value.length === 0 ? ' ' : value,
+  //         selected_text: selectedText,
+  //         n_candidates: countSugest,
+  //         event_type: eventType,
+  //       })
+  //       .catch((error) => {
+  //         console.error('Failed to send ML status:', error);
+  //       });
+  //   },
+  //   [value],
+  // );
+
+  const fetchAiCandidates = useCallback(async (text: string) => {
+    if (!text.trim()) {
+      setAiCandidates([]);
+      return;
+    }
+
+    setAiLoading(true);
+    try {
+      const res = await mainApi.ml_handlers.mlMkbCode({
+        field_name: 'main_diagnosis',
+        description: text,
+        n_candidates: 3,
+        use_llm: true,
+      });
+      setAiCandidates(res.candidates || []);
+    } catch (error) {
+      console.error('Failed to fetch AI candidates:', error);
+      setAiCandidates([]);
+    } finally {
+      setAiLoading(false);
+    }
+  }, []);
+  const useDebounce = <T,>(value: T, delay: number): T => {
+    const [debouncedValue, setDebouncedValue] = useState<T>(value);
+
+    useEffect(() => {
+      const timer = setTimeout(() => setDebouncedValue(value), delay);
+      return () => clearTimeout(timer);
+    }, [value, delay]);
+
+    return debouncedValue;
+  };
+  const debouncedSearchValue = useDebounce(searchValue, 300);
+
   const handleSelect = (diagnosis: Mkb10Item) => {
     const fullDiagnosis = `${diagnosis.code} – ${diagnosis.name}`;
     onValueChange(id, fullDiagnosis);
     setIsOpen(false);
     setSearchValue('');
+    //sendMlStatus('suggestion_selected', fullDiagnosis, diagnoses.length);
   };
 
+  const handleAiSelect = (candidate: CandidatesItem) => {
+    const fullDiagnosis = `${candidate.code} – ${candidate.name}`;
+    onValueChange(id, fullDiagnosis);
+    setIsOpen(false);
+    setSearchValue('');
+    //sendMlStatus('suggestion_selected', fullDiagnosis, aiCandidates.length);
+  };
+  useEffect(() => {
+    if (isOpen && debouncedSearchValue.trim()) {
+      fetchAiCandidates(debouncedSearchValue);
+    }
+  }, [debouncedSearchValue, isOpen, fetchAiCandidates]);
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newValue = e.target.value;
     onValueChange(id, newValue);
     setSearchValue(newValue);
-    if (!isOpen) setIsOpen(true);
-  };
-
-  const handleInputClick = () => {
-    setIsOpen(true);
-    if (value.trim()) {
-      setSearchValue(value);
+    if (!isOpen) {
+      setIsOpen(true);
     }
-  };
-
-  const handleInputFocus = () => {
-    setIsOpen(true);
-    if (inputRef.current) {
-      inputRef.current.select();
+    if (newValue.length === 0) {
+      setAiCandidates([]);
     }
   };
 
@@ -104,7 +174,10 @@ export const DiagnosisInput: React.FC<DiagnosisInputProps> = ({
           type="text"
           value={value}
           onChange={handleInputChange}
-          onClick={handleOpenWithReset}
+          onClick={() => {
+            //sendMlStatus('form_click');
+            handleOpenWithReset();
+          }}
           onFocus={handleOpenWithReset}
           placeholder="Введите код или название диагноза..."
           className="ml-6 text-[#202020] border-0 focus:border-0 focus:outline-none focus:ring-0 w-full bg-transparent placeholder-gray-400 leading-[140%] py-2"
@@ -112,6 +185,38 @@ export const DiagnosisInput: React.FC<DiagnosisInputProps> = ({
 
         {isOpen && (
           <div className="absolute p-1.5 z-50 max-w-103.5 ml-6 mt-1 bg-white rounded-lg shadow-lg border-0 max-h-80 overflow-y-auto custom-scrollbar">
+            <h4 className="text-[#6C757D] text-[12px] font-medium">
+              Наиболее подходящие диагнозы
+            </h4>
+            <div className="pt-1.5 pb-3 border-b mb-3 border-[#E9ECEF]">
+              {aiLoading ? (
+                <div className="px-2.5 py-1.5 text-gray-400 text-sm">
+                  Загрузка рекомендаций...
+                </div>
+              ) : aiCandidates.length > 0 ? (
+                aiCandidates.map((cand) => {
+                  const percent = Math.round(cand.similarity * 100);
+                  const fullText = `${cand.name}`;
+                  return (
+                    <div
+                      key={`ai-${cand.code}`}
+                      onClick={() => handleAiSelect(cand)}
+                      className="px-2.5 py-1.5 flex flex-row gap-2.5 items-center cursor-pointer rounded-md transition-colors hover:bg-[#e6efff] text-[#202020]"
+                    >
+                      <div className="text-sm text-[#5D8CF1] text-right">
+                        {percent}%
+                      </div>
+                      <div className="text-sm flex-1">{fullText}</div>
+                    </div>
+                  );
+                })
+              ) : (
+                <div className="px-2.5 py-1.5 text-gray-400 text-sm">
+                  Опишите диагноз система поможет его подобрать
+                </div>
+              )}
+            </div>
+
             <h4 className="text-[#6C757D] text-[12px] font-medium">
               Все диагнозы
             </h4>
@@ -142,11 +247,11 @@ export const DiagnosisInput: React.FC<DiagnosisInputProps> = ({
                     onClick={() => handleSelect(diagnosis)}
                     className={`px-2.5 py-1.5 cursor-pointer rounded-md transition-colors ${
                       isSelected
-                        ? 'bg-[#e6efff] text-[#202020] font-semibold'
+                        ? 'bg-[#e6efff] text-[#202020]'
                         : 'hover:bg-[#e6efff] text-[#202020]'
                     }`}
                   >
-                    <div className="text-sm font-medium">
+                    <div className="text-sm">
                       {diagnosis.code} – {diagnosis.name}
                     </div>
                   </div>

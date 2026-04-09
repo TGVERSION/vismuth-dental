@@ -26,10 +26,18 @@ export interface MlMkbCodePayload {
 
 export interface MlMkbCodeResponse {
   extracted_diagnosis: string;
-  candidates: string[];
+  candidates: CandidatesItem[];
   best_code: string;
   best_name: string;
 }
+
+export interface CandidatesItem {
+  code: string;
+  name: string;
+  distance: number;
+  similarity: number;
+}
+
 export interface MlStatusPayload {
   field_name: string;
   description: string;

@@ -4,6 +4,18 @@ import { ChangeEvent, useEffect, useRef, useState } from 'react';
 import { useAutocomplete } from '@/hooks/useAutocomplete';
 import { AutocompleteSuggestions } from './AutocompleteSuggestions';
 import { DiagnosisInput } from './DiagnosisInput';
+import { mainApi } from '@/api';
+
+export interface MlStatusPayload {
+  field_name: string;
+  description: string;
+  selected_text: string;
+  event_type: string;
+}
+
+export interface MlStatusResponse {
+  detail: string;
+}
 
 interface SectionInputProps {
   id: number;
@@ -49,9 +61,7 @@ export const SectionInput: React.FC<SectionInputProps> = ({
   };
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      autoResize();
-    }, 0);
+    const timer = setTimeout(autoResize, 0);
     return () => clearTimeout(timer);
   }, [value]);
 
@@ -67,15 +77,36 @@ export const SectionInput: React.FC<SectionInputProps> = ({
     }
   };
 
+  const sendMlStatus = (
+    eventType: string,
+    selectedText: string = '',
+    countSugest: number = -1,
+  ) => {
+    mainApi.ml_handlers
+      .mlAutocompleteStatus({
+        field_name: sectionKey,
+        description: value.length === 0 ? ' ' : value,
+        selected_text: selectedText,
+        n_candidates: countSugest,
+        event_type: eventType,
+      })
+      .catch((error) => {
+        console.error('Failed to send ML status:', error);
+      });
+  };
+
   const handleSuggestionClick = (suggestion: string) => {
     onValueChange(id, suggestion);
     handleSelect(suggestion);
+    sendMlStatus('suggestion_selected', suggestion);
   };
 
   const handleSuggestionSelect = (fullValue: string) => {
     onValueChange(id, fullValue);
     handleSelect(fullValue);
+    sendMlStatus('suggestion_selected', fullValue, 8);
   };
+
   if (sectionKey === 'main_diagnosis') {
     return (
       <DiagnosisInput
@@ -86,6 +117,7 @@ export const SectionInput: React.FC<SectionInputProps> = ({
       />
     );
   }
+
   return (
     <div className="flex gap-2 flex-col relative">
       <div className="text-[30px] pl-6 font-medium leading-[140%] bg-transparent border-0 focus:outline-none focus:ring-0 w-full">
@@ -102,6 +134,11 @@ export const SectionInput: React.FC<SectionInputProps> = ({
             setIsOpen(true);
             setHighlightedIndex(-1);
             setTimeout(() => autoResize(), 0);
+          }}
+          onClick={() => {
+            enableAutocomplete();
+            setIsOpen(true);
+            sendMlStatus('form_click');
           }}
           onFocus={() => {
             enableAutocomplete();

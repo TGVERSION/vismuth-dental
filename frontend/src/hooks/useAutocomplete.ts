@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
-import { CompletePayload, mlApi } from '@/api';
+import { CompletePayload, mainApi, mlApi } from '@/api';
 
 interface UseAutocompleteOptions {
   sectionKey: string;
@@ -49,12 +49,12 @@ export const useAutocomplete = (
         setError(null);
 
         const payload: CompletePayload = {
-          field: sectionKey,
+          field_name: sectionKey,
           prefix: query,
           num_sequences: maxSuggestions,
         };
 
-        const response = await mlApi.search(payload);
+        const response = await mainApi.ml_handlers.mlAutocomplete(payload);
         setSuggestions(response.suggestions || []);
       } catch (err: unknown) {
         const errorMessage = err instanceof Error ? err.message : 'API Error';

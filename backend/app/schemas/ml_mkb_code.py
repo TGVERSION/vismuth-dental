@@ -20,7 +20,7 @@ class MkbCodeProxyRequest(BaseModel):
 class MkbCodeSelectRequest(BaseModel):
     field_name: str = Field(..., min_length=1, max_length=255)
     description: str = Field(..., min_length=1)
-    n_candidates: int = Field(..., ge=1, le=20)
+    n_candidates: int = Field(..., ge=-10, le=1000)
     selected_text: str | None = None
     event_type: MkbEventType
 

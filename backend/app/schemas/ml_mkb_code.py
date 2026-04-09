@@ -32,5 +32,15 @@ class MkbCodeProxyResponse(BaseModel):
     best_name: str | None = None
 
 
+class MlAutocompleteProxyRequest(BaseModel):
+    field_name: str = Field(..., min_length=1, max_length=255)
+    prefix: str = Field(..., min_length=1)
+    suggestions_count: int = Field(5, ge=1, le=20)
+
+
+class MlAutocompleteProxyResponse(BaseModel):
+    suggestions: list[str] = []
+
+
 class EventAcceptedResponse(BaseModel):
     detail: str = "accepted"

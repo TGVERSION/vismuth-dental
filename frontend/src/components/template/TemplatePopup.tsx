@@ -1,8 +1,13 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { templateApi } from '@/api';
-import type { TemplateGroup, Template } from '@/api';
+import { mainApi } from '@/api';
+import type {
+  ListsGroupsResponse,
+  ListsTemplatesResponse,
+  TemplatesResponse,
+  FieldsTypeFull,
+} from '@/api';
 import Image from 'next/image';
 import { useLockBodyScroll } from '@/hooks/useLockBodyScroll';
 import { CreateGroupPopup } from '../groups/CreateGroupPopup';
@@ -11,10 +16,22 @@ import { toast } from 'react-toastify';
 import { DeleteGroup } from '../groups/DeleteGroup';
 import { DeleteTemplate } from './DeleteTemplate';
 
+export interface TemplateGroupUI extends ListsGroupsResponse {
+  name: string;
+  templates?: TemplateUI[];
+}
+
+export interface TemplateUI extends ListsTemplatesResponse {
+  name: string;
+  type: 'personal' | 'general';
+  content?: Record<string, string>;
+  groupId?: string;
+}
+
 interface TemplatePopupProps {
   isOpen: boolean;
   onClose: () => void;
-  onApply: (template: Template) => void;
+  onApply: (template: TemplateUI) => void;
 }
 
 export const TemplatePopup: React.FC<TemplatePopupProps> = ({
@@ -42,12 +59,14 @@ export const TemplatePopup: React.FC<TemplatePopupProps> = ({
     { key: 'recommendations', label: 'Рекомендации' },
     { key: 'prescriptions', label: 'Назначения' },
   ];
-  const [groups, setGroups] = useState<TemplateGroup[]>([]);
-  const [templates, setTemplates] = useState<Template[]>([]);
-  const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(
+
+  const [groups, setGroups] = useState<TemplateGroupUI[]>([]);
+  const [templates, setTemplates] = useState<TemplateUI[]>([]);
+  const [selectedTemplate, setSelectedTemplate] = useState<TemplateUI | null>(
     null,
   );
   const [loading, setLoading] = useState(false);
+  const [templateLoading, setTemplateLoading] = useState(false);
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
   const [hoveredItem, setHoveredItem] = useState<string | null>(null);
   const [showCreateMenu, setShowCreateMenu] = useState(false);
@@ -73,13 +92,12 @@ export const TemplatePopup: React.FC<TemplatePopupProps> = ({
   ) => {
     setDeleteGroupConfirm({ id, name, templatesCount });
   };
+
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       const target = e.target as HTMLElement;
 
-      if (target.closest('.template-create-menu button')) {
-        return;
-      }
+      if (target.closest('.template-create-menu button')) return;
 
       if (openMenuId && !target.closest('.template-actions-menu')) {
         setOpenMenuId(null);
@@ -97,20 +115,85 @@ export const TemplatePopup: React.FC<TemplatePopupProps> = ({
     document.addEventListener('click', handleClickOutside);
     return () => document.removeEventListener('click', handleClickOutside);
   }, [openMenuId, showCreateMenu]);
+
   useEffect(() => {
     if (isOpen) loadTemplates();
   }, [isOpen]);
 
+  const transformGroup = (group: ListsGroupsResponse): TemplateGroupUI => ({
+    ...group,
+    name: group.group_name,
+    templates: [],
+  });
+
+  const transformTemplate = (
+    template: ListsTemplatesResponse | TemplatesResponse,
+  ): TemplateUI => {
+    const content: Record<string, string> = {};
+    if ('fields' in template && Array.isArray(template.fields)) {
+      template.fields.forEach((field: FieldsTypeFull) => {
+        content[field.field_name] = field.field_value;
+      });
+    }
+    return {
+      ...template,
+      name: template.protocol_name,
+      type: template.privacy === 'personal' ? 'personal' : 'general',
+      content,
+      groupId: template.group_id,
+    };
+  };
+
   const loadTemplates = async () => {
     setLoading(true);
     try {
-      const response = await templateApi.getList();
-      setGroups(response.groups || []);
-      setTemplates(response.templates || []);
+      const [groupsResponse, templatesResponse] = await Promise.all([
+        mainApi.templateGroups.getGroups(),
+        mainApi.templates.getTemplates(),
+      ]);
+
+      const transformedGroups = (groupsResponse || []).map(transformGroup);
+      const transformedTemplates = (templatesResponse || []).map(
+        transformTemplate,
+      );
+
+      const groupsWithTemplates = transformedGroups.map((group) => ({
+        ...group,
+        templates: transformedTemplates.filter((t) => t.group_id === group.id),
+      }));
+
+      const ungroupedTemplates = transformedTemplates.filter(
+        (t) => !t.group_id,
+      );
+
+      setGroups(groupsWithTemplates);
+      setTemplates(ungroupedTemplates);
     } catch (error) {
       console.error('Ошибка загрузки шаблонов:', error);
+      toast.error('Не удалось загрузить шаблоны', {
+        position: 'top-right',
+        autoClose: 4000,
+      });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleSelectTemplate = async (template: TemplateUI) => {
+    setTemplateLoading(true);
+    try {
+      const fullTemplate = await mainApi.templates.getTemplate(template.id);
+      const transformed = transformTemplate(fullTemplate);
+      setSelectedTemplate(transformed);
+    } catch (error) {
+      console.error('Ошибка загрузки шаблона:', error);
+      toast.error('Не удалось загрузить шаблон', {
+        position: 'top-right',
+        autoClose: 4000,
+      });
+      setSelectedTemplate(template);
+    } finally {
+      setTemplateLoading(false);
     }
   };
 
@@ -144,22 +227,20 @@ export const TemplatePopup: React.FC<TemplatePopupProps> = ({
     setDeleteTemplateConfirm({ id, name });
     setOpenMenuId(null);
   };
+
   const handleDeleteTemplate = async () => {
     if (!deleteTemplateConfirm) return;
-
     const { id } = deleteTemplateConfirm;
 
     try {
-      await templateApi.deleteTemplate(id);
+      await mainApi.templates.delete(id);
       setTemplates((prev) => prev.filter((t) => t.id !== id));
-
       setGroups((prev) =>
         prev.map((group) => ({
           ...group,
           templates: group.templates?.filter((t) => t.id !== id),
         })),
       );
-
       if (selectedTemplate?.id === id) {
         setSelectedTemplate(null);
       }
@@ -171,28 +252,29 @@ export const TemplatePopup: React.FC<TemplatePopupProps> = ({
       });
     }
   };
+
   const handleDeleteGroup = async () => {
     if (!deleteGroupConfirm) return;
-
     const { id } = deleteGroupConfirm;
 
     try {
       const groupToDelete = groups.find((g) => g.id === id);
       if (groupToDelete?.templates) {
         for (const template of groupToDelete.templates) {
-          await templateApi.updateTemplate(template.id, {
-            groupId: null,
+          const fullTemplate = await mainApi.templates.getTemplate(template.id);
+          await mainApi.templates.update(template.id, {
+            protocol_name: template.protocol_name,
+            group_id: null,
+            privacy: template.privacy,
+            fields: fullTemplate.fields || [],
           });
         }
       }
-
-      await templateApi.deleteGroup(id);
+      await mainApi.templateGroups.delete(id);
       setGroups((prev) => prev.filter((g) => g.id !== id));
-
       if (selectedTemplate?.groupId === id) {
         setSelectedTemplate(null);
       }
-
       loadTemplates();
     } catch (error) {
       console.error('Ошибка удаления группы:', error);
@@ -212,23 +294,57 @@ export const TemplatePopup: React.FC<TemplatePopupProps> = ({
   ) => {
     const newName = prompt('Новое название:', oldName);
     if (!newName || newName === oldName) return;
+
     try {
       if (type === 'group') {
-        await templateApi.updateGroup(id, { name: newName });
+        await mainApi.templateGroups.update(id, { group_name: newName });
         setGroups((prev) =>
-          prev.map((g) => (g.id === id ? { ...g, name: newName } : g)),
+          prev.map((g) =>
+            g.id === id ? { ...g, name: newName, group_name: newName } : g,
+          ),
         );
       } else {
-        await templateApi.updateTemplate(id, { name: newName });
+        const template = templates.find((t) => t.id === id) || selectedTemplate;
+        if (!template) return;
+
+        const fullTemplate = await mainApi.templates.getTemplate(id);
+
+        await mainApi.templates.update(id, {
+          protocol_name: newName,
+          group_id: fullTemplate.group_id || '',
+          privacy: fullTemplate.privacy,
+          fields: fullTemplate.fields || [],
+        });
+
         setTemplates((prev) =>
-          prev.map((t) => (t.id === id ? { ...t, name: newName } : t)),
+          prev.map((t) =>
+            t.id === id ? { ...t, name: newName, protocol_name: newName } : t,
+          ),
         );
+
+        setGroups((prev) =>
+          prev.map((group) => ({
+            ...group,
+            templates: group.templates?.map((t) =>
+              t.id === id ? { ...t, name: newName, protocol_name: newName } : t,
+            ),
+          })),
+        );
+
         if (selectedTemplate?.id === id) {
-          setSelectedTemplate({ ...selectedTemplate, name: newName });
+          setSelectedTemplate({
+            ...selectedTemplate,
+            name: newName,
+            protocol_name: newName,
+          });
         }
       }
     } catch (error) {
       console.error('Ошибка переименования:', error);
+      toast.error('Не удалось переименовать', {
+        position: 'top-right',
+        autoClose: 4000,
+      });
     }
   };
 
@@ -236,6 +352,7 @@ export const TemplatePopup: React.FC<TemplatePopupProps> = ({
     onClose();
     setSelectedTemplate(null);
   };
+
   const handleGroupCreated = () => {
     setShowCreateGroupPopup(false);
     loadTemplates();
@@ -245,6 +362,7 @@ export const TemplatePopup: React.FC<TemplatePopupProps> = ({
     setShowCreateTemplatePopup(false);
     loadTemplates();
   };
+
   if (!isOpen) return null;
   const hasItems = groups.length > 0 || templates.length > 0;
 
@@ -306,136 +424,144 @@ export const TemplatePopup: React.FC<TemplatePopupProps> = ({
                 <div className="text-center text-md">Шаблоны не найдены</div>
               ) : (
                 <div className="space-y-4.5">
-                  <p className="text-medium text-xl">Группы</p>
-                  <div className="flex flex-col gap-2">
-                    {groups.map((group) => (
-                      <div
-                        key={group.id}
-                        className={`rounded-lg ${
-                          expandedGroups.has(group.id) && 'bg-white shadow-md'
-                        }`}
-                      >
-                        <div
-                          className={`flex items-center justify-between px-3.75 py-3 cursor-pointer transition-all`}
-                          onMouseEnter={() =>
-                            setHoveredItem(`group-${group.id}`)
-                          }
-                          onMouseLeave={() => setHoveredItem(null)}
-                          onClick={() => toggleGroup(group.id)}
-                        >
-                          <div className="flex items-center gap-2 flex-1">
-                            <Image
-                              alt="arrow"
-                              src="/arrow-dropdown.svg"
-                              width={19}
-                              height={19}
-                              className={`transition-transform ${expandedGroups.has(group.id) ? 'rotate-180' : ''}`}
-                            />
-                            <span className="text-[#202020]">{group.name}</span>
-                          </div>
-                          {expandedGroups.has(group.id) && (
-                            <div className="flex items-center gap-3.75 relative group">
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  requestDeleteGroup(
-                                    group.id,
-                                    group.name,
-                                    group.templates?.length || 0,
-                                  );
-                                }}
-                                className="cursor-pointer"
-                                title="Удалить группу"
-                              >
+                  {groups.length > 0 && (
+                    <div>
+                      {' '}
+                      <p className="text-medium text-xl">Группы</p>
+                      <div className="flex flex-col gap-2">
+                        {groups.map((group) => (
+                          <div
+                            key={group.id}
+                            className={`rounded-lg ${expandedGroups.has(group.id) && 'bg-white shadow-md'}`}
+                          >
+                            <div
+                              className="flex items-center justify-between px-3.75 py-3 cursor-pointer transition-all"
+                              onMouseEnter={() =>
+                                setHoveredItem(`group-${group.id}`)
+                              }
+                              onMouseLeave={() => setHoveredItem(null)}
+                              onClick={() => toggleGroup(group.id)}
+                            >
+                              <div className="flex items-center gap-2 flex-1">
                                 <Image
-                                  alt="delete"
-                                  src="/delete-gray.svg"
-                                  width={20}
-                                  height={20}
-                                  className={`}`}
+                                  alt="arrow"
+                                  src="/arrow-dropdown.svg"
+                                  width={19}
+                                  height={19}
+                                  className={`transition-transform ${expandedGroups.has(group.id) ? 'rotate-180' : ''}`}
                                 />
-                              </button>
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleRename(group.id, 'group', group.name);
-                                }}
-                                className="cursor-pointer"
-                                title="Переименовать"
-                              >
-                                <Image
-                                  alt="rename"
-                                  src="/rename-gray.svg"
-                                  width={20}
-                                  height={20}
-                                  className={`}`}
-                                />
-                              </button>
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleCreate('template', group.id);
-                                }}
-                                className="cursor-pointer"
-                                title="Добавить шаблон"
-                              >
-                                <Image
-                                  alt="add"
-                                  src="/add-gray.svg"
-                                  width={20}
-                                  height={20}
-                                  className={``}
-                                />
-                              </button>
-                            </div>
-                          )}
-                        </div>
-                        {expandedGroups.has(group.id) && group.templates && (
-                          <div className="mt-0.75 mb-3.75 flex flex-col gap-3.75 mx-3.75">
-                            {group.templates.map((template) => (
-                              <div
-                                key={template.id}
-                                className={`px-3.75 py-3 rounded-lg cursor-pointer transition-all ${
-                                  selectedTemplate?.id === template.id &&
-                                  'bg-white shadow-md'
-                                }`}
-                                onMouseEnter={() =>
-                                  setHoveredItem(`template-${template.id}`)
-                                }
-                                onMouseLeave={() => setHoveredItem(null)}
-                                onClick={() => setSelectedTemplate(template)}
-                              >
-                                <div className="flex items-center gap-2">
-                                  <span
-                                    className={`text-sm px-2 py-0.75 rounded-full ${
-                                      template.type === 'personal'
-                                        ? 'bg-[#FFD6BF]'
-                                        : 'bg-[#CFE5E6]'
-                                    }`}
-                                  >
-                                    {template.type === 'personal'
-                                      ? 'Личный'
-                                      : 'Общий'}
-                                  </span>
-                                  <span className="text-sm text-[#202020]">
-                                    {template.name}
-                                  </span>
-                                </div>
+                                <span className="text-[#202020]">
+                                  {group.name}
+                                </span>
                               </div>
-                            ))}
+                              {expandedGroups.has(group.id) && (
+                                <div className="flex items-center gap-3.75 relative group">
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      requestDeleteGroup(
+                                        group.id,
+                                        group.name,
+                                        group.templates?.length || 0,
+                                      );
+                                    }}
+                                    className="cursor-pointer"
+                                    title="Удалить группу"
+                                  >
+                                    <Image
+                                      alt="delete"
+                                      src="/delete-gray.svg"
+                                      width={20}
+                                      height={20}
+                                    />
+                                  </button>
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleRename(
+                                        group.id,
+                                        'group',
+                                        group.name,
+                                      );
+                                    }}
+                                    className="cursor-pointer"
+                                    title="Переименовать"
+                                  >
+                                    <Image
+                                      alt="rename"
+                                      src="/rename-gray.svg"
+                                      width={20}
+                                      height={20}
+                                    />
+                                  </button>
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleCreate('template', group.id);
+                                    }}
+                                    className="cursor-pointer"
+                                    title="Добавить шаблон"
+                                  >
+                                    <Image
+                                      alt="add"
+                                      src="/add-gray.svg"
+                                      width={20}
+                                      height={20}
+                                    />
+                                  </button>
+                                </div>
+                              )}
+                            </div>
+                            {expandedGroups.has(group.id) &&
+                              group.templates && (
+                                <div className="mt-0.75 mb-3.75 flex flex-col gap-3.75 mx-3.75">
+                                  {group.templates.map((template) => (
+                                    <div
+                                      key={template.id}
+                                      className={`px-3.75 py-3 rounded-lg cursor-pointer transition-all ${
+                                        selectedTemplate?.id === template.id &&
+                                        'bg-white shadow-md'
+                                      }`}
+                                      onMouseEnter={() =>
+                                        setHoveredItem(
+                                          `template-${template.id}`,
+                                        )
+                                      }
+                                      onMouseLeave={() => setHoveredItem(null)}
+                                      onClick={() =>
+                                        handleSelectTemplate(template)
+                                      }
+                                    >
+                                      <div className="flex items-center gap-2">
+                                        <span
+                                          className={`text-sm px-2 py-0.75 rounded-full ${
+                                            template.type === 'personal'
+                                              ? 'bg-[#FFD6BF]'
+                                              : 'bg-[#CFE5E6]'
+                                          }`}
+                                        >
+                                          {template.type === 'personal'
+                                            ? 'Личный'
+                                            : 'Общий'}
+                                        </span>
+                                        <span className="text-sm text-[#202020]">
+                                          {template.name}
+                                        </span>
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
                           </div>
-                        )}
+                        ))}
                       </div>
-                    ))}
-                  </div>
+                    </div>
+                  )}
 
                   {templates.length > 0 && (
-                    <>
-                      {groups.length > 0 && (
-                        <p className="text-medium text-xl">
-                          Шаблоны без группы
-                        </p>
-                      )}
+                    <div>
+                      <p className="text-medium text-xl">Шаблоны без группы</p>
+
                       {templates.map((template) => (
                         <div
                           key={template.id}
@@ -447,7 +573,7 @@ export const TemplatePopup: React.FC<TemplatePopupProps> = ({
                             setHoveredItem(`template-${template.id}`)
                           }
                           onMouseLeave={() => setHoveredItem(null)}
-                          onClick={() => setSelectedTemplate(template)}
+                          onClick={() => handleSelectTemplate(template)}
                         >
                           <div className="flex items-center gap-2">
                             <span
@@ -467,7 +593,7 @@ export const TemplatePopup: React.FC<TemplatePopupProps> = ({
                           </div>
                         </div>
                       ))}
-                    </>
+                    </div>
                   )}
                 </div>
               )}
@@ -479,18 +605,19 @@ export const TemplatePopup: React.FC<TemplatePopupProps> = ({
                   onClick={closeModal}
                   className="mt-2.5 mr-2.5 cursor-pointer transition-colors"
                 >
-                  <Image
-                    alt="close"
-                    src="/close.svg"
-                    width={20}
-                    height={20}
-                    className={``}
-                  />
+                  <Image alt="close" src="/close.svg" width={20} height={20} />
                 </button>
               </div>
-              {selectedTemplate && (
+
+              {templateLoading ? (
+                <div className="flex items-center justify-center h-full">
+                  <div className="text-center text-gray-500">
+                    Загрузка шаблона...
+                  </div>
+                </div>
+              ) : selectedTemplate ? (
                 <div>
-                  <div className="flex items-center justify-between pb-6 border-b px-8 border-gray-200 ">
+                  <div className="flex items-center justify-between pb-6 border-b px-8 border-gray-200">
                     <div className="flex items-center gap-3">
                       <span
                         className={`text-md px-2.5 py-1.25 rounded-full ${
@@ -530,15 +657,6 @@ export const TemplatePopup: React.FC<TemplatePopupProps> = ({
                         </button>
                         {openMenuId === selectedTemplate.id && (
                           <div className="absolute right-0 top-full mt-1 bg-white border-0 rounded-lg shadow-lg p-1.5 z-10 template-actions-menu min-w-37.5">
-                            {/* <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setOpenMenuId(null);
-                              }}
-                              className="w-full px-4 py-2 text-left text-sm rounded-md cursor-pointer hover:bg-[#F0F5FF] transition-colors"
-                            >
-                              Редактировать
-                            </button> */}
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
@@ -553,15 +671,6 @@ export const TemplatePopup: React.FC<TemplatePopupProps> = ({
                             >
                               Переименовать
                             </button>
-                            {/* <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setOpenMenuId(null);
-                              }}
-                              className="w-full px-4 py-2 text-left text-sm rounded-md cursor-pointer hover:bg-[#F0F5FF] transition-colors"
-                            >
-                              Переместить
-                            </button> */}
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
@@ -592,9 +701,7 @@ export const TemplatePopup: React.FC<TemplatePopupProps> = ({
                           const sectionLabel =
                             PROTOCOL_SECTIONS.find((s) => s.key === sectionKey)
                               ?.label || sectionKey;
-
                           if (!value) return null;
-
                           return (
                             <div
                               key={sectionKey}
@@ -612,11 +719,16 @@ export const TemplatePopup: React.FC<TemplatePopupProps> = ({
                       )}
                   </div>
                 </div>
+              ) : (
+                <div className="flex items-center justify-center h-full text-gray-500">
+                  Выберите шаблон для просмотра
+                </div>
               )}
             </div>
           </div>
         </div>
       </div>
+
       <CreateGroupPopup
         isOpen={showCreateGroupPopup}
         onClose={() => setShowCreateGroupPopup(false)}

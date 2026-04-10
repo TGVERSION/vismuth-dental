@@ -15,6 +15,12 @@ import type {
   MlMkbCodeResponse,
   MlStatusResponse,
   MlStatusPayload,
+  ListsGroupsResponse,
+  GroupRequest,
+  GroupResponse,
+  ListsTemplatesResponse,
+  TemplatesRequest,
+  TemplatesResponse,
 } from './index';
 
 export const apiClient = new ApiClient({
@@ -53,6 +59,37 @@ export const mainApi = {
       apiClient.put<ConsultationsResponse>(`/consultations/${id}`, data),
 
     delete: (id: string) => apiClient.delete<void>(`/consultations/${id}`),
+  },
+
+  //Группы
+  templateGroups: {
+    getGroups: () => apiClient.get<ListsGroupsResponse[]>('/template-groups'),
+
+    create: (data: GroupRequest) =>
+      apiClient.post<GroupResponse>('/template-groups', data),
+
+    update: (id: string, data: GroupRequest) =>
+      apiClient.put<GroupResponse>(`/template-groups/${id}`, data),
+
+    delete: (id: string) => apiClient.delete<void>(`/template-groups/${id}`),
+  },
+
+  templates: {
+    getTemplates: () =>
+      apiClient.get<ListsTemplatesResponse[]>('/protocol-templates'),
+
+    create: (data: TemplatesRequest) =>
+      apiClient.post<TemplatesResponse>('/protocol-templates', data),
+
+    getTemplate: (consultation_id: string) =>
+      apiClient.get<TemplatesResponse>(
+        `/protocol-templates/${consultation_id}`,
+      ),
+
+    update: (id: string, data: TemplatesRequest) =>
+      apiClient.put<TemplatesResponse>(`/protocol-templates/${id}`, data),
+
+    delete: (id: string) => apiClient.delete<void>(`/protocol-templates/${id}`),
   },
 
   mkb10: {

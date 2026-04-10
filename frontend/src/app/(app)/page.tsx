@@ -4,6 +4,7 @@ import {
   ConsultationsRequest,
   mainApi,
   ListConsultationsResponse,
+  ListsTemplatesResponse,
 } from '@/api';
 import { SectionInput } from '@/components/SectionInput';
 import { Sidebar } from '@/components/Sidebar';
@@ -12,7 +13,6 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { toast } from 'react-toastify';
 
 import { TemplatePopup } from '@/components/template/TemplatePopup';
-import type { Template } from '@/api';
 import { CreateTemplatePopup } from '@/components/template/CreateTemplatePopup';
 
 interface SectionData {
@@ -20,6 +20,12 @@ interface SectionData {
   label: string;
   value: string;
   sectionKey: string;
+}
+export interface TemplateUI extends ListsTemplatesResponse {
+  name: string;
+  type: 'personal' | 'general';
+  content?: Record<string, string>;
+  groupId?: string;
 }
 
 export default function Home() {
@@ -112,7 +118,7 @@ export default function Home() {
 
   const [showSaveAsTemplatePopup, setShowSaveAsTemplatePopup] = useState(false);
   const [isFromPage, setIsFromPage] = useState(false);
-  const handleApplyTemplate = (template: Template) => {
+  const handleApplyTemplate = (template: TemplateUI) => {
     if (template.content) {
       setSections((prev) =>
         prev.map((section) => ({
@@ -550,7 +556,7 @@ export default function Home() {
                   setShowSaveAsTemplatePopup(true);
                   setIsFromPage(true);
                 }}
-                className="hover:bg-[#F0F5FF] w-full text-[#202020] rounded-xl h-13 ml-6 cursor-pointer bg-[#DCE7FF] px-6 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                className="hover:bg-[#F0F5FF] text-[#202020] cursor-pointer bg-[#DCE7FF] w-full  rounded-xl h-13 ml-6 px-6 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
                 Сохранить как шаблон
               </button>

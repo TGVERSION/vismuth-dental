@@ -150,3 +150,7 @@ body {
 .animate-fade-in {
   animation: fade-in 0.15s ease-out;
 }
+
+.w-webkit-fill-available {
+  width: -webkit-fill-available;
+}

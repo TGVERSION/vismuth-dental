@@ -1,11 +1,25 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { templateApi } from '@/api';
-import type { Template } from '@/api';
+import { mainApi } from '@/api';
+import type {
+  ListsGroupsResponse,
+  ListsTemplatesResponse,
+  TemplatesResponse,
+} from '@/api';
 import Image from 'next/image';
 import { toast } from 'react-toastify';
 import { useLockBodyScroll } from '@/hooks/useLockBodyScroll';
+
+export interface TemplateUI extends ListsTemplatesResponse {
+  name: string;
+  type: 'personal' | 'general';
+  groupId?: string;
+}
+
+export interface GroupUI extends ListsGroupsResponse {
+  name: string;
+}
 
 interface CreateGroupPopupProps {
   isOpen: boolean;
@@ -23,9 +37,18 @@ export const CreateGroupPopup: React.FC<CreateGroupPopupProps> = ({
   const [selectedTemplates, setSelectedTemplates] = useState<Set<string>>(
     new Set(),
   );
-  const [templates, setTemplates] = useState<Template[]>([]);
+  const [templates, setTemplates] = useState<TemplateUI[]>([]);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+
+  const transformTemplate = (
+    template: ListsTemplatesResponse | TemplatesResponse,
+  ): TemplateUI => ({
+    ...template,
+    name: template.protocol_name,
+    type: template.privacy === 'personal' ? 'personal' : 'general',
+    groupId: template.group_id,
+  });
 
   useEffect(() => {
     if (isOpen) {
@@ -36,14 +59,28 @@ export const CreateGroupPopup: React.FC<CreateGroupPopupProps> = ({
   const loadTemplates = async () => {
     setLoading(true);
     try {
-      const response = await templateApi.getList();
+      // Загружаем шаблоны и группы параллельно
+      const [groupsResponse, templatesResponse] = await Promise.all([
+        mainApi.templateGroups.getGroups(),
+        mainApi.templates.getTemplates(),
+      ]);
+
       const allTemplates = [
-        ...(response.templates || []),
-        ...(response.groups || []).flatMap((g) => g.templates || []),
+        ...(templatesResponse || []).map(transformTemplate),
+        ...(groupsResponse || []).flatMap((group) => []),
       ];
-      setTemplates(allTemplates);
+
+      const ungroupedTemplates = allTemplates.filter(
+        (t) => t.privacy !== 'general',
+      );
+
+      setTemplates(ungroupedTemplates);
     } catch (error) {
       console.error('Ошибка загрузки шаблонов:', error);
+      toast.error('Не удалось загрузить шаблоны', {
+        position: 'top-right',
+        autoClose: 3000,
+      });
     } finally {
       setLoading(false);
     }
@@ -60,15 +97,20 @@ export const CreateGroupPopup: React.FC<CreateGroupPopupProps> = ({
 
     setSaving(true);
     try {
-      const newGroup = await templateApi.createGroup({
-        name: groupName.trim(),
-        type: 'personal',
+      const newGroup = await mainApi.templateGroups.create({
+        group_name: groupName.trim(),
       });
 
       if (selectedTemplates.size > 0) {
         for (const templateId of selectedTemplates) {
-          await templateApi.updateTemplate(templateId, {
-            groupId: newGroup.id,
+          const template = templates.find((t) => t.id === templateId);
+          if (!template) continue;
+          const fullTemplate = await mainApi.templates.getTemplate(template.id);
+          await mainApi.templates.update(templateId, {
+            protocol_name: template.protocol_name,
+            group_id: newGroup.id,
+            privacy: template.privacy,
+            fields: fullTemplate.fields || [],
           });
         }
       }
@@ -148,7 +190,7 @@ export const CreateGroupPopup: React.FC<CreateGroupPopupProps> = ({
             <label className="block text-sm text-gray-600 mb-3">
               Выберите шаблоны для этой группы
             </label>
-            <div className="max-h-60 overflow-y-auto border border-gray-200 rounded-lg p-3 space-y-2">
+            <div className="max-h-60 overflow-y-auto border-0 p-3 space-y-2">
               {templates.map((template) => (
                 <label
                   key={template.id}
@@ -158,7 +200,7 @@ export const CreateGroupPopup: React.FC<CreateGroupPopupProps> = ({
                     type="checkbox"
                     checked={selectedTemplates.has(template.id)}
                     onChange={() => toggleTemplate(template.id)}
-                    className="w-5 h-5 rounded border-gray-300 text-[#5D8CF1] focus:ring-[#5D8CF1]"
+                    className="w-5 h-5 rounded cursor-pointer border-gray-300 text-[#5D8CF1] focus:ring-[#5D8CF1]"
                   />
                   <span
                     className={`text-sm px-2 py-0.75 rounded-full ${
@@ -175,24 +217,21 @@ export const CreateGroupPopup: React.FC<CreateGroupPopupProps> = ({
                 </label>
               ))}
             </div>
-            <p className="text-xs text-gray-500 mt-2">
-              Выбрано: {selectedTemplates.size} шаблон(ов)
-            </p>
           </div>
         )}
 
-        <div className="flex gap-3 pt-4 px-5 pb-5">
+        <div className="flex flex-col gap-3 px-5 pb-5">
           <button
             onClick={handleSave}
             disabled={saving}
-            className="flex-1 h-12 bg-[#5D8CF1] text-white rounded-lg hover:bg-[#769CEF] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="h-12 bg-[#5D8CF1] text-white rounded-[15px] cursor-pointer hover:bg-[#769CEF] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {saving ? 'Сохранение...' : 'Сохранить'}
           </button>
           <button
             onClick={handleClose}
             disabled={saving}
-            className="flex-1 h-12 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="h-12 hover:bg-[#F0F5FF] text-[#202020] cursor-pointer bg-[#DCE7FF] rounded-[15px] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Отменить
           </button>

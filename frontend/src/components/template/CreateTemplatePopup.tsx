@@ -1,19 +1,36 @@
 'use client';
 
-import { useState, useEffect, ChangeEvent } from 'react';
-import { templateApi } from '@/api';
-import type { TemplateGroup, Template } from '@/api';
+import { useState, useEffect, ChangeEvent, useRef } from 'react';
+import { mainApi } from '@/api';
+import type {
+  ListsGroupsResponse,
+  TemplatesResponse,
+  TemplatesRequest,
+  FieldsType,
+  FieldsTypeFull,
+} from '@/api';
 import Image from 'next/image';
 import { toast } from 'react-toastify';
 import { CreateGroupPopup } from '../groups/CreateGroupPopup';
 import { useLockBodyScroll } from '@/hooks/useLockBodyScroll';
+
+export interface TemplateUI extends Omit<TemplatesResponse, 'fields'> {
+  name: string;
+  type: 'personal' | 'general';
+  content?: Record<string, string>;
+  groupId?: string;
+}
+
+export interface GroupUI extends ListsGroupsResponse {
+  name: string;
+}
 
 interface CreateTemplatePopupProps {
   isOpen: boolean;
   isFromPage: boolean;
   groupId?: string | null;
   onClose: () => void;
-  onSuccess: (template: Template) => void;
+  onSuccess: (template: TemplateUI) => void;
   initialContent?: Record<string, string>;
   stayInEditor?: boolean;
 }
@@ -47,7 +64,7 @@ export const CreateTemplatePopup: React.FC<CreateTemplatePopupProps> = ({
   const [step, setStep] = useState<1 | 2>(1);
   const [templateName, setTemplateName] = useState('');
   const [selectedGroupId, setSelectedGroupId] = useState<string>('');
-  const [groups, setGroups] = useState<TemplateGroup[]>([]);
+  const [groups, setGroups] = useState<GroupUI[]>([]);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [showCreateGroupPopup, setShowCreateGroupPopup] = useState(false);
@@ -55,6 +72,46 @@ export const CreateTemplatePopup: React.FC<CreateTemplatePopupProps> = ({
   const [templateContent, setTemplateContent] = useState<
     Record<string, string>
   >(initialContent || {});
+  // Рефы для всех textarea
+  const textareaRefs = useRef<Record<string, HTMLTextAreaElement>>({});
+
+  // Функция авто-ресайза для конкретного textarea
+  const resizeTextarea = (textarea: HTMLTextAreaElement) => {
+    if (!textarea) return;
+    textarea.style.height = 'auto';
+    textarea.style.height = `${textarea.scrollHeight}px`;
+  };
+
+  // Эффект: ресайз при изменении контента
+  useEffect(() => {
+    Object.values(textareaRefs.current).forEach(resizeTextarea);
+  }, [templateContent]); // ← ключевое: следим за изменениями контента
+  const transformGroup = (group: ListsGroupsResponse): GroupUI => ({
+    ...group,
+    name: group.group_name,
+  });
+
+  const transformTemplate = (template: TemplatesResponse): TemplateUI => {
+    const content: Record<string, string> = {};
+    template.fields?.forEach((field: FieldsTypeFull) => {
+      content[field.field_name] = field.field_value;
+    });
+    return {
+      ...template,
+      name: template.protocol_name,
+      type: template.privacy === 'personal' ? 'personal' : 'general',
+      content,
+      groupId: template.group_id,
+    };
+  };
+
+  const contentToFields = (content: Record<string, string>): FieldsType[] => {
+    return Object.entries(content).map(([fieldName, fieldValue]) => ({
+      field_name: fieldName,
+      field_type: 'text',
+      field_value: fieldValue,
+    }));
+  };
 
   useEffect(() => {
     if (isOpen) {
@@ -78,10 +135,14 @@ export const CreateTemplatePopup: React.FC<CreateTemplatePopupProps> = ({
   const loadGroups = async () => {
     setLoading(true);
     try {
-      const response = await templateApi.getList();
-      setGroups(response.groups || []);
+      const response = await mainApi.templateGroups.getGroups();
+      setGroups((response || []).map(transformGroup));
     } catch (error) {
       console.error('Ошибка загрузки групп:', error);
+      toast.error('Не удалось загрузить группы', {
+        position: 'top-right',
+        autoClose: 3000,
+      });
     } finally {
       setLoading(false);
     }
@@ -113,12 +174,15 @@ export const CreateTemplatePopup: React.FC<CreateTemplatePopupProps> = ({
 
     setSaving(true);
     try {
-      const newTemplate = await templateApi.createTemplate({
-        name: templateName.trim(),
-        type: 'personal',
-        groupId: selectedGroupId || undefined,
-        content: templateContent,
-      });
+      const createRequest: TemplatesRequest = {
+        protocol_name: templateName.trim(),
+        group_id: selectedGroupId || '',
+        privacy: 'personal',
+        fields: contentToFields(templateContent),
+      };
+
+      const newTemplateResponse = await mainApi.templates.create(createRequest);
+      const newTemplate = transformTemplate(newTemplateResponse);
 
       toast.success(stayInEditor ? 'Шаблон сохранён' : 'Шаблон создан', {
         position: 'top-right',
@@ -204,17 +268,13 @@ export const CreateTemplatePopup: React.FC<CreateTemplatePopupProps> = ({
                 </label>
                 <div className="space-y-2 max-h-60 overflow-y-auto">
                   <label
-                    className={`flex items-center justify-between p-3 rounded-lg cursor-pointer border-2 transition-colors ${
-                      selectedGroupId === ''
-                        ? 'border-[#5D8CF1] bg-blue-50'
-                        : 'border-gray-200 hover:border-gray-300'
-                    }`}
+                    className={`flex items-center justify-between p-3 rounded-lg cursor-pointer border-0 hover:bg-gray-50 transition-colors`}
                   >
                     <span className="text-sm text-[#202020]">
                       Шаблоны без группы
                     </span>
-                    {selectedGroupId === '' && (
-                      <span className="text-sm text-green-600 flex items-center gap-1">
+                    {selectedGroupId === '' ? (
+                      <span className="text-sm text-[#459F49] px-3 py-1.25 bg-[#D4FBD7] rounded-[10px] flex items-center gap-1">
                         <Image
                           alt="check"
                           src="/check.svg"
@@ -222,6 +282,10 @@ export const CreateTemplatePopup: React.FC<CreateTemplatePopupProps> = ({
                           height={16}
                         />
                         Выбрано
+                      </span>
+                    ) : (
+                      <span className="text-sm text-[#5D8CF1] px-3 py-1.25 bg-[#DCE7FF] rounded-[10px] flex items-center gap-1">
+                        Выбрать
                       </span>
                     )}
                     <input
@@ -237,17 +301,15 @@ export const CreateTemplatePopup: React.FC<CreateTemplatePopupProps> = ({
                   {sortedGroups.map((group) => (
                     <label
                       key={group.id}
-                      className={`flex items-center justify-between p-3 rounded-lg cursor-pointer border-2 transition-colors ${
-                        selectedGroupId === group.id
-                          ? 'border-[#5D8CF1] bg-blue-50'
-                          : 'border-gray-200 hover:border-gray-300'
-                      }`}
+                      className={
+                        'flex items-center justify-between p-3 rounded-lg cursor-pointer border-0 hover:bg-gray-50 transition-color'
+                      }
                     >
                       <span className="text-sm text-[#202020]">
                         {group.name}
                       </span>
-                      {selectedGroupId === group.id && (
-                        <span className="text-sm text-green-600 flex items-center gap-1">
+                      {selectedGroupId === group.id ? (
+                        <span className="text-sm text-[#459F49] px-3 py-1.25 bg-[#D4FBD7] rounded-[10px] flex items-center gap-1">
                           <Image
                             alt="check"
                             src="/check.svg"
@@ -255,6 +317,10 @@ export const CreateTemplatePopup: React.FC<CreateTemplatePopupProps> = ({
                             height={16}
                           />
                           Выбрано
+                        </span>
+                      ) : (
+                        <span className="text-sm text-[#5D8CF1] px-3 py-1.25 bg-[#DCE7FF] rounded-[10px] flex items-center gap-1">
+                          Выбрать
                         </span>
                       )}
                       <input
@@ -268,27 +334,28 @@ export const CreateTemplatePopup: React.FC<CreateTemplatePopupProps> = ({
                     </label>
                   ))}
                 </div>
-
-                <button
-                  onClick={() => setShowCreateGroupPopup(true)}
-                  className="mt-3 text-sm text-[#5D8CF1] hover:text-[#769CEF] transition-colors"
-                >
-                  Создать новую группу
-                </button>
+                <div className="flex ">
+                  <button
+                    onClick={() => setShowCreateGroupPopup(true)}
+                    className="mt-3 mx-auto text-[16px] text-[#5D8CF1] cursor-pointer text-center hover:text-[#769CEF] transition-colors"
+                  >
+                    Создать новую группу
+                  </button>
+                </div>
               </div>
 
-              <div className="flex gap-3 pt-4 px-5 pb-5">
+              <div className="flex flex-col gap-3 px-5 pb-5">
                 <button
                   onClick={handleNext}
                   disabled={isFromPage ? saving : loading}
-                  className="flex-1 h-12 bg-[#5D8CF1] text-white rounded-lg hover:bg-[#769CEF] transition-colors disabled:opacity-50"
+                  className="h-12 bg-[#5D8CF1] text-white cursor-pointer rounded-[15px] hover:bg-[#769CEF] transition-colors disabled:opacity-50"
                 >
                   {isFromPage ? 'Сохранить' : 'Далее'}
                 </button>
                 <button
                   onClick={handleClose}
                   disabled={loading}
-                  className="flex-1 h-12 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors disabled:opacity-50"
+                  className="h-12 rounded-[15px] hover:bg-[#F0F5FF] text-[#202020] cursor-pointer bg-[#DCE7FF] transition-colors disabled:opacity-50"
                 >
                   Отменить
                 </button>
@@ -314,6 +381,10 @@ export const CreateTemplatePopup: React.FC<CreateTemplatePopupProps> = ({
                       {section.label}
                     </label>
                     <textarea
+                      ref={(el) => {
+                        if (el) textareaRefs.current[section.key] = el;
+                        else delete textareaRefs.current[section.key];
+                      }}
                       value={templateContent[section.key] || ''}
                       onChange={(e: ChangeEvent<HTMLTextAreaElement>) =>
                         handleContentChange(section.key, e.target.value)
@@ -326,18 +397,18 @@ export const CreateTemplatePopup: React.FC<CreateTemplatePopupProps> = ({
                 ))}
               </div>
 
-              <div className="flex gap-3 pt-4 sticky bottom-0 bg-white">
+              <div className="flex flex-col gap-3 sticky -bottom-10 bg-white">
                 <button
                   onClick={handleSave}
                   disabled={saving}
-                  className="flex-1 h-12 bg-[#5D8CF1] text-white rounded-lg hover:bg-[#769CEF] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="h-12 bg-[#5D8CF1] text-white rounded-[15px] hover:bg-[#769CEF] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {saving ? 'Сохранение...' : 'Сохранить'}
                 </button>
                 <button
                   onClick={() => setStep(1)}
                   disabled={saving}
-                  className="flex-1 h-12 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="h-12 rounded-[15px] hover:bg-[#F0F5FF] text-[#202020] cursor-pointer bg-[#DCE7FF] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Назад
                 </button>

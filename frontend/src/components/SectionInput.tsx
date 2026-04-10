@@ -149,7 +149,7 @@ export const SectionInput: React.FC<SectionInputProps> = ({
             setTimeout(() => setIsOpen(false), 200);
           }}
           onKeyDown={(e) => handleKeyDown(e, handleSuggestionSelect)}
-          className="ml-6 text-[#202020] border-0 focus:border-0 focus:outline-none focus:ring-0 w-full resize-none bg-transparent placeholder-gray-400 overflow-hidden min-h-10 leading-[140%]"
+          className="ml-6 text-[#202020] border-0 focus:border-0 focus:outline-none focus:ring-0 w-webkit-fill-available resize-none bg-transparent placeholder-gray-400 overflow-hidden min-h-10 leading-[140%]"
           placeholder="Введите..."
           rows={1}
         />

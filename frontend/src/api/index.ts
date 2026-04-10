@@ -1,6 +1,5 @@
 export { mainApi } from './main-api';
 export { mlApi } from './ml-api';
-export { templateApi } from './template-api';
 
 export interface ApiError {
   detail: string;
@@ -126,27 +125,57 @@ export interface Mkb10Request {
   searchValue?: string;
 }
 
-export interface TemplateGroup {
+export interface ListsGroupsResponse {
   id: string;
-  name: string;
-  type: 'personal' | 'shared';
-  templates?: Template[];
-  isExpanded?: boolean;
-  createdAt?: string;
-  updatedAt?: string;
+  group_name: string;
 }
 
-export interface Template {
-  id: string;
-  name: string;
-  type: 'personal' | 'shared';
-  groupId?: string | null;
-  content?: Record<string, string>;
-  createdAt?: string;
-  updatedAt?: string;
+export interface GroupRequest {
+  group_name: string;
 }
 
-export interface TemplateListResponse {
-  groups: TemplateGroup[];
-  templates: Template[];
+export interface GroupResponse extends ListsGroupsResponse {
+  creator_id: string;
+  created_at: string;
+  updated_at: string;
+  deleted_at: string;
+}
+
+export interface ListsTemplatesResponse {
+  id: string;
+  protocol_name: string;
+  group_id: string;
+  privacy: string;
+}
+
+export interface TemplatesRequest {
+  protocol_name: string;
+  group_id: string | null;
+  privacy: string;
+  fields: FieldsType[];
+}
+
+export interface FieldsType {
+  field_name: string;
+  field_type: string;
+  field_value: string;
+}
+
+export interface FieldsTypeFull extends FieldsType {
+  id: string;
+  created_at: string;
+  updated_at: string;
+  deleted_at: string;
+}
+
+export interface TemplatesResponse {
+  id: string;
+  protocol_name: string;
+  group_id: string;
+  creator_id: string;
+  privacy: string;
+  created_at: string;
+  updated_at: string;
+  deleted_at: string;
+  fields: FieldsTypeFull[];
 }

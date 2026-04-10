@@ -57,26 +57,26 @@ export const DiagnosisInput: React.FC<DiagnosisInputProps> = ({
   }, [isOpen]);
 
   // //  Отправка статуса в ML
-  // const sendMlStatus = useCallback(
-  //   (
-  //     eventType: string,
-  //     selectedText: string = '',
-  //     countSugest: number = -1,
-  //   ) => {
-  //     mainApi.ml_handlers
-  //       .mlAutocompleteStatus({
-  //         field_name: 'main_diagnosis',
-  //         description: value.length === 0 ? ' ' : value,
-  //         selected_text: selectedText,
-  //         n_candidates: countSugest,
-  //         event_type: eventType,
-  //       })
-  //       .catch((error) => {
-  //         console.error('Failed to send ML status:', error);
-  //       });
-  //   },
-  //   [value],
-  // );
+  const sendMlStatus = useCallback(
+    (
+      eventType: string,
+      selectedText: string = '',
+      countSugest: number = -1,
+    ) => {
+      mainApi.ml_handlers
+        .mlAutocompleteStatus({
+          field_name: 'main_diagnosis',
+          description: value.length === 0 ? ' ' : value,
+          selected_text: selectedText,
+          n_candidates: countSugest,
+          event_type: eventType,
+        })
+        .catch((error) => {
+          console.error('Failed to send ML status:', error);
+        });
+    },
+    [value],
+  );
 
   const fetchAiCandidates = useCallback(async (text: string) => {
     if (!text.trim()) {
@@ -117,15 +117,15 @@ export const DiagnosisInput: React.FC<DiagnosisInputProps> = ({
     onValueChange(id, fullDiagnosis);
     setIsOpen(false);
     setSearchValue('');
-    //sendMlStatus('suggestion_selected', fullDiagnosis, diagnoses.length);
+    sendMlStatus('suggestion_selected', fullDiagnosis, diagnoses.length);
   };
 
   const handleAiSelect = (candidate: CandidatesItem) => {
-    const fullDiagnosis = `${candidate.code} – ${candidate.name}`;
+    const fullDiagnosis = `${candidate.name}`;
     onValueChange(id, fullDiagnosis);
     setIsOpen(false);
     setSearchValue('');
-    //sendMlStatus('suggestion_selected', fullDiagnosis, aiCandidates.length);
+    sendMlStatus('suggestion_selected', fullDiagnosis, aiCandidates.length);
   };
   useEffect(() => {
     if (isOpen && debouncedSearchValue.trim()) {
@@ -175,7 +175,7 @@ export const DiagnosisInput: React.FC<DiagnosisInputProps> = ({
           value={value}
           onChange={handleInputChange}
           onClick={() => {
-            //sendMlStatus('form_click');
+            sendMlStatus('form_click');
             handleOpenWithReset();
           }}
           onFocus={handleOpenWithReset}

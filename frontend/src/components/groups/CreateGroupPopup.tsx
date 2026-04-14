@@ -70,11 +70,7 @@ export const CreateGroupPopup: React.FC<CreateGroupPopupProps> = ({
         ...(groupsResponse || []).flatMap((group) => []),
       ];
 
-      const ungroupedTemplates = allTemplates.filter(
-        (t) => t.privacy !== 'general',
-      );
-
-      setTemplates(ungroupedTemplates);
+      setTemplates(allTemplates);
     } catch (error) {
       console.error('Ошибка загрузки шаблонов:', error);
       toast.error('Не удалось загрузить шаблоны', {

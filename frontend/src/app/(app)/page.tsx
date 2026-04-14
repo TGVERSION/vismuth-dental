@@ -443,85 +443,85 @@ export default function Home() {
         </button>
 
         {/* Индикатор загрузки списка */}
-        {isLoadingList && (
+        {isLoadingList ? (
           <div className="animate-spin mx-auto my-40 rounded-full h-10 w-10 border-b-2 border-[#5D8CF1]"></div>
-        )}
-
-        <div className="flex-1 overflow-y-auto overflow-x-hidden custom-scrollbar">
-          {consultations.length > 0 ? (
-            <div className="flex flex-col gap-1.25">
-              {/* Группировка по годам */}
-              {Object.entries(
-                consultations.reduce(
-                  (acc, consultation) => {
-                    const year = new Date(
-                      consultation.updated_at,
-                    ).getFullYear();
-                    if (!acc[year]) acc[year] = [];
-                    acc[year].push(consultation);
-                    return acc;
-                  },
-                  {} as Record<string, ListConsultationsResponse[]>,
-                ),
-              ).map(([year, yearConsultations]) => (
-                <div key={year} className="flex flex-col gap-1.25">
-                  <div className="px-3.75 py-2.25 text-[14px] font-semibold">
-                    {year}
-                  </div>
-
-                  {/* Группировка по месяцам */}
-                  {Object.entries(
-                    yearConsultations.reduce(
-                      (acc, consultation) => {
-                        const month = new Date(
-                          consultation.updated_at,
-                        ).toLocaleDateString('ru-RU', { month: 'long' });
-                        if (!acc[month]) acc[month] = [];
-                        acc[month].push(consultation);
-                        return acc;
-                      },
-                      {} as Record<string, ListConsultationsResponse[]>,
-                    ),
-                  ).map(([month, monthConsultations]) => (
-                    <div key={month} className="flex flex-col gap-1.25">
-                      <div className="px-6.25 py-2.25 text-[14px] font-medium">
-                        {month.charAt(0).toUpperCase() + month.slice(1)}
-                      </div>
-
-                      {monthConsultations.map((consultation) => (
-                        <div
-                          key={consultation.id}
-                          onClick={() =>
-                            handleConsultationClick(consultation.id)
-                          }
-                          className={`ml-6.25 px-2.5 py-2.25 rounded-[15px] transition-all cursor-pointer ${
-                            protocolId === consultation.id
-                              ? 'bg-white'
-                              : 'hover:bg-white'
-                          }`}
-                        >
-                          <p className="text-[14px] font-medium">
-                            {consultation.protocol_name ||
-                              `Протокол №${consultation.id.slice(-12)}`}
-                          </p>
-                          <span className="text-[14px] text-[#6C757D]">
-                            {formatDate(consultation.updated_at)}
-                          </span>
-                        </div>
-                      ))}
+        ) : (
+          <div className="flex-1 overflow-y-auto overflow-x-hidden custom-scrollbar">
+            {consultations.length > 0 ? (
+              <div className="flex flex-col gap-1.25">
+                {/* Группировка по годам */}
+                {Object.entries(
+                  consultations.reduce(
+                    (acc, consultation) => {
+                      const year = new Date(
+                        consultation.updated_at,
+                      ).getFullYear();
+                      if (!acc[year]) acc[year] = [];
+                      acc[year].push(consultation);
+                      return acc;
+                    },
+                    {} as Record<string, ListConsultationsResponse[]>,
+                  ),
+                ).map(([year, yearConsultations]) => (
+                  <div key={year} className="flex flex-col gap-1.25">
+                    <div className="px-3.75 py-2.25 text-[14px] font-semibold">
+                      {year}
                     </div>
-                  ))}
-                </div>
-              ))}
-            </div>
-          ) : (
-            !isLoadingList && (
-              <div className="px-4 py-8 text-center text-gray-500 text-sm">
-                Нет сохранённых протоколов
+
+                    {/* Группировка по месяцам */}
+                    {Object.entries(
+                      yearConsultations.reduce(
+                        (acc, consultation) => {
+                          const month = new Date(
+                            consultation.updated_at,
+                          ).toLocaleDateString('ru-RU', { month: 'long' });
+                          if (!acc[month]) acc[month] = [];
+                          acc[month].push(consultation);
+                          return acc;
+                        },
+                        {} as Record<string, ListConsultationsResponse[]>,
+                      ),
+                    ).map(([month, monthConsultations]) => (
+                      <div key={month} className="flex flex-col gap-1.25">
+                        <div className="px-6.25 py-2.25 text-[14px] font-medium">
+                          {month.charAt(0).toUpperCase() + month.slice(1)}
+                        </div>
+
+                        {monthConsultations.map((consultation) => (
+                          <div
+                            key={consultation.id}
+                            onClick={() =>
+                              handleConsultationClick(consultation.id)
+                            }
+                            className={`ml-6.25 px-2.5 py-2.25 rounded-[15px] transition-all cursor-pointer ${
+                              protocolId === consultation.id
+                                ? 'bg-white'
+                                : 'hover:bg-white'
+                            }`}
+                          >
+                            <p className="text-[14px] font-medium">
+                              {consultation.protocol_name ||
+                                `Протокол №${consultation.id.slice(-12)}`}
+                            </p>
+                            <span className="text-[14px] text-[#6C757D]">
+                              {formatDate(consultation.updated_at)}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    ))}
+                  </div>
+                ))}
               </div>
-            )
-          )}
-        </div>
+            ) : (
+              !isLoadingList && (
+                <div className="px-4 py-8 text-center text-gray-500 text-sm">
+                  Нет сохранённых протоколов
+                </div>
+              )
+            )}
+          </div>
+        )}
       </div>
 
       {isLoading && (

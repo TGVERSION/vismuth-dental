@@ -15,6 +15,8 @@ import { CreateTemplatePopup } from './CreateTemplatePopup';
 import { toast } from 'react-toastify';
 import { DeleteGroup } from '../groups/DeleteGroup';
 import { DeleteTemplate } from './DeleteTemplate';
+import { RenameTemplate } from './RenameTemplatePopup';
+import { RenameGroup } from '../groups/RenameGroupPopup';
 
 export interface TemplateGroupUI extends ListsGroupsResponse {
   name: string;
@@ -65,8 +67,14 @@ export const TemplatePopup: React.FC<TemplatePopupProps> = ({
   const [selectedTemplate, setSelectedTemplate] = useState<TemplateUI | null>(
     null,
   );
+
   const [loading, setLoading] = useState(false);
   const [templateLoading, setTemplateLoading] = useState(false);
+  const [openRename, setOpenRename] = useState(false);
+  const [openGroupRename, setOpenGroupRename] = useState(false);
+  const [selectedGroup, setSelectedGroup] = useState<TemplateGroupUI | null>(
+    null,
+  );
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
   const [hoveredItem, setHoveredItem] = useState<string | null>(null);
   const [showCreateMenu, setShowCreateMenu] = useState(false);
@@ -290,10 +298,9 @@ export const TemplatePopup: React.FC<TemplatePopupProps> = ({
   const handleRename = async (
     id: string,
     type: 'group' | 'template',
-    oldName: string,
+    newName: string,
   ) => {
-    const newName = prompt('Новое название:', oldName);
-    if (!newName || newName === oldName) return;
+    if (!newName) return;
 
     try {
       if (type === 'group') {
@@ -478,11 +485,8 @@ export const TemplatePopup: React.FC<TemplatePopupProps> = ({
                                   <button
                                     onClick={(e) => {
                                       e.stopPropagation();
-                                      handleRename(
-                                        group.id,
-                                        'group',
-                                        group.name,
-                                      );
+                                      setOpenGroupRename(true);
+                                      setSelectedGroup(group);
                                     }}
                                     className="cursor-pointer"
                                     title="Переименовать"
@@ -660,11 +664,7 @@ export const TemplatePopup: React.FC<TemplatePopupProps> = ({
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
-                                handleRename(
-                                  selectedTemplate.id,
-                                  'template',
-                                  selectedTemplate.name,
-                                );
+                                setOpenRename(true);
                                 setOpenMenuId(null);
                               }}
                               className="w-full px-4 py-2 text-left text-sm rounded-md cursor-pointer hover:bg-[#F0F5FF] transition-colors"
@@ -750,6 +750,32 @@ export const TemplatePopup: React.FC<TemplatePopupProps> = ({
         isOpen={!!deleteTemplateConfirm}
         onClose={() => setDeleteTemplateConfirm(null)}
         onDelete={handleDeleteTemplate}
+      />
+      <RenameTemplate
+        key={selectedTemplate?.id}
+        onRename={async (newName) => {
+          if (!selectedTemplate) {
+            setOpenRename(false);
+            return;
+          }
+          await handleRename(selectedTemplate.id, 'template', newName);
+        }}
+        isOpen={openRename && selectedTemplate !== null}
+        onClose={() => setOpenRename(false)}
+        templateName={selectedTemplate?.name || ''}
+      />
+      <RenameGroup
+        key={selectedGroup?.id}
+        onRename={async (newName) => {
+          if (!selectedGroup) {
+            setOpenGroupRename(false);
+            return;
+          }
+          await handleRename(selectedGroup.id, 'group', newName);
+        }}
+        isOpen={openGroupRename && selectedGroup !== null}
+        onClose={() => setOpenGroupRename(false)}
+        groupName={selectedGroup?.name || ''}
       />
     </>
   );

@@ -13,6 +13,7 @@ import Image from 'next/image';
 import { toast } from 'react-toastify';
 import { CreateGroupPopup } from '../groups/CreateGroupPopup';
 import { useLockBodyScroll } from '@/hooks/useLockBodyScroll';
+import { CustomDropdown, type DropdownOption } from '../CustomDropdown';
 
 export interface TemplateUI extends Omit<TemplatesResponse, 'fields'> {
   name: string;
@@ -63,6 +64,9 @@ export const CreateTemplatePopup: React.FC<CreateTemplatePopupProps> = ({
   useLockBodyScroll(isOpen);
   const [step, setStep] = useState<1 | 2>(1);
   const [templateName, setTemplateName] = useState('');
+  const [templateType, setTemplateType] = useState<'personal' | 'general'>(
+    'personal',
+  );
   const [selectedGroupId, setSelectedGroupId] = useState<string>('');
   const [groups, setGroups] = useState<GroupUI[]>([]);
   const [loading, setLoading] = useState(false);
@@ -75,6 +79,18 @@ export const CreateTemplatePopup: React.FC<CreateTemplatePopupProps> = ({
   // Рефы для всех textarea
   const textareaRefs = useRef<Record<string, HTMLTextAreaElement>>({});
 
+  const TEMPLATE_TYPE_OPTIONS: DropdownOption<'personal' | 'general'>[] = [
+    {
+      value: 'personal',
+      label: 'Личный',
+      badgeClass: 'bg-[#FFD6BF] text-[#202020]',
+    },
+    {
+      value: 'general',
+      label: 'Общий',
+      badgeClass: 'bg-[#CFE5E6] text-[#202020]',
+    },
+  ];
   // Функция авто-ресайза для конкретного textarea
   const resizeTextarea = (textarea: HTMLTextAreaElement) => {
     if (!textarea) return;
@@ -117,6 +133,7 @@ export const CreateTemplatePopup: React.FC<CreateTemplatePopupProps> = ({
     if (isOpen) {
       loadGroups();
       setStep(1);
+      setTemplateType('personal');
       setTemplateName('');
       setSelectedGroupId('');
       if (groupId) setSelectedGroupId(groupId);
@@ -177,7 +194,7 @@ export const CreateTemplatePopup: React.FC<CreateTemplatePopupProps> = ({
       const createRequest: TemplatesRequest = {
         protocol_name: templateName.trim(),
         group_id: selectedGroupId || '',
-        privacy: 'personal',
+        privacy: templateType,
         fields: contentToFields(templateContent),
       };
 
@@ -205,6 +222,7 @@ export const CreateTemplatePopup: React.FC<CreateTemplatePopupProps> = ({
   const handleClose = () => {
     setStep(1);
     setTemplateName('');
+    setTemplateType('personal');
     setSelectedGroupId('');
     onClose();
   };
@@ -248,18 +266,47 @@ export const CreateTemplatePopup: React.FC<CreateTemplatePopupProps> = ({
 
           {step === 1 ? (
             <div>
-              <div className="mb-6 px-5">
-                <label className="block text-sm text-gray-600 mb-2">
-                  Название шаблона
-                </label>
-                <input
-                  type="text"
-                  value={templateName}
-                  onChange={(e) => setTemplateName(e.target.value)}
-                  placeholder="Введите название"
-                  className="w-full px-4 py-2.5 bg-gray-50 border-0 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#5D8CF1]"
-                  autoFocus
-                />
+              <div className="mb-6 px-5 flex flex-row gap-4">
+                <div className="w-[111px]">
+                  <label className="block text-sm text-gray-600 mb-2">
+                    Тип шаблона
+                  </label>
+                  <CustomDropdown<'personal' | 'general'>
+                    options={TEMPLATE_TYPE_OPTIONS}
+                    value={templateType}
+                    onChange={setTemplateType}
+                    placeholder="Тип шаблона"
+                    renderTrigger={(option) => (
+                      <span
+                        className={`text-sm px-2 py-0.75 rounded-full ${option.badgeClass}`}
+                      >
+                        {option.label}
+                      </span>
+                    )}
+                    renderOption={(option) => (
+                      <>
+                        <span
+                          className={`text-sm px-2 py-0.75 rounded-full ${option.badgeClass}`}
+                        >
+                          {option.label}
+                        </span>
+                      </>
+                    )}
+                  />
+                </div>
+                <div className="w-[358px]">
+                  <label className="block text-sm text-gray-600 mb-2">
+                    Название шаблона
+                  </label>
+                  <input
+                    type="text"
+                    value={templateName}
+                    onChange={(e) => setTemplateName(e.target.value)}
+                    placeholder="Введите название"
+                    className="w-full px-4 py-2.5 bg-gray-50 border-0 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#5D8CF1]"
+                    autoFocus
+                  />
+                </div>
               </div>
 
               <div className="mb-6 px-5">

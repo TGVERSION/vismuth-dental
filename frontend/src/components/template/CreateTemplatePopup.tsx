@@ -76,7 +76,6 @@ export const CreateTemplatePopup: React.FC<CreateTemplatePopupProps> = ({
   const [templateContent, setTemplateContent] = useState<
     Record<string, string>
   >(initialContent || {});
-  // Рефы для всех textarea
   const textareaRefs = useRef<Record<string, HTMLTextAreaElement>>({});
 
   const TEMPLATE_TYPE_OPTIONS: DropdownOption<'personal' | 'general'>[] = [
@@ -91,17 +90,15 @@ export const CreateTemplatePopup: React.FC<CreateTemplatePopupProps> = ({
       badgeClass: 'bg-[#CFE5E6] text-[#202020]',
     },
   ];
-  // Функция авто-ресайза для конкретного textarea
   const resizeTextarea = (textarea: HTMLTextAreaElement) => {
     if (!textarea) return;
     textarea.style.height = 'auto';
     textarea.style.height = `${textarea.scrollHeight}px`;
   };
 
-  // Эффект: ресайз при изменении контента
   useEffect(() => {
     Object.values(textareaRefs.current).forEach(resizeTextarea);
-  }, [templateContent]); // ← ключевое: следим за изменениями контента
+  }, [templateContent]);
   const transformGroup = (group: ListsGroupsResponse): GroupUI => ({
     ...group,
     name: group.group_name,

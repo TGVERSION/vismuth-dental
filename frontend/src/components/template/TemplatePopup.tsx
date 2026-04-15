@@ -17,6 +17,7 @@ import { DeleteGroup } from '../groups/DeleteGroup';
 import { DeleteTemplate } from './DeleteTemplate';
 import { RenameTemplate } from './RenameTemplatePopup';
 import { RenameGroup } from '../groups/RenameGroupPopup';
+import { MoveTemplatePopup } from './MoveTemplatePopup';
 
 export interface TemplateGroupUI extends ListsGroupsResponse {
   name: string;
@@ -71,6 +72,9 @@ export const TemplatePopup: React.FC<TemplatePopupProps> = ({
   const [loading, setLoading] = useState(false);
   const [templateLoading, setTemplateLoading] = useState(false);
   const [openRename, setOpenRename] = useState(false);
+  const [openEdit, setOpenEdit] = useState(false);
+  const [openMove, setOpenMove] = useState(false);
+
   const [openGroupRename, setOpenGroupRename] = useState(false);
   const [selectedGroup, setSelectedGroup] = useState<TemplateGroupUI | null>(
     null,
@@ -664,12 +668,32 @@ export const TemplatePopup: React.FC<TemplatePopupProps> = ({
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
+                                setOpenEdit(true);
+                                setOpenMenuId(null);
+                              }}
+                              className="w-full px-4 py-2 text-left text-sm rounded-md cursor-pointer hover:bg-[#F0F5FF] transition-colors"
+                            >
+                              Редактировать
+                            </button>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
                                 setOpenRename(true);
                                 setOpenMenuId(null);
                               }}
                               className="w-full px-4 py-2 text-left text-sm rounded-md cursor-pointer hover:bg-[#F0F5FF] transition-colors"
                             >
                               Переименовать
+                            </button>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setOpenMove(true);
+                                setOpenMenuId(null);
+                              }}
+                              className="w-full px-4 py-2 text-left text-sm rounded-md cursor-pointer hover:bg-[#F0F5FF] transition-colors"
+                            >
+                              Переместить
                             </button>
                             <button
                               onClick={(e) => {
@@ -776,6 +800,12 @@ export const TemplatePopup: React.FC<TemplatePopupProps> = ({
         isOpen={openGroupRename && selectedGroup !== null}
         onClose={() => setOpenGroupRename(false)}
         groupName={selectedGroup?.name || ''}
+      />
+      <MoveTemplatePopup
+        isOpen={openMove}
+        templateId={selectedTemplate?.id || null}
+        onClose={() => setOpenMove(false)}
+        onSuccess={loadTemplates}
       />
     </>
   );

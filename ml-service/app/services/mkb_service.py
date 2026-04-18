@@ -1,5 +1,5 @@
 from langchain_core.messages import SystemMessage, HumanMessage
-from .llm_setup import llm, model, collection
+from .llm_setup import llm_mkb, emb_model, collection
 
 
 def extract_diagnosis(description: str) -> str:
@@ -48,7 +48,7 @@ def extract_diagnosis(description: str) -> str:
         HumanMessage(content=f"Описание: {description}")
     ]
     
-    response = llm.invoke(messages)
+    response = llm_mkb.invoke(messages)
     
     return response.content.strip()
 
@@ -69,7 +69,7 @@ def search_mkb(query: str, n_results: int = 3, use_prefix: bool = True) -> list:
     search_query = f"search_query: {query}" if use_prefix else query
     
     # Векторизуем
-    query_emb = model.encode([search_query], normalize_embeddings=True)
+    query_emb = emb_model.encode([search_query], normalize_embeddings=True)
     
     # Ищем
     results = collection.query(

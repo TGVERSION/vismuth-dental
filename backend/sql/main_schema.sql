@@ -259,84 +259,84 @@ CREATE TABLE ref_mis (
 );
 
 
--- =========================================
--- Основная сущность: протокол консультации
--- =========================================
+-- -- =========================================
+-- -- Основная сущность: протокол консультации
+-- -- =========================================
 
-CREATE TABLE IF NOT EXISTS consultation (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+-- CREATE TABLE IF NOT EXISTS consultation (
+--     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
 
-    service_user UUID REFERENCES service_user(id),
+--     service_user UUID REFERENCES service_user(id),
 
-    -- Интеграция с внешней клинической системой (заполняется при интеграции)
-    external_system INTEGER, -- идентификатор внешней системы (EMR/МИС)
-    external_patient_id INTEGER, -- внешний ID пациента
-    external_doctor_id INTEGER, -- внешний ID врача
-    external_visit_id INTEGER, -- внешний ID визита/обращения
+--     -- Интеграция с внешней клинической системой (заполняется при интеграции)
+--     external_system INTEGER, -- идентификатор внешней системы (EMR/МИС)
+--     external_patient_id INTEGER, -- внешний ID пациента
+--     external_doctor_id INTEGER, -- внешний ID врача
+--     external_visit_id INTEGER, -- внешний ID визита/обращения
 
-    consultation_datetime TIMESTAMPTZ, -- дата/время консультации
+--     consultation_datetime TIMESTAMPTZ, -- дата/время консультации
 
-    -- 1. Жалобы
-    complaints TEXT,
+--     -- 1. Жалобы
+--     complaints TEXT,
 
-    -- 2. Анамнез заболевания
-    disease_anamnesis TEXT,
+--     -- 2. Анамнез заболевания
+--     disease_anamnesis TEXT,
 
-    -- 3. История заболевания
-    disease_history TEXT,
+--     -- 3. История заболевания
+--     disease_history TEXT,
 
-    -- 4. Состояние пациента
-    patient_condition TEXT,
+--     -- 4. Состояние пациента
+--     patient_condition TEXT,
 
-    -- 5. Анамнез жизни
-    life_anamnesis TEXT,
+--     -- 5. Анамнез жизни
+--     life_anamnesis TEXT,
 
-    -- 6. Вредные привычки и зависимости
-    bad_habits TEXT,
+--     -- 6. Вредные привычки и зависимости
+--     bad_habits TEXT,
 
-    -- 7. Аллергологический анамнез
-    allergy_anamnesis TEXT,
+--     -- 7. Аллергологический анамнез
+--     allergy_anamnesis TEXT,
 
-    -- 8. Витальные параметры
-    vital_parameters TEXT,
+--     -- 8. Витальные параметры
+--     vital_parameters TEXT,
 
-    -- 9. Объективные данные
-    objective_data TEXT,
+--     -- 9. Объективные данные
+--     objective_data TEXT,
 
-    -- 10. Объективизированная оценка состояния
-    clinical_assessment TEXT,
+--     -- 10. Объективизированная оценка состояния
+--     clinical_assessment TEXT,
 
-    -- 11. Заключение консультации
-    consultation_conclusion TEXT,
+--     -- 11. Заключение консультации
+--     consultation_conclusion TEXT,
 
-    -- 12. Диагнозы: основной и сопутствующие
-    main_diagnosis TEXT,
-    comorbid_diagnoses TEXT,
+--     -- 12. Диагнозы: основной и сопутствующие
+--     main_diagnosis TEXT,
+--     comorbid_diagnoses TEXT,
 
-    -- 13. Рекомендации
-    recommendations TEXT,
+--     -- 13. Рекомендации
+--     recommendations TEXT,
 
-    -- 14. Назначения
-    prescriptions TEXT,
+--     -- 14. Назначения
+--     prescriptions TEXT,
 
-    -- Служебные поля
-    protocol_name VARCHAR(255), -- название протокола
-    status_protocol VARCHAR(255), -- статус протокола (draft/active/cancelled/archived и т.п.)
-    created_at TIMESTAMPTZ DEFAULT now(),
-    updated_at TIMESTAMPTZ,
-    deleted_at TIMESTAMPTZ,
+--     -- Служебные поля
+--     protocol_name VARCHAR(255), -- название протокола
+--     status_protocol VARCHAR(255), -- статус протокола (draft/active/cancelled/archived и т.п.)
+--     created_at TIMESTAMPTZ DEFAULT now(),
+--     updated_at TIMESTAMPTZ,
+--     deleted_at TIMESTAMPTZ,
 
-    protocol_template_id UUID REFERENCES protocol_template(id),
-    extra_fields JSONB
-);
+--     protocol_template_id UUID REFERENCES protocol_template(id),
+--     extra_fields JSONB
+-- );
 
-COMMENT ON TABLE consultation IS 'Протоколы консультаций (объединённая сущность, все разделы протокола в одной таблице)';
+-- COMMENT ON TABLE consultation IS 'Протоколы консультаций (объединённая сущность, все разделы протокола в одной таблице)';
 
-CREATE INDEX IF NOT EXISTS idx_consultation_datetime
-    ON consultation (consultation_datetime);
+-- CREATE INDEX IF NOT EXISTS idx_consultation_datetime
+--     ON consultation (consultation_datetime);
 
-CREATE INDEX IF NOT EXISTS idx_consultation_protocol_template_id
-    ON consultation (protocol_template_id);
+-- CREATE INDEX IF NOT EXISTS idx_consultation_protocol_template_id
+--     ON consultation (protocol_template_id);
 
 -- =========================================
 -- Сущности для пользователей
@@ -367,6 +367,123 @@ COMMENT ON COLUMN service_user.role IS 'Роль пользователя сер
 
 CREATE INDEX IF NOT EXISTS idx_service_user_email
     ON service_user (login);
+
+
+-- =========================================
+-- Структуры протоколов консультаций
+-- =========================================
+
+CREATE TABLE IF NOT EXISTS protocol_structures (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+
+    creator_id UUID NOT NULL REFERENCES service_user (id),
+    structure_code VARCHAR(255) NOT NULL,
+    structure_name VARCHAR(500) NOT NULL,
+    description TEXT,
+    version INTEGER NOT NULL DEFAULT 1,
+    is_active BOOLEAN NOT NULL DEFAULT true,
+
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at TIMESTAMPTZ,
+    deleted_at TIMESTAMPTZ
+);
+
+COMMENT ON TABLE protocol_structures IS
+    'Версионируемые структуры протоколов';
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_protocol_structures_code_version_unique
+    ON protocol_structures (structure_code, version);
+
+CREATE INDEX IF NOT EXISTS idx_protocol_structures_creator_id
+    ON protocol_structures (creator_id);
+
+CREATE INDEX IF NOT EXISTS idx_protocol_structures_is_active
+    ON protocol_structures (is_active);
+
+
+CREATE TABLE IF NOT EXISTS protocol_structures_fields (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+
+    protocol_structure_id UUID NOT NULL REFERENCES protocol_structures (id) ON DELETE CASCADE,
+    field_name VARCHAR(255) NOT NULL,
+    field_label VARCHAR(500),
+    description TEXT,
+    field_type VARCHAR(255) NOT NULL,
+    default_value TEXT,
+    field_value TEXT,
+    dictionary VARCHAR(255),
+    is_required BOOLEAN NOT NULL DEFAULT false,
+    sort_order INTEGER NOT NULL DEFAULT 0
+);
+
+COMMENT ON TABLE protocol_structures_fields IS
+    'Поля внутри версии protocol_structures';
+
+CREATE INDEX IF NOT EXISTS idx_protocol_structures_fields_structure_id
+    ON protocol_structures_fields (protocol_structure_id);
+
+CREATE INDEX IF NOT EXISTS idx_protocol_structures_fields_sort
+    ON protocol_structures_fields (protocol_structure_id, sort_order);
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_protocol_structures_fields_name_unique
+    ON protocol_structures_fields (protocol_structure_id, field_name);
+
+
+-- =========================================
+-- Сущности для протоколов
+-- =========================================
+
+CREATE TABLE IF NOT EXISTS protocols (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+
+    service_user UUID REFERENCES service_user (id),
+    protocol_structure_id UUID NOT NULL REFERENCES protocol_structures (id),
+    patient_id INTEGER,
+    doctor_id UUID REFERENCES service_user (id),
+
+    protocol_name VARCHAR(255),
+    status_protocol VARCHAR(255),
+
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at TIMESTAMPTZ,
+    deleted_at TIMESTAMPTZ
+);
+
+COMMENT ON TABLE protocols IS
+    'Экземпляр протокола по выбранной структуре';
+
+CREATE INDEX IF NOT EXISTS idx_protocols_service_user
+    ON protocols (service_user);
+
+CREATE INDEX IF NOT EXISTS idx_protocols_patient_id
+    ON protocols (patient_id);
+
+CREATE INDEX IF NOT EXISTS idx_protocols_doctor_id
+    ON protocols (doctor_id);
+
+CREATE INDEX IF NOT EXISTS idx_protocols_protocol_structure_id
+    ON protocols (protocol_structure_id);
+
+
+CREATE TABLE IF NOT EXISTS protocol_fields (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+
+    protocol_id UUID NOT NULL REFERENCES protocols (id) ON DELETE CASCADE,
+    field_id UUID NOT NULL REFERENCES protocol_structures_fields (id),
+    field_value TEXT
+);
+
+COMMENT ON TABLE protocol_fields IS
+    'Значения полей экземпляра протокола (связь с определением поля в protocol_structures_fields)';
+
+CREATE INDEX IF NOT EXISTS idx_protocol_fields_protocol_id
+    ON protocol_fields (protocol_id);
+
+CREATE INDEX IF NOT EXISTS idx_protocol_fields_field_id
+    ON protocol_fields (field_id);
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_protocol_fields_protocol_field_unique
+    ON protocol_fields (protocol_id, field_id);
 
 
 -- Ожидающая регистрация: до подтверждения кода строки в service_user нет

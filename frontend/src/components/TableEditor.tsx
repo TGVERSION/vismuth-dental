@@ -7,33 +7,13 @@ import {
   useEffect,
   useLayoutEffect,
 } from 'react';
-import React from 'react';
 
-// Fix 7 — Magic number constants
 const HEADER_HEIGHT_PX = 36;
 const ROW_HEIGHT_PX = 34;
 const MAX_VISIBLE_ROWS = 10;
+// 36 + 10 * 34 = 376
+const MAX_TABLE_HEIGHT = HEADER_HEIGHT_PX + MAX_VISIBLE_ROWS * ROW_HEIGHT_PX;
 
-// Fix 6 — Module-level style constants
-const PLUS_BTN_STYLE: React.CSSProperties = {
-  position: 'absolute',
-  width: 18, height: 18, borderRadius: '50%',
-  background: '#5D8CF1', color: '#fff', border: 'none',
-  fontSize: 13, cursor: 'pointer',
-  display: 'flex', alignItems: 'center', justifyContent: 'center',
-  boxShadow: '0 1px 4px rgba(93,140,241,0.5)',
-  zIndex: 30, padding: 0, lineHeight: 1,
-};
-
-const DEL_CIRCLE_STYLE: React.CSSProperties = {
-  width: 20, height: 20, borderRadius: '50%',
-  border: 'none', background: 'transparent', color: '#BDBDBD',
-  cursor: 'pointer', fontSize: 11,
-  display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-  padding: 0, lineHeight: 1,
-};
-
-// Fix 3 — Stable id on Column interface
 export interface Column {
   id: string;
   name: string;
@@ -64,20 +44,14 @@ export function TableEditor({
   const scrollRef = useRef<HTMLDivElement>(null);
   const tableRef  = useRef<HTMLTableElement>(null);
 
-  // Fix 1 — Ref to avoid stale columns snapshot in startResize
   const columnsRef = useRef(columns);
   useEffect(() => { columnsRef.current = columns; }, [columns]);
 
   const [hoveredCol, setHoveredCol] = useState<number | null>(null);
   const [hoveredRow, setHoveredRow] = useState<number | null>(null);
-  // Separate hover state for the + buttons so they stay visible when
-  // the mouse moves from the th/tr onto the button
   const [plusColHovered, setPlusColHovered] = useState<number | null>(null);
   const [plusRowHovered, setPlusRowHovered] = useState<number | null>(null);
-
-  // Fix 5 — React state for delete button hover
   const [hoveredDelBtn, setHoveredDelBtn] = useState<string | null>(null);
-
   const [colBtnPos, setColBtnPos] = useState<OverlayPos[]>([]);
   const [rowBtnPos, setRowBtnPos] = useState<OverlayPos[]>([]);
 
@@ -93,7 +67,6 @@ export function TableEditor({
     const visLeft   = outerRect.left  - wrapRect.left;
     const visRight  = outerRect.right - wrapRect.left;
 
-    // Column + buttons: centred on TOP border of table, at right edge of each th
     const headerCells = Array.from(
       table.querySelectorAll<HTMLTableCellElement>('thead th:not([data-actions])')
     );
@@ -109,7 +82,6 @@ export function TableEditor({
       })
     );
 
-    // Row + buttons: centred on BOTTOM border of each tr, left of table
     const bodyRows = Array.from(
       table.querySelectorAll<HTMLTableRowElement>('tbody tr')
     );
@@ -125,11 +97,9 @@ export function TableEditor({
     );
   }, []);
 
-  // Fix 4 — Only recompute on geometry changes, not row content changes
   const colGeometry = columns.map((c) => `${c.id}:${c.width}`).join(',');
   useLayoutEffect(() => {
     computePositions();
-    // Only geometry changes (column count, widths, row count) affect overlay positions
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [columns.length, rows.length, colGeometry, computePositions]);
 
@@ -148,7 +118,6 @@ export function TableEditor({
   const addColumn = useCallback(
     (afterIndex: number) => {
       const next = [...columns];
-      // Fix 3 — Generate stable id for new columns
       next.splice(afterIndex + 1, 0, {
         id: `col-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
         name: `Колонка ${columns.length + 1}`,
@@ -218,7 +187,6 @@ export function TableEditor({
       const startX = e.clientX;
       const startW = columnsRef.current[ci].width;
 
-      // Fix 1 — Use columnsRef to avoid stale closure over columns
       const onMove = (ev: MouseEvent) => {
         const next = [...columnsRef.current];
         next[ci] = { ...next[ci], width: Math.max(60, startW + ev.clientX - startX) };
@@ -236,92 +204,40 @@ export function TableEditor({
 
   // ── Render ─────────────────────────────────────────────────────────────
   return (
-    <div ref={wrapRef} style={{ position: 'relative', paddingTop: 9 }}>
+    <div ref={wrapRef} className="relative pt-[9px]">
       {/* Table */}
-      <div
-        ref={outerRef}
-        style={{
-          border: '1px solid #E5E7EB',
-          borderRadius: 8,
-          overflow: 'hidden',
-        }}
-      >
+      <div ref={outerRef} className="border border-[#E5E7EB] rounded-lg overflow-hidden">
         <div
           ref={scrollRef}
-          style={{
-            overflowX: 'auto',
-            overflowY: 'auto',
-            maxHeight: `calc(${HEADER_HEIGHT_PX}px + ${MAX_VISIBLE_ROWS} * ${ROW_HEIGHT_PX}px)`,
-          }}
+          className="overflow-x-auto overflow-y-auto"
+          style={{ maxHeight: MAX_TABLE_HEIGHT }}
         >
-          <table
-            ref={tableRef}
-            style={{
-              borderCollapse: 'collapse',
-              width: '100%',
-              tableLayout: 'fixed',
-            }}
-          >
+          <table ref={tableRef} className="border-collapse w-full table-fixed">
+
             {/* ── Header ── */}
             <thead>
               <tr>
-                {/* Fix 3 — Use col.id as React key */}
                 {columns.map((col, ci) => (
                   <th
                     key={col.id}
-                    style={{
-                      width: col.width,
-                      minWidth: 60,
-                      position: 'sticky',
-                      top: 0,
-                      zIndex: 5,
-                      background: hoveredCol === ci ? '#F1F3F9' : '#F9FAFB',
-                      borderRight: '1px solid #E5E7EB',
-                      borderBottom: '1px solid #E5E7EB',
-                      height: HEADER_HEIGHT_PX,
-                      padding: 0,
-                      fontWeight: 500,
-                      fontSize: 13,
-                      color: '#202020',
-                      userSelect: 'none',
-                    }}
+                    style={{ width: col.width }}
+                    className={`sticky top-0 z-[5] min-w-[60px] border-r border-b border-[#E5E7EB] h-9 p-0 font-medium text-[13px] text-[#202020] select-none relative ${hoveredCol === ci ? 'bg-[#F1F3F9]' : 'bg-[#F9FAFB]'}`}
                     onMouseEnter={() => setHoveredCol(ci)}
                     onMouseLeave={() => setHoveredCol(null)}
                   >
-                    {/* Fix 2 — Controlled input instead of contentEditable */}
-                    <div
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        padding: '0 24px 0 12px',
-                        height: '100%',
-                      }}
-                    >
+                    <div className="flex items-center pl-3 pr-6 h-full">
                       <input
                         type="text"
                         value={col.name}
                         onChange={(e) => renameColumn(ci, e.target.value)}
                         onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur(); }}
                         onMouseDown={(e) => e.stopPropagation()}
-                        style={{
-                          flex: 1,
-                          fontSize: 13,
-                          fontWeight: 500,
-                          border: 'none',
-                          background: 'transparent',
-                          color: '#202020',
-                          fontFamily: 'inherit',
-                          outline: 'none',
-                          cursor: 'text',
-                          minWidth: 0,
-                          padding: 0,
-                          width: '100%',
-                        }}
+                        className="flex-1 text-[13px] font-medium border-none bg-transparent text-[#202020] outline-none cursor-text min-w-0 p-0 w-full"
+                        style={{ fontFamily: 'inherit' }}
                       />
                     </div>
 
                     {/* Column delete ✕ */}
-                    {/* Fix 5 — React state-driven hover instead of direct DOM mutation */}
                     {hoveredCol === ci && (
                       <button
                         type="button"
@@ -329,15 +245,7 @@ export function TableEditor({
                         onMouseDown={(e) => e.stopPropagation()}
                         onMouseEnter={() => setHoveredDelBtn(`col-${ci}`)}
                         onMouseLeave={() => setHoveredDelBtn(null)}
-                        style={{
-                          ...DEL_CIRCLE_STYLE,
-                          position: 'absolute',
-                          right: 6,
-                          top: '50%',
-                          transform: 'translateY(-50%)',
-                          background: hoveredDelBtn === `col-${ci}` ? '#FEE2E2' : 'transparent',
-                          color: hoveredDelBtn === `col-${ci}` ? '#EF4444' : '#BDBDBD',
-                        }}
+                        className={`absolute right-1.5 top-1/2 -translate-y-1/2 w-5 h-5 rounded-full border-none cursor-pointer text-[11px] inline-flex items-center justify-center p-0 leading-none ${hoveredDelBtn === `col-${ci}` ? 'bg-[#FEE2E2] text-[#EF4444]' : 'bg-transparent text-[#BDBDBD]'}`}
                       >
                         ✕
                       </button>
@@ -346,35 +254,16 @@ export function TableEditor({
                     {/* Resize handle */}
                     <div
                       onMouseDown={(e) => startResize(e, ci)}
-                      style={{
-                        position: 'absolute',
-                        right: -3,
-                        top: 0,
-                        bottom: 0,
-                        width: 6,
-                        cursor: 'col-resize',
-                        zIndex: 10,
-                      }}
+                      className="absolute -right-[3px] top-0 bottom-0 w-[6px] cursor-col-resize z-10"
                     />
                   </th>
                 ))}
 
-                {/* Actions column header */}
+                {/* Actions column header — no left divider, no right border */}
                 <th
                   data-actions="true"
-                  style={{
-                    width: 36,
-                    minWidth: 36,
-                    position: 'sticky',
-                    top: 0,
-                    zIndex: 5,
-                    background: '#F9FAFB',
-                    borderRight: 'none',
-                    borderLeftStyle: 'hidden',
-                    borderBottom: '1px solid #E5E7EB',
-                    height: HEADER_HEIGHT_PX,
-                    padding: 0,
-                  }}
+                  style={{ borderLeftStyle: 'hidden' }}
+                  className="w-9 min-w-[36px] sticky top-0 z-[5] bg-[#F9FAFB] border-r-0 border-b border-[#E5E7EB] h-9 p-0"
                 />
               </tr>
             </thead>
@@ -384,83 +273,43 @@ export function TableEditor({
               {rows.map((row, ri) => (
                 <tr
                   key={ri}
-                  style={{
-                    background: hoveredRow === ri ? '#FAFBFF' : 'transparent',
-                  }}
+                  className={hoveredRow === ri ? 'bg-[#FAFBFF]' : ''}
                   onMouseEnter={() => setHoveredRow(ri)}
                   onMouseLeave={() => setHoveredRow(null)}
                 >
                   {row.map((cell, ci) => (
                     <td
                       key={ci}
-                      style={{
-                        borderRight: '1px solid #E5E7EB',
-                        borderBottom: '1px solid #E5E7EB',
-                        height: ROW_HEIGHT_PX,
-                        padding: 0,
-                        position: 'relative',
-                      }}
+                      className="border-r border-b border-[#E5E7EB] relative p-0"
+                      style={{ height: ROW_HEIGHT_PX }}
                     >
                       {/* Resize handle on body cells */}
                       <div
                         onMouseDown={(e) => startResize(e, ci)}
-                        style={{
-                          position: 'absolute',
-                          right: -3,
-                          top: 0,
-                          bottom: 0,
-                          width: 6,
-                          cursor: 'col-resize',
-                          zIndex: 10,
-                        }}
+                        className="absolute -right-[3px] top-0 bottom-0 w-[6px] cursor-col-resize z-10"
                       />
                       <input
                         type="text"
                         value={cell}
                         placeholder="—"
                         onChange={(e) => updateCell(ri, ci, e.target.value)}
-                        style={{
-                          display: 'block',
-                          width: '100%',
-                          height: '100%',
-                          border: 'none',
-                          padding: '0 12px',
-                          fontSize: 13,
-                          color: '#202020',
-                          background: 'transparent',
-                          outline: 'none',
-                          fontFamily: 'inherit',
-                        }}
+                        className="block w-full h-full border-none px-3 text-[13px] text-[#202020] bg-transparent outline-none"
+                        style={{ fontFamily: 'inherit' }}
                       />
                     </td>
                   ))}
 
                   {/* Actions cell — row delete */}
-                  {/* Fix 5 — React state-driven hover instead of direct DOM mutation */}
                   <td
-                    style={{
-                      borderRight: 'none',
-                      borderLeftStyle: 'hidden',
-                      borderBottom: '1px solid #E5E7EB',
-                      width: 36,
-                      minWidth: 36,
-                      padding: 0,
-                      textAlign: 'center',
-                      verticalAlign: 'middle',
-                    }}
+                    style={{ borderLeftStyle: 'hidden' }}
+                    className="border-r-0 border-b border-[#E5E7EB] w-9 min-w-[36px] p-0 text-center align-middle"
                   >
                     <button
                       type="button"
                       onClick={() => deleteRow(ri)}
                       onMouseEnter={() => setHoveredDelBtn(`row-${ri}`)}
                       onMouseLeave={() => setHoveredDelBtn(null)}
-                      style={{
-                        ...DEL_CIRCLE_STYLE,
-                        opacity: hoveredRow === ri ? 1 : 0,
-                        pointerEvents: hoveredRow === ri ? 'all' : 'none',
-                        background: hoveredDelBtn === `row-${ri}` ? '#FEE2E2' : 'transparent',
-                        color: hoveredDelBtn === `row-${ri}` ? '#EF4444' : '#BDBDBD',
-                      }}
+                      className={`w-5 h-5 rounded-full border-none cursor-pointer text-[11px] inline-flex items-center justify-center p-0 leading-none transition-opacity ${hoveredRow === ri ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'} ${hoveredDelBtn === `row-${ri}` ? 'bg-[#FEE2E2] text-[#EF4444]' : 'bg-transparent text-[#BDBDBD]'}`}
                     >
                       ✕
                     </button>
@@ -481,7 +330,8 @@ export function TableEditor({
             onClick={() => addColumn(ci)}
             onMouseEnter={() => setPlusColHovered(ci)}
             onMouseLeave={() => setPlusColHovered(null)}
-            style={{ ...PLUS_BTN_STYLE, left: pos.left, top: pos.top }}
+            className="absolute w-[18px] h-[18px] rounded-full bg-[#5D8CF1] text-white border-none text-[13px] cursor-pointer flex items-center justify-center shadow-[0_1px_4px_rgba(93,140,241,0.5)] z-30 p-0 leading-none"
+            style={{ left: pos.left, top: pos.top }}
           >
             +
           </button>
@@ -497,7 +347,8 @@ export function TableEditor({
             onClick={() => addRow(ri)}
             onMouseEnter={() => setPlusRowHovered(ri)}
             onMouseLeave={() => setPlusRowHovered(null)}
-            style={{ ...PLUS_BTN_STYLE, left: pos.left, top: pos.top }}
+            className="absolute w-[18px] h-[18px] rounded-full bg-[#5D8CF1] text-white border-none text-[13px] cursor-pointer flex items-center justify-center shadow-[0_1px_4px_rgba(93,140,241,0.5)] z-30 p-0 leading-none"
+            style={{ left: pos.left, top: pos.top }}
           >
             +
           </button>

@@ -40,68 +40,25 @@ export function EditDictionaryModal({ isOpen, onClose }: EditDictionaryModalProp
   return (
     <div
       onClick={handleOverlayClick}
-      style={{
-        position: 'fixed',
-        inset: 0,
-        zIndex: 50,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        background: 'rgba(0,0,0,0.3)',
-      }}
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/30"
     >
-      <div
-        style={{
-          background: '#fff',
-          borderRadius: 12,
-          width: 640,
-          maxHeight: '90vh',
-          overflowY: 'auto',
-          padding: '28px 28px 24px',
-          position: 'relative',
-          boxShadow: '0 8px 32px rgba(0,0,0,0.12)',
-        }}
-      >
+      <div className="relative bg-white rounded-xl w-[640px] max-h-[90vh] overflow-y-auto px-7 pt-7 pb-6 shadow-[0_8px_32px_rgba(0,0,0,0.12)]">
         {/* Close */}
         <button
           type="button"
           onClick={onClose}
-          style={{
-            position: 'absolute',
-            top: 16,
-            right: 16,
-            border: 'none',
-            background: 'none',
-            fontSize: 18,
-            cursor: 'pointer',
-            color: '#909090',
-            lineHeight: 1,
-          }}
+          className="absolute top-4 right-4 border-none bg-transparent text-lg leading-none cursor-pointer text-[#909090] hover:text-[#202020] transition-colors"
         >
           ✕
         </button>
 
         {/* Title */}
-        <h2
-          style={{
-            fontSize: 20,
-            fontWeight: 600,
-            color: '#202020',
-            marginBottom: 20,
-          }}
-        >
+        <h2 className="text-xl font-semibold text-[#202020] mb-5">
           Редактирование справочника
         </h2>
 
         {/* Name input */}
-        <label
-          style={{
-            display: 'block',
-            fontSize: 13,
-            color: '#909090',
-            marginBottom: 6,
-          }}
-        >
+        <label className="block text-[13px] text-[#909090] mb-1.5">
           Название справочника
         </label>
         <input
@@ -109,24 +66,11 @@ export function EditDictionaryModal({ isOpen, onClose }: EditDictionaryModalProp
           value={dictionaryName}
           onChange={(e) => setDictionaryName(e.target.value)}
           placeholder="Введите название"
-          style={{
-            width: '100%',
-            boxSizing: 'border-box',
-            border: '1px solid #E5E7EB',
-            borderRadius: 8,
-            padding: '10px 14px',
-            fontSize: 14,
-            color: '#202020',
-            background: '#FAFAFA',
-            outline: 'none',
-            marginBottom: 20,
-          }}
-          onFocus={(e) => (e.currentTarget.style.borderColor = '#5D8CF1')}
-          onBlur={(e) => (e.currentTarget.style.borderColor = '#E5E7EB')}
+          className="w-full border border-[#E5E7EB] focus:border-[#5D8CF1] rounded-lg px-3.5 py-2.5 text-sm text-[#202020] bg-[#FAFAFA] outline-none mb-5 transition-colors"
         />
 
         {/* Table editor */}
-        <div style={{ marginBottom: 20 }}>
+        <div className="mb-5">
           <TableEditor
             columns={columns}
             rows={rows}
@@ -136,44 +80,18 @@ export function EditDictionaryModal({ isOpen, onClose }: EditDictionaryModalProp
         </div>
 
         {/* Actions */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+        <div className="flex flex-col gap-2.5">
           <button
             type="button"
             onClick={handleSave}
-            style={{
-              width: '100%',
-              padding: 12,
-              background: '#5D8CF1',
-              color: '#fff',
-              border: 'none',
-              borderRadius: 8,
-              fontSize: 14,
-              fontWeight: 500,
-              cursor: 'pointer',
-            }}
-            onMouseEnter={(e) =>
-              ((e.currentTarget as HTMLButtonElement).style.background = '#769CEF')
-            }
-            onMouseLeave={(e) =>
-              ((e.currentTarget as HTMLButtonElement).style.background = '#5D8CF1')
-            }
+            className="w-full py-3 bg-[#5D8CF1] hover:bg-[#769CEF] text-white border-none rounded-lg text-sm font-medium cursor-pointer transition-colors"
           >
             Сохранить
           </button>
           <button
             type="button"
             onClick={onClose}
-            style={{
-              width: '100%',
-              padding: 12,
-              background: '#EEF2FF',
-              color: '#5D8CF1',
-              border: 'none',
-              borderRadius: 8,
-              fontSize: 14,
-              fontWeight: 500,
-              cursor: 'pointer',
-            }}
+            className="w-full py-3 bg-[#EEF2FF] hover:bg-[#E0E7FF] text-[#5D8CF1] border-none rounded-lg text-sm font-medium cursor-pointer transition-colors"
           >
             Отменить
           </button>

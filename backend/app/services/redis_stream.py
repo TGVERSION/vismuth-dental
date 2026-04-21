@@ -36,5 +36,24 @@ def build_event_payload(
     return {"event": json.dumps(payload, ensure_ascii=False)}
 
 
+def build_fullness_complaints_payload(
+    *,
+    user_id: UUID,
+    status: str,
+    color: str,
+    analysis: str,
+    suggested_text: str,
+) -> dict[str, str]:
+    payload = {
+        "event_kind": "fullness_complaints_stats",
+        "user_id": str(user_id),
+        "status": status,
+        "color": color,
+        "analysis": analysis,
+        "suggested_text": suggested_text,
+    }
+    return {"event": json.dumps(payload, ensure_ascii=False)}
+
+
 async def publish_event(redis: Redis, payload: dict[str, str]) -> str:
     return await redis.xadd(settings.redis_stream_key, payload, id="*")

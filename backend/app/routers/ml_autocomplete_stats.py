@@ -13,7 +13,11 @@ from ..schemas.ml_mkb_code import (
     MkbCodeSelectRequest,
     MkbEventType,
 )
-from ..services.redis_stream import build_event_payload, get_redis_client, publish_event
+from ..services.redis_stream import (
+    build_event_payload,
+    get_redis_client,
+    publish_event,
+)
 
 router = APIRouter(tags=["ml_autocomplete_stats"])
 
@@ -133,3 +137,5 @@ async def push_selected_event(
     finally:
         await redis.aclose()
     return EventAcceptedResponse()
+
+

@@ -590,9 +590,30 @@ CREATE INDEX IF NOT EXISTS idx_autocomplete_stats_event_type
     ON autocomplete_stats (event_type);
 
 
+-- =========================================
+-- Логи проверки полноты в поле Жалобы
+-- =========================================
 
+CREATE TABLE IF NOT EXISTS fullness_complaints_stats (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL REFERENCES service_user(id),
+    status VARCHAR(255),
+    color VARCHAR(255),
+    analysis TEXT,
+    suggested_text TEXT,
+    created_at TIMESTAMPTZ DEFAULT now(),
+    updated_at TIMESTAMPTZ,
+    deleted_at TIMESTAMPTZ
+);
 
+CREATE INDEX IF NOT EXISTS idx_fullness_complaints_stats_user_id
+    ON fullness_complaints_stats (user_id);
 
+CREATE INDEX IF NOT EXISTS idx_fullness_complaints_stats_created_at
+    ON fullness_complaints_stats (created_at);
 
+CREATE INDEX IF NOT EXISTS idx_fullness_complaints_stats_deleted_at
+    ON fullness_complaints_stats (deleted_at);
 
-
+CREATE INDEX IF NOT EXISTS idx_fullness_complaints_stats_status
+    ON fullness_complaints_stats (status);

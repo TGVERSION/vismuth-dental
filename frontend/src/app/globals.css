@@ -154,3 +154,14 @@ body {
 .w-webkit-fill-available {
   width: -webkit-fill-available;
 }
+
+.placeholder-bracket {
+  color: #5d8cf1;
+  cursor: pointer;
+  font-weight: 500;
+}
+div[contenteditable][data-placeholder]:empty:before {
+  content: attr(data-placeholder);
+  color: #9ca3af;
+  pointer-events: none;
+}

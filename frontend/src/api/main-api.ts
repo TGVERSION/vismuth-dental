@@ -21,6 +21,8 @@ import type {
   ListsTemplatesResponse,
   TemplatesRequest,
   TemplatesResponse,
+  mlFullnessComplaintPayload,
+  mlFullnessComplaintResponse,
 } from './index';
 
 export const apiClient = new ApiClient({
@@ -110,5 +112,11 @@ export const mainApi = {
 
     mlAutocompleteStatus: (data: MlStatusPayload) =>
       apiClient.post<MlStatusResponse>('/ml_autocomplete_stats', data),
+
+    mlFullnessComplaint: (data: mlFullnessComplaintPayload) =>
+      apiClient.post<mlFullnessComplaintResponse>(
+        '/ml_fullness_complaints',
+        data,
+      ),
   },
 };

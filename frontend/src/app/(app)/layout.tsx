@@ -4,10 +4,12 @@ import { useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
+import { EditDictionaryModal } from '@/components/EditDictionaryModal';
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const [showProfileMenu, setShowProfileMenu] = useState(false);
+  const [isDictionaryOpen, setIsDictionaryOpen] = useState(false);
   const hideTimerRef = useRef<NodeJS.Timeout | null>(null);
   const { user, handleLogout } = useAuth();
   const hideHeader = ['/login', '/register'].includes(pathname);
@@ -46,11 +48,20 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               height={26}
             />
 
-            <div
-              className="relative"
-              onMouseEnter={handleProfileEnter}
-              onMouseLeave={handleProfileLeave}
-            >
+            <div className="flex items-center gap-4">
+              <button
+                type="button"
+                onClick={() => setIsDictionaryOpen(true)}
+                className="text-sm font-medium text-[#5D8CF1] hover:text-[#769CEF] transition-colors cursor-pointer border-none bg-transparent"
+              >
+                Настройка
+              </button>
+
+              <div
+                className="relative"
+                onMouseEnter={handleProfileEnter}
+                onMouseLeave={handleProfileLeave}
+              >
               <Image
                 alt="profile"
                 className="profile cursor-pointer"
@@ -77,10 +88,16 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                   </button>
                 </div>
               )}
+              </div>
             </div>
           </div>
         </header>
       )}
+
+      <EditDictionaryModal
+        isOpen={isDictionaryOpen}
+        onClose={() => setIsDictionaryOpen(false)}
+      />
 
       <main className="flex bg-[#F3F4F8] min-h-screen w-full gap-5 mx-auto my-20">
         {children}

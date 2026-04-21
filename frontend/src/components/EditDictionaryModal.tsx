@@ -2,6 +2,8 @@
 
 import { useState, useCallback } from 'react';
 import { TableEditor, Column } from './TableEditor';
+import Image from 'next/image';
+import { useLockBodyScroll } from '@/hooks/useLockBodyScroll';
 
 interface EditDictionaryModalProps {
   isOpen: boolean;
@@ -19,7 +21,11 @@ const DEFAULT_ROWS: string[][] = [
   ['', '', ''],
 ];
 
-export function EditDictionaryModal({ isOpen, onClose }: EditDictionaryModalProps) {
+export function EditDictionaryModal({
+  isOpen,
+  onClose,
+}: EditDictionaryModalProps) {
+  useLockBodyScroll(isOpen);
   const [dictionaryName, setDictionaryName] = useState('');
   const [columns, setColumns] = useState<Column[]>(DEFAULT_COLUMNS);
   const [rows, setRows] = useState<string[][]>(DEFAULT_ROWS);
@@ -32,7 +38,7 @@ export function EditDictionaryModal({ isOpen, onClose }: EditDictionaryModalProp
     (e: React.MouseEvent<HTMLDivElement>) => {
       if (e.target === e.currentTarget) onClose();
     },
-    [onClose]
+    [onClose],
   );
 
   if (!isOpen) return null;
@@ -40,61 +46,60 @@ export function EditDictionaryModal({ isOpen, onClose }: EditDictionaryModalProp
   return (
     <div
       onClick={handleOverlayClick}
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/30"
+      className="modal-overlay fixed inset-0 bg-black/50 flex justify-center items-start pt-10 z-[1002] overflow-y-auto "
     >
-      <div className="relative bg-white rounded-xl w-[640px] max-h-[90vh] overflow-y-auto px-7 pt-7 pb-6 shadow-[0_8px_32px_rgba(0,0,0,0.12)]">
+      <div className="bg-white rounded-xl w-160 h-auto pr-5 pt-5 pb-10 pl-10 shadow-[0_8px_32px_rgba(0,0,0,0.12)]">
         {/* Close */}
-        <button
-          type="button"
-          onClick={onClose}
-          className="absolute top-4 right-4 border-none bg-transparent text-lg leading-none cursor-pointer text-[#909090] hover:text-[#202020] transition-colors"
-        >
-          ✕
-        </button>
-
-        {/* Title */}
-        <h2 className="text-xl font-semibold text-[#202020] mb-5">
-          Редактирование справочника
-        </h2>
-
-        {/* Name input */}
-        <label className="block text-[13px] text-[#909090] mb-1.5">
-          Название справочника
-        </label>
-        <input
-          type="text"
-          value={dictionaryName}
-          onChange={(e) => setDictionaryName(e.target.value)}
-          placeholder="Введите название"
-          className="w-full border border-[#E5E7EB] focus:border-[#5D8CF1] rounded-lg px-3.5 py-2.5 text-sm text-[#202020] bg-[#FAFAFA] outline-none mb-5 transition-colors"
-        />
-
-        {/* Table editor */}
-        <div className="mb-5">
-          <TableEditor
-            columns={columns}
-            rows={rows}
-            onColumnsChange={setColumns}
-            onRowsChange={setRows}
-          />
+        <div className="flex justify-end">
+          <button onClick={onClose} className="cursor-pointer">
+            <Image alt="close" src="/close.svg" width={20} height={20} />
+          </button>
         </div>
+        <div className="mr-5">
+          {/* Title */}
+          <h2 className="text-[32px] font-medium text-[#202020] mb-7.5">
+            Редактирование справочника
+          </h2>
 
-        {/* Actions */}
-        <div className="flex flex-col gap-2.5">
-          <button
-            type="button"
-            onClick={handleSave}
-            className="w-full py-3 bg-[#5D8CF1] hover:bg-[#769CEF] text-white border-none rounded-lg text-sm font-medium cursor-pointer transition-colors"
-          >
-            Сохранить
-          </button>
-          <button
-            type="button"
-            onClick={onClose}
-            className="w-full py-3 bg-[#EEF2FF] hover:bg-[#E0E7FF] text-[#5D8CF1] border-none rounded-lg text-sm font-medium cursor-pointer transition-colors"
-          >
-            Отменить
-          </button>
+          {/* Name input */}
+          <label className="block text-[14px] text-[#6C757D] mb-1.25">
+            Название справочника
+          </label>
+          <input
+            type="text"
+            value={dictionaryName}
+            onChange={(e) => setDictionaryName(e.target.value)}
+            placeholder="Введите название"
+            className="w-full border-0 h-10 focus:border-[#5D8CF1] rounded-lg px-3 py-2 text-sm text-[#202020] bg-[#F2F4F7] outline-none mb-4 transition-colors"
+          />
+
+          {/* Table editor */}
+          <div className="mb-5">
+            <TableEditor
+              columns={columns}
+              rows={rows}
+              onColumnsChange={setColumns}
+              onRowsChange={setRows}
+            />
+          </div>
+
+          {/* Actions */}
+          <div className="flex flex-col gap-3">
+            <button
+              type="button"
+              onClick={handleSave}
+              className="cursor-pointer h-12 w-full py-3 bg-[#5D8CF1] hover:bg-[#769CEF] text-white rounded-xl transition-colors"
+            >
+              Сохранить
+            </button>
+            <button
+              type="button"
+              onClick={onClose}
+              className="cursor-pointer h-12 w-full py-3 bg-[#DCE7FF] hover:bg-[#F0F5FF] rounded-xl transition-colors"
+            >
+              Отменить
+            </button>
+          </div>
         </div>
       </div>
     </div>

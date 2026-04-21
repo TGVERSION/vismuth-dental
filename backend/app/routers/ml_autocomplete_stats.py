@@ -4,10 +4,6 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from ..config import settings
 from ..deps import get_current_user
 from ..models.service_user import ServiceUser
-from ..schemas.ml_fullness_complaints import (
-    MlFullnessComplaintsRequest,
-    MlFullnessComplaintsResponse,
-)
 from ..schemas.ml_mkb_code import (
     EventAcceptedResponse,
     MlAutocompleteProxyRequest,
@@ -19,7 +15,6 @@ from ..schemas.ml_mkb_code import (
 )
 from ..services.redis_stream import (
     build_event_payload,
-    build_fullness_complaints_payload,
     get_redis_client,
     publish_event,
 )
@@ -144,32 +139,3 @@ async def push_selected_event(
     return EventAcceptedResponse()
 
 
-@router.post(
-    "/ml_fullness_complaints",
-    response_model=MlFullnessComplaintsResponse,
-)
-async def proxy_ml_fullness_complaints(
-    payload: MlFullnessComplaintsRequest,
-    current_user: ServiceUser = Depends(get_current_user),
-) -> MlFullnessComplaintsResponse:
-    body = await _proxy_to_ml(
-        "/fullness/complaints",
-        {
-            "example_prompt": payload.example_prompt,
-        },
-    )
-
-    redis = get_redis_client()
-    try:
-        event = build_fullness_complaints_payload(
-            user_id=current_user.id,
-            status=body["status"],
-            color=body["color"],
-            analysis=body["analysis"],
-            suggested_text=body["suggested_text"],
-        )
-        await publish_event(redis, event)
-    finally:
-        await redis.aclose()
-
-    return MlFullnessComplaintsResponse(**body)

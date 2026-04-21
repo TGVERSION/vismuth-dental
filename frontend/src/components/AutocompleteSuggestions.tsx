@@ -20,7 +20,7 @@ export const AutocompleteSuggestions: React.FC<
   if (suggestions.length === 0) return null;
 
   return (
-    <ul className="absolute z-50 w-full -mt-2 ml-6 bg-[#F2F4F7] border-0 rounded-lg max-h-60 overflow-auto">
+    <ul className="absolute z-50 w-full -mt-1 bg-[#F2F4F7] border-0 rounded-lg max-h-60 overflow-auto">
       {suggestions.map((suggestion, index) => (
         <li
           key={index}

@@ -48,6 +48,18 @@ export interface MlStatusPayload {
 export interface MlStatusResponse {
   detail: string;
 }
+
+export interface mlFullnessComplaintPayload {
+  example_prompt: string;
+}
+
+export interface mlFullnessComplaintResponse {
+  status: 'complete' | 'incomplete';
+  color: 'green' | 'yellow' | 'red';
+  analysis: string;
+  suggested_text: string;
+}
+
 //Main
 export interface ConsultationsRequest {
   id: string;

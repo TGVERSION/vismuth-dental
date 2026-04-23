@@ -67,7 +67,7 @@ export const RenameTemplate: React.FC<RenameTemplateProps> = ({
         {/* Кнопка закрытия */}
         <div className="flex justify-end">
           <button onClick={handleClose} className="cursor-pointer">
-            <Image alt="close" src="/close.svg" width={20} height={20} />
+            <Image alt="close" src="/close.svg" width={25} height={25} />
           </button>
         </div>
 

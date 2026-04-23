@@ -41,7 +41,7 @@ export const FeedbackPopover = ({
   };
 
   return (
-    <div className="absolute z-50 -mt-1 w-fit max-w-2xl animate-fadeIn">
+    <div className="absolute z-50 w-fit max-w-2xl animate-fadeIn">
       <div className={`bg-white rounded-2xl shadow-2xl overflow-hidden`}>
         <div className="p-1.5">
           <div className="flex items-center justify-between">

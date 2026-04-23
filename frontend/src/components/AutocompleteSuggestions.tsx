@@ -24,7 +24,10 @@ export const AutocompleteSuggestions: React.FC<
       {suggestions.map((suggestion, index) => (
         <li
           key={index}
-          onMouseDown={() => onSelect(suggestion)}
+          onMouseDown={(e) => {
+            e.preventDefault();
+            onSelect(suggestion);
+          }}
           className={`px-4 py-2 cursor-pointer text-sm transition-colors ${
             index === highlightedIndex
               ? 'bg-[#e6efff] text-[#202020]'

@@ -27,8 +27,26 @@ interface SectionInputProps {
   sectionKey: string;
   onLabelChange: (id: number, newLabel: string) => void;
   onValueChange: (id: number, newValue: string) => void;
+  onAnalysisChange?: (
+    status: { color: string; analysis: string } | null,
+  ) => void;
 }
-
+const mockApiCall = (
+  text: mlFullnessComplaintPayload,
+): Promise<mlFullnessComplaintResponse> => {
+  return new Promise((resolve) => {
+    setTimeout(() => {
+      resolve({
+        status: 'incomplete',
+        color: 'yellow',
+        analysis:
+          'Отсутствует информация о связи симптомов с определенными факторами (провокация/облегчение).',
+        suggested_text:
+          'Жалобы на боль в поясничной области, с иррадиацией в правую ногу, интенсивность до 7 баллов. Отмечает слабость в ногах, ограничение самостоятельного передвижения, периодически возникают отеки голеней. Симптомы провоцируются [факторы], облегчаются [факторы].',
+      });
+    }, 800);
+  });
+};
 const getPlainTextFromHTML = (html: string): string => {
   const div = document.createElement('div');
   div.innerHTML = html;
@@ -49,11 +67,13 @@ export const SectionInput: React.FC<SectionInputProps> = ({
   sectionKey,
   onLabelChange,
   onValueChange,
+  onAnalysisChange,
 }) => {
   const editableRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [hasUserInteracted, setHasUserInteracted] = useState(false);
   const [isComposing, setIsComposing] = useState(false);
+  const [showPopover, setShowPopover] = useState(false);
 
   const [mlAnalysis, setMlAnalysis] =
     useState<mlFullnessComplaintResponse | null>(null);
@@ -75,7 +95,23 @@ export const SectionInput: React.FC<SectionInputProps> = ({
     enabled: hasUserInteracted,
   });
 
-  // Синхронизация содержимого с value
+  const initialTextRef = useRef<string>('');
+
+  const setCursorToEnd = (element: HTMLElement) => {
+    const range = document.createRange();
+    const selection = window.getSelection();
+    range.selectNodeContents(element);
+    range.collapse(false);
+    selection?.removeAllRanges();
+    selection?.addRange(range);
+  };
+  const isComplaintField =
+    sectionKey === 'complaints' || sectionKey === 'chief_complaint';
+  useEffect(() => {
+    if (isComplaintField) {
+      onAnalysisChange?.(mlAnalysis);
+    }
+  }, [mlAnalysis, isComplaintField]);
   useEffect(() => {
     if (!editableRef.current) return;
     const currentText = getPlainTextFromHTML(editableRef.current.innerHTML);
@@ -109,17 +145,32 @@ export const SectionInput: React.FC<SectionInputProps> = ({
         console.error('Failed to send ML status:', error);
       });
   };
-
+  if (value === '') {
+    if (editableRef.current) {
+      editableRef.current.innerHTML = '';
+      editableRef.current.textContent = '';
+    }
+  }
   const handleSuggestionClick = (suggestion: string) => {
-    onValueChange(id, suggestion);
-    handleSelect(suggestion);
-    sendMlStatus('suggestion_selected', suggestion);
+    if (editableRef.current) {
+      editableRef.current.innerHTML = formatTextWithPlaceholders(suggestion);
+      onValueChange(id, suggestion);
+      handleSelect(suggestion);
+      sendMlStatus('suggestion_selected', suggestion);
+      editableRef.current.focus();
+      setCursorToEnd(editableRef.current);
+    }
   };
 
   const handleSuggestionSelect = (fullValue: string) => {
-    onValueChange(id, fullValue);
-    handleSelect(fullValue);
-    sendMlStatus('suggestion_selected', fullValue, 8);
+    if (editableRef.current) {
+      editableRef.current.innerHTML = formatTextWithPlaceholders(fullValue);
+      onValueChange(id, fullValue);
+      handleSelect(fullValue);
+      sendMlStatus('suggestion_selected', fullValue, 8);
+      editableRef.current.focus();
+      setCursorToEnd(editableRef.current);
+    }
   };
 
   const fetchMlAnalysis = useCallback(
@@ -133,8 +184,8 @@ export const SectionInput: React.FC<SectionInputProps> = ({
         example_prompt: textToAnalyze,
       };
       try {
-        const response =
-          await mainApi.ml_handlers.mlFullnessComplaint(dataToSend);
+        const response = await mockApiCall(dataToSend);
+        // await mainApi.ml_handlers.mlFullnessComplaint(dataToSend);
         setMlAnalysis(response);
       } catch (error) {
         console.error('Failed to fetch analysis:', error);
@@ -149,6 +200,7 @@ export const SectionInput: React.FC<SectionInputProps> = ({
     if (mlAnalysis?.suggested_text) {
       onValueChange(id, mlAnalysis.suggested_text);
       setMlAnalysis(null);
+      initialTextRef.current = '';
     }
   };
 
@@ -191,6 +243,7 @@ export const SectionInput: React.FC<SectionInputProps> = ({
 
     const plainText = getPlainTextFromHTML(editable.innerHTML);
     onValueChange(id, plainText);
+    initialTextRef.current = '';
   };
 
   const handleInput = () => {
@@ -209,22 +262,23 @@ export const SectionInput: React.FC<SectionInputProps> = ({
     enableAutocomplete();
     setIsOpen(true);
     closeMlFeedback();
+    initialTextRef.current = value;
   };
 
   const handleBlur = () => {
     enableAutocomplete();
     setTimeout(() => setIsOpen(false), 200);
     if (isComplaintField && value && value.trim().length > 0) {
-      fetchMlAnalysis(value);
+      if (value !== initialTextRef.current) {
+        fetchMlAnalysis(value);
+        initialTextRef.current = value;
+      }
     }
   };
 
   const handleKeyDownEditable = (e: React.KeyboardEvent<HTMLDivElement>) => {
     handleKeyDown(e, handleSuggestionSelect);
   };
-
-  const isComplaintField =
-    sectionKey === 'complaints' || sectionKey === 'chief_complaint';
 
   if (sectionKey === 'main_diagnosis') {
     return (
@@ -250,21 +304,34 @@ export const SectionInput: React.FC<SectionInputProps> = ({
               <Spinner />
             ) : mlAnalysis ? (
               <div
-                className={`w-4 h-4 rounded-full transition-all duration-300 ${
-                  mlAnalysis.color === 'green'
-                    ? 'bg-[#459F49]'
-                    : mlAnalysis.color === 'yellow'
-                      ? 'bg-[#F29100]'
-                      : 'bg-[#D91528]'
-                }`}
-                title={mlAnalysis.analysis}
-              />
+                onMouseEnter={() => setShowPopover(true)}
+                onMouseLeave={() => setShowPopover(false)}
+              >
+                <div
+                  className={`w-4 h-4 cursor-pointer rounded-full transition-all duration-300 ${
+                    mlAnalysis.color === 'green'
+                      ? 'bg-[#459F49]'
+                      : mlAnalysis.color === 'yellow'
+                        ? 'bg-[#F29100]'
+                        : 'bg-[#D91528]'
+                  }`}
+                  title={mlAnalysis.analysis}
+                />
+                {showPopover && isComplaintField && !isFetchingAnalysis && (
+                  <FeedbackPopover
+                    color={mlAnalysis.color}
+                    analysis={mlAnalysis.analysis}
+                    suggestedText={mlAnalysis.suggested_text}
+                    onApply={handleApplySuggestion}
+                    onClose={() => setShowPopover(false)}
+                  />
+                )}
+              </div>
             ) : (
               <div className="w-3 h-3" />
             )}
           </div>
           <div className="relative w-full">
-            {/* Contenteditable div всегда отображается */}
             <div
               ref={editableRef}
               contentEditable
@@ -299,7 +366,7 @@ export const SectionInput: React.FC<SectionInputProps> = ({
               loading={loading}
             />
 
-            {isComplaintField && mlAnalysis && !isFetchingAnalysis && (
+            {/* {isComplaintField && mlAnalysis && !isFetchingAnalysis && (
               <FeedbackPopover
                 color={mlAnalysis.color}
                 analysis={mlAnalysis.analysis}
@@ -307,7 +374,7 @@ export const SectionInput: React.FC<SectionInputProps> = ({
                 onApply={handleApplySuggestion}
                 onClose={closeMlFeedback}
               />
-            )}
+            )} */}
           </div>
         </div>
       </div>

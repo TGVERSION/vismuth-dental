@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { mainApi } from '@/api';
 import type {
   ListsGroupsResponse,
@@ -18,6 +18,8 @@ import { DeleteTemplate } from './DeleteTemplate';
 import { RenameTemplate } from './RenameTemplatePopup';
 import { RenameGroup } from '../groups/RenameGroupPopup';
 import { MoveTemplatePopup } from './MoveTemplatePopup';
+import { EditTemplatePopup } from './EditTemplatePopup';
+import { EditTemplateContentPopup } from './EditTemplateContentPopup';
 
 export interface TemplateGroupUI extends ListsGroupsResponse {
   name: string;
@@ -97,6 +99,54 @@ export const TemplatePopup: React.FC<TemplatePopupProps> = ({
     name: string;
   } | null>(null);
 
+  const [showEditConfirm, setShowEditConfirm] = useState(false);
+  const lastContextMenu = useRef<{
+    timestamp: number;
+    target: EventTarget | null;
+  }>({
+    timestamp: 0,
+    target: null,
+  });
+  const [showEditContentPopup, setShowEditContentPopup] = useState(false);
+  const [editingTemplate, setEditingTemplate] = useState<TemplateUI | null>(
+    null,
+  );
+  const handleContextMenu = (e: React.MouseEvent) => {
+    e.preventDefault();
+
+    const now = Date.now();
+    const { timestamp, target } = lastContextMenu.current;
+
+    if (target === e.target && now - timestamp < 500) {
+      setShowEditConfirm(true);
+      lastContextMenu.current = { timestamp: 0, target: null };
+    } else {
+      lastContextMenu.current = { timestamp: now, target: e.target };
+    }
+  };
+  const handleEditConfirm = () => {
+    setShowEditConfirm(false);
+    if (selectedTemplate) {
+      setEditingTemplate(selectedTemplate);
+      setShowEditContentPopup(true);
+    }
+  };
+  const handleTemplateUpdated = async () => {
+    await loadTemplates();
+    if (editingTemplate) {
+      try {
+        const fullTemplate = await mainApi.templates.getTemplate(
+          editingTemplate.id,
+        );
+        const transformed = transformTemplate(fullTemplate);
+        setSelectedTemplate(transformed);
+      } catch (error) {
+        console.error('Ошибка загрузки шаблона:', error);
+      }
+    }
+    setShowEditContentPopup(false);
+    setEditingTemplate(null);
+  };
   const requestDeleteGroup = (
     id: string,
     name: string,
@@ -443,7 +493,7 @@ export const TemplatePopup: React.FC<TemplatePopupProps> = ({
                         {groups.map((group) => (
                           <div
                             key={group.id}
-                            className={`rounded-lg ${expandedGroups.has(group.id) && 'bg-white shadow-md'}`}
+                            className={`rounded-lg hover:bg-white shadow-custom-hover ${expandedGroups.has(group.id) && 'bg-white shadow-md'}`}
                           >
                             <div
                               className="flex items-center justify-between px-3.75 py-3 cursor-pointer transition-all"
@@ -526,7 +576,7 @@ export const TemplatePopup: React.FC<TemplatePopupProps> = ({
                                   {group.templates.map((template) => (
                                     <div
                                       key={template.id}
-                                      className={`px-3.75 py-3 rounded-lg cursor-pointer transition-all ${
+                                      className={`px-3.75 py-3 rounded-lg cursor-pointer transition-all hover:bg-white shadow-custom-hover  ${
                                         selectedTemplate?.id === template.id &&
                                         'bg-white shadow-md'
                                       }`}
@@ -573,7 +623,7 @@ export const TemplatePopup: React.FC<TemplatePopupProps> = ({
                       {templates.map((template) => (
                         <div
                           key={template.id}
-                          className={`px-3.75 py-3 rounded-lg cursor-pointer transition-all ${
+                          className={`px-3.75 py-3 rounded-lg cursor-pointer hover:bg-white shadow-custom-hover transition-all ${
                             selectedTemplate?.id === template.id &&
                             'bg-white shadow-md'
                           }`}
@@ -613,7 +663,7 @@ export const TemplatePopup: React.FC<TemplatePopupProps> = ({
                   onClick={closeModal}
                   className="mt-2.5 mr-2.5 cursor-pointer transition-colors"
                 >
-                  <Image alt="close" src="/close.svg" width={20} height={20} />
+                  <Image alt="close" src="/close.svg" width={25} height={25} />
                 </button>
               </div>
 
@@ -669,7 +719,7 @@ export const TemplatePopup: React.FC<TemplatePopupProps> = ({
                               onClick={(e) => {
                                 e.stopPropagation();
                                 setOpenEdit(true);
-                                setOpenMenuId(null);
+                                handleEditConfirm();
                               }}
                               className="w-full px-4 py-2 text-left text-sm rounded-md cursor-pointer hover:bg-[#F0F5FF] transition-colors"
                             >
@@ -718,7 +768,10 @@ export const TemplatePopup: React.FC<TemplatePopupProps> = ({
                       </button>
                     </div>
                   </div>
-                  <div className="py-5.25 pl-14 pr-8 flex flex-col gap-9">
+                  <div
+                    onContextMenu={handleContextMenu}
+                    className="py-5.25 pl-14 pr-8 flex flex-col gap-9"
+                  >
                     {selectedTemplate.content &&
                       Object.entries(selectedTemplate.content).map(
                         ([sectionKey, value]) => {
@@ -775,6 +828,11 @@ export const TemplatePopup: React.FC<TemplatePopupProps> = ({
         onClose={() => setDeleteTemplateConfirm(null)}
         onDelete={handleDeleteTemplate}
       />
+      <EditTemplatePopup
+        isOpen={showEditConfirm}
+        onClose={() => setShowEditConfirm(false)}
+        onEdit={handleEditConfirm}
+      />
       <RenameTemplate
         key={selectedTemplate?.id}
         onRename={async (newName) => {
@@ -806,6 +864,15 @@ export const TemplatePopup: React.FC<TemplatePopupProps> = ({
         templateId={selectedTemplate?.id || null}
         onClose={() => setOpenMove(false)}
         onSuccess={loadTemplates}
+      />
+      <EditTemplateContentPopup
+        isOpen={showEditContentPopup}
+        template={editingTemplate}
+        onClose={() => {
+          setShowEditContentPopup(false);
+          setEditingTemplate(null);
+        }}
+        onSuccess={handleTemplateUpdated}
       />
     </>
   );

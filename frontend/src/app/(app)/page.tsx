@@ -11,7 +11,7 @@ import { Sidebar } from '@/components/Sidebar';
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { toast } from 'react-toastify';
-
+import Image from 'next/image';
 import { TemplatePopup } from '@/components/template/TemplatePopup';
 import { CreateTemplatePopup } from '@/components/template/CreateTemplatePopup';
 
@@ -113,9 +113,11 @@ export default function Home() {
   const [isSaving, setIsSaving] = useState(false);
   const [lastSavedData, setLastSavedData] = useState<string>('');
   const [isLoading, setIsLoading] = useState(false);
+  const [sectionStatus, setSectionStatus] = useState<
+    Record<string, { color: string; analysis: string } | null>
+  >({});
   const [loadError, setLoadError] = useState<string | null>(null);
   const [showTemplatePopup, setShowTemplatePopup] = useState(false);
-
   const [showSaveAsTemplatePopup, setShowSaveAsTemplatePopup] = useState(false);
   const [isFromPage, setIsFromPage] = useState(false);
   const handleApplyTemplate = (template: TemplateUI) => {
@@ -318,15 +320,13 @@ export default function Home() {
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, [sections, activeSection]);
-
+  const sectionContainerRef = useRef<HTMLDivElement>(null);
   const handleSectionClick = useCallback((sectionKey: string) => {
     const element = sectionRefs.current[sectionKey];
-    if (element) {
-      const offsetTop = element.offsetTop - 300;
-      window.scrollTo({
-        top: offsetTop,
-        behavior: 'smooth',
-      });
+    const container = sectionContainerRef.current;
+    if (element && container) {
+      const offsetTop = element.offsetTop - 200;
+      container.scrollTo({ top: offsetTop, behavior: 'smooth' });
       setActiveSection(sectionKey);
     }
   }, []);
@@ -532,68 +532,101 @@ export default function Home() {
 
       {/* Основной контент */}
       {protocolId && !isLoading && (
-        <div className="bg-white rounded-[15px] ml-93.5 w-full max-w-372.75 py-6.25 flex flex-row gap-16 pr-5 mr-2">
-          <Sidebar
-            sections={sidebarSections}
-            activeSection={activeSection}
-            onSectionClick={handleSectionClick}
-          />
-
-          <div className="flex flex-col gap-9 lg:ml-84.75 lg:w-full">
-            <div className="text-[40px] pl-6 font-semibold leading-[150%] bg-transparent border-0 focus:outline-none focus:ring-0 w-full">
-              {templateTitle}
-            </div>
-
-            <div className="flex flex-row gap-2.5 w-full">
-              <button
-                onClick={() => setShowTemplatePopup(true)}
-                className="hover:bg-[#769CEF] w-full text-white rounded-xl h-13 ml-6 cursor-pointer bg-[#5D8CF1] px-6 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-              >
-                Использовать шаблон
+        <div className="bg-white rounded-[15px] ml-93.5 w-full max-w-374.75 flex flex-col mr-2 h-[calc(100vh-55px)] custom-scrollbar overflow-hidden">
+          <div className="mx-6.25 mt-2 bg-white border-b border-b-[#E9ECEF]">
+            <div className="mx-auto mb-2 flex flex-row items-center justify-center gap-6">
+              <button className="cursor-pointer rounded-xl hover:bg-white shadow-custom-hover flex flex-row items-center gap-2 py-3 px-3.75">
+                <Image
+                  alt="klinReg"
+                  src="/check-all.svg"
+                  width={20}
+                  height={20}
+                />
+                Проверить по клин. реком.
               </button>
-              <button
-                onClick={() => {
-                  setShowSaveAsTemplatePopup(true);
-                  setIsFromPage(true);
-                }}
-                className="hover:bg-[#F0F5FF] text-[#202020] cursor-pointer bg-[#DCE7FF] w-full  rounded-xl h-13 ml-6 px-6 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-              >
-                Сохранить как шаблон
+              <button className="cursor-pointer rounded-xl hover:bg-white shadow-custom-hover flex flex-row items-center gap-2 py-3 px-3.75">
+                <Image
+                  alt="print"
+                  src="/print-fill.svg"
+                  width={20}
+                  height={20}
+                />
+                Напечатать протокол
               </button>
             </div>
-            <div className="flex gap-9 flex-col">
-              {sections.map((section) => (
-                <div
-                  key={section.id}
-                  ref={(el) => {
-                    sectionRefs.current[section.sectionKey] = el;
-                  }}
-                  className="scroll-mt-24"
-                >
-                  <SectionInput
-                    key={section.id}
-                    id={section.id}
-                    label={section.label}
-                    value={section.value}
-                    onLabelChange={handleLabelChange}
-                    onValueChange={handleValueChange}
-                    sectionKey={section.sectionKey}
-                  />
-                </div>
-              ))}
-            </div>
+          </div>
 
-            <button
-              onClick={handleSave}
-              disabled={isSaving}
-              className="hover:bg-[#769CEF] text-white rounded-xl h-13 ml-6 cursor-pointer bg-[#5D8CF1] px-6 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+          <div className="py-6.25 flex flex-row gap-16 pr-5 mr-2 overflow-hidden">
+            <Sidebar
+              sections={sidebarSections}
+              activeSection={activeSection}
+              onSectionClick={handleSectionClick}
+              sectionStatus={sectionStatus}
+            />
+
+            <div
+              className="flex flex-col gap-9 lg:ml-84.75 lg:w-full overflow-x-hidden overflow-y-auto pr-2"
+              ref={sectionContainerRef}
             >
-              {isSaving ? (
-                <div className="animate-spin mx-auto my- rounded-full h-5 w-5 border-b-2 border-white"></div>
-              ) : (
-                'Сохранить'
-              )}
-            </button>
+              <div className="text-[40px] pl-6 font-semibold leading-[150%] bg-transparent border-0 focus:outline-none focus:ring-0 w-full">
+                {templateTitle}
+              </div>
+              <div className="flex flex-row gap-2.5 w-full">
+                <button
+                  onClick={() => setShowTemplatePopup(true)}
+                  className="hover:bg-[#769CEF] w-full text-white rounded-xl h-13 ml-6 cursor-pointer bg-[#5D8CF1] px-6 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                >
+                  Использовать шаблон
+                </button>
+                <button
+                  onClick={() => {
+                    setShowSaveAsTemplatePopup(true);
+                    setIsFromPage(true);
+                  }}
+                  className="hover:bg-[#F0F5FF] text-[#202020] cursor-pointer bg-[#DCE7FF] w-full  rounded-xl h-13 ml-6 px-6 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                >
+                  Сохранить как шаблон
+                </button>
+              </div>
+              <div className="flex gap-9 flex-col">
+                {sections.map((section) => (
+                  <div
+                    key={section.id}
+                    ref={(el) => {
+                      sectionRefs.current[section.sectionKey] = el;
+                    }}
+                    className="scroll-mt-24"
+                  >
+                    <SectionInput
+                      key={section.id}
+                      id={section.id}
+                      label={section.label}
+                      value={section.value}
+                      onLabelChange={handleLabelChange}
+                      onValueChange={handleValueChange}
+                      sectionKey={section.sectionKey}
+                      onAnalysisChange={(status) => {
+                        setSectionStatus((prev) => ({
+                          ...prev,
+                          [section.sectionKey]: status,
+                        }));
+                      }}
+                    />
+                  </div>
+                ))}
+              </div>
+              <button
+                onClick={handleSave}
+                disabled={isSaving}
+                className="hover:bg-[#769CEF] mb-4 text-white rounded-xl h-13 ml-6 cursor-pointer bg-[#5D8CF1] px-6 py-2.5 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              >
+                {isSaving ? (
+                  <div className="animate-spin mx-auto my- rounded-full h-5 w-5 border-b-2 border-white"></div>
+                ) : (
+                  'Сохранить'
+                )}
+              </button>
+            </div>
           </div>
         </div>
       )}

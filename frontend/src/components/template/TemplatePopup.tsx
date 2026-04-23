@@ -100,30 +100,18 @@ export const TemplatePopup: React.FC<TemplatePopupProps> = ({
   } | null>(null);
 
   const [showEditConfirm, setShowEditConfirm] = useState(false);
-  const lastContextMenu = useRef<{
-    timestamp: number;
-    target: EventTarget | null;
-  }>({
-    timestamp: 0,
-    target: null,
-  });
+
   const [showEditContentPopup, setShowEditContentPopup] = useState(false);
   const [editingTemplate, setEditingTemplate] = useState<TemplateUI | null>(
     null,
   );
-  const handleContextMenu = (e: React.MouseEvent) => {
-    e.preventDefault();
 
-    const now = Date.now();
-    const { timestamp, target } = lastContextMenu.current;
-
-    if (target === e.target && now - timestamp < 500) {
+  const handleDoubleClick = () => {
+    if (selectedTemplate) {
       setShowEditConfirm(true);
-      lastContextMenu.current = { timestamp: 0, target: null };
-    } else {
-      lastContextMenu.current = { timestamp: now, target: e.target };
     }
   };
+
   const handleEditConfirm = () => {
     setShowEditConfirm(false);
     if (selectedTemplate) {
@@ -769,7 +757,7 @@ export const TemplatePopup: React.FC<TemplatePopupProps> = ({
                     </div>
                   </div>
                   <div
-                    onContextMenu={handleContextMenu}
+                    onDoubleClick={handleDoubleClick}
                     className="py-5.25 pl-14 pr-8 flex flex-col gap-9"
                   >
                     {selectedTemplate.content &&

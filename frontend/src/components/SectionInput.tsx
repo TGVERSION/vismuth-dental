@@ -184,8 +184,10 @@ export const SectionInput: React.FC<SectionInputProps> = ({
         example_prompt: textToAnalyze,
       };
       try {
-        const response = await mockApiCall(dataToSend);
-        // await mainApi.ml_handlers.mlFullnessComplaint(dataToSend);
+        const response =
+          await mainApi.ml_handlers.mlFullnessComplaint(dataToSend);
+        //await mockApiCall(dataToSend);
+
         setMlAnalysis(response);
       } catch (error) {
         console.error('Failed to fetch analysis:', error);

@@ -1,6 +1,5 @@
 'use client';
 
-import { useLockBodyScroll } from '@/hooks/useLockBodyScroll';
 import { toast } from 'react-toastify';
 import Image from 'next/image';
 
@@ -15,7 +14,7 @@ export const DeleteTemplate: React.FC<DeleteTemplateProps> = ({
   onClose,
   onDelete,
 }) => {
-  useLockBodyScroll(isOpen);
+  //useLockBodyScroll(isOpen);
 
   const handleDelete = async () => {
     try {

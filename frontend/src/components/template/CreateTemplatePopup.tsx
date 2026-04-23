@@ -12,7 +12,6 @@ import type {
 import Image from 'next/image';
 import { toast } from 'react-toastify';
 import { CreateGroupPopup } from '../groups/CreateGroupPopup';
-import { useLockBodyScroll } from '@/hooks/useLockBodyScroll';
 import { CustomDropdown, type DropdownOption } from '../CustomDropdown';
 
 export interface TemplateUI extends Omit<TemplatesResponse, 'fields'> {
@@ -61,7 +60,7 @@ export const CreateTemplatePopup: React.FC<CreateTemplatePopupProps> = ({
   initialContent,
   stayInEditor = false,
 }) => {
-  useLockBodyScroll(isOpen);
+  //useLockBodyScroll(isOpen);
   const [step, setStep] = useState<1 | 2>(1);
   const [templateName, setTemplateName] = useState('');
   const [templateType, setTemplateType] = useState<'personal' | 'general'>(

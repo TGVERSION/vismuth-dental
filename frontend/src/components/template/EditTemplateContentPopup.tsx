@@ -5,7 +5,6 @@ import { mainApi } from '@/api';
 import type { TemplatesRequest, FieldsType } from '@/api';
 import Image from 'next/image';
 import { toast } from 'react-toastify';
-import { useLockBodyScroll } from '@/hooks/useLockBodyScroll';
 import type { TemplateUI } from './TemplatePopup';
 
 interface EditTemplateContentPopupProps {
@@ -34,7 +33,7 @@ const PROTOCOL_SECTIONS = [
 export const EditTemplateContentPopup: React.FC<
   EditTemplateContentPopupProps
 > = ({ isOpen, template, onClose, onSuccess }) => {
-  useLockBodyScroll(isOpen);
+  //useLockBodyScroll(isOpen);
   const [saving, setSaving] = useState(false);
   const [templateContent, setTemplateContent] = useState<
     Record<string, string>

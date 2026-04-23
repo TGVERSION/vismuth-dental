@@ -1,6 +1,5 @@
 'use client';
 
-import { useLockBodyScroll } from '@/hooks/useLockBodyScroll';
 import { toast } from 'react-toastify';
 import Image from 'next/image';
 
@@ -15,7 +14,7 @@ export const EditTemplatePopup: React.FC<EditTemplateProps> = ({
   onClose,
   onEdit,
 }) => {
-  useLockBodyScroll(isOpen);
+  //useLockBodyScroll(isOpen);
 
   if (!isOpen) return null;
 

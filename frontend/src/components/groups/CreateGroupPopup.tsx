@@ -9,7 +9,6 @@ import type {
 } from '@/api';
 import Image from 'next/image';
 import { toast } from 'react-toastify';
-import { useLockBodyScroll } from '@/hooks/useLockBodyScroll';
 
 export interface TemplateUI extends ListsTemplatesResponse {
   name: string;
@@ -32,7 +31,7 @@ export const CreateGroupPopup: React.FC<CreateGroupPopupProps> = ({
   onClose,
   onSuccess,
 }) => {
-  useLockBodyScroll(isOpen);
+  //useLockBodyScroll(isOpen);
   const [groupName, setGroupName] = useState('');
   const [selectedTemplates, setSelectedTemplates] = useState<Set<string>>(
     new Set(),

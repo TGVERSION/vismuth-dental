@@ -14,8 +14,13 @@ export const useAuth = () => {
     try {
       const response = await mainApi.serviceUsers.login(credentials);
 
-      login(response.user, response.access_token);
       localStorage.setItem('access_token', response.access_token);
+      const user = await mainApi.serviceUsers.serviceUser();
+      const saveUser = {
+        ...user,
+        id: response.user.id,
+      };
+      login(saveUser, response.access_token);
       router.push('/');
 
       return { success: true };
@@ -47,8 +52,13 @@ export const useAuth = () => {
         code,
       });
 
-      login(response.user, response.access_token);
       localStorage.setItem('access_token', response.access_token);
+      const user = await mainApi.serviceUsers.serviceUser();
+      const saveUser = {
+        ...user,
+        id: response.user.id,
+      };
+      login(saveUser, response.access_token);
       router.push('/');
 
       return { success: true };

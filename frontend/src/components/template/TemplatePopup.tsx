@@ -9,7 +9,6 @@ import type {
   FieldsTypeFull,
 } from '@/api';
 import Image from 'next/image';
-import { useLockBodyScroll } from '@/hooks/useLockBodyScroll';
 import { CreateGroupPopup } from '../groups/CreateGroupPopup';
 import { CreateTemplatePopup } from './CreateTemplatePopup';
 import { toast } from 'react-toastify';
@@ -44,7 +43,7 @@ export const TemplatePopup: React.FC<TemplatePopupProps> = ({
   onClose,
   onApply,
 }) => {
-  useLockBodyScroll(isOpen);
+  //useLockBodyScroll(isOpen);
 
   const PROTOCOL_SECTIONS = [
     { key: 'complaints', label: 'Жалобы' },

@@ -1,6 +1,5 @@
 'use client';
 
-import { useLockBodyScroll } from '@/hooks/useLockBodyScroll';
 import { toast } from 'react-toastify';
 import Image from 'next/image';
 interface DeleteGroupProps {
@@ -14,7 +13,7 @@ export const DeleteGroup: React.FC<DeleteGroupProps> = ({
   onClose,
   onDelete,
 }) => {
-  useLockBodyScroll(isOpen);
+  //useLockBodyScroll(isOpen);
 
   const handleDelete = async () => {
     try {

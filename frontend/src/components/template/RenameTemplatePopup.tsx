@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import { useLockBodyScroll } from '@/hooks/useLockBodyScroll';
 import { toast } from 'react-toastify';
 import Image from 'next/image';
 
@@ -18,7 +17,7 @@ export const RenameTemplate: React.FC<RenameTemplateProps> = ({
   templateName,
   onRename,
 }) => {
-  useLockBodyScroll(isOpen);
+  //useLockBodyScroll(isOpen);
   const [inputValue, setInputValue] = useState(templateName);
 
   const handleRename = async () => {

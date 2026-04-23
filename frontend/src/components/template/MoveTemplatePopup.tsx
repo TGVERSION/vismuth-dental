@@ -6,7 +6,6 @@ import type { ListsGroupsResponse, TemplatesResponse } from '@/api';
 import Image from 'next/image';
 import { toast } from 'react-toastify';
 import { CreateGroupPopup } from '../groups/CreateGroupPopup';
-import { useLockBodyScroll } from '@/hooks/useLockBodyScroll';
 
 interface MoveTemplatePopupProps {
   isOpen: boolean;
@@ -21,7 +20,7 @@ export const MoveTemplatePopup: React.FC<MoveTemplatePopupProps> = ({
   onClose,
   onSuccess,
 }) => {
-  useLockBodyScroll(isOpen);
+  //useLockBodyScroll(isOpen);
   const [selectedGroupId, setSelectedGroupId] = useState<string>('');
   const [groups, setGroups] = useState<ListsGroupsResponse[]>([]);
   const [template, setTemplate] = useState<TemplatesResponse | null>(null);

@@ -112,13 +112,19 @@ export interface RegisterConfirmRequest {
 export interface TokenResponse {
   access_token: string;
   token_type: string;
-  user: UserData;
+  user: ServiceUserData;
 }
 
-export interface UserData {
-  id: string;
-  role: string;
+export interface ServiceUserData {
+  id?: string;
   login: string;
+  first_name: string;
+  last_name: string;
+  role: 'doctor' | 'head_of_department' | 'administrator';
+  is_active: true;
+  created_at: string;
+  updated_at: string;
+  deleted_at: string;
 }
 
 export interface Mkb10Item {

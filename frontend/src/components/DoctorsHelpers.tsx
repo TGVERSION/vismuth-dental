@@ -1,6 +1,5 @@
 'use client';
 
-import { useLockBodyScroll } from '@/hooks/useLockBodyScroll';
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
 
@@ -13,7 +12,7 @@ export const DoctorsHelpers: React.FC<DoctorsHelpersProps> = ({
   isOpen,
   onClose,
 }) => {
-  useLockBodyScroll(isOpen);
+  //useLockBodyScroll(isOpen);
   if (!isOpen) return null;
   const closeModal = () => {
     onClose();

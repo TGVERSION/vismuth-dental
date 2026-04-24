@@ -5,10 +5,12 @@ import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import { DoctorsHelpers } from '@/components/DoctorsHelpers';
+import { EditDictionaryModal } from '@/components/EditDictionaryModal';
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const [showProfileMenu, setShowProfileMenu] = useState(false);
+  const [isDictionaryOpen, setIsDictionaryOpen] = useState(false);
   const hideTimerRef = useRef<NodeJS.Timeout | null>(null);
   const { user, handleLogout } = useAuth();
   const hideHeader = ['/login', '/register'].includes(pathname);
@@ -60,6 +62,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 Помощники врача
               </div>
               <Image
+                onClick={() => setIsDictionaryOpen(true)}
                 alt="settings"
                 className="cursor-pointer"
                 src="/setting-fill.svg"
@@ -102,6 +105,11 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           </div>
         </header>
       )}
+
+      <EditDictionaryModal
+        isOpen={isDictionaryOpen}
+        onClose={() => setIsDictionaryOpen(false)}
+      />
 
       <main className="flex bg-[#F3F4F8] min-h-screen w-full gap-5 mx-auto my-20">
         {children}

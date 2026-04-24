@@ -46,7 +46,7 @@ export function EditDictionaryModal({
       onClick={handleOverlayClick}
       className="modal-overlay fixed inset-0 bg-black/50 flex justify-center items-start pt-10 z-[1002] overflow-y-auto "
     >
-      <div className="bg-white rounded-xl w-160 h-auto pr-5 pt-5 pb-10 pl-10 shadow-[0_8px_32px_rgba(0,0,0,0.12)]">
+      <div className="bg-white rounded-xl w-160 h-auto pr-5 pt-5 pb-10 pl-10 shadow-[0_8px_32px_rgba(0,0,0,0.12)] animate-fade-in">
         {/* Close */}
         <div className="flex justify-end">
           <button onClick={onClose} className="cursor-pointer">

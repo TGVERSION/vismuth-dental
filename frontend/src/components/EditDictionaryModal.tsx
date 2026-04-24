@@ -3,7 +3,6 @@
 import { useState, useCallback } from 'react';
 import { TableEditor, Column } from './TableEditor';
 import Image from 'next/image';
-import { useLockBodyScroll } from '@/hooks/useLockBodyScroll';
 
 interface EditDictionaryModalProps {
   isOpen: boolean;
@@ -25,7 +24,6 @@ export function EditDictionaryModal({
   isOpen,
   onClose,
 }: EditDictionaryModalProps) {
-  useLockBodyScroll(isOpen);
   const [dictionaryName, setDictionaryName] = useState('');
   const [columns, setColumns] = useState<Column[]>(DEFAULT_COLUMNS);
   const [rows, setRows] = useState<string[][]>(DEFAULT_ROWS);

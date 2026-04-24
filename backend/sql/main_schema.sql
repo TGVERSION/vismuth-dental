@@ -617,3 +617,32 @@ CREATE INDEX IF NOT EXISTS idx_fullness_complaints_stats_deleted_at
 
 CREATE INDEX IF NOT EXISTS idx_fullness_complaints_stats_status
     ON fullness_complaints_stats (status);
+
+
+-- =========================================
+-- Таблицы автодополнения
+-- =========================================
+-- Таблица словаря
+CREATE TABLE IF NOT EXISTS ml_unigrams (
+    id SERIAL PRIMARY KEY,
+    word TEXT NOT NULL UNIQUE,
+    frequency INTEGER NOT NULL DEFAULT 0,
+    weight FLOAT NOT NULL DEFAULT 0
+);
+
+-- Таблица биграмм с полем bigram
+CREATE TABLE IF NOT EXISTS ml_bigrams (
+    id SERIAL PRIMARY KEY,
+    bigram TEXT NOT NULL UNIQUE,
+    first_word TEXT NOT NULL,
+    second_word TEXT NOT NULL,
+    frequency INTEGER NOT NULL DEFAULT 0,
+    weight FLOAT NOT NULL DEFAULT 0
+);
+
+-- Индексы для скорости поиска
+CREATE INDEX IF NOT EXISTS idx_dict_word ON ml_unigrams (word text_pattern_ops);
+CREATE INDEX IF NOT EXISTS idx_dict_weight ON ml_unigrams (weight DESC);
+CREATE INDEX IF NOT EXISTS idx_bigram_bigram ON ml_bigrams (bigram text_pattern_ops);
+CREATE INDEX IF NOT EXISTS idx_bigram_first ON ml_bigrams (first_word text_pattern_ops);
+CREATE INDEX IF NOT EXISTS idx_bigram_weight ON ml_bigrams (weight DESC);

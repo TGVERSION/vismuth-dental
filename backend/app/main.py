@@ -10,6 +10,7 @@ from .routers.ml_fullness import router as ml_fullness_router
 from .routers.protocol_templates import router as protocol_templates_router
 from .routers.service_user import router as service_user_router
 from .routers.template_groups import router as template_groups_router
+from .routers.ml_autocomplete_dict import router as ml_complete_router
 
 
 app = FastAPI(title="Vismuth Clinical Decision Support")
@@ -22,6 +23,7 @@ app.include_router(ml_fullness_router)
 app.include_router(service_user_router)
 app.include_router(template_groups_router)
 app.include_router(protocol_templates_router)
+app.include_router(ml_complete_router)
 
 
 @app.get("/health", tags=["system"])

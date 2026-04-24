@@ -25,7 +25,7 @@ export const DoctorsHelpers: React.FC<DoctorsHelpersProps> = ({
         onClick={closeModal}
       >
         <div
-          className="bg-white rounded-2xl w-full max-w-334.5 flex flex-col shadow-2xl min-h-[calc(100vh-80px)]"
+          className="bg-white rounded-2xl w-full max-w-334.5 flex flex-col shadow-2xl min-h-[calc(100vh-80px)] animate-fade-in"
           onClick={(e) => e.stopPropagation()}
         >
           <div className="flex flex-1">

@@ -9,7 +9,6 @@ import type {
 } from '@/api';
 import Image from 'next/image';
 import { toast } from 'react-toastify';
-import { useLockBodyScroll } from '@/hooks/useLockBodyScroll';
 
 export interface TemplateUI extends ListsTemplatesResponse {
   name: string;
@@ -32,7 +31,7 @@ export const CreateGroupPopup: React.FC<CreateGroupPopupProps> = ({
   onClose,
   onSuccess,
 }) => {
-  useLockBodyScroll(isOpen);
+  //useLockBodyScroll(isOpen);
   const [groupName, setGroupName] = useState('');
   const [selectedTemplates, setSelectedTemplates] = useState<Set<string>>(
     new Set(),
@@ -160,7 +159,7 @@ export const CreateGroupPopup: React.FC<CreateGroupPopupProps> = ({
       >
         <div className="flex justify-end">
           <button onClick={handleClose} className="cursor-pointer">
-            <Image alt="close" src="/close.svg" width={20} height={20} />
+            <Image alt="close" src="/close.svg" width={25} height={25} />
           </button>
         </div>
 

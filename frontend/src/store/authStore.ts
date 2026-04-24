@@ -1,16 +1,16 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
-import { UserData } from '@/api';
+import { ServiceUserData } from '@/api';
 
 interface AuthState {
-  user: UserData | null;
+  user: ServiceUserData | null;
   accessToken: string | null;
   isAuthenticated: boolean;
   isLoaded: boolean;
 
-  setUser: (user: UserData | null) => void;
+  setUser: (user: ServiceUserData | null) => void;
   setAccessToken: (token: string | null) => void;
-  login: (user: UserData, token: string) => void;
+  login: (user: ServiceUserData, token: string) => void;
   logout: () => void;
   clearAuth: () => void;
   markLoaded: () => void;

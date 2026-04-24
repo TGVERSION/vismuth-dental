@@ -20,11 +20,14 @@ export const AutocompleteSuggestions: React.FC<
   if (suggestions.length === 0) return null;
 
   return (
-    <ul className="absolute z-50 w-full -mt-2 ml-6 bg-[#F2F4F7] border-0 rounded-lg max-h-60 overflow-auto">
+    <ul className="absolute z-50 w-full -mt-1 bg-[#F2F4F7] border-0 rounded-lg max-h-60 overflow-auto">
       {suggestions.map((suggestion, index) => (
         <li
           key={index}
-          onMouseDown={() => onSelect(suggestion)}
+          onMouseDown={(e) => {
+            e.preventDefault();
+            onSelect(suggestion);
+          }}
           className={`px-4 py-2 cursor-pointer text-sm transition-colors ${
             index === highlightedIndex
               ? 'bg-[#e6efff] text-[#202020]'

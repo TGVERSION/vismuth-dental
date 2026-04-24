@@ -1,6 +1,5 @@
 'use client';
 
-import { useLockBodyScroll } from '@/hooks/useLockBodyScroll';
 import { toast } from 'react-toastify';
 import Image from 'next/image';
 
@@ -15,7 +14,7 @@ export const DeleteTemplate: React.FC<DeleteTemplateProps> = ({
   onClose,
   onDelete,
 }) => {
-  useLockBodyScroll(isOpen);
+  //useLockBodyScroll(isOpen);
 
   const handleDelete = async () => {
     try {
@@ -48,7 +47,7 @@ export const DeleteTemplate: React.FC<DeleteTemplateProps> = ({
         {/* Кнопка закрытия */}
         <div className="flex justify-end">
           <button onClick={onClose} className="cursor-pointer">
-            <Image alt="close" src="/close.svg" width={20} height={20} />
+            <Image alt="close" src="/close.svg" width={25} height={25} />
           </button>
         </div>
 

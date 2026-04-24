@@ -53,19 +53,19 @@ body {
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb {
-  background: #c1c1c1;
+  background: #8b8b8b;
   border-radius: 4px;
   transition: background 0.2s;
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: #999;
+  background: #636363;
 }
 
 /* Firefox */
 .custom-scrollbar {
   scrollbar-width: thin;
-  scrollbar-color: #c1c1c1 transparent;
+  scrollbar-color: #8b8b8b transparent;
 }
 
 .custom-scrollbar-hidden::-webkit-scrollbar {
@@ -79,7 +79,10 @@ body {
   display: none;
 }
 .shadow-custom {
-  box-shadow: 0 4px 20px #0000001a;
+  box-shadow: 0px 0px 55px 0px #00000014 !important;
+}
+.shadow-custom-hover:hover {
+  box-shadow: 0px 0px 55px 0px #00000014 !important;
 }
 
 @keyframes slideIn {
@@ -153,4 +156,28 @@ body {
 
 .w-webkit-fill-available {
   width: -webkit-fill-available;
+}
+
+.placeholder-bracket {
+  color: #5d8cf1;
+  cursor: pointer;
+  font-weight: 500;
+}
+div[contenteditable][data-placeholder]:empty:before {
+  content: attr(data-placeholder);
+  color: #9ca3af;
+  pointer-events: none;
+}
+[contenteditable][data-placeholder]:empty:before {
+  content: attr(data-placeholder);
+  color: #9ca3af;
+  font-style: normal;
+  pointer-events: none;
+  display: block;
+  position: absolute;
+}
+
+.shadow-md,
+.shadow-lg {
+  box-shadow: 0px 0px 55px 0px #00000014 !important;
 }

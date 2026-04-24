@@ -1,6 +1,5 @@
 'use client';
 
-import { useLockBodyScroll } from '@/hooks/useLockBodyScroll';
 import { toast } from 'react-toastify';
 import Image from 'next/image';
 interface DeleteGroupProps {
@@ -14,7 +13,7 @@ export const DeleteGroup: React.FC<DeleteGroupProps> = ({
   onClose,
   onDelete,
 }) => {
-  useLockBodyScroll(isOpen);
+  //useLockBodyScroll(isOpen);
 
   const handleDelete = async () => {
     try {
@@ -47,7 +46,7 @@ export const DeleteGroup: React.FC<DeleteGroupProps> = ({
         {/* Кнопка закрытия */}
         <div className="flex justify-end">
           <button onClick={onClose} className="cursor-pointer">
-            <Image alt="close" src="/close.svg" width={20} height={20} />
+            <Image alt="close" src="/close.svg" width={25} height={25} />
           </button>
         </div>
         <h2 className="text-[34px] font-medium text-center mb-5 px-5">

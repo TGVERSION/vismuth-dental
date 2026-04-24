@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import { useLockBodyScroll } from '@/hooks/useLockBodyScroll';
 import { toast } from 'react-toastify';
 import Image from 'next/image';
 
@@ -18,7 +17,7 @@ export const RenameGroup: React.FC<RenameGroupProps> = ({
   groupName,
   onRename,
 }) => {
-  useLockBodyScroll(isOpen);
+  //useLockBodyScroll(isOpen);
   const [inputValue, setInputValue] = useState(groupName);
 
   const handleRename = async () => {
@@ -67,7 +66,7 @@ export const RenameGroup: React.FC<RenameGroupProps> = ({
         {/* Кнопка закрытия */}
         <div className="flex justify-end">
           <button onClick={handleClose} className="cursor-pointer">
-            <Image alt="close" src="/close.svg" width={20} height={20} />
+            <Image alt="close" src="/close.svg" width={25} height={25} />
           </button>
         </div>
 

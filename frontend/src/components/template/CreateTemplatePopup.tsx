@@ -12,7 +12,6 @@ import type {
 import Image from 'next/image';
 import { toast } from 'react-toastify';
 import { CreateGroupPopup } from '../groups/CreateGroupPopup';
-import { useLockBodyScroll } from '@/hooks/useLockBodyScroll';
 import { CustomDropdown, type DropdownOption } from '../CustomDropdown';
 
 export interface TemplateUI extends Omit<TemplatesResponse, 'fields'> {
@@ -61,7 +60,7 @@ export const CreateTemplatePopup: React.FC<CreateTemplatePopupProps> = ({
   initialContent,
   stayInEditor = false,
 }) => {
-  useLockBodyScroll(isOpen);
+  //useLockBodyScroll(isOpen);
   const [step, setStep] = useState<1 | 2>(1);
   const [templateName, setTemplateName] = useState('');
   const [templateType, setTemplateType] = useState<'personal' | 'general'>(
@@ -253,7 +252,7 @@ export const CreateTemplatePopup: React.FC<CreateTemplatePopupProps> = ({
         >
           <div className="flex justify-end">
             <button onClick={handleClose} className="cursor-pointer">
-              <Image alt="close" src="/close.svg" width={20} height={20} />
+              <Image alt="close" src="/close.svg" width={25} height={25} />
             </button>
           </div>
 
@@ -412,8 +411,8 @@ export const CreateTemplatePopup: React.FC<CreateTemplatePopupProps> = ({
                   Структура протокола
                 </label>
                 <select className="w-full px-4 py-2.5 bg-gray-50 border-0 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#5D8CF1]">
-                  <option>Приём врача пульмонолога</option>
                   <option>Приём врача терапевта</option>
+                  <option>Приём врача пульмонолога</option>
                   <option>Приём врача кардиолога</option>
                 </select>
               </div>

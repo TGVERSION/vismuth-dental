@@ -21,6 +21,9 @@ import type {
   ListsTemplatesResponse,
   TemplatesRequest,
   TemplatesResponse,
+  mlFullnessComplaintPayload,
+  mlFullnessComplaintResponse,
+  ServiceUserData,
 } from './index';
 
 export const apiClient = new ApiClient({
@@ -31,7 +34,6 @@ export const apiClient = new ApiClient({
 });
 
 export const mainApi = {
-  // Пользователи
   serviceUsers: {
     register: (data: LoginRequest) =>
       apiClient.post<LoginResponse>('/auth/register', data),
@@ -42,9 +44,9 @@ export const mainApi = {
     login: (data: LoginRequest) =>
       apiClient.post<TokenResponse>('/auth/login', data),
     logout: () => apiClient.post<LoginResponse>('/auth/logout'),
+    serviceUser: () => apiClient.get<ServiceUserData>('/service_user'),
   },
 
-  // Протоколы
   consultations: {
     getLists: () =>
       apiClient.get<ListConsultationsResponse[]>('/consultations'),
@@ -61,7 +63,6 @@ export const mainApi = {
     delete: (id: string) => apiClient.delete<void>(`/consultations/${id}`),
   },
 
-  //Группы
   templateGroups: {
     getGroups: () => apiClient.get<ListsGroupsResponse[]>('/template-groups'),
 
@@ -110,5 +111,11 @@ export const mainApi = {
 
     mlAutocompleteStatus: (data: MlStatusPayload) =>
       apiClient.post<MlStatusResponse>('/ml_autocomplete_stats', data),
+
+    mlFullnessComplaint: (data: mlFullnessComplaintPayload) =>
+      apiClient.post<mlFullnessComplaintResponse>(
+        '/ml_fullness_complaints',
+        data,
+      ),
   },
 };

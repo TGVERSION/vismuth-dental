@@ -381,8 +381,8 @@ CREATE TABLE IF NOT EXISTS protocol_structures_fields (
     description TEXT,
     field_type VARCHAR(255) NOT NULL,
     default_value TEXT,
-    field_value TEXT,
     dictionary VARCHAR(255),
+    protocol_fields_main_id UUID REFERENCES protocol_fields_main (id),
     is_required BOOLEAN NOT NULL DEFAULT false,
     sort_order INTEGER NOT NULL DEFAULT 0
 );
@@ -396,8 +396,33 @@ CREATE INDEX IF NOT EXISTS idx_protocol_structures_fields_structure_id
 CREATE INDEX IF NOT EXISTS idx_protocol_structures_fields_sort
     ON protocol_structures_fields (protocol_structure_id, sort_order);
 
+CREATE INDEX IF NOT EXISTS idx_protocol_structures_fields_protocol_fields_main_id
+    ON protocol_structures_fields (protocol_fields_main_id);
+
 CREATE UNIQUE INDEX IF NOT EXISTS idx_protocol_structures_fields_name_unique
     ON protocol_structures_fields (protocol_structure_id, field_name);
+
+
+-- =========================================
+-- Справочник ключевых полей протокола для автодополнения
+-- =========================================
+CREATE TABLE IF NOT EXISTS protocol_fields_main (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    field_name VARCHAR(255),
+    field_label VARCHAR(255),
+    description TEXT,
+    endpoint_link VARCHAR(255),
+    created_at TIMESTAMPTZ DEFAULT now(),
+    updated_at TIMESTAMPTZ,
+    deleted_at TIMESTAMPTZ
+);
+
+COMMENT ON TABLE protocol_fields_main IS
+    'Справочник ключевых полей протокола для автодополнения';
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_protocol_fields_main_field_name_unique
+    ON protocol_fields_main (field_name)
+    WHERE deleted_at IS NULL;
 
 
 -- =========================================
@@ -545,6 +570,7 @@ CREATE TABLE IF NOT EXISTS protocol_template (
     protocol_name VARCHAR(255), -- название шаблона
     group_id UUID REFERENCES template_group(id), -- идентификатор группы (ссылка на группу или NULL)
     creator_id UUID REFERENCES service_user(id), -- идентификатор создателя (ссылка на пользователя)
+    protocol_structure_id UUID REFERENCES protocol_structures(id) ON DELETE SET NULL, -- структура протокола
     privacy VARCHAR(255), -- приватность ("Общий" или "Личный")
     created_at TIMESTAMPTZ DEFAULT now(), -- дата создания
     updated_at TIMESTAMPTZ, -- дата изменения

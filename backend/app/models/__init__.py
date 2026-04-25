@@ -4,5 +4,6 @@ from .consultation import Consultation  # noqa: F401
 from .mkb10 import Mkb10  # noqa: F401
 from .template_group import TemplateGroup  # noqa: F401
 from .protocol_template import ProtocolTemplate, ProtocolTemplateField  # noqa: F401
+from .protocol_structure import ProtocolFieldMain, ProtocolStructure, ProtocolStructureField  # noqa: F401
 from .autocomplete_stats import AutocompleteStats  # noqa: F401
 from .fullness_complaints_stats import FullnessComplaintsStats  # noqa: F401

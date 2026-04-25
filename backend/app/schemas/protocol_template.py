@@ -20,6 +20,7 @@ class ProtocolTemplateCreate(BaseModel):
     protocol_name: str = Field(..., min_length=1, max_length=255)
     privacy: ProtocolPrivacy
     group_id: UUID | None = None
+    protocol_structure_id: UUID | None = None
     fields: list[ProtocolTemplateFieldCreate] = Field(default_factory=list)
 
 
@@ -27,6 +28,7 @@ class ProtocolTemplateUpdate(BaseModel):
     protocol_name: str | None = Field(default=None, min_length=1, max_length=255)
     privacy: ProtocolPrivacy | None = None
     group_id: UUID | None = None
+    protocol_structure_id: UUID | None = None
     fields: list[ProtocolTemplateFieldCreate] | None = None
 
 
@@ -47,6 +49,7 @@ class ProtocolTemplateRead(BaseModel):
     id: UUID
     protocol_name: str | None
     group_id: UUID | None
+    protocol_structure_id: UUID | None
     creator_id: UUID | None
     privacy: str | None
     created_at: datetime
@@ -62,6 +65,7 @@ class ProtocolTemplateListItem(BaseModel):
     id: UUID
     protocol_name: str | None
     group_id: UUID | None
+    protocol_structure_id: UUID | None
     privacy: str | None
 
     class Config:

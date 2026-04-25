@@ -338,35 +338,6 @@ CREATE TABLE ref_mis (
 -- CREATE INDEX IF NOT EXISTS idx_consultation_protocol_template_id
 --     ON consultation (protocol_template_id);
 
--- =========================================
--- Сущности для пользователей
--- =========================================
-
--- Таблица пользователя сервиса
-CREATE TABLE IF NOT EXISTS service_user (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-
-    login VARCHAR(255) UNIQUE NOT NULL, -- логин пользователя
-    password_hash TEXT NOT NULL, -- хэш пароля
-
-    first_name VARCHAR(255),
-    last_name VARCHAR(255),
-
-    role VARCHAR(50) NOT NULL DEFAULT 'doctor', -- роль пользователя (admin/head of department/doctor)
-
-    is_active BOOLEAN NOT NULL DEFAULT true, -- активен ли пользователь
-
-    created_at TIMESTAMPTZ DEFAULT now(),
-    updated_at TIMESTAMPTZ,
-    deleted_at TIMESTAMPTZ
-);
-
-COMMENT ON TABLE service_user IS 'Пользователи сервиса (администраторы, операторы системы)';
-COMMENT ON COLUMN service_user.password_hash IS 'Хэш пароля пользователя';
-COMMENT ON COLUMN service_user.role IS 'Роль пользователя сервиса';
-
-CREATE INDEX IF NOT EXISTS idx_service_user_email
-    ON service_user (login);
 
 
 -- =========================================
@@ -410,8 +381,8 @@ CREATE TABLE IF NOT EXISTS protocol_structures_fields (
     description TEXT,
     field_type VARCHAR(255) NOT NULL,
     default_value TEXT,
-    field_value TEXT,
     dictionary VARCHAR(255),
+    protocol_fields_main_id UUID REFERENCES protocol_fields_main (id),
     is_required BOOLEAN NOT NULL DEFAULT false,
     sort_order INTEGER NOT NULL DEFAULT 0
 );
@@ -425,9 +396,58 @@ CREATE INDEX IF NOT EXISTS idx_protocol_structures_fields_structure_id
 CREATE INDEX IF NOT EXISTS idx_protocol_structures_fields_sort
     ON protocol_structures_fields (protocol_structure_id, sort_order);
 
+CREATE INDEX IF NOT EXISTS idx_protocol_structures_fields_protocol_fields_main_id
+    ON protocol_structures_fields (protocol_fields_main_id);
+
 CREATE UNIQUE INDEX IF NOT EXISTS idx_protocol_structures_fields_name_unique
     ON protocol_structures_fields (protocol_structure_id, field_name);
 
+
+-- =========================================
+-- Справочник ключевых полей протокола для автодополнения
+-- =========================================
+CREATE TABLE IF NOT EXISTS protocol_fields_main (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    field_name VARCHAR(255),
+    field_label VARCHAR(255),
+    description TEXT,
+    endpoint_link VARCHAR(255),
+    created_at TIMESTAMPTZ DEFAULT now(),
+    updated_at TIMESTAMPTZ,
+    deleted_at TIMESTAMPTZ
+);
+
+COMMENT ON TABLE protocol_fields_main IS
+    'Справочник ключевых полей протокола для автодополнения';
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_protocol_fields_main_field_name_unique
+    ON protocol_fields_main (field_name)
+    WHERE deleted_at IS NULL;
+
+
+INSERT INTO protocol_fields_main (
+    field_name,
+    field_label,
+    description,
+    endpoint_link
+)
+VALUES
+    ('complaints', 'Жалобы', 'Жалобы пациента', NULL),
+    ('disease_anamnesis', 'Анамнез заболевания', 'Анамнез заболевания', NULL),
+    ('disease_history', 'История заболевания', 'История заболевания', NULL),
+    ('patient_condition', 'Состояние пациента', 'Состояние пациента', NULL),
+    ('life_anamnesis', 'Анамнез жизни', 'Анамнез жизни', NULL),
+    ('bad_habits', 'Вредные привычки и зависимости', 'Вредные привычки и зависимости', NULL),
+    ('allergy_anamnesis', 'Аллергологический анамнез', 'Аллергологический анамнез', NULL),
+    ('vital_parameters', 'Витальные параметры', 'Витальные параметры', NULL),
+    ('objective_data', 'Объективные данные', 'Объективные данные', NULL),
+    ('clinical_assessment', 'Объективизированная оценка состояния', 'Объективизированная оценка состояния', NULL),
+    ('consultation_conclusion', 'Заключение консультации', 'Заключение консультации', NULL),
+    ('main_diagnosis', 'Основной диагноз', 'Основной диагноз', NULL),
+    ('comorbid_diagnoses', 'Сопутствующие диагнозы', 'Сопутствующие диагнозы', NULL),
+    ('recommendations', 'Рекомендации', 'Рекомендации', NULL),
+    ('prescriptions', 'Назначения', 'Назначения', NULL)
+ON CONFLICT (field_name) WHERE deleted_at IS NULL DO NOTHING;
 
 -- =========================================
 -- Сущности для протоколов
@@ -437,7 +457,7 @@ CREATE TABLE IF NOT EXISTS protocols (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
 
     service_user UUID REFERENCES service_user (id),
-    protocol_structure_id UUID NOT NULL REFERENCES protocol_structures (id),
+    protocol_structure_id UUID REFERENCES protocol_structures(id) ON DELETE SET NULL,
     patient_id INTEGER,
     doctor_id UUID REFERENCES service_user (id),
 
@@ -484,6 +504,37 @@ CREATE INDEX IF NOT EXISTS idx_protocol_fields_field_id
 
 CREATE UNIQUE INDEX IF NOT EXISTS idx_protocol_fields_protocol_field_unique
     ON protocol_fields (protocol_id, field_id);
+
+
+-- =========================================
+-- Сущности для пользователей
+-- =========================================
+
+-- Таблица пользователя сервиса
+CREATE TABLE IF NOT EXISTS service_user (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+
+    login VARCHAR(255) UNIQUE NOT NULL, -- логин пользователя
+    password_hash TEXT NOT NULL, -- хэш пароля
+
+    first_name VARCHAR(255),
+    last_name VARCHAR(255),
+
+    role VARCHAR(50) NOT NULL DEFAULT 'doctor', -- роль пользователя (admin/head of department/doctor)
+
+    is_active BOOLEAN NOT NULL DEFAULT true, -- активен ли пользователь
+
+    created_at TIMESTAMPTZ DEFAULT now(),
+    updated_at TIMESTAMPTZ,
+    deleted_at TIMESTAMPTZ
+);
+
+COMMENT ON TABLE service_user IS 'Пользователи сервиса (администраторы, операторы системы)';
+COMMENT ON COLUMN service_user.password_hash IS 'Хэш пароля пользователя';
+COMMENT ON COLUMN service_user.role IS 'Роль пользователя сервиса';
+
+CREATE INDEX IF NOT EXISTS idx_service_user_email
+    ON service_user (login);
 
 
 -- Ожидающая регистрация: до подтверждения кода строки в service_user нет
@@ -543,6 +594,7 @@ CREATE TABLE IF NOT EXISTS protocol_template (
     protocol_name VARCHAR(255), -- название шаблона
     group_id UUID REFERENCES template_group(id), -- идентификатор группы (ссылка на группу или NULL)
     creator_id UUID REFERENCES service_user(id), -- идентификатор создателя (ссылка на пользователя)
+    protocol_structure_id UUID REFERENCES protocol_structures(id) ON DELETE SET NULL, -- структура протокола
     privacy VARCHAR(255), -- приватность ("Общий" или "Личный")
     created_at TIMESTAMPTZ DEFAULT now(), -- дата создания
     updated_at TIMESTAMPTZ, -- дата изменения

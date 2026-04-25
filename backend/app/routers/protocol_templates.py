@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..db import get_db
 from ..deps import get_current_user
+from ..models.protocol_structure import ProtocolStructure
 from ..models.protocol_template import ProtocolTemplate, ProtocolTemplateField
 from ..models.service_user import ServiceUser
 from ..models.template_group import TemplateGroup
@@ -94,6 +95,7 @@ async def get_protocol_template(
         id=template.id,
         protocol_name=template.protocol_name,
         group_id=template.group_id,
+        protocol_structure_id=template.protocol_structure_id,
         creator_id=template.creator_id,
         privacy=template.privacy,
         created_at=template.created_at,
@@ -119,6 +121,23 @@ async def _ensure_group_owned_by_user(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Unknown group reference",
+        )
+
+
+async def _ensure_protocol_structure_exists(
+    db: AsyncSession,
+    *,
+    protocol_structure_id: UUID,
+) -> None:
+    stmt = select(ProtocolStructure.id).where(
+        ProtocolStructure.id == protocol_structure_id,
+        ProtocolStructure.deleted_at.is_(None),
+    )
+    result = await db.execute(stmt)
+    if result.scalar_one_or_none() is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Unknown protocol structure reference",
         )
 
 
@@ -190,6 +209,11 @@ async def update_protocol_template(
             group_id=data["group_id"],
             user_id=current_user.id,
         )
+    if "protocol_structure_id" in data and data["protocol_structure_id"] is not None:
+        await _ensure_protocol_structure_exists(
+            db,
+            protocol_structure_id=data["protocol_structure_id"],
+        )
 
     now = datetime.now(timezone.utc)
 
@@ -204,6 +228,8 @@ async def update_protocol_template(
 
     if "group_id" in data:
         template.group_id = data["group_id"]
+    if "protocol_structure_id" in data:
+        template.protocol_structure_id = data["protocol_structure_id"]
 
     if "fields" in data and data["fields"] is not None:
         old_fields_stmt = select(ProtocolTemplateField).where(
@@ -256,6 +282,7 @@ async def update_protocol_template(
         id=template.id,
         protocol_name=template.protocol_name,
         group_id=template.group_id,
+        protocol_structure_id=template.protocol_structure_id,
         creator_id=template.creator_id,
         privacy=template.privacy,
         created_at=template.created_at,
@@ -338,6 +365,11 @@ async def create_protocol_template(
             group_id=payload.group_id,
             user_id=current_user.id,
         )
+    if payload.protocol_structure_id is not None:
+        await _ensure_protocol_structure_exists(
+            db,
+            protocol_structure_id=payload.protocol_structure_id,
+        )
 
     now = datetime.now(timezone.utc)
     privacy_value = payload.privacy.value
@@ -345,6 +377,7 @@ async def create_protocol_template(
     template = ProtocolTemplate(
         protocol_name=protocol_name,
         group_id=payload.group_id,
+        protocol_structure_id=payload.protocol_structure_id,
         creator_id=current_user.id,
         privacy=privacy_value,
         created_at=now,
@@ -386,6 +419,7 @@ async def create_protocol_template(
         id=template.id,
         protocol_name=template.protocol_name,
         group_id=template.group_id,
+        protocol_structure_id=template.protocol_structure_id,
         creator_id=template.creator_id,
         privacy=template.privacy,
         created_at=template.created_at,

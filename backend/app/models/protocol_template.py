@@ -28,6 +28,11 @@ class ProtocolTemplate(Base):
         ForeignKey("service_user.id"),
         nullable=True,
     )
+    protocol_structure_id: Mapped[Optional[UUID]] = mapped_column(
+        PG_UUID(as_uuid=True),
+        ForeignKey("protocol_structures.id", ondelete="SET NULL"),
+        nullable=True,
+    )
     privacy: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         TIMESTAMP(timezone=True),

@@ -67,7 +67,11 @@ async def proxy_mkb_code(
     return MkbCodeProxyResponse(**body)
 
 
-@router.post("/select", response_model=EventAcceptedResponse)
+@router.post(
+    "/select",
+    response_model=EventAcceptedResponse,
+    include_in_schema=False,
+)
 async def push_selected_event(
     payload: MkbCodeSelectRequest,
     current_user: ServiceUser = Depends(get_current_user),

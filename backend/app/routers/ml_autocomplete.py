@@ -8,8 +8,6 @@ from ..schemas.ml_mkb_code import (
     EventAcceptedResponse,
     MlAutocompleteProxyRequest,
     MlAutocompleteProxyResponse,
-    MkbCodeProxyRequest,
-    MkbCodeProxyResponse,
     MkbCodeSelectRequest,
     MkbEventType,
 )
@@ -19,7 +17,7 @@ from ..services.redis_stream import (
     publish_event,
 )
 
-router = APIRouter(tags=["ml_autocomplete_stats"])
+router = APIRouter(tags=["ml_autocomplete"])
 
 
 async def _proxy_to_ml(path: str, body: dict) -> dict:
@@ -70,28 +68,6 @@ async def _publish_autocomplete_shown(
         await redis.aclose()
 
 
-@router.post("/ml_mkb_code", response_model=MkbCodeProxyResponse)
-async def proxy_mkb_code(
-    payload: MkbCodeProxyRequest,
-    current_user: ServiceUser = Depends(get_current_user),
-) -> MkbCodeProxyResponse:
-    body = await _proxy_to_ml(
-        "/mkb_code",
-        {
-            "description": payload.description,
-            "n_candidates": payload.n_candidates,
-            "use_llm": payload.use_llm,
-        },
-    )
-    await _publish_autocomplete_shown(
-        field_name=payload.field_name,
-        prefix=payload.description,
-        suggestions_count=payload.n_candidates,
-        current_user=current_user,
-    )
-    return MkbCodeProxyResponse(**body)
-
-
 @router.post("/ml_autocomplete", response_model=MlAutocompleteProxyResponse)
 async def proxy_ml_autocomplete(
     payload: MlAutocompleteProxyRequest,
@@ -137,5 +113,4 @@ async def push_selected_event(
     finally:
         await redis.aclose()
     return EventAcceptedResponse()
-
 

@@ -6,6 +6,7 @@ from .routers.auth import router as auth_router
 from .routers.consultations import router as consultations_router
 from .routers.mkb10 import router as mkb10_router
 from .routers.ml_autocomplete_stats import router as ml_autocomplete_stats_router
+from .routers.ml_mkb_code import router as ml_mkb_code_router
 from .routers.ml_fullness import router as ml_fullness_router
 from .routers.protocol_templates import router as protocol_templates_router
 from .routers.service_user import router as service_user_router
@@ -19,6 +20,7 @@ app.include_router(auth_router)
 app.include_router(consultations_router)
 app.include_router(mkb10_router)
 app.include_router(ml_autocomplete_stats_router)
+app.include_router(ml_mkb_code_router)
 app.include_router(ml_fullness_router)
 app.include_router(service_user_router)
 app.include_router(template_groups_router)

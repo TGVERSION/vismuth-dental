@@ -425,6 +425,30 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_protocol_fields_main_field_name_unique
     WHERE deleted_at IS NULL;
 
 
+INSERT INTO protocol_fields_main (
+    field_name,
+    field_label,
+    description,
+    endpoint_link
+)
+VALUES
+    ('complaints', 'Жалобы', 'Жалобы пациента', NULL),
+    ('disease_anamnesis', 'Анамнез заболевания', 'Анамнез заболевания', NULL),
+    ('disease_history', 'История заболевания', 'История заболевания', NULL),
+    ('patient_condition', 'Состояние пациента', 'Состояние пациента', NULL),
+    ('life_anamnesis', 'Анамнез жизни', 'Анамнез жизни', NULL),
+    ('bad_habits', 'Вредные привычки и зависимости', 'Вредные привычки и зависимости', NULL),
+    ('allergy_anamnesis', 'Аллергологический анамнез', 'Аллергологический анамнез', NULL),
+    ('vital_parameters', 'Витальные параметры', 'Витальные параметры', NULL),
+    ('objective_data', 'Объективные данные', 'Объективные данные', NULL),
+    ('clinical_assessment', 'Объективизированная оценка состояния', 'Объективизированная оценка состояния', NULL),
+    ('consultation_conclusion', 'Заключение консультации', 'Заключение консультации', NULL),
+    ('main_diagnosis', 'Основной диагноз', 'Основной диагноз', NULL),
+    ('comorbid_diagnoses', 'Сопутствующие диагнозы', 'Сопутствующие диагнозы', NULL),
+    ('recommendations', 'Рекомендации', 'Рекомендации', NULL),
+    ('prescriptions', 'Назначения', 'Назначения', NULL)
+ON CONFLICT (field_name) WHERE deleted_at IS NULL DO NOTHING;
+
 -- =========================================
 -- Сущности для протоколов
 -- =========================================

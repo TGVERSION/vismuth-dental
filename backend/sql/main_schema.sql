@@ -457,7 +457,7 @@ CREATE TABLE IF NOT EXISTS protocols (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
 
     service_user UUID REFERENCES service_user (id),
-    protocol_structure_id UUID NOT NULL REFERENCES protocol_structures (id),
+    protocol_structure_id UUID REFERENCES protocol_structures(id) ON DELETE SET NULL,
     patient_id INTEGER,
     doctor_id UUID REFERENCES service_user (id),
 

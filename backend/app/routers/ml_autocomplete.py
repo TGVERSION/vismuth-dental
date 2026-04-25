@@ -17,7 +17,7 @@ from ..services.redis_stream import (
     publish_event,
 )
 
-router = APIRouter(tags=["ml_autocomplete_stats"])
+router = APIRouter(tags=["ml_autocomplete"])
 
 
 async def _proxy_to_ml(path: str, body: dict) -> dict:
@@ -113,5 +113,4 @@ async def push_selected_event(
     finally:
         await redis.aclose()
     return EventAcceptedResponse()
-
 

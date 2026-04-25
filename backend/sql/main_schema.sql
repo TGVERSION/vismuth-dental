@@ -338,35 +338,6 @@ CREATE TABLE ref_mis (
 -- CREATE INDEX IF NOT EXISTS idx_consultation_protocol_template_id
 --     ON consultation (protocol_template_id);
 
--- =========================================
--- Сущности для пользователей
--- =========================================
-
--- Таблица пользователя сервиса
-CREATE TABLE IF NOT EXISTS service_user (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-
-    login VARCHAR(255) UNIQUE NOT NULL, -- логин пользователя
-    password_hash TEXT NOT NULL, -- хэш пароля
-
-    first_name VARCHAR(255),
-    last_name VARCHAR(255),
-
-    role VARCHAR(50) NOT NULL DEFAULT 'doctor', -- роль пользователя (admin/head of department/doctor)
-
-    is_active BOOLEAN NOT NULL DEFAULT true, -- активен ли пользователь
-
-    created_at TIMESTAMPTZ DEFAULT now(),
-    updated_at TIMESTAMPTZ,
-    deleted_at TIMESTAMPTZ
-);
-
-COMMENT ON TABLE service_user IS 'Пользователи сервиса (администраторы, операторы системы)';
-COMMENT ON COLUMN service_user.password_hash IS 'Хэш пароля пользователя';
-COMMENT ON COLUMN service_user.role IS 'Роль пользователя сервиса';
-
-CREATE INDEX IF NOT EXISTS idx_service_user_email
-    ON service_user (login);
 
 
 -- =========================================
@@ -484,6 +455,37 @@ CREATE INDEX IF NOT EXISTS idx_protocol_fields_field_id
 
 CREATE UNIQUE INDEX IF NOT EXISTS idx_protocol_fields_protocol_field_unique
     ON protocol_fields (protocol_id, field_id);
+
+
+-- =========================================
+-- Сущности для пользователей
+-- =========================================
+
+-- Таблица пользователя сервиса
+CREATE TABLE IF NOT EXISTS service_user (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+
+    login VARCHAR(255) UNIQUE NOT NULL, -- логин пользователя
+    password_hash TEXT NOT NULL, -- хэш пароля
+
+    first_name VARCHAR(255),
+    last_name VARCHAR(255),
+
+    role VARCHAR(50) NOT NULL DEFAULT 'doctor', -- роль пользователя (admin/head of department/doctor)
+
+    is_active BOOLEAN NOT NULL DEFAULT true, -- активен ли пользователь
+
+    created_at TIMESTAMPTZ DEFAULT now(),
+    updated_at TIMESTAMPTZ,
+    deleted_at TIMESTAMPTZ
+);
+
+COMMENT ON TABLE service_user IS 'Пользователи сервиса (администраторы, операторы системы)';
+COMMENT ON COLUMN service_user.password_hash IS 'Хэш пароля пользователя';
+COMMENT ON COLUMN service_user.role IS 'Роль пользователя сервиса';
+
+CREATE INDEX IF NOT EXISTS idx_service_user_email
+    ON service_user (login);
 
 
 -- Ожидающая регистрация: до подтверждения кода строки в service_user нет

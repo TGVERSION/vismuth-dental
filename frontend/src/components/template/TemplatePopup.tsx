@@ -519,6 +519,7 @@ export const TemplatePopup: React.FC<TemplatePopupProps> = ({
                                     <Image
                                       alt="delete"
                                       src="/delete-gray.svg"
+                                      className="icon-gray"
                                       width={20}
                                       height={20}
                                     />
@@ -535,6 +536,7 @@ export const TemplatePopup: React.FC<TemplatePopupProps> = ({
                                     <Image
                                       alt="rename"
                                       src="/rename-gray.svg"
+                                      className="icon-gray"
                                       width={20}
                                       height={20}
                                     />
@@ -550,6 +552,7 @@ export const TemplatePopup: React.FC<TemplatePopupProps> = ({
                                     <Image
                                       alt="add"
                                       src="/add-gray.svg"
+                                      className="icon-gray"
                                       width={20}
                                       height={20}
                                     />
@@ -560,41 +563,52 @@ export const TemplatePopup: React.FC<TemplatePopupProps> = ({
                             {expandedGroups.has(group.id) &&
                               group.templates && (
                                 <div className="mt-0.75 mb-3.75 flex flex-col gap-3.75 mx-3.75">
-                                  {group.templates.map((template) => (
-                                    <div
-                                      key={template.id}
-                                      className={`px-3.75 py-3 rounded-lg cursor-pointer transition-all hover:bg-white shadow-custom-hover  ${
-                                        selectedTemplate?.id === template.id &&
-                                        'bg-white shadow-md'
-                                      }`}
-                                      onMouseEnter={() =>
-                                        setHoveredItem(
-                                          `template-${template.id}`,
-                                        )
-                                      }
-                                      onMouseLeave={() => setHoveredItem(null)}
-                                      onClick={() =>
-                                        handleSelectTemplate(template)
-                                      }
-                                    >
-                                      <div className="flex items-center gap-2">
-                                        <span
-                                          className={`text-sm px-2 py-0.75 rounded-full ${
-                                            template.type === 'personal'
-                                              ? 'bg-[#FFD6BF]'
-                                              : 'bg-[#CFE5E6]'
+                                  {group.templates.length > 0 ? (
+                                    <>
+                                      {group.templates.map((template) => (
+                                        <div
+                                          key={template.id}
+                                          className={`px-3.75 py-3 rounded-lg cursor-pointer transition-all hover:bg-white shadow-custom-hover  ${
+                                            selectedTemplate?.id ===
+                                              template.id &&
+                                            'bg-white shadow-md'
                                           }`}
+                                          onMouseEnter={() =>
+                                            setHoveredItem(
+                                              `template-${template.id}`,
+                                            )
+                                          }
+                                          onMouseLeave={() =>
+                                            setHoveredItem(null)
+                                          }
+                                          onClick={() =>
+                                            handleSelectTemplate(template)
+                                          }
                                         >
-                                          {template.type === 'personal'
-                                            ? 'Личный'
-                                            : 'Общий'}
-                                        </span>
-                                        <span className="text-sm text-[#202020]">
-                                          {template.name}
-                                        </span>
-                                      </div>
-                                    </div>
-                                  ))}
+                                          <div className="flex items-center gap-2">
+                                            <span
+                                              className={`text-sm px-2 py-0.75 rounded-full ${
+                                                template.type === 'personal'
+                                                  ? 'bg-[#FFD6BF]'
+                                                  : 'bg-[#CFE5E6]'
+                                              }`}
+                                            >
+                                              {template.type === 'personal'
+                                                ? 'Личный'
+                                                : 'Общий'}
+                                            </span>
+                                            <span className="text-sm text-[#202020]">
+                                              {template.name}
+                                            </span>
+                                          </div>
+                                        </div>
+                                      ))}
+                                    </>
+                                  ) : (
+                                    <p className="px-3.75 py-3 text-sm text-[#6C757D]">
+                                      Шаблонов пока нет
+                                    </p>
+                                  )}
                                 </div>
                               )}
                           </div>
@@ -696,6 +710,7 @@ export const TemplatePopup: React.FC<TemplatePopupProps> = ({
                           <Image
                             alt="more"
                             src="/more.svg"
+                            className="icon-gray"
                             width={34}
                             height={34}
                           />

@@ -120,6 +120,9 @@ export default function Home() {
   const [showTemplatePopup, setShowTemplatePopup] = useState(false);
   const [showSaveAsTemplatePopup, setShowSaveAsTemplatePopup] = useState(false);
   const [isFromPage, setIsFromPage] = useState(false);
+  const [showTemplateMenu, setShowTemplateMenu] = useState(false);
+  const templateMenuRef = useRef<HTMLDivElement>(null);
+  const hideTimerRef = useRef<NodeJS.Timeout | null>(null);
   const handleApplyTemplate = (template: TemplateUI) => {
     if (template.content) {
       setSections((prev) =>
@@ -130,6 +133,22 @@ export default function Home() {
       );
     }
   };
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        showTemplateMenu &&
+        templateMenuRef.current &&
+        !templateMenuRef.current.contains(event.target as Node)
+      ) {
+        setShowTemplateMenu(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showTemplateMenu]);
   const getCurrentProtocolContent = () => {
     const content: Record<string, string> = {};
     sections.forEach((section) => {
@@ -431,6 +450,10 @@ export default function Home() {
       year: 'numeric',
     });
   };
+  const handleTemplateEnter = () => {
+    setShowTemplateMenu(!showTemplateMenu);
+  };
+
   return (
     <>
       {/* Левая панель со списком протоколов */}
@@ -535,15 +558,18 @@ export default function Home() {
         <div className="bg-white rounded-[15px] ml-93.5 w-full max-w-374.75 flex flex-col mr-2 h-[calc(100vh-55px)] custom-scrollbar overflow-hidden">
           <div className="mx-6.25 mt-2 bg-white border-b border-b-[#E9ECEF]">
             <div className="mx-auto mb-2 flex flex-row items-center justify-center gap-6">
-              <button className="cursor-pointer rounded-xl hover:bg-white shadow-custom-hover flex flex-row items-center gap-2 py-3 px-3.75">
-                <Image
-                  alt="klinReg"
-                  src="/check-all.svg"
-                  width={20}
-                  height={20}
-                />
-                Проверить по клин. реком.
-              </button>
+              {sections.find((s) => s.sectionKey === 'main_diagnosis')
+                ?.value && (
+                <button className="cursor-pointer rounded-xl hover:bg-white shadow-custom-hover flex flex-row items-center gap-2 py-3 px-3.75">
+                  <Image
+                    alt="klinReg"
+                    src="/check-all.svg"
+                    width={20}
+                    height={20}
+                  />
+                  Проверить по клин. реком.
+                </button>
+              )}
               <button className="cursor-pointer rounded-xl hover:bg-white shadow-custom-hover flex flex-row items-center gap-2 py-3 px-3.75">
                 <Image
                   alt="print"
@@ -553,6 +579,45 @@ export default function Home() {
                 />
                 Напечатать протокол
               </button>
+              <div
+                className="relative"
+                ref={templateMenuRef}
+                onClick={handleTemplateEnter}
+              >
+                <button className="cursor-pointer rounded-xl hover:bg-white shadow-custom-hover flex flex-row items-center gap-2 py-3 px-3.75">
+                  <Image
+                    alt="template"
+                    src="/template-fill.svg"
+                    width={20}
+                    height={20}
+                  />
+                  Шаблоны
+                </button>
+
+                {showTemplateMenu && (
+                  <div className="absolute left-0 top-full mt-2 w-46.25 bg-white rounded-xl shadow-custom p-1.5 z-50 flex flex-col">
+                    <button
+                      onClick={() => {
+                        setShowTemplatePopup(true);
+                        setShowTemplateMenu(false);
+                      }}
+                      className="hover:bg-[#F0F5FF] text-[14px] w-ful rounded-md h-8.25 cursor-pointer px-2.5 py-1.5 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                    >
+                      Использовать шаблон
+                    </button>
+                    <button
+                      onClick={() => {
+                        setShowSaveAsTemplatePopup(true);
+                        setIsFromPage(true);
+                        setShowTemplateMenu(false);
+                      }}
+                      className="hover:bg-[#F0F5FF] text-[14px] cursor-pointer w-full  rounded-md h-8.25 px-2.5 py-1.5 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                    >
+                      Сохранить как шаблон
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
 
@@ -571,23 +636,7 @@ export default function Home() {
               <div className="text-[40px] pl-6 font-semibold leading-[150%] bg-transparent border-0 focus:outline-none focus:ring-0 w-full">
                 {templateTitle}
               </div>
-              <div className="flex flex-row gap-2.5 w-full">
-                <button
-                  onClick={() => setShowTemplatePopup(true)}
-                  className="hover:bg-[#769CEF] w-full text-white rounded-xl h-13 ml-6 cursor-pointer bg-[#5D8CF1] px-6 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                >
-                  Использовать шаблон
-                </button>
-                <button
-                  onClick={() => {
-                    setShowSaveAsTemplatePopup(true);
-                    setIsFromPage(true);
-                  }}
-                  className="hover:bg-[#F0F5FF] text-[#202020] cursor-pointer bg-[#DCE7FF] w-full  rounded-xl h-13 ml-6 px-6 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                >
-                  Сохранить как шаблон
-                </button>
-              </div>
+
               <div className="flex gap-9 flex-col">
                 {sections.map((section) => (
                   <div
@@ -611,21 +660,33 @@ export default function Home() {
                           [section.sectionKey]: status,
                         }));
                       }}
+                      isActive={section.sectionKey === activeSection}
                     />
                   </div>
                 ))}
               </div>
-              <button
-                onClick={handleSave}
-                disabled={isSaving}
-                className="hover:bg-[#769CEF] mb-4 text-white rounded-xl h-13 ml-6 cursor-pointer bg-[#5D8CF1] px-6 py-2.5 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-              >
-                {isSaving ? (
-                  <div className="animate-spin mx-auto my- rounded-full h-5 w-5 border-b-2 border-white"></div>
-                ) : (
-                  'Сохранить'
-                )}
-              </button>
+              <div className="flex flex-col gap-3">
+                <button
+                  onClick={() => {
+                    setShowSaveAsTemplatePopup(true);
+                    setIsFromPage(true);
+                  }}
+                  className="hover:bg-[#F0F5FF] text-[#202020] cursor-pointer bg-[#DCE7FF]  rounded-xl h-13 ml-6 px-6 py-2.5 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                >
+                  Сохранить как шаблон
+                </button>
+                <button
+                  onClick={handleSave}
+                  disabled={isSaving}
+                  className="hover:bg-[#769CEF] mb-4 text-white rounded-xl h-13 ml-6 cursor-pointer bg-[#5D8CF1] px-6 py-2.5 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                >
+                  {isSaving ? (
+                    <div className="animate-spin mx-auto my- rounded-full h-5 w-5 border-b-2 border-white"></div>
+                  ) : (
+                    'Сохранить'
+                  )}
+                </button>
+              </div>
             </div>
           </div>
         </div>

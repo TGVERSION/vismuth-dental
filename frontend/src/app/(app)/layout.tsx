@@ -5,7 +5,7 @@ import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import { DoctorsHelpers } from '@/components/DoctorsHelpers';
-import { EditDictionaryModal } from '@/components/EditDictionaryModal';
+import { SettingsPopup } from '@/components/settings/SettingsPopup';
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -64,7 +64,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               <Image
                 onClick={() => setIsDictionaryOpen(true)}
                 alt="settings"
-                className="cursor-pointer"
+                className="cursor-pointer icon"
                 src="/setting-fill.svg"
                 width={23}
                 height={23}
@@ -76,7 +76,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               >
                 <Image
                   alt="profile"
-                  className="profile cursor-pointer"
+                  className="profile cursor-pointer icon"
                   src="/profile.svg"
                   width={23}
                   height={23}
@@ -106,7 +106,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         </header>
       )}
 
-      <EditDictionaryModal
+      <SettingsPopup
         isOpen={isDictionaryOpen}
         onClose={() => setIsDictionaryOpen(false)}
       />

@@ -20,13 +20,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
   sectionStatus,
 }) => {
   const getSectionColor = (section: Section) => {
-    if (section.id === activeSection) {
-      return 'text-[#5D8CF1] hover:text-[#769CEF]';
-    }
     if (section.hasContent) {
-      return 'text-[#202020] hover:text-[#769CEF]';
+      return 'text-[#202020] hover:text-[#5D8CF1]';
     }
-    return 'text-[#909090] hover:text-[#769CEF]';
+    if (section.id === activeSection) {
+      return 'text-[#909090] hover:text-[#5D8CF1]';
+    }
+
+    return 'text-[#909090] hover:text-[#5D8CF1]';
   };
 
   return (

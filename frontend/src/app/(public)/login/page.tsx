@@ -273,7 +273,7 @@ export default function AuthForms() {
                       }
                       width={20}
                       height={20}
-                      className="w-5 h-5"
+                      className="w-5 h-5 icon-gray"
                     />
                   </button>
                 </div>
@@ -366,7 +366,7 @@ export default function AuthForms() {
                       }
                       width={20}
                       height={20}
-                      className="w-5 h-5"
+                      className="w-5 h-5 icon-gray"
                     />
                   </button>
                 </div>

@@ -4,12 +4,14 @@ export const FeedbackPopover = ({
   suggestedText,
   onApply,
   onClose,
+  style,
 }: {
   color: 'green' | 'yellow' | 'red';
   analysis: string;
   suggestedText: string;
   onApply: () => void;
   onClose: () => void;
+  style?: React.CSSProperties;
 }) => {
   const colorMap = {
     green: { header: 'text-[#459F49]', border: 'border-[#459F49]' },
@@ -41,7 +43,10 @@ export const FeedbackPopover = ({
   };
 
   return (
-    <div className="absolute z-50 w-fit max-w-2xl animate-fade-in">
+    <div
+      className="absolute z-50 mb-1 w-fit max-w-2xl animate-fade-in"
+      style={style}
+    >
       <div className={`bg-white rounded-2xl shadow-2xl overflow-hidden`}>
         <div className="p-1.5">
           <div className="flex items-center justify-between">

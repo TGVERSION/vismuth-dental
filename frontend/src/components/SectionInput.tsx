@@ -11,6 +11,7 @@ import {
 } from '@/api';
 import { Spinner } from './SpinnerFullnes';
 import { FeedbackPopover } from './FeedbackPopover';
+import { createPortal } from 'react-dom';
 
 export interface MlStatusPayload {
   field_name: string;
@@ -25,6 +26,7 @@ interface SectionInputProps {
   label: string;
   value: string;
   sectionKey: string;
+  isActive?: boolean;
   onLabelChange: (id: number, newLabel: string) => void;
   onValueChange: (id: number, newValue: string) => void;
   onAnalysisChange?: (
@@ -68,17 +70,32 @@ export const SectionInput: React.FC<SectionInputProps> = ({
   onLabelChange,
   onValueChange,
   onAnalysisChange,
+  isActive,
 }) => {
   const editableRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [hasUserInteracted, setHasUserInteracted] = useState(false);
   const [isComposing, setIsComposing] = useState(false);
   const [showPopover, setShowPopover] = useState(false);
-
+  const indicatorRef = useRef<HTMLDivElement>(null);
+  const [popoverPosition, setPopoverPosition] = useState<{
+    bottom: number;
+    left: number;
+  } | null>(null);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const [mlAnalysis, setMlAnalysis] =
     useState<mlFullnessComplaintResponse | null>(null);
   const [isFetchingAnalysis, setIsFetchingAnalysis] = useState(false);
-
+  const [animate, setAnimate] = useState(false);
+  const prevActive = useRef(isActive);
+  useEffect(() => {
+    if (isActive && prevActive.current === false) {
+      setAnimate(true);
+      const timer = setTimeout(() => setAnimate(false), 600);
+      return () => clearTimeout(timer);
+    }
+    prevActive.current = isActive;
+  }, [isActive]);
   const {
     suggestions,
     isOpen,
@@ -96,7 +113,35 @@ export const SectionInput: React.FC<SectionInputProps> = ({
   });
 
   const initialTextRef = useRef<string>('');
+  const handleMouseEnter = useCallback(() => {
+    clearTimeout(timerRef.current);
+    if (indicatorRef.current) {
+      const rect = indicatorRef.current.getBoundingClientRect();
+      // position: fixed – координаты от viewport
+      // низ попапа должен быть чуть выше верха индикатора
+      setPopoverPosition({
+        bottom: window.innerHeight - rect.top + 8, // 8px отступ
+        left: rect.left,
+      });
+    }
+    timerRef.current = setTimeout(() => setShowPopover(true), 300);
+  }, []);
 
+  const handleMouseLeave = useCallback(() => {
+    clearTimeout(timerRef.current);
+    timerRef.current = setTimeout(() => {
+      setShowPopover(false);
+    }, 300);
+  }, []);
+  useEffect(() => {
+    if (!showPopover) return;
+    const handleScroll = () => setShowPopover(false);
+    window.addEventListener('scroll', handleScroll, true);
+    return () => window.removeEventListener('scroll', handleScroll, true);
+  }, [showPopover]);
+  useEffect(() => {
+    return () => clearTimeout(timerRef.current);
+  }, []);
   const setCursorToEnd = (element: HTMLElement) => {
     const range = document.createRange();
     const selection = window.getSelection();
@@ -289,6 +334,7 @@ export const SectionInput: React.FC<SectionInputProps> = ({
         label={label}
         value={value}
         onValueChange={onValueChange}
+        isActive={isActive}
       />
     );
   }
@@ -296,19 +342,34 @@ export const SectionInput: React.FC<SectionInputProps> = ({
   return (
     <div ref={containerRef} className="flex flex-col mb-6 relative">
       <div className="flex-grow relative">
-        <div className="text-[30px] font-medium ml-6 leading-[140%] text-[#202020] mb-1">
-          {label}
-        </div>
-
         <div className="flex items-center gap-3">
-          <div className="flex-shrink-0 w-4 h-4">
+          <div className="flex-shrink-0 w-4 h-4" ref={indicatorRef}>
             {isFetchingAnalysis ? (
               <Spinner />
             ) : mlAnalysis ? (
               <div
-                onMouseEnter={() => setShowPopover(true)}
-                onMouseLeave={() => setShowPopover(false)}
+                onMouseEnter={handleMouseEnter}
+                onMouseLeave={handleMouseLeave}
               >
+                {showPopover &&
+                  isComplaintField &&
+                  !isFetchingAnalysis &&
+                  createPortal(
+                    <FeedbackPopover
+                      color={mlAnalysis.color}
+                      analysis={mlAnalysis.analysis}
+                      suggestedText={mlAnalysis.suggested_text}
+                      onApply={handleApplySuggestion}
+                      onClose={() => setShowPopover(false)}
+                      style={{
+                        position: 'fixed',
+                        bottom: popoverPosition?.bottom,
+                        left: popoverPosition?.left,
+                        zIndex: 9999,
+                      }}
+                    />,
+                    document.body,
+                  )}
                 <div
                   className={`w-4 h-4 cursor-pointer rounded-full transition-all duration-300 ${
                     mlAnalysis.color === 'green'
@@ -317,22 +378,20 @@ export const SectionInput: React.FC<SectionInputProps> = ({
                         ? 'bg-[#F29100]'
                         : 'bg-[#D91528]'
                   }`}
-                  title={mlAnalysis.analysis}
                 />
-                {showPopover && isComplaintField && !isFetchingAnalysis && (
-                  <FeedbackPopover
-                    color={mlAnalysis.color}
-                    analysis={mlAnalysis.analysis}
-                    suggestedText={mlAnalysis.suggested_text}
-                    onApply={handleApplySuggestion}
-                    onClose={() => setShowPopover(false)}
-                  />
-                )}
               </div>
             ) : (
               <div className="w-3 h-3" />
             )}
           </div>
+          <div
+            className={`text-[30px] font-medium leading-[140%] text-[#202020] mb-1 ${animate ? 'animate-scale-pulse' : ''}`}
+          >
+            {label}
+          </div>
+        </div>
+
+        <div className="flex ml-7 items-center gap-3">
           <div className="relative w-full">
             <div
               ref={editableRef}
@@ -353,7 +412,7 @@ export const SectionInput: React.FC<SectionInputProps> = ({
                 setIsComposing(false);
                 handleInput();
               }}
-              className="text-[#202020] border-0 focus:border-0 focus:outline-none focus:ring-0 w-full resize-none bg-transparent min-h-10 leading-[140%] text-[16px] whitespace-pre-wrap break-words"
+              className="text-[#202020] border-0 focus:border-0 focus:outline-none focus:ring-0 w-full resize-none bg-transparent min-h-5.5 leading-[140%] text-[16px] whitespace-pre-wrap break-words"
               style={{ wordBreak: 'break-word' }}
               role="textbox"
               aria-multiline="true"

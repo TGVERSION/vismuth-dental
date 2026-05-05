@@ -249,7 +249,7 @@ export const EditTemplateContentPopup: React.FC<
             disabled={
               saving || loadingStructure || currentStructureFields.length === 0
             }
-            className="h-12 bg-[#5D8CF1] text-white rounded-[15px] hover:bg-[#769CEF] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="h-12 bg-[#5D8CF1] text-white rounded-[15px] cursor-pointer hover:bg-[#769CEF] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {saving ? 'Сохранение...' : 'Сохранить'}
           </button>

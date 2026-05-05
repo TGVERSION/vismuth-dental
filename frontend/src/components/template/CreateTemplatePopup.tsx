@@ -8,7 +8,6 @@ import type {
   TemplatesRequest,
   FieldsType,
   FieldsTypeFull,
-  ProtocolStructuresFields,
   StructureProtocolsFields,
 } from '@/api';
 import Image from 'next/image';
@@ -308,7 +307,10 @@ export const CreateTemplatePopup: React.FC<CreateTemplatePopupProps> = ({
           onClick={(e) => e.stopPropagation()}
         >
           <div className="flex justify-end">
-            <button onClick={handleClose} className="cursor-pointer">
+            <button
+              onClick={step === 1 ? handleClose : () => setStep(1)}
+              className="cursor-pointer"
+            >
               <Image alt="close" src="/close.svg" width={25} height={25} />
             </button>
           </div>
@@ -457,7 +459,6 @@ export const CreateTemplatePopup: React.FC<CreateTemplatePopupProps> = ({
               </div>
             </div>
           ) : (
-            // === ШАГ 2: Поля структуры ===
             <div className="px-5 pb-5">
               <div className="">
                 <label className="block text-sm text-gray-600 mb-2">
@@ -502,8 +503,6 @@ export const CreateTemplatePopup: React.FC<CreateTemplatePopupProps> = ({
                   </p>
                 )}
               </div>
-
-              {/* === КОНТЕНТ ПОЛЕЙ === */}
               <div
                 className={`${
                   currentProtocolStructure && 'space-y-6 mt-6 mb-6 pt-4'
@@ -511,7 +510,7 @@ export const CreateTemplatePopup: React.FC<CreateTemplatePopupProps> = ({
               >
                 {currentProtocolStructure &&
                 currentStructureFields.length === 0 ? (
-                  <div className="text-center py-12 px-4 bg-yellow-50 rounded-xl border border-yellow-200">
+                  <div className="text-center py-12 px-499">
                     <p className="text-sm text-yellow-800">
                       В выбранной структуре нет полей для заполнения
                     </p>

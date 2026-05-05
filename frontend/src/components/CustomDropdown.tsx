@@ -13,23 +13,35 @@ export type DropdownOption<T = string> = {
   meta?: Record<string, unknown>;
 };
 
-export interface CustomDropdownProps<T = string> {
+// Условные типы для value и onChange в зависимости от multiple
+export type DropdownValue<T, M extends boolean = false> = M extends true
+  ? T[]
+  : T;
+export type DropdownOnChange<T, M extends boolean = false> = (
+  value: DropdownValue<T, M>,
+) => void;
+
+export interface CustomDropdownProps<T = string, M extends boolean = false> {
   options: DropdownOption<T>[];
-  value: T;
-  onChange: (value: T) => void;
+  value: DropdownValue<T, M>;
+  onChange: DropdownOnChange<T, M>;
   placeholder?: string;
   disabled?: boolean;
   className?: string;
   dropdownClassName?: string;
   optionClassName?: string;
-  renderTrigger?: (option: DropdownOption<T>) => ReactNode;
+  // Исправленная строка:
+  renderTrigger?: (
+    option: DropdownOption<T> | DropdownOption<T>[],
+  ) => ReactNode;
   renderOption?: (option: DropdownOption<T>, isSelected: boolean) => ReactNode;
   showCheckIcon?: boolean;
   position?: 'top' | 'bottom';
+  multiple?: M;
   'aria-label'?: string;
 }
 
-export function CustomDropdown<T = string>({
+export function CustomDropdown<T = string, M extends boolean = false>({
   options,
   value,
   onChange,
@@ -40,15 +52,44 @@ export function CustomDropdown<T = string>({
   optionClassName = '',
   renderTrigger,
   renderOption,
-  showCheckIcon = true,
+  showCheckIcon = false,
   position = 'bottom',
+  multiple = false as M,
   'aria-label': ariaLabel,
-}: CustomDropdownProps<T>) {
+}: CustomDropdownProps<T, M>) {
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
 
-  // Закрытие при клике снаружи
+  // Хелперы для работы с одиночным и множественным выбором
+  const getValues = (): T[] => {
+    if (multiple) {
+      return Array.isArray(value) ? (value as T[]) : value ? [value as T] : [];
+    }
+    return value ? [value as T] : [];
+  };
+
+  const isSelected = (optionValue: T): boolean => {
+    return getValues().includes(optionValue);
+  };
+
+  const handleValueChange = (optionValue: T) => {
+    if (multiple) {
+      const currentValues = getValues();
+      const newValues = currentValues.includes(optionValue)
+        ? currentValues.filter((v) => v !== optionValue)
+        : [...currentValues, optionValue];
+      (onChange as DropdownOnChange<T, true>)(
+        newValues as DropdownValue<T, true>,
+      );
+    } else {
+      (onChange as DropdownOnChange<T, false>)(
+        optionValue as DropdownValue<T, false>,
+      );
+      setIsOpen(false);
+    }
+  };
+
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (
@@ -84,7 +125,7 @@ export function CustomDropdown<T = string>({
       const viewportHeight = window.innerHeight;
       const spaceBelow = viewportHeight - rect.bottom;
       const spaceAbove = rect.top;
-      const gap = 4; // отступ от поля в px
+      const gap = 4;
 
       let preferred: 'top' | 'bottom';
       if (position === 'top') {
@@ -108,9 +149,8 @@ export function CustomDropdown<T = string>({
       let maxHeight: number | undefined;
 
       if (preferred === 'top') {
-        // Нижняя граница списка = rect.top - gap, растягиваем вверх
         bottom = viewportHeight - rect.top + gap;
-        maxHeight = Math.min(spaceAbove - gap * 2, 240); // ограничим до 240px или доступного пространства
+        maxHeight = Math.min(spaceAbove - gap * 2, 240);
         top = undefined;
       } else {
         top = rect.bottom + gap;
@@ -120,10 +160,10 @@ export function CustomDropdown<T = string>({
 
       setActualPosition(preferred);
       setCoords({
-        top: top ?? 0, // будет использоваться как значение, но если bottom задан, top игнорируется
+        top: top ?? 0,
         left: rect.left,
         width: rect.width,
-        bottom, // новое поле
+        bottom,
         maxHeight,
       });
     };
@@ -137,7 +177,6 @@ export function CustomDropdown<T = string>({
     };
   }, [isOpen, position]);
 
-  // Обработчики клавиш
   const handleKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
     if (!isOpen) {
       if (e.key === 'Enter' || e.key === ' ' || e.key === 'ArrowDown') {
@@ -148,7 +187,10 @@ export function CustomDropdown<T = string>({
     }
 
     const enabledOptions = options.filter((opt) => !opt.disabled);
-    const currentIndex = enabledOptions.findIndex((opt) => opt.value === value);
+    const currentValues = getValues();
+    const currentIndex = enabledOptions.findIndex((opt) =>
+      currentValues.includes(opt.value),
+    );
 
     switch (e.key) {
       case 'Escape':
@@ -159,7 +201,7 @@ export function CustomDropdown<T = string>({
         e.preventDefault();
         if (enabledOptions.length > 0) {
           const nextIndex = (currentIndex + 1) % enabledOptions.length;
-          onChange(enabledOptions[nextIndex].value);
+          handleValueChange(enabledOptions[nextIndex].value);
         }
         break;
       case 'ArrowUp':
@@ -167,24 +209,28 @@ export function CustomDropdown<T = string>({
         if (enabledOptions.length > 0) {
           const prevIndex =
             (currentIndex - 1 + enabledOptions.length) % enabledOptions.length;
-          onChange(enabledOptions[prevIndex].value);
+          handleValueChange(enabledOptions[prevIndex].value);
         }
         break;
       case 'Enter':
       case ' ':
         e.preventDefault();
-        setIsOpen(false);
+        if (!multiple) {
+          setIsOpen(false);
+        }
         break;
     }
   };
 
-  const handleSelect = (option: DropdownOption<T>) => {
-    if (option.disabled) return;
-    onChange(option.value);
-    setIsOpen(false);
-  };
+  const sortedOptions = [...options].sort((a, b) => {
+    const aSelected = isSelected(a.value);
+    const bSelected = isSelected(b.value);
+    if (aSelected && !bSelected) return -1;
+    if (!aSelected && bSelected) return 1;
+    return 0;
+  });
 
-  const selectedOption = options.find((opt) => opt.value === value);
+  const selectedOptions = options.filter((opt) => isSelected(opt.value));
 
   const dropdownList = (
     <div
@@ -200,12 +246,13 @@ export function CustomDropdown<T = string>({
       }}
       id="dropdown-list"
       role="listbox"
+      aria-multiselectable={multiple}
       className={`bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden animate-fade-in max-h-60 overflow-y-auto ${
         dropdownClassName
       }`}
     >
-      {options.map((option) => {
-        const isSelected = option.value === value;
+      {sortedOptions.map((option) => {
+        const optionIsSelected = isSelected(option.value);
         const isDisabled = option.disabled;
 
         return (
@@ -213,46 +260,47 @@ export function CustomDropdown<T = string>({
             key={String(option.value)}
             type="button"
             role="option"
-            aria-selected={isSelected}
-            onClick={() => handleSelect(option)}
+            aria-selected={optionIsSelected}
+            onClick={() => handleValueChange(option.value)}
             disabled={isDisabled}
             className={`w-full cursor-pointer px-4 py-3 text-left flex items-center gap-3 hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
-              isSelected ? 'bg-gray-50' : ''
+              optionIsSelected ? 'bg-gray-50' : ''
             } ${optionClassName}`}
           >
-            {renderOption ? (
-              renderOption(option, isSelected)
-            ) : (
-              <>
-                {option.icon && (
-                  <Image
-                    src={option.icon}
-                    alt=""
-                    width={16}
-                    height={16}
-                    className="flex-shrink-0"
-                  />
-                )}
-                <span className="text-sm text-[#202020] flex-1">
-                  {option.label}
-                </span>
-                {option.badgeClass && (
-                  <span
-                    className={`text-xs px-2 py-0.5 rounded-full ${option.badgeClass}`}
-                  >
-                    {option.label}
-                  </span>
-                )}
-                {showCheckIcon && isSelected && (
-                  <Image
-                    src="/check.svg"
-                    alt="selected"
-                    width={16}
-                    height={16}
-                    className="ml-auto flex-shrink-0"
-                  />
-                )}
-              </>
+            <div className="flex-1 flex items-center gap-3">
+              {renderOption ? (
+                renderOption(option, optionIsSelected)
+              ) : (
+                <>
+                  {option.icon && (
+                    <Image
+                      src={option.icon}
+                      alt=""
+                      width={16}
+                      height={16}
+                      className="flex-shrink-0"
+                    />
+                  )}
+                  <span className="text-sm text-[#202020]">{option.label}</span>
+                  {option.badgeClass && (
+                    <span
+                      className={`text-xs px-2 py-0.5 rounded-full ${option.badgeClass}`}
+                    >
+                      {option.label}
+                    </span>
+                  )}
+                </>
+              )}
+            </div>
+
+            {showCheckIcon && optionIsSelected && (
+              <Image
+                src="/check.svg"
+                alt="selected"
+                width={16}
+                height={16}
+                className="flex-shrink-0 ml-auto"
+              />
             )}
           </button>
         );
@@ -276,16 +324,18 @@ export function CustomDropdown<T = string>({
         type="button"
         onClick={() => !disabled && setIsOpen((prev) => !prev)}
         disabled={disabled}
-        className={`w-full h-11 px-3 py-2 bg-gray-50 border-0 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#5D8CF1] text-left flex items-center justify-between cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed transition-shadow ${
+        className={`w-full min-h-11 px-3 py-2 bg-gray-50 border-0 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#5D8CF1] text-left flex items-center justify-between cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed transition-shadow ${
           isOpen ? 'ring-2 ring-[#5D8CF1]' : ''
         }`}
         aria-controls="dropdown-list"
       >
-        {renderTrigger && selectedOption ? (
-          renderTrigger(selectedOption)
+        {renderTrigger && selectedOptions.length > 0 ? (
+          renderTrigger(multiple ? selectedOptions : selectedOptions[0])
         ) : (
-          <span className="text-sm text-[#202020]">
-            {selectedOption?.label || placeholder}
+          <span className="text-sm text-[#202020] truncate">
+            {multiple && selectedOptions.length > 0
+              ? selectedOptions.map((opt) => opt.label).join(', ')
+              : selectedOptions[0]?.label || placeholder}
           </span>
         )}
         <Image

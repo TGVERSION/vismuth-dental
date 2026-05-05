@@ -24,6 +24,15 @@ import type {
   mlFullnessComplaintPayload,
   mlFullnessComplaintResponse,
   ServiceUserData,
+  ProtocolStructures,
+  ProtocolStructuresFields,
+  ProtocolStructuresPost,
+  ProtocolStructuresPatch,
+  ProtocolFcieldsMain,
+  Protocols,
+  ProtocolsFields,
+  ProtocolsPost,
+  ProtocolsPut,
 } from './index';
 
 export const apiClient = new ApiClient({
@@ -43,7 +52,9 @@ export const mainApi = {
 
     login: (data: LoginRequest) =>
       apiClient.post<TokenResponse>('/auth/login', data),
+
     logout: () => apiClient.post<LoginResponse>('/auth/logout'),
+
     serviceUser: () => apiClient.get<ServiceUserData>('/service_user'),
   },
 
@@ -117,5 +128,57 @@ export const mainApi = {
         '/ml_fullness_complaints',
         data,
       ),
+  },
+
+  protocol_structures: {
+    getProtocolStructures: () =>
+      apiClient.get<ProtocolStructures[]>('/protocol-structures'),
+
+    postProtocolStructures: (data: ProtocolStructuresPost) =>
+      apiClient.post<ProtocolStructuresFields>('/protocol-structures', data),
+
+    getProtocolStructuresById: (id: string) =>
+      apiClient.get<ProtocolStructuresFields>(`/protocol-structures/${id}`),
+
+    updateProtocolStructuresById: (id: string, data: ProtocolStructuresPost) =>
+      apiClient.put<ProtocolStructuresFields>(
+        `/protocol-structures/${id}`,
+        data,
+      ),
+
+    patchProtocolStructuresById: (id: string, data: ProtocolStructuresPatch) =>
+      apiClient.patch<ProtocolStructuresFields>(
+        `/protocol-structures/${id}`,
+        data,
+      ),
+
+    delete: (id: string) =>
+      apiClient.delete<void>(`/protocol-structures/${id}`),
+  },
+
+  protocol_fields_main: {
+    getProtocolFcieldsMain: () =>
+      apiClient.get<ProtocolFcieldsMain[]>('/protocol-fields-main'),
+
+    getProtocolFcieldsMainById: (id: string) =>
+      apiClient.get<ProtocolFcieldsMain>(`/protocol-fields-main/${id}`),
+  },
+
+  protocols: {
+    getProtocols: () => apiClient.get<Protocols[]>('/protocols'),
+
+    postProtocols: (data: ProtocolsPost) =>
+      apiClient.post<ProtocolsFields>('/protocols', data),
+
+    getProtocolsById: (id: string) =>
+      apiClient.get<ProtocolsFields>(`/protocols/${id}`),
+
+    updateProtocolsById: (id: string, data: ProtocolsPut) =>
+      apiClient.put<ProtocolsFields>(`/protocols/${id}`, data),
+
+    patchProtocolStructuresById: (id: string, data: ProtocolsPut) =>
+      apiClient.patch<ProtocolsFields>(`/protocols/${id}`, data),
+
+    delete: (id: string) => apiClient.delete<void>(`/protocols/${id}`),
   },
 };

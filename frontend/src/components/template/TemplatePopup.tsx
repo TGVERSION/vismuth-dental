@@ -7,6 +7,7 @@ import type {
   ListsTemplatesResponse,
   TemplatesResponse,
   FieldsTypeFull,
+  ProtocolStructures,
 } from '@/api';
 import Image from 'next/image';
 import { CreateGroupPopup } from '../groups/CreateGroupPopup';
@@ -19,6 +20,8 @@ import { RenameGroup } from '../groups/RenameGroupPopup';
 import { MoveTemplatePopup } from './MoveTemplatePopup';
 import { EditTemplatePopup } from './EditTemplatePopup';
 import { EditTemplateContentPopup } from './EditTemplateContentPopup';
+import { useProtocolStructuresStore } from '@/store/protocolStructuresStore';
+import type { ProtocolStructuresFields } from '@/api';
 
 export interface TemplateGroupUI extends ListsGroupsResponse {
   name: string;
@@ -43,26 +46,7 @@ export const TemplatePopup: React.FC<TemplatePopupProps> = ({
   onClose,
   onApply,
 }) => {
-  //useLockBodyScroll(isOpen);
-
-  const PROTOCOL_SECTIONS = [
-    { key: 'complaints', label: 'Жалобы' },
-    { key: 'disease_anamnesis', label: 'Анамнез заболевания' },
-    { key: 'disease_history', label: 'История заболевания' },
-    { key: 'life_anamnesis', label: 'Анамнез жизни' },
-    { key: 'bad_habits', label: 'Вредные привычки и зависимости' },
-    { key: 'allergy_anamnesis', label: 'Аллергологический анамнез' },
-    { key: 'vital_parameters', label: 'Витальные параметры' },
-    { key: 'objective_data', label: 'Объективные данные' },
-    {
-      key: 'clinical_assessment',
-      label: 'Объективизированная оценка состояния',
-    },
-    { key: 'consultation_conclusion', label: 'Заключение консультации' },
-    { key: 'main_diagnosis', label: 'Диагнозы' },
-    { key: 'recommendations', label: 'Рекомендации' },
-    { key: 'prescriptions', label: 'Назначения' },
-  ];
+  const { structures, fetchStructureById } = useProtocolStructuresStore();
 
   const [groups, setGroups] = useState<TemplateGroupUI[]>([]);
   const [templates, setTemplates] = useState<TemplateUI[]>([]);
@@ -110,7 +94,37 @@ export const TemplatePopup: React.FC<TemplatePopupProps> = ({
       setShowEditConfirm(true);
     }
   };
+  const [structureDetailsCache, setStructureDetailsCache] = useState<
+    Record<string, ProtocolStructuresFields>
+  >({});
 
+  useEffect(() => {
+    const loadStructureDetails = async () => {
+      if (!selectedTemplate?.protocol_structure_id) return;
+
+      if (structureDetailsCache[selectedTemplate.protocol_structure_id]) {
+        return;
+      }
+
+      try {
+        const structure = await fetchStructureById(
+          selectedTemplate.protocol_structure_id,
+        );
+        if (structure) {
+          setStructureDetailsCache((prev) => ({
+            ...prev,
+            [selectedTemplate.protocol_structure_id!]: structure,
+          }));
+        }
+      } catch (error) {
+        console.error('Ошибка загрузки структуры:', error);
+      }
+    };
+
+    if (selectedTemplate) {
+      loadStructureDetails();
+    }
+  }, [selectedTemplate, fetchStructureById, structureDetailsCache]);
   const handleEditConfirm = () => {
     setShowEditConfirm(false);
     if (selectedTemplate) {
@@ -316,6 +330,7 @@ export const TemplatePopup: React.FC<TemplatePopupProps> = ({
             group_id: null,
             privacy: template.privacy,
             fields: fullTemplate.fields || [],
+            protocol_structure_id: fullTemplate.protocol_structure_id,
           });
         }
       }
@@ -362,6 +377,7 @@ export const TemplatePopup: React.FC<TemplatePopupProps> = ({
           group_id: fullTemplate.group_id || '',
           privacy: fullTemplate.privacy,
           fields: fullTemplate.fields || [],
+          protocol_structure_id: fullTemplate.protocol_structure_id,
         });
 
         setTemplates((prev) =>
@@ -410,7 +426,21 @@ export const TemplatePopup: React.FC<TemplatePopupProps> = ({
     setShowCreateTemplatePopup(false);
     loadTemplates();
   };
+  const getFieldLabel = (
+    structure: ProtocolStructuresFields | null,
+    fieldKey: string,
+  ): string => {
+    if (!structure?.fields) return fieldKey;
+    const field = structure.fields.find((f) => f.field_name === fieldKey);
+    return field?.field_label || fieldKey;
+  };
 
+  const getCachedStructure = (
+    template: TemplateUI | null,
+  ): ProtocolStructuresFields | null => {
+    if (!template?.protocol_structure_id) return null;
+    return structureDetailsCache[template.protocol_structure_id] || null;
+  };
   if (!isOpen) return null;
   const hasItems = groups.length > 0 || templates.length > 0;
 
@@ -722,6 +752,7 @@ export const TemplatePopup: React.FC<TemplatePopupProps> = ({
                                 e.stopPropagation();
                                 setOpenEdit(true);
                                 handleEditConfirm();
+                                setOpenMenuId(null);
                               }}
                               className="w-full px-4 py-2 text-left text-sm rounded-md cursor-pointer hover:bg-[#F0F5FF] transition-colors"
                             >
@@ -776,18 +807,16 @@ export const TemplatePopup: React.FC<TemplatePopupProps> = ({
                   >
                     {selectedTemplate.content &&
                       Object.entries(selectedTemplate.content).map(
-                        ([sectionKey, value]) => {
-                          const sectionLabel =
-                            PROTOCOL_SECTIONS.find((s) => s.key === sectionKey)
-                              ?.label || sectionKey;
+                        ([fieldKey, value]) => {
+                          const structure =
+                            getCachedStructure(selectedTemplate);
+                          const fieldLabel = getFieldLabel(structure, fieldKey);
+
                           if (!value) return null;
                           return (
-                            <div
-                              key={sectionKey}
-                              className="flex flex-col gap-3"
-                            >
+                            <div key={fieldKey} className="flex flex-col gap-3">
                               <h4 className="text-3xl font-medium text-[#202020]">
-                                {sectionLabel}
+                                {fieldLabel}
                               </h4>
                               <p className="text-md whitespace-pre-wrap">
                                 {value}

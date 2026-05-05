@@ -39,13 +39,15 @@ export function TableEditor({
   onColumnsChange,
   onRowsChange,
 }: TableEditorProps) {
-  const wrapRef   = useRef<HTMLDivElement>(null);
-  const outerRef  = useRef<HTMLDivElement>(null);
+  const wrapRef = useRef<HTMLDivElement>(null);
+  const outerRef = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
-  const tableRef  = useRef<HTMLTableElement>(null);
+  const tableRef = useRef<HTMLTableElement>(null);
 
   const columnsRef = useRef(columns);
-  useEffect(() => { columnsRef.current = columns; }, [columns]);
+  useEffect(() => {
+    columnsRef.current = columns;
+  }, [columns]);
 
   const [hoveredCol, setHoveredCol] = useState<number | null>(null);
   const [hoveredRow, setHoveredRow] = useState<number | null>(null);
@@ -57,50 +59,51 @@ export function TableEditor({
 
   // ── Position computation ───────────────────────────────────────────────
   const computePositions = useCallback(() => {
-    const wrap  = wrapRef.current;
+    const wrap = wrapRef.current;
     const outer = outerRef.current;
     const table = tableRef.current;
     if (!wrap || !outer || !table) return;
 
-    const wrapRect  = wrap.getBoundingClientRect();
+    const wrapRect = wrap.getBoundingClientRect();
     const outerRect = outer.getBoundingClientRect();
-    const visLeft   = outerRect.left  - wrapRect.left;
-    const visRight  = outerRect.right - wrapRect.left;
+    const visLeft = outerRect.left - wrapRect.left;
+    const visRight = outerRect.right - wrapRect.left;
 
     const headerCells = Array.from(
-      table.querySelectorAll<HTMLTableCellElement>('thead th:not([data-actions])')
+      table.querySelectorAll<HTMLTableCellElement>(
+        'thead th:not([data-actions])',
+      ),
     );
     setColBtnPos(
       headerCells.map((th) => {
-        const r    = th.getBoundingClientRect();
+        const r = th.getBoundingClientRect();
         const left = r.right - wrapRect.left - 9;
         return {
           left,
           top: outerRect.top - wrapRect.top - 9,
           visible: left >= visLeft - 9 && left <= visRight + 9,
         };
-      })
+      }),
     );
 
     const bodyRows = Array.from(
-      table.querySelectorAll<HTMLTableRowElement>('tbody tr')
+      table.querySelectorAll<HTMLTableRowElement>('tbody tr'),
     );
     setRowBtnPos(
       bodyRows.map((tr) => {
         const r = tr.getBoundingClientRect();
         return {
           left: outerRect.left - wrapRect.left - 9,
-          top:  r.bottom - wrapRect.top - 9,
+          top: r.bottom - wrapRect.top - 9,
           visible: r.bottom >= outerRect.top && r.top <= outerRect.bottom,
         };
-      })
+      }),
     );
   }, []);
 
   const colGeometry = columns.map((c) => `${c.id}:${c.width}`).join(',');
   useLayoutEffect(() => {
     computePositions();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [columns.length, rows.length, colGeometry, computePositions]);
 
   useEffect(() => {
@@ -129,10 +132,10 @@ export function TableEditor({
           const r = [...row];
           r.splice(afterIndex + 1, 0, '');
           return r;
-        })
+        }),
       );
     },
-    [columns, rows, onColumnsChange, onRowsChange]
+    [columns, rows, onColumnsChange, onRowsChange],
   );
 
   const deleteColumn = useCallback(
@@ -141,7 +144,7 @@ export function TableEditor({
       onColumnsChange(columns.filter((_, i) => i !== ci));
       onRowsChange(rows.map((row) => row.filter((_, i) => i !== ci)));
     },
-    [columns, rows, onColumnsChange, onRowsChange]
+    [columns, rows, onColumnsChange, onRowsChange],
   );
 
   const renameColumn = useCallback(
@@ -150,17 +153,21 @@ export function TableEditor({
       next[ci] = { ...next[ci], name };
       onColumnsChange(next);
     },
-    [columns, onColumnsChange]
+    [columns, onColumnsChange],
   );
 
   // ── Row operations ─────────────────────────────────────────────────────
   const addRow = useCallback(
     (afterIndex: number) => {
       const next = [...rows];
-      next.splice(afterIndex + 1, 0, columns.map(() => ''));
+      next.splice(
+        afterIndex + 1,
+        0,
+        columns.map(() => ''),
+      );
       onRowsChange(next);
     },
-    [rows, columns, onRowsChange]
+    [rows, columns, onRowsChange],
   );
 
   const deleteRow = useCallback(
@@ -168,7 +175,7 @@ export function TableEditor({
       if (rows.length === 1) return;
       onRowsChange(rows.filter((_, i) => i !== ri));
     },
-    [rows, onRowsChange]
+    [rows, onRowsChange],
   );
 
   const updateCell = useCallback(
@@ -177,7 +184,7 @@ export function TableEditor({
       next[ri][ci] = value;
       onRowsChange(next);
     },
-    [rows, onRowsChange]
+    [rows, onRowsChange],
   );
 
   // ── Column resize ──────────────────────────────────────────────────────
@@ -189,7 +196,10 @@ export function TableEditor({
 
       const onMove = (ev: MouseEvent) => {
         const next = [...columnsRef.current];
-        next[ci] = { ...next[ci], width: Math.max(60, startW + ev.clientX - startX) };
+        next[ci] = {
+          ...next[ci],
+          width: Math.max(60, startW + ev.clientX - startX),
+        };
         onColumnsChange(next);
       };
       const onUp = () => {
@@ -199,21 +209,23 @@ export function TableEditor({
       document.addEventListener('mousemove', onMove);
       document.addEventListener('mouseup', onUp);
     },
-    [onColumnsChange]
+    [onColumnsChange],
   );
 
   // ── Render ─────────────────────────────────────────────────────────────
   return (
-    <div ref={wrapRef} className="relative pt-[9px]">
+    <div ref={wrapRef} className="relative pt-2.25">
       {/* Table */}
-      <div ref={outerRef} className="border border-[#E5E7EB] rounded-lg overflow-hidden">
+      <div
+        ref={outerRef}
+        className="border border-[#E5E7EB] rounded-lg overflow-hidden"
+      >
         <div
           ref={scrollRef}
           className="overflow-x-auto overflow-y-auto"
           style={{ maxHeight: MAX_TABLE_HEIGHT }}
         >
           <table ref={tableRef} className="border-collapse w-full table-fixed">
-
             {/* ── Header ── */}
             <thead>
               <tr>
@@ -221,7 +233,7 @@ export function TableEditor({
                   <th
                     key={col.id}
                     style={{ width: col.width }}
-                    className={`sticky top-0 z-[5] min-w-[60px] border-r border-b border-[#E5E7EB] h-9 p-0 font-medium text-[13px] text-[#202020] select-none relative ${hoveredCol === ci ? 'bg-[#F1F3F9]' : 'bg-[#F9FAFB]'}`}
+                    className={`sticky top-0 z-5 min-w-15 border-r border-b border-[#E5E7EB] h-9 p-0 font-medium text-[13px] text-[#202020] select-none relative ${hoveredCol === ci ? 'bg-[#F1F3F9]' : 'bg-[#F9FAFB]'}`}
                     onMouseEnter={() => setHoveredCol(ci)}
                     onMouseLeave={() => setHoveredCol(null)}
                   >
@@ -230,7 +242,9 @@ export function TableEditor({
                         type="text"
                         value={col.name}
                         onChange={(e) => renameColumn(ci, e.target.value)}
-                        onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur(); }}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') e.currentTarget.blur();
+                        }}
                         onMouseDown={(e) => e.stopPropagation()}
                         className="flex-1 text-[13px] font-medium border-none bg-transparent text-[#202020] outline-none cursor-text min-w-0 p-0 w-full"
                         style={{ fontFamily: 'inherit' }}
@@ -254,7 +268,7 @@ export function TableEditor({
                     {/* Resize handle */}
                     <div
                       onMouseDown={(e) => startResize(e, ci)}
-                      className="absolute -right-[3px] top-0 bottom-0 w-[6px] cursor-col-resize z-10"
+                      className="absolute -right-0.75 top-0 bottom-0 w-1.5 cursor-col-resize z-10"
                     />
                   </th>
                 ))}
@@ -263,7 +277,7 @@ export function TableEditor({
                 <th
                   data-actions="true"
                   style={{ borderLeftStyle: 'hidden' }}
-                  className="w-9 min-w-[36px] sticky top-0 z-[5] bg-[#F9FAFB] border-r-0 border-b border-[#E5E7EB] h-9 p-0"
+                  className="w-9 min-w-9 sticky top-0 z-5 bg-[#F9FAFB] border-r-0 border-b border-[#E5E7EB] h-9 p-0"
                 />
               </tr>
             </thead>
@@ -286,7 +300,7 @@ export function TableEditor({
                       {/* Resize handle on body cells */}
                       <div
                         onMouseDown={(e) => startResize(e, ci)}
-                        className="absolute -right-[3px] top-0 bottom-0 w-[6px] cursor-col-resize z-10"
+                        className="absolute -right-0.75 top-0 bottom-0 w-1.5 cursor-col-resize z-10"
                       />
                       <input
                         type="text"
@@ -302,7 +316,7 @@ export function TableEditor({
                   {/* Actions cell — row delete */}
                   <td
                     style={{ borderLeftStyle: 'hidden' }}
-                    className="border-r-0 border-b border-[#E5E7EB] w-9 min-w-[36px] p-0 text-center align-middle"
+                    className="border-r-0 border-b border-[#E5E7EB] w-9 min-w-9 p-0 text-center align-middle"
                   >
                     <button
                       type="button"
@@ -330,12 +344,12 @@ export function TableEditor({
             onClick={() => addColumn(ci)}
             onMouseEnter={() => setPlusColHovered(ci)}
             onMouseLeave={() => setPlusColHovered(null)}
-            className="absolute w-[18px] h-[18px] rounded-full bg-[#5D8CF1] text-white border-none text-[13px] cursor-pointer flex items-center justify-center shadow-[0_1px_4px_rgba(93,140,241,0.5)] z-30 p-0 leading-none"
+            className="absolute w-4.5 h-4.5 rounded-full bg-[#5D8CF1] text-white border-none text-[13px] cursor-pointer flex items-center justify-center shadow-[0_1px_4px_rgba(93,140,241,0.5)] z-30 p-0 leading-none"
             style={{ left: pos.left, top: pos.top }}
           >
             +
           </button>
-        ) : null
+        ) : null,
       )}
 
       {/* Overlay — row + buttons */}
@@ -347,12 +361,12 @@ export function TableEditor({
             onClick={() => addRow(ri)}
             onMouseEnter={() => setPlusRowHovered(ri)}
             onMouseLeave={() => setPlusRowHovered(null)}
-            className="absolute w-[18px] h-[18px] rounded-full bg-[#5D8CF1] text-white border-none text-[13px] cursor-pointer flex items-center justify-center shadow-[0_1px_4px_rgba(93,140,241,0.5)] z-30 p-0 leading-none"
+            className="absolute w-4.5 h-4.5 rounded-full bg-[#5D8CF1] text-white border-none text-[13px] cursor-pointer flex items-center justify-center shadow-[0_1px_4px_rgba(93,140,241,0.5)] z-30 p-0 leading-none"
             style={{ left: pos.left, top: pos.top }}
           >
             +
           </button>
-        ) : null
+        ) : null,
       )}
     </div>
   );

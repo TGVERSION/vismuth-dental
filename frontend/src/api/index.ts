@@ -84,6 +84,7 @@ export interface ConsultationsRequest {
   recommendations: string;
   prescriptions: string;
   status_protocol: string;
+  protocol_template_id: string;
 }
 export interface ConsultationsResponse extends ConsultationsRequest {
   deleted_at: string;
@@ -163,6 +164,7 @@ export interface ListsTemplatesResponse {
   id: string;
   protocol_name: string;
   group_id: string;
+  protocol_structure_id: string;
   privacy: string;
 }
 
@@ -170,6 +172,7 @@ export interface TemplatesRequest {
   protocol_name: string;
   group_id: string | null;
   privacy: string;
+  protocol_structure_id: string;
   fields: FieldsType[];
 }
 
@@ -190,10 +193,137 @@ export interface TemplatesResponse {
   id: string;
   protocol_name: string;
   group_id: string;
+  protocol_structure_id: string;
   creator_id: string;
   privacy: string;
   created_at: string;
   updated_at: string;
   deleted_at: string;
   fields: FieldsTypeFull[];
+}
+
+export interface ProtocolStructures {
+  id: string;
+  creator_id: string;
+  structure_code: string;
+  structure_name: string;
+  description: string;
+  version: number;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+  deleted_at: string;
+}
+
+export interface ProtocolStructuresPost {
+  structure_code: string;
+  structure_name: string;
+  description: string;
+  version: number;
+  is_active: boolean;
+  fields: StructureProtocolsFieldsSmall[];
+}
+export interface ProtocolStructuresPatch {
+  structure_code: string;
+  structure_name: string;
+  description: string;
+  version: number;
+  is_active: boolean;
+  fields_add: StructureProtocolsFieldsSmall[];
+  fields_update: ProtocolStructuresFields[];
+  fields_delete: string[];
+}
+
+export interface ProtocolStructuresFields {
+  id: string;
+  creator_id: string;
+  structure_code: string;
+  structure_name: string;
+  description: string;
+  version: number;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+  deleted_at: string;
+  fields: StructureProtocolsFields[];
+}
+
+export interface StructureProtocolsFields {
+  id: string;
+  protocol_structure_id: string;
+  field_name: string;
+  field_label: string;
+  description: string;
+  field_type: string;
+  default_value: string;
+  dictionary: string;
+  protocol_fields_main_id: string;
+  is_required: boolean;
+  sort_order: number;
+}
+
+export interface StructureProtocolsFieldsSmall {
+  field_name: string;
+  field_label: string;
+  description: string;
+  field_type: string;
+  default_value: string;
+  dictionary: string;
+  protocol_fields_main_id: string;
+  is_required: boolean;
+  sort_order: number;
+}
+
+export interface ProtocolFcieldsMain {
+  id: string;
+  field_name: string;
+  field_label: string;
+  description: string;
+  endpoint_link: string;
+  created_at: string;
+  updated_at: string;
+  deleted_at: string;
+}
+
+export interface Protocols {
+  id: string;
+  service_user: string;
+  protocol_structure_id: string;
+  patient_id: number;
+  doctor_id: string;
+  protocol_name: string;
+  status_protocol: string;
+  created_at: string;
+  updated_at: string;
+  deleted_at: string;
+}
+export interface ProtocolsFields {
+  id: string;
+  service_user: string;
+  protocol_structure_id: string;
+  patient_id: number;
+  doctor_id: string;
+  protocol_name: string;
+  status_protocol: string;
+  created_at: string;
+  updated_at: string;
+  deleted_at: string;
+  field_values: Record<string, string>;
+}
+
+export interface ProtocolsPost {
+  protocol_structure_id: string;
+  patient_id: number | null;
+  doctor_id: string | null;
+  protocol_name: string;
+  status_protocol: string;
+  field_values: Record<string, string>;
+}
+
+export interface ProtocolsPut {
+  patient_id: number | null;
+  doctor_id: string | null;
+  protocol_name: string;
+  status_protocol: string;
+  field_values: Record<string, string>;
 }

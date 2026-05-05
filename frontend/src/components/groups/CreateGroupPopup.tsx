@@ -106,6 +106,7 @@ export const CreateGroupPopup: React.FC<CreateGroupPopupProps> = ({
             group_id: newGroup.id,
             privacy: template.privacy,
             fields: fullTemplate.fields || [],
+            protocol_structure_id: fullTemplate.protocol_structure_id,
           });
         }
       }
@@ -150,7 +151,7 @@ export const CreateGroupPopup: React.FC<CreateGroupPopupProps> = ({
 
   return (
     <div
-      className="modal-overlay fixed inset-0 bg-black/50 flex items-center justify-center z-[1002]"
+      className="modal-overlay fixed inset-0 bg-black/50 flex items-center justify-center z-1002"
       onClick={handleClose}
     >
       <div

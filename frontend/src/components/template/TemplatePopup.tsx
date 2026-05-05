@@ -316,6 +316,7 @@ export const TemplatePopup: React.FC<TemplatePopupProps> = ({
             group_id: null,
             privacy: template.privacy,
             fields: fullTemplate.fields || [],
+            protocol_structure_id: fullTemplate.protocol_structure_id,
           });
         }
       }
@@ -362,6 +363,7 @@ export const TemplatePopup: React.FC<TemplatePopupProps> = ({
           group_id: fullTemplate.group_id || '',
           privacy: fullTemplate.privacy,
           fields: fullTemplate.fields || [],
+          protocol_structure_id: fullTemplate.protocol_structure_id,
         });
 
         setTemplates((prev) =>

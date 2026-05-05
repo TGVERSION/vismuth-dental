@@ -72,6 +72,7 @@ export const MoveTemplatePopup: React.FC<MoveTemplatePopupProps> = ({
         group_id: selectedGroupId || null,
         privacy: template.privacy,
         fields: template.fields || [],
+        protocol_structure_id: template.protocol_structure_id,
       });
 
       toast.success('Шаблон успешно перемещён', {

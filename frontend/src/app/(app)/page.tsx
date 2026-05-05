@@ -1,10 +1,11 @@
 'use client';
 
 import {
-  ConsultationsRequest,
   mainApi,
   ListConsultationsResponse,
   ListsTemplatesResponse,
+  ProtocolStructuresFields,
+  Protocols,
 } from '@/api';
 import { SectionInput } from '@/components/SectionInput';
 import { Sidebar } from '@/components/Sidebar';
@@ -14,12 +15,15 @@ import { toast } from 'react-toastify';
 import Image from 'next/image';
 import { TemplatePopup } from '@/components/template/TemplatePopup';
 import { CreateTemplatePopup } from '@/components/template/CreateTemplatePopup';
+import { useProtocolStructuresStore } from '@/store/protocolStructuresStore';
+import { ProtocolsPost, StructureProtocolsFields } from '@/api';
 
 interface SectionData {
   id: number;
   label: string;
   value: string;
   sectionKey: string;
+  fieldMeta?: StructureProtocolsFields;
 }
 export interface TemplateUI extends ListsTemplatesResponse {
   name: string;
@@ -32,82 +36,26 @@ export default function Home() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
+  const {
+    structures,
+    isLoading: structuresLoading,
+    fetchStructures,
+    fetchStructureById,
+  } = useProtocolStructuresStore();
+
   const [templateTitle, setTemplateTitle] = useState<string>(
     'Протокол консультации терапевта №1',
   );
+  const [showCreateMenu, setShowCreateMenu] = useState(false);
+  const createMenuRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    fetchStructures();
+  }, [fetchStructures]);
 
-  const SECTION_TO_API_FIELD: Record<string, keyof ConsultationsRequest> = {
-    complaints: 'complaints',
-    disease_anamnesis: 'disease_anamnesis',
-    disease_history: 'disease_history',
-    life_anamnesis: 'life_anamnesis',
-    bad_habits: 'bad_habits',
-    allergy_anamnesis: 'allergy_anamnesis',
-    vital_parameters: 'vital_parameters',
-    objective_data: 'objective_data',
-    clinical_assessment: 'clinical_assessment',
-    consultation_conclusion: 'consultation_conclusion',
-    main_diagnosis: 'main_diagnosis',
-    recommendations: 'recommendations',
-    prescriptions: 'prescriptions',
-  };
-
-  const [sections, setSections] = useState<SectionData[]>([
-    { id: 1, label: 'Жалобы', value: '', sectionKey: 'complaints' },
-    {
-      id: 2,
-      label: 'Анамнез заболевания',
-      value: '',
-      sectionKey: 'disease_anamnesis',
-    },
-    {
-      id: 3,
-      label: 'История заболевания',
-      value: '',
-      sectionKey: 'disease_history',
-    },
-    { id: 4, label: 'Анамнез жизни', value: '', sectionKey: 'life_anamnesis' },
-    {
-      id: 5,
-      label: 'Вредные привычки и зависимости',
-      value: '',
-      sectionKey: 'bad_habits',
-    },
-    {
-      id: 6,
-      label: 'Аллергологический анамнез',
-      value: '',
-      sectionKey: 'allergy_anamnesis',
-    },
-    {
-      id: 7,
-      label: 'Витальные параметры',
-      value: '',
-      sectionKey: 'vital_parameters',
-    },
-    {
-      id: 8,
-      label: 'Объективные данные',
-      value: '',
-      sectionKey: 'objective_data',
-    },
-    {
-      id: 9,
-      label: 'Объективизированная оценка состояния',
-      value: '',
-      sectionKey: 'clinical_assessment',
-    },
-    {
-      id: 10,
-      label: 'Заключение консультации',
-      value: '',
-      sectionKey: 'consultation_conclusion',
-    },
-    { id: 11, label: 'Диагноз', value: '', sectionKey: 'main_diagnosis' },
-    { id: 12, label: 'Рекомендации', value: '', sectionKey: 'recommendations' },
-    { id: 13, label: 'Назначения', value: '', sectionKey: 'prescriptions' },
-  ]);
-
+  const [sections, setSections] = useState<SectionData[]>([]);
+  const [currentProtocolStructure, setCurrentProtocolStructure] = useState<
+    string | null
+  >(null);
   const [activeSection, setActiveSection] = useState<string>('complaints');
   const [protocolId, setProtocolId] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
@@ -142,34 +90,92 @@ export default function Home() {
       ) {
         setShowTemplateMenu(false);
       }
+      if (
+        showCreateMenu &&
+        createMenuRef.current &&
+        !createMenuRef.current.contains(event.target as Node)
+      ) {
+        setShowCreateMenu(false);
+      }
     };
 
     document.addEventListener('mousedown', handleClickOutside);
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
-  }, [showTemplateMenu]);
-  const getCurrentProtocolContent = () => {
-    const content: Record<string, string> = {};
-    sections.forEach((section) => {
-      content[section.sectionKey] = section.value;
-    });
-    return content;
+  }, [showCreateMenu, showTemplateMenu]);
+  const initializeSectionsFromStructure = useCallback(
+    (structure: ProtocolStructuresFields) => {
+      const newSections = structure.fields
+        .sort((a, b) => a.sort_order - b.sort_order)
+        .map((field, index) => ({
+          id: index + 1,
+          label: field.field_label,
+          value: field.default_value || '',
+          sectionKey: field.field_name,
+          fieldMeta: field,
+        }));
+
+      setSections(newSections);
+
+      if (
+        newSections.length > 0 &&
+        !newSections.find((s) => s.sectionKey === activeSection)
+      ) {
+        setActiveSection(newSections[0].sectionKey);
+      }
+    },
+    [activeSection],
+  );
+
+  const handleCreateWithStructure = async (structureId: string) => {
+    try {
+      setIsLoading(true);
+
+      const structure = await fetchStructureById(structureId);
+
+      const field_values: Record<string, string> = {};
+      structure!.fields.forEach((field) => {
+        field_values[field.id] = field.default_value || '';
+      });
+
+      const protocolData: ProtocolsPost = {
+        protocol_structure_id: structureId,
+        patient_id: null,
+        doctor_id: null,
+        protocol_name: `Протокол ${structure!.structure_name} №${Date.now().toString().slice(-6)}`,
+        status_protocol: 'draft',
+        field_values,
+      };
+
+      const response = await mainApi.protocols.postProtocols(protocolData);
+      const newId = response.id;
+
+      if (newId) {
+        setProtocolId(newId);
+        initializeSectionsFromStructure(structure!);
+
+        const params = new URLSearchParams(window.location.search);
+        params.set('id', newId);
+        params.set('structure_id', structureId);
+        router.replace(`?${params.toString()}`, { scroll: false });
+
+        loadProtocolsList();
+
+        toast.success('Протокол создан');
+      }
+    } catch (error) {
+      console.error('Ошибка создания протокола:', error);
+      toast.error('Не удалось создать протокол');
+    } finally {
+      setIsLoading(false);
+    }
   };
-  const [consultations, setConsultations] = useState<
-    ListConsultationsResponse[]
-  >([]);
-  const [isLoadingList, setIsLoadingList] = useState(false);
-
-  const sectionRefs = useRef<Record<string, HTMLDivElement | null>>({});
-  const saveTimerRef = useRef<NodeJS.Timeout | null>(null);
-
-  const loadConsultationsList = async () => {
+  const loadProtocolsList = async () => {
     setIsLoadingList(true);
     try {
-      const response = await mainApi.consultations.getLists();
+      const response = await mainApi.protocols.getProtocols();
       setConsultations(response || []);
-      console.log('Список протоколов загружен:', response?.length);
     } catch (error) {
       console.error('Ошибка загрузки списка:', error);
       setLoadError('Не удалось загрузить список протоколов');
@@ -177,31 +183,72 @@ export default function Home() {
       setIsLoadingList(false);
     }
   };
+  const getCurrentProtocolContent = () => {
+    const content: Record<string, string> = {};
+    sections.forEach((section) => {
+      content[section.sectionKey] = section.value;
+    });
+    return content;
+  };
+  const [consultations, setConsultations] = useState<Protocols[]>([]);
+  const [isLoadingList, setIsLoadingList] = useState(false);
+
+  const sectionRefs = useRef<Record<string, HTMLDivElement | null>>({});
+  const saveTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const isLoadingProtocolRef = useRef(false);
 
   const loadProtocol = async (id: string) => {
     setIsLoading(true);
     setLoadError(null);
+    isLoadingProtocolRef.current = true;
 
     try {
-      const response = await mainApi.consultations.getConsultation(id);
+      const response = await mainApi.protocols.getProtocolsById(id);
+
+      let structure: ProtocolStructuresFields | null = null;
+
+      if (response.protocol_structure_id) {
+        structure = await fetchStructureById(response.protocol_structure_id);
+        if (structure) {
+          initializeSectionsFromStructure(structure);
+        }
+      }
+      const fieldValuesByFieldName: Record<string, string> = {};
+
+      if (structure && response.field_values) {
+        const uuidToFieldName = structure.fields.reduce(
+          (acc, field) => {
+            if (field.id) {
+              acc[field.id] = field.field_name;
+            }
+            return acc;
+          },
+          {} as Record<string, string>,
+        );
+
+        Object.entries(response.field_values).forEach(([uuid, value]) => {
+          const fieldName = uuidToFieldName[uuid];
+          if (fieldName && typeof value === 'string') {
+            fieldValuesByFieldName[fieldName] = value;
+          }
+        });
+      } else if (response.field_values) {
+        Object.entries(response.field_values).forEach(([key, value]) => {
+          if (typeof value === 'string') {
+            fieldValuesByFieldName[key] = value;
+          }
+        });
+      }
 
       setSections((prev) =>
-        prev.map((section) => {
-          const apiField = SECTION_TO_API_FIELD[section.sectionKey];
-          if (!apiField) return section;
-
-          const apiValue = response[apiField];
-          return {
-            ...section,
-            value: typeof apiValue === 'string' ? apiValue : '',
-          };
-        }),
+        prev.map((section) => ({
+          ...section,
+          value: fieldValuesByFieldName[section.sectionKey] ?? section.value,
+        })),
       );
 
-      // Обновляем заголовок если есть
-      // if (response.template_title) {
-      setTemplateTitle(`Протокол №${response.id.slice(-12)}`);
-      // }
+      setTemplateTitle(response.protocol_name || `Протокол №${id.slice(-12)}`);
+      setCurrentProtocolStructure(response.protocol_structure_id);
 
       console.log('Протокол загружен:', id);
     } catch (error) {
@@ -209,11 +256,12 @@ export default function Home() {
       setLoadError('Не удалось загрузить протокол');
     } finally {
       setIsLoading(false);
+      isLoadingProtocolRef.current = false;
     }
   };
 
   useEffect(() => {
-    loadConsultationsList();
+    loadProtocolsList();
   }, []);
 
   useEffect(() => {
@@ -225,7 +273,7 @@ export default function Home() {
   }, [searchParams]);
 
   useEffect(() => {
-    if (!protocolId) return;
+    if (!protocolId || isLoadingProtocolRef.current) return;
 
     const currentData = JSON.stringify({ templateTitle, sections });
     if (currentData === lastSavedData) return;
@@ -247,57 +295,29 @@ export default function Home() {
   }, [templateTitle, sections, protocolId, lastSavedData]);
 
   const autoSave = async () => {
-    if (!protocolId || isSaving) return;
+    if (!protocolId || isSaving || isLoadingProtocolRef.current) return;
     setIsSaving(true);
 
     try {
-      const dataToUpdate: ConsultationsRequest = {
-        id: protocolId,
-        external_system: 0,
-        external_patient_id: 0,
-        external_doctor_id: 0,
-        external_visit_id: 0,
-        consultation_datetime: new Date().toISOString(),
-        complaints:
-          sections.find((s) => s.sectionKey === 'complaints')?.value || '',
-        disease_anamnesis:
-          sections.find((s) => s.sectionKey === 'disease_anamnesis')?.value ||
-          '',
-        disease_history:
-          sections.find((s) => s.sectionKey === 'disease_history')?.value || '',
-        patient_condition: '',
-        life_anamnesis:
-          sections.find((s) => s.sectionKey === 'life_anamnesis')?.value || '',
-        bad_habits:
-          sections.find((s) => s.sectionKey === 'bad_habits')?.value || '',
-        allergy_anamnesis:
-          sections.find((s) => s.sectionKey === 'allergy_anamnesis')?.value ||
-          '',
-        vital_parameters:
-          sections.find((s) => s.sectionKey === 'vital_parameters')?.value ||
-          '',
-        objective_data:
-          sections.find((s) => s.sectionKey === 'objective_data')?.value || '',
-        clinical_assessment:
-          sections.find((s) => s.sectionKey === 'clinical_assessment')?.value ||
-          '',
-        consultation_conclusion:
-          sections.find((s) => s.sectionKey === 'consultation_conclusion')
-            ?.value || '',
-        main_diagnosis:
-          sections.find((s) => s.sectionKey === 'main_diagnosis')?.value || '',
-        comorbid_diagnoses: '',
-        recommendations:
-          sections.find((s) => s.sectionKey === 'recommendations')?.value || '',
-        prescriptions:
-          sections.find((s) => s.sectionKey === 'prescriptions')?.value || '',
-        status_protocol: 'draft',
+      const field_values: Record<string, string> = {};
+      sections.forEach((section) => {
+        field_values[section.fieldMeta!.id] = section.value;
+      });
+
+      const dataToUpdate = {
+        patient_id: null,
+        doctor_id: null,
+        protocol_name: templateTitle,
+        status_protocol: 'draft' as const,
+        field_values,
       };
 
-      await mainApi.consultations.update(protocolId, dataToUpdate);
+      await mainApi.protocols.updateProtocolsById(protocolId, dataToUpdate);
+      setLastSavedData(JSON.stringify({ templateTitle, sections }));
       console.log('Авто-сохранение:', protocolId);
     } catch (error) {
       console.error('Ошибка авто-сохранения:', error);
+      toast.error('Ошибка сохранения');
     } finally {
       setIsSaving(false);
     }
@@ -363,8 +383,6 @@ export default function Home() {
     if (protocolId) {
       await autoSave();
       toast.success('Протокол сохранён');
-    } else {
-      await createNew();
     }
   };
 
@@ -382,57 +400,6 @@ export default function Home() {
     label: section.label,
     hasContent: section.value.trim().length > 0,
   }));
-
-  const createNew = async () => {
-    try {
-      const localDate = new Date();
-      const consultation_datetime = new Date(
-        localDate.getTime() - localDate.getTimezoneOffset() * 60000,
-      ).toISOString();
-
-      const dataToSend: ConsultationsRequest = {
-        id: '',
-        external_system: 0,
-        external_patient_id: 0,
-        external_doctor_id: 0,
-        external_visit_id: 0,
-        consultation_datetime,
-        complaints: '',
-        disease_anamnesis: '',
-        disease_history: '',
-        patient_condition: '',
-        life_anamnesis: '',
-        bad_habits: '',
-        allergy_anamnesis: '',
-        vital_parameters: '',
-        objective_data: '',
-        clinical_assessment: '',
-        consultation_conclusion: '',
-        main_diagnosis: '',
-        comorbid_diagnoses: '',
-        recommendations: '',
-        prescriptions: '',
-        status_protocol: 'draft',
-      };
-
-      const response = await mainApi.consultations.create(dataToSend);
-
-      const newId = response.id?.toString() || response.id;
-      if (newId) {
-        setProtocolId(newId);
-
-        const params = new URLSearchParams(window.location.search);
-        params.set('id', newId);
-        router.replace(`?${params.toString()}`, { scroll: false });
-
-        console.log('Протокол создан, ID:', newId);
-
-        loadConsultationsList();
-      }
-    } catch (error) {
-      console.error('Ошибка создания протокола:', error);
-    }
-  };
 
   useEffect(() => {
     return () => {
@@ -456,23 +423,59 @@ export default function Home() {
 
   return (
     <>
-      {/* Левая панель со списком протоколов */}
       <div className="fixed ml-3 mr-5 left-0 top-20 custom-height w-85.75 flex flex-col bg-[#F3F4F8]">
-        <button
-          onClick={createNew}
-          className="shrink-0 w-full mb-6 hover:text-[#769CEF] bg-white rounded-xl h-13 cursor-pointer text-[#5D8CF1] px-6 transition-colors"
-        >
-          Создать новый протокол
-        </button>
+        <div className="relative" ref={createMenuRef}>
+          <button
+            onClick={() => setShowCreateMenu(!showCreateMenu)}
+            className="shrink-0 w-full hover:text-[#769CEF] bg-white rounded-xl h-13 cursor-pointer text-[#5D8CF1] px-6 transition-colors"
+          >
+            Создать новый протокол
+          </button>
 
-        {/* Индикатор загрузки списка */}
+          {showCreateMenu && (
+            <div className="absolute top-full left-0 right-0 mt-1 bg-white rounded-xl shadow-custom p-2 z-50 max-h-60 overflow-y-auto">
+              {structuresLoading ? (
+                <div className="py-4 text-center text-sm text-gray-500">
+                  <div className="animate-spin mx-auto mb-2 rounded-full h-4 w-4 border-b-2 border-[#5D8CF1]"></div>
+                  Загрузка структур...
+                </div>
+              ) : structures.length > 0 ? (
+                <>
+                  {structures.map((structure) => (
+                    <button
+                      key={structure.id}
+                      onClick={() => {
+                        handleCreateWithStructure(structure.id);
+                        setShowCreateMenu(false);
+                      }}
+                      className="w-full text-left px-3 py-2 rounded-lg hover:bg-[#F0F5FF] text-sm transition-colors group"
+                    >
+                      <div className="font-medium text-gray-800">
+                        {structure.structure_name}
+                      </div>
+                      {structure.description && (
+                        <div className="text-xs text-gray-500 mt-0.5 line-clamp-1">
+                          {structure.description}
+                        </div>
+                      )}
+                    </button>
+                  ))}
+                </>
+              ) : (
+                <div className="py-4 text-center text-sm text-gray-500">
+                  Нет доступных структур
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
         {isLoadingList ? (
           <div className="animate-spin mx-auto my-40 rounded-full h-10 w-10 border-b-2 border-[#5D8CF1]"></div>
         ) : (
-          <div className="flex-1 overflow-y-auto overflow-x-hidden custom-scrollbar">
+          <div className="flex-1 mt-6 overflow-y-auto overflow-x-hidden custom-scrollbar">
             {consultations.length > 0 ? (
               <div className="flex flex-col gap-1.25">
-                {/* Группировка по годам */}
                 {Object.entries(
                   consultations.reduce(
                     (acc, consultation) => {
@@ -490,8 +493,6 @@ export default function Home() {
                     <div className="px-3.75 py-2.25 text-[14px] font-semibold">
                       {year}
                     </div>
-
-                    {/* Группировка по месяцам */}
                     {Object.entries(
                       yearConsultations.reduce(
                         (acc, consultation) => {
@@ -553,7 +554,6 @@ export default function Home() {
         </div>
       )}
 
-      {/* Основной контент */}
       {protocolId && !isLoading && (
         <div className="bg-white rounded-[15px] ml-93.5 w-full max-w-374.75 flex flex-col mr-2 h-[calc(100vh-55px)] custom-scrollbar overflow-hidden">
           <div className="mx-6.25 mt-2 bg-white border-b border-b-[#E9ECEF]">
@@ -703,6 +703,7 @@ export default function Home() {
         onSuccess={() => setShowSaveAsTemplatePopup(false)}
         initialContent={getCurrentProtocolContent()}
         stayInEditor={true}
+        currentStructure={currentProtocolStructure}
       />
     </>
   );

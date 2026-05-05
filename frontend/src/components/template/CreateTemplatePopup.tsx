@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, ChangeEvent, useRef } from 'react';
+import { useState, useEffect, ChangeEvent, useRef, useCallback } from 'react';
 import { mainApi } from '@/api';
 import type {
   ListsGroupsResponse,
@@ -8,11 +8,14 @@ import type {
   TemplatesRequest,
   FieldsType,
   FieldsTypeFull,
+  ProtocolStructuresFields,
+  StructureProtocolsFields,
 } from '@/api';
 import Image from 'next/image';
 import { toast } from 'react-toastify';
 import { CreateGroupPopup } from '../groups/CreateGroupPopup';
 import { CustomDropdown, type DropdownOption } from '../CustomDropdown';
+import { useProtocolStructuresStore } from '@/store/protocolStructuresStore';
 
 export interface TemplateUI extends Omit<TemplatesResponse, 'fields'> {
   name: string;
@@ -33,23 +36,8 @@ interface CreateTemplatePopupProps {
   onSuccess: (template: TemplateUI) => void;
   initialContent?: Record<string, string>;
   stayInEditor?: boolean;
+  currentStructure?: string | null;
 }
-
-const PROTOCOL_SECTIONS = [
-  { key: 'complaints', label: 'Жалобы' },
-  { key: 'disease_anamnesis', label: 'Анамнез заболевания' },
-  { key: 'disease_history', label: 'История заболевания' },
-  { key: 'life_anamnesis', label: 'Анамнез жизни' },
-  { key: 'bad_habits', label: 'Вредные привычки и зависимости' },
-  { key: 'allergy_anamnesis', label: 'Аллергологический анамнез' },
-  { key: 'vital_parameters', label: 'Витальные параметры' },
-  { key: 'objective_data', label: 'Объективные данные' },
-  { key: 'clinical_assessment', label: 'Объективизированная оценка состояния' },
-  { key: 'consultation_conclusion', label: 'Заключение консультации' },
-  { key: 'main_diagnosis', label: 'Диагнозы' },
-  { key: 'recommendations', label: 'Рекомендации' },
-  { key: 'prescriptions', label: 'Назначения' },
-];
 
 export const CreateTemplatePopup: React.FC<CreateTemplatePopupProps> = ({
   isOpen,
@@ -59,22 +47,37 @@ export const CreateTemplatePopup: React.FC<CreateTemplatePopupProps> = ({
   onSuccess,
   initialContent,
   stayInEditor = false,
+  currentStructure,
 }) => {
-  //useLockBodyScroll(isOpen);
   const [step, setStep] = useState<1 | 2>(1);
   const [templateName, setTemplateName] = useState('');
   const [templateType, setTemplateType] = useState<'personal' | 'general'>(
     'personal',
   );
+
+  const {
+    structures,
+    isLoading: structuresLoading,
+    fetchStructureById,
+  } = useProtocolStructuresStore();
+
   const [selectedGroupId, setSelectedGroupId] = useState<string>('');
   const [groups, setGroups] = useState<GroupUI[]>([]);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [showCreateGroupPopup, setShowCreateGroupPopup] = useState(false);
 
+  const [currentProtocolStructure, setCurrentProtocolStructure] = useState<
+    string | null
+  >(currentStructure || null);
+  const [currentStructureFields, setCurrentStructureFields] = useState<
+    StructureProtocolsFields[]
+  >([]);
+  const [loadingStructureFields, setLoadingStructureFields] = useState(false);
+
   const [templateContent, setTemplateContent] = useState<
     Record<string, string>
-  >(initialContent || {});
+  >({});
   const textareaRefs = useRef<Record<string, HTMLTextAreaElement>>({});
 
   const TEMPLATE_TYPE_OPTIONS: DropdownOption<'personal' | 'general'>[] = [
@@ -89,6 +92,90 @@ export const CreateTemplatePopup: React.FC<CreateTemplatePopupProps> = ({
       badgeClass: 'bg-[#CFE5E6] text-[#202020]',
     },
   ];
+
+  // Загрузка групп
+  const loadGroups = useCallback(async () => {
+    setLoading(true);
+    try {
+      const response = await mainApi.templateGroups.getGroups();
+      setGroups((response || []).map((g) => ({ ...g, name: g.group_name })));
+    } catch (error) {
+      console.error('Ошибка загрузки групп:', error);
+      toast.error('Не удалось загрузить группы');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  // Загрузка полей структуры при выборе
+  const loadStructureFields = useCallback(
+    async (structureId: string) => {
+      if (!structureId) {
+        setCurrentStructureFields([]);
+        return;
+      }
+
+      setLoadingStructureFields(true);
+      try {
+        const structure = await fetchStructureById(structureId);
+        if (structure) {
+          // Сортируем поля по порядку отображения
+          const sortedFields = [...structure.fields].sort(
+            (a, b) => a.sort_order - b.sort_order,
+          );
+          setCurrentStructureFields(sortedFields);
+
+          // Инициализируем контент значениями по умолчанию из структуры
+          const defaultContent: Record<string, string> = {};
+          sortedFields.forEach((field) => {
+            defaultContent[field.field_name] =
+              initialContent?.[field.field_name] ?? field.default_value ?? '';
+          });
+          setTemplateContent(defaultContent);
+        }
+      } catch (error) {
+        console.error('Ошибка загрузки полей структуры:', error);
+        toast.error('Не удалось загрузить поля структуры');
+        setCurrentStructureFields([]);
+      } finally {
+        setLoadingStructureFields(false);
+      }
+    },
+    [fetchStructureById, initialContent],
+  );
+
+  // Реакция на изменение выбранной структуры
+  useEffect(() => {
+    if (currentProtocolStructure) {
+      loadStructureFields(currentProtocolStructure);
+    } else {
+      setCurrentStructureFields([]);
+      setTemplateContent({});
+    }
+  }, [currentProtocolStructure, loadStructureFields]);
+
+  // Инициализация при открытии модалки
+  useEffect(() => {
+    if (isOpen) {
+      loadGroups();
+      setStep(1);
+      setTemplateType('personal');
+      setTemplateName('');
+      setSelectedGroupId('');
+      if (groupId) setSelectedGroupId(groupId);
+
+      // Инициализация структуры
+      if (currentStructure) {
+        setCurrentProtocolStructure(currentStructure);
+      } else {
+        setCurrentProtocolStructure(null);
+        setCurrentStructureFields([]);
+        setTemplateContent({});
+      }
+    }
+  }, [isOpen, initialContent, groupId, currentStructure, loadGroups]);
+
+  // Авто-ресайз textarea
   const resizeTextarea = (textarea: HTMLTextAreaElement) => {
     if (!textarea) return;
     textarea.style.height = 'auto';
@@ -97,12 +184,9 @@ export const CreateTemplatePopup: React.FC<CreateTemplatePopupProps> = ({
 
   useEffect(() => {
     Object.values(textareaRefs.current).forEach(resizeTextarea);
-  }, [templateContent]);
-  const transformGroup = (group: ListsGroupsResponse): GroupUI => ({
-    ...group,
-    name: group.group_name,
-  });
+  }, [templateContent, currentStructureFields]);
 
+  // Трансформации
   const transformTemplate = (template: TemplatesResponse): TemplateUI => {
     const content: Record<string, string> = {};
     template.fields?.forEach((field: FieldsTypeFull) => {
@@ -117,56 +201,21 @@ export const CreateTemplatePopup: React.FC<CreateTemplatePopupProps> = ({
     };
   };
 
-  const contentToFields = (content: Record<string, string>): FieldsType[] => {
-    return Object.entries(content).map(([fieldName, fieldValue]) => ({
-      field_name: fieldName,
-      field_type: 'text',
-      field_value: fieldValue,
-    }));
-  };
+  const contentToFields = useCallback(
+    (content: Record<string, string>): FieldsType[] => {
+      return Object.entries(content).map(([fieldName, fieldValue]) => ({
+        field_name: fieldName,
+        field_type: 'text',
+        field_value: fieldValue,
+      }));
+    },
+    [],
+  );
 
-  useEffect(() => {
-    if (isOpen) {
-      loadGroups();
-      setStep(1);
-      setTemplateType('personal');
-      setTemplateName('');
-      setSelectedGroupId('');
-      if (groupId) setSelectedGroupId(groupId);
-      if (initialContent) {
-        setTemplateContent(initialContent);
-      } else {
-        const emptyContent: Record<string, string> = {};
-        PROTOCOL_SECTIONS.forEach((section) => {
-          emptyContent[section.key] = '';
-        });
-        setTemplateContent(emptyContent);
-      }
-    }
-  }, [isOpen, initialContent, groupId]);
-
-  const loadGroups = async () => {
-    setLoading(true);
-    try {
-      const response = await mainApi.templateGroups.getGroups();
-      setGroups((response || []).map(transformGroup));
-    } catch (error) {
-      console.error('Ошибка загрузки групп:', error);
-      toast.error('Не удалось загрузить группы', {
-        position: 'top-right',
-        autoClose: 3000,
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
+  // Обработчики
   const handleNext = () => {
     if (!templateName.trim()) {
-      toast.error('Введите название шаблона', {
-        position: 'top-right',
-        autoClose: 3000,
-      });
+      toast.error('Введите название шаблона');
       return;
     }
     if (isFromPage) {
@@ -178,10 +227,15 @@ export const CreateTemplatePopup: React.FC<CreateTemplatePopupProps> = ({
 
   const handleSave = async () => {
     if (!templateName.trim()) {
-      toast.error('Введите название шаблона', {
-        position: 'top-right',
-        autoClose: 3000,
-      });
+      toast.error('Введите название шаблона');
+      return;
+    }
+    if (!currentProtocolStructure) {
+      toast.error('Выберите структуру протокола');
+      return;
+    }
+    if (currentStructureFields.length === 0) {
+      toast.error('Поля структуры не загружены');
       return;
     }
 
@@ -189,27 +243,22 @@ export const CreateTemplatePopup: React.FC<CreateTemplatePopupProps> = ({
     try {
       const createRequest: TemplatesRequest = {
         protocol_name: templateName.trim(),
-        group_id: selectedGroupId || '',
+        group_id: selectedGroupId || null,
         privacy: templateType,
         fields: contentToFields(templateContent),
+        protocol_structure_id: currentProtocolStructure,
       };
 
       const newTemplateResponse = await mainApi.templates.create(createRequest);
       const newTemplate = transformTemplate(newTemplateResponse);
 
-      toast.success(stayInEditor ? 'Шаблон сохранён' : 'Шаблон создан', {
-        position: 'top-right',
-        autoClose: 3000,
-      });
+      toast.success(stayInEditor ? 'Шаблон сохранён' : 'Шаблон создан');
 
       onSuccess(newTemplate);
       handleClose();
     } catch (error) {
       console.error('Ошибка создания шаблона:', error);
-      toast.error('Не удалось создать шаблон', {
-        position: 'top-right',
-        autoClose: 4000,
-      });
+      toast.error('Не удалось создать шаблон');
     } finally {
       setSaving(false);
     }
@@ -220,6 +269,9 @@ export const CreateTemplatePopup: React.FC<CreateTemplatePopupProps> = ({
     setTemplateName('');
     setTemplateType('personal');
     setSelectedGroupId('');
+    setCurrentProtocolStructure(null);
+    setCurrentStructureFields([]);
+    setTemplateContent({});
     onClose();
   };
 
@@ -229,14 +281,19 @@ export const CreateTemplatePopup: React.FC<CreateTemplatePopupProps> = ({
     setShowCreateGroupPopup(false);
   };
 
-  const handleContentChange = (sectionKey: string, value: string) => {
+  const handleContentChange = (fieldName: string, value: string) => {
     setTemplateContent((prev) => ({
       ...prev,
-      [sectionKey]: value,
+      [fieldName]: value,
     }));
   };
 
   const sortedGroups = [...groups].sort((a, b) => a.name.localeCompare(b.name));
+  const structureOptions: DropdownOption<string>[] = structures.map((s) => ({
+    value: s.id,
+    label: s.structure_name,
+    meta: { description: s.description },
+  }));
 
   if (!isOpen) return null;
 
@@ -261,9 +318,10 @@ export const CreateTemplatePopup: React.FC<CreateTemplatePopupProps> = ({
           </h2>
 
           {step === 1 ? (
+            // === ШАГ 1: Основные настройки ===
             <div>
               <div className="mb-6 px-5 flex flex-row gap-4">
-                <div className="w-[111px]">
+                <div className="w-27.75">
                   <label className="block text-sm text-gray-600 mb-2">
                     Тип шаблона
                   </label>
@@ -280,17 +338,15 @@ export const CreateTemplatePopup: React.FC<CreateTemplatePopupProps> = ({
                       </span>
                     )}
                     renderOption={(option) => (
-                      <>
-                        <span
-                          className={`text-sm px-2 py-0.75 rounded-full ${option.badgeClass}`}
-                        >
-                          {option.label}
-                        </span>
-                      </>
+                      <span
+                        className={`text-sm px-2 py-0.75 rounded-full ${option.badgeClass}`}
+                      >
+                        {option.label}
+                      </span>
                     )}
                   />
                 </div>
-                <div className="w-[358px]">
+                <div className="w-89.5">
                   <label className="block text-sm text-gray-600 mb-2">
                     Название шаблона
                   </label>
@@ -310,9 +366,7 @@ export const CreateTemplatePopup: React.FC<CreateTemplatePopupProps> = ({
                   Выберите группу для этого шаблона
                 </label>
                 <div className="space-y-2 max-h-60 overflow-y-auto">
-                  <label
-                    className={`flex items-center justify-between p-3 rounded-lg cursor-pointer border-0 hover:bg-gray-50 transition-colors`}
-                  >
+                  <label className="flex items-center justify-between p-3 rounded-lg cursor-pointer border-0 hover:bg-gray-50 transition-colors">
                     <span className="text-sm text-[#202020]">
                       Шаблоны без группы
                     </span>
@@ -344,9 +398,7 @@ export const CreateTemplatePopup: React.FC<CreateTemplatePopupProps> = ({
                   {sortedGroups.map((group) => (
                     <label
                       key={group.id}
-                      className={
-                        'flex items-center justify-between p-3 rounded-lg cursor-pointer border-0 hover:bg-gray-50 transition-color'
-                      }
+                      className="flex items-center justify-between p-3 rounded-lg cursor-pointer border-0 hover:bg-gray-50 transition-colors"
                     >
                       <span className="text-sm text-[#202020]">
                         {group.name}
@@ -377,7 +429,7 @@ export const CreateTemplatePopup: React.FC<CreateTemplatePopupProps> = ({
                     </label>
                   ))}
                 </div>
-                <div className="flex ">
+                <div className="flex">
                   <button
                     onClick={() => setShowCreateGroupPopup(true)}
                     className="mt-3 mx-auto text-[16px] text-[#5D8CF1] cursor-pointer text-center hover:text-[#769CEF] transition-colors"
@@ -405,57 +457,115 @@ export const CreateTemplatePopup: React.FC<CreateTemplatePopupProps> = ({
               </div>
             </div>
           ) : (
-            <div>
-              <div className="mb-6 pb-4">
+            // === ШАГ 2: Поля структуры ===
+            <div className="px-5 pb-5">
+              <div className="">
                 <label className="block text-sm text-gray-600 mb-2">
                   Структура протокола
                 </label>
-                <select className="w-full px-4 py-2.5 bg-gray-50 border-0 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#5D8CF1]">
-                  <option>Приём врача терапевта</option>
-                  <option>Приём врача пульмонолога</option>
-                  <option>Приём врача кардиолога</option>
-                </select>
+
+                <CustomDropdown<string>
+                  options={structureOptions}
+                  value={currentProtocolStructure || ''}
+                  onChange={(value) => {
+                    setCurrentProtocolStructure(value || null);
+                  }}
+                  placeholder="Выберите структуру"
+                  disabled={structuresLoading || structureOptions.length === 0}
+                  showCheckIcon={true}
+                  renderOption={(option, isSelected) => (
+                    <>
+                      <span className="text-sm text-[#202020] flex-1">
+                        {option.label}
+                      </span>
+                      {option.meta?.description && (
+                        <span className="text-xs text-gray-500 ml-2 line-clamp-1">
+                          {option.meta.description as string}
+                        </span>
+                      )}
+                      {isSelected && (
+                        <Image
+                          src="/check.svg"
+                          alt="selected"
+                          width={16}
+                          height={16}
+                          className="ml-2 flex-shrink-0"
+                        />
+                      )}
+                    </>
+                  )}
+                />
+
+                {!structuresLoading && structureOptions.length === 0 && (
+                  <p className="text-xs text-gray-500 mt-1">
+                    Нет доступных структур протоколов
+                  </p>
+                )}
               </div>
 
-              <div className="space-y-6 mb-6">
-                {PROTOCOL_SECTIONS.map((section) => (
-                  <div key={section.key} className="flex flex-col gap-2">
-                    <label className="text-lg font-medium text-[#202020]">
-                      {section.label}
-                    </label>
-                    <textarea
-                      ref={(el) => {
-                        if (el) textareaRefs.current[section.key] = el;
-                        else delete textareaRefs.current[section.key];
-                      }}
-                      value={templateContent[section.key] || ''}
-                      onChange={(e: ChangeEvent<HTMLTextAreaElement>) =>
-                        handleContentChange(section.key, e.target.value)
-                      }
-                      placeholder="Введите текст..."
-                      rows={3}
-                      className="w-full px-4 py-3 bg-gray-50 border-0 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#5D8CF1] resize-none text-sm leading-relaxed"
-                    />
+              {/* === КОНТЕНТ ПОЛЕЙ === */}
+              <div
+                className={`${
+                  currentProtocolStructure && 'space-y-6 mt-6 mb-6 pt-4'
+                }`}
+              >
+                {currentProtocolStructure &&
+                currentStructureFields.length === 0 ? (
+                  <div className="text-center py-12 px-4 bg-yellow-50 rounded-xl border border-yellow-200">
+                    <p className="text-sm text-yellow-800">
+                      В выбранной структуре нет полей для заполнения
+                    </p>
                   </div>
-                ))}
+                ) : (
+                  currentStructureFields.map((field) => (
+                    <div key={field.id} className="flex flex-col gap-2">
+                      <label className="text-lg font-medium text-[#202020] flex items-center gap-2">
+                        {field.field_label}
+                        {field.is_required && (
+                          <span className="text-red-500 text-sm">*</span>
+                        )}
+                      </label>
+                      <textarea
+                        ref={(el) => {
+                          if (el) textareaRefs.current[field.field_name] = el;
+                          else delete textareaRefs.current[field.field_name];
+                        }}
+                        value={templateContent[field.field_name] || ''}
+                        onChange={(e: ChangeEvent<HTMLTextAreaElement>) =>
+                          handleContentChange(field.field_name, e.target.value)
+                        }
+                        placeholder={'Введите текст...'}
+                        rows={3}
+                        className="w-full px-4 py-3 bg-gray-50 border-0 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#5D8CF1] resize-none text-sm leading-relaxed"
+                      />
+                    </div>
+                  ))
+                )}
               </div>
 
-              <div className="flex flex-col gap-3 sticky -bottom-10 bg-white">
-                <button
-                  onClick={handleSave}
-                  disabled={saving}
-                  className="h-12 bg-[#5D8CF1] text-white rounded-[15px] hover:bg-[#769CEF] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {saving ? 'Сохранение...' : 'Сохранить'}
-                </button>
-                <button
-                  onClick={() => setStep(1)}
-                  disabled={saving}
-                  className="h-12 rounded-[15px] hover:bg-[#F0F5FF] text-[#202020] cursor-pointer bg-[#DCE7FF] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  Назад
-                </button>
-              </div>
+              {/* Кнопки сохранения */}
+              {currentProtocolStructure && (
+                <div className="flex flex-col gap-3 sticky -bottom-10 bg-white pt-4">
+                  <button
+                    onClick={handleSave}
+                    disabled={
+                      saving ||
+                      !currentProtocolStructure ||
+                      currentStructureFields.length === 0
+                    }
+                    className="h-12 bg-[#5D8CF1] text-white rounded-[15px] hover:bg-[#769CEF] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {saving ? 'Сохранение...' : 'Сохранить'}
+                  </button>
+                  <button
+                    onClick={() => setStep(1)}
+                    disabled={saving}
+                    className="h-12 rounded-[15px] hover:bg-[#F0F5FF] text-[#202020] cursor-pointer bg-[#DCE7FF] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Назад
+                  </button>
+                </div>
+              )}
             </div>
           )}
         </div>

@@ -36,7 +36,7 @@ export const DeleteGroup: React.FC<DeleteGroupProps> = ({
 
   return (
     <div
-      className="modal-overlay fixed inset-0 bg-black/50 flex items-center justify-center z-[1002]"
+      className="modal-overlay fixed inset-0 bg-black/50 flex items-center justify-center z-1002"
       onClick={onClose}
     >
       <div

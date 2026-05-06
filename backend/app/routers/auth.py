@@ -12,6 +12,7 @@ from ..deps import get_current_user
 from ..email import send_registration_code
 from ..models.registration_pending import RegistrationPending
 from ..models.service_user import ServiceUser
+from ..models.user_settings import UserSettings
 from ..schemas.auth import (
     LoginRequest,
     MessageResponse,
@@ -194,6 +195,8 @@ async def register_confirm(
         deleted_at=None,
     )
     db.add(user)
+    await db.flush()
+    db.add(UserSettings(user_id=user.id))
     await db.delete(pending)
     await db.commit()
     await db.refresh(user)

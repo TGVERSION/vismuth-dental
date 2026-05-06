@@ -568,8 +568,32 @@ CREATE INDEX IF NOT EXISTS idx_registration_pending_expires_at
 
 
 
+-- =========================================
+-- Настройки помощников пользователя
+-- =========================================
+CREATE TABLE IF NOT EXISTS user_settings (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL UNIQUE REFERENCES service_user(id) ON DELETE CASCADE,
 
+    mkb_code BOOLEAN NOT NULL DEFAULT true,
+    autocomplete VARCHAR(64) NOT NULL DEFAULT 'dict_autocomplete',
+    fullness_complaints BOOLEAN NOT NULL DEFAULT true,
 
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at TIMESTAMPTZ
+);
+
+COMMENT ON TABLE user_settings IS
+    'Настройки ИИ-помощников (МКБ-10, автодополнение, проверка полноты) для конкретного пользователя';
+COMMENT ON COLUMN user_settings.mkb_code IS
+    'Включён ли подбор кода диагноза МКБ-10';
+COMMENT ON COLUMN user_settings.autocomplete IS
+    'Тип автодополнения текста: ml_autocomplete | dict_autocomplete | off (выключено)';
+COMMENT ON COLUMN user_settings.fullness_complaints IS
+    'Включена ли проверка полноты полей (жалобы)';
+
+CREATE INDEX IF NOT EXISTS idx_user_settings_user_id
+    ON user_settings (user_id);
 
 
 -- =========================================

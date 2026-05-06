@@ -8,3 +8,4 @@ from .protocol_structure import ProtocolFieldMain, ProtocolStructure, ProtocolSt
 from .protocol import Protocol, ProtocolField  # noqa: F401
 from .autocomplete_stats import AutocompleteStats  # noqa: F401
 from .fullness_complaints_stats import FullnessComplaintsStats  # noqa: F401
+from .user_settings import UserSettings  # noqa: F401

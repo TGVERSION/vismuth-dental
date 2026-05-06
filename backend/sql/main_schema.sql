@@ -621,11 +621,12 @@ CREATE TABLE IF NOT EXISTS protocol_template_fields (
 CREATE TABLE IF NOT EXISTS autocomplete_stats (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(), -- уникальный идентификатор события показа подсказок
     user_id UUID NOT NULL REFERENCES service_user(id), -- пользователь, вызвавший автодополнение
-    field_name VARCHAR(255) NOT NULL, -- поле ввода, в котором вызваны подсказки
+    field_name VARCHAR(255), -- поле ввода, в котором вызваны подсказки (может быть NULL для dict_autocomplete)
     prefix TEXT NOT NULL, -- введённый пользователем префикс до запроса
     suggestions_count INTEGER, -- количество предложенных вариантов
     selected_text TEXT, -- выбранный вариант; NULL, если ничего не выбрано
     event_type VARCHAR(64) NOT NULL, -- тип события (form_click/autocomplete_shown/suggestion_selected)
+    type_autocomplete VARCHAR(64), -- источник автодополнения (ml_autocomplete/dict_autocomplete)
     shown_at TIMESTAMPTZ(3) NOT NULL DEFAULT now() -- момент показа подсказок пользователю (до миллисекунд)
 );
 
@@ -640,6 +641,9 @@ CREATE INDEX IF NOT EXISTS idx_autocomplete_stats_field_name
 
 CREATE INDEX IF NOT EXISTS idx_autocomplete_stats_event_type
     ON autocomplete_stats (event_type);
+
+CREATE INDEX IF NOT EXISTS idx_autocomplete_stats_type_autocomplete
+    ON autocomplete_stats (type_autocomplete);
 
 
 -- =========================================

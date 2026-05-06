@@ -10,6 +10,11 @@ class MkbEventType(StrEnum):
     suggestion_selected = "suggestion_selected"
 
 
+class AutocompleteType(StrEnum):
+    ml_autocomplete = "ml_autocomplete"
+    dict_autocomplete = "dict_autocomplete"
+
+
 class MkbCodeProxyRequest(BaseModel):
     field_name: str = Field(..., min_length=1, max_length=255)
     description: str = Field(..., min_length=1)
@@ -23,6 +28,7 @@ class MkbCodeSelectRequest(BaseModel):
     n_candidates: int = Field(..., ge=-10, le=1000)
     selected_text: str | None = None
     event_type: MkbEventType
+    type_autocomplete: AutocompleteType = AutocompleteType.ml_autocomplete
 
 
 class MkbCodeProxyResponse(BaseModel):
@@ -33,9 +39,10 @@ class MkbCodeProxyResponse(BaseModel):
 
 
 class MlAutocompleteProxyRequest(BaseModel):
-    field_name: str = Field(..., min_length=1, max_length=255)
+    field_name: str | None = Field(None, min_length=1, max_length=255)
     prefix: str = Field(..., min_length=1)
     suggestions_count: int = Field(5, ge=1, le=20)
+    type_autocomplete: AutocompleteType = AutocompleteType.ml_autocomplete
 
 
 class MlAutocompleteProxyResponse(BaseModel):

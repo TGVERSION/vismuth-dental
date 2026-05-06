@@ -18,8 +18,8 @@ async def get_complaints_fullness(example_prompt: str) -> dict:
 
 Подсчет критериев (если есть жалобы):
 5 критериев - status full, color green
-2-4 критерия - status incomplete, color yellow
-0-1 критерий - status incomplete, color red
+3-4 критерия - status incomplete, color yellow
+0-2 критерия - status incomplete, color red
 
 Для status incomplete:
 Сохрани введенный врачом текст. Добавь маркеры [...] для недостающих данных. 

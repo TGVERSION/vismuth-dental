@@ -21,11 +21,12 @@ class AutocompleteStats(Base):
         ForeignKey("service_user.id"),
         nullable=False,
     )
-    field_name: Mapped[str] = mapped_column(String(255), nullable=False)
+    field_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
     prefix: Mapped[str] = mapped_column(Text, nullable=False)
     suggestions_count: Mapped[int | None] = mapped_column(Integer, nullable=True)
     selected_text: Mapped[str | None] = mapped_column(Text, nullable=True)
     event_type: Mapped[str] = mapped_column(String(64), nullable=False)
+    type_autocomplete: Mapped[str] = mapped_column(String(64), nullable=False)
     shown_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=False,

@@ -5,7 +5,7 @@ from uuid import UUID
 from redis.asyncio import Redis
 
 from ..config import settings
-from ..schemas.ml_mkb_code import MkbEventType
+from ..schemas.ml_mkb_code import AutocompleteType, MkbEventType
 
 
 def get_redis_client() -> Redis:
@@ -20,6 +20,7 @@ def build_event_payload(
     n_candidates: int,
     selected_text: str | None,
     event_type: MkbEventType,
+    type_autocomplete: AutocompleteType = AutocompleteType.ml_autocomplete,
     shown_at: datetime | None = None,
 ) -> dict[str, str]:
     event_time = shown_at or datetime.now(timezone.utc)
@@ -30,6 +31,7 @@ def build_event_payload(
         "suggestions_count": n_candidates,
         "selected_text": selected_text,
         "event_type": event_type.value,
+        "type_autocomplete": type_autocomplete.value,
         "shown_at": event_time.isoformat(),
     }
     # Store body as JSON to keep XADD payload stable.

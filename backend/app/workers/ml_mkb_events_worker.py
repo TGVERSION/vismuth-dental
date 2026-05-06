@@ -22,13 +22,15 @@ def _parse_shown_at(value: str) -> datetime:
 
 
 async def _save_event(db: AsyncSession, event: dict) -> None:
+    type_autocomplete = event.get("type_autocomplete", "ml_autocomplete")
     row = AutocompleteStats(
         user_id=UUID(event["user_id"]),
-        field_name=event["field_name"],
+        field_name=event.get("field_name"),
         prefix=event["prefix"],
         suggestions_count=int(event["suggestions_count"]),
         selected_text=event.get("selected_text"),
         event_type=event["event_type"],
+        type_autocomplete=type_autocomplete,
         shown_at=_parse_shown_at(event["shown_at"]),
     )
     db.add(row)

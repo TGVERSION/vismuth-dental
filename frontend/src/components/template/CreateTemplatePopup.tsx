@@ -332,13 +332,16 @@ export const CreateTemplatePopup: React.FC<CreateTemplatePopupProps> = ({
                     value={templateType}
                     onChange={setTemplateType}
                     placeholder="Тип шаблона"
-                    renderTrigger={(option) => (
-                      <span
-                        className={`text-sm px-2 py-0.75 rounded-full ${option.badgeClass}`}
-                      >
-                        {option.label}
-                      </span>
-                    )}
+                    renderTrigger={(option) => {
+                      const opt = Array.isArray(option) ? option[0] : option;
+                      return (
+                        <span
+                          className={`text-sm px-2 py-0.75 rounded-full ${opt.badgeClass}`}
+                        >
+                          {opt.label}
+                        </span>
+                      );
+                    }}
                     renderOption={(option) => (
                       <span
                         className={`text-sm px-2 py-0.75 rounded-full ${option.badgeClass}`}
@@ -473,26 +476,11 @@ export const CreateTemplatePopup: React.FC<CreateTemplatePopupProps> = ({
                   }}
                   placeholder="Выберите структуру"
                   disabled={structuresLoading || structureOptions.length === 0}
-                  showCheckIcon={true}
                   renderOption={(option, isSelected) => (
                     <>
                       <span className="text-sm text-[#202020] flex-1">
                         {option.label}
                       </span>
-                      {option.meta?.description && (
-                        <span className="text-xs text-gray-500 ml-2 line-clamp-1">
-                          {option.meta.description as string}
-                        </span>
-                      )}
-                      {isSelected && (
-                        <Image
-                          src="/check.svg"
-                          alt="selected"
-                          width={16}
-                          height={16}
-                          className="ml-2 flex-shrink-0"
-                        />
-                      )}
                     </>
                   )}
                 />

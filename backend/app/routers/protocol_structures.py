@@ -1,5 +1,5 @@
 from datetime import datetime, timezone
-from typing import List
+from typing import Any, List
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -23,6 +23,12 @@ from ..schemas.protocol_structure import (
 )
 
 router = APIRouter(prefix="/protocol-structures", tags=["protocol-structures"])
+
+
+def _normalize_default_value_jsonb(value: Any) -> Any:
+    if isinstance(value, list) and all(isinstance(item, str) for item in value):
+        return sorted(value, key=str.lower)
+    return value
 
 
 def _normalize_required(value: str, *, field_name: str) -> str:
@@ -111,6 +117,9 @@ def _fields_create_payload(
                 "description": row.description,
                 "field_type": field_type,
                 "default_value": row.default_value,
+                "default_value_jsonb": _normalize_default_value_jsonb(
+                    row.default_value_jsonb
+                ),
                 "dictionary": row.dictionary,
                 "protocol_fields_main_id": row.protocol_fields_main_id,
                 "is_required": row.is_required,
@@ -327,6 +336,10 @@ async def patch_protocol_structure(
                 )
             if "default_value" in item_data:
                 row.default_value = item_data["default_value"]
+            if "default_value_jsonb" in item_data:
+                row.default_value_jsonb = _normalize_default_value_jsonb(
+                    item_data["default_value_jsonb"]
+                )
             if "dictionary" in item_data:
                 row.dictionary = item_data["dictionary"]
             if "protocol_fields_main_id" in item_data:

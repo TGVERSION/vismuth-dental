@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing import Any
 from uuid import UUID
 
 from pydantic import BaseModel, Field
@@ -10,6 +11,7 @@ class ProtocolStructureFieldCreate(BaseModel):
     description: str | None = None
     field_type: str = Field(..., min_length=1, max_length=255)
     default_value: str | None = None
+    default_value_jsonb: Any | None = None
     dictionary: str | None = Field(default=None, max_length=255)
     protocol_fields_main_id: UUID | None = None
     is_required: bool = False
@@ -22,6 +24,7 @@ class ProtocolStructureFieldPut(BaseModel):
     description: str | None = None
     field_type: str = Field(..., min_length=1, max_length=255)
     default_value: str | None = None
+    default_value_jsonb: Any | None = None
     dictionary: str | None = Field(default=None, max_length=255)
     protocol_fields_main_id: UUID | None = None
     is_required: bool = False
@@ -35,6 +38,7 @@ class ProtocolStructureFieldPatch(BaseModel):
     description: str | None = None
     field_type: str | None = Field(default=None, min_length=1, max_length=255)
     default_value: str | None = None
+    default_value_jsonb: Any | None = None
     dictionary: str | None = Field(default=None, max_length=255)
     protocol_fields_main_id: UUID | None = None
     is_required: bool | None = None
@@ -78,6 +82,7 @@ class ProtocolStructureFieldRead(BaseModel):
     description: str | None
     field_type: str
     default_value: str | None
+    default_value_jsonb: Any | None
     dictionary: str | None
     protocol_fields_main_id: UUID | None
     is_required: bool

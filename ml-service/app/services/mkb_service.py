@@ -1,5 +1,5 @@
 from langchain_core.messages import SystemMessage, HumanMessage
-from .llm_setup import llm_mkb, emb_model, collection
+from .llm_setup import llm_mkb, mkb_emb_model, mkb_collection
 
 
 def extract_diagnosis(description: str) -> str:
@@ -69,10 +69,10 @@ def search_mkb(query: str, n_results: int = 3, use_prefix: bool = True) -> list:
     search_query = f"search_query: {query}" if use_prefix else query
     
     # Векторизуем
-    query_emb = emb_model.encode([search_query], normalize_embeddings=True)
+    query_emb = mkb_emb_model.encode([search_query], normalize_embeddings=True)
     
     # Ищем
-    results = collection.query(
+    results = mkb_collection.query(
         query_embeddings=query_emb.tolist(),
         n_results=n_results,
         include=["documents", "distances", "metadatas"]

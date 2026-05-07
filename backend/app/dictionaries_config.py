@@ -1,0 +1,31 @@
+REF_TABLES: dict[str, str] = {
+    "ref_patient_condition": "ref_patient_condition",
+    "ref_pathology": "ref_pathology",
+    "ref_bad_habits": "ref_bad_habits",
+    "ref_allergy_reaction_type": "ref_allergy_reaction_type",
+    "ref_allergy_manifestation": "ref_allergy_manifestation",
+    "ref_vital_parameter": "ref_vital_parameter",
+    "ref_unit": "ref_unit",
+    "ref_scale_type": "ref_scale_type",
+    "ref_scale_parameter": "ref_scale_parameter",
+    "ref_diagnosis_nosology_type": "ref_diagnosis_nosology_type",
+    "ref_mkb10": "ref_mkb10",
+    "ref_diagnosis_justification": "ref_diagnosis_justification",
+    "ref_disease_character": "ref_disease_character",
+}
+
+SEARCH_FIELDS: dict[str, list[str]] = {
+    "ref_patient_condition": ["name", "syn"],
+    "ref_pathology": ["fullname"],
+    "ref_bad_habits": ["name", "synonym"],
+    "ref_allergy_reaction_type": ["name"],
+    "ref_allergy_manifestation": ["name", "name_syn"],
+    "ref_vital_parameter": ["name", "synonym", "measurement", "method"],
+    "ref_unit": ["fullname", "shortname", "printname"],
+    "ref_scale_type": ["name", "name_eng", "abbreviation"],
+    "ref_scale_parameter": ["name", "vital_parameter"],
+    "ref_diagnosis_nosology_type": ["full_name", "short_name", "name_088_488_551"],
+    "ref_mkb10": ["mkb_code", "mkb_name"],
+    "ref_diagnosis_justification": ["name"],
+    "ref_disease_character": ["name"],
+}

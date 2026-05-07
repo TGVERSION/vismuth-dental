@@ -2,10 +2,12 @@ import { useAuthStore } from '@/store/authStore';
 import { mainApi } from '@/api';
 import { useRouter } from 'next/navigation';
 import { toast } from 'react-toastify';
+import { useHelpersStore } from '@/store/helpersStore';
 
 export const useAuth = () => {
   const router = useRouter();
   const { user, accessToken, isAuthenticated, login, logout } = useAuthStore();
+  const { fetchUserSettings } = useHelpersStore();
 
   const handleLogin = async (credentials: {
     login: string;
@@ -21,6 +23,9 @@ export const useAuth = () => {
         id: response.user.id,
       };
       login(saveUser, response.access_token);
+
+      const userId = response.user.id;
+      if (userId) fetchUserSettings(userId).catch(() => {});
       router.push('/');
 
       return { success: true };

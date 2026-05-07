@@ -70,7 +70,6 @@ export const RenameTemplate: React.FC<RenameTemplateProps> = ({
           </button>
         </div>
 
-        {/* Заголовок */}
         <h2 className="text-[34px] font-medium text-left mb-8 px-5">
           Переименуйте шаблон
         </h2>
@@ -83,12 +82,11 @@ export const RenameTemplate: React.FC<RenameTemplateProps> = ({
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
             placeholder="Введите название"
-            className="w-full px-4 py-2.5 bg-gray-50 border-0 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#5D8CF1]"
+            className="w-full h-10 px-4 py-2.5 bg-gray-50 border-0 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#5D8CF1]"
             autoFocus
           />
         </div>
 
-        {/* Кнопки действий */}
         <div className="flex flex-col gap-3 px-5 pb-5 mt-7.5">
           <button
             onClick={handleRename}

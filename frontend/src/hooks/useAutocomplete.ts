@@ -6,6 +6,7 @@ interface UseAutocompleteOptions {
   debounceMs?: number;
   maxSuggestions?: number;
   enabled?: boolean;
+  autocompleteType?: 'ml_autocomplete' | 'dict_autocomplete' | 'off';
 }
 
 export const useAutocomplete = (
@@ -15,6 +16,7 @@ export const useAutocomplete = (
     debounceMs = 300,
     maxSuggestions = 8,
     enabled = true,
+    autocompleteType = 'dict_autocomplete',
   }: UseAutocompleteOptions,
 ) => {
   const [isOpen, setIsOpen] = useState(false);
@@ -51,7 +53,9 @@ export const useAutocomplete = (
         const payload: CompletePayload = {
           field_name: sectionKey,
           prefix: query,
-          num_sequences: maxSuggestions,
+          suggestions_count: maxSuggestions,
+          type_autocomplete:
+            autocompleteType !== 'off' ? autocompleteType : undefined,
         };
 
         const response = await mainApi.ml_handlers.mlAutocomplete(payload);

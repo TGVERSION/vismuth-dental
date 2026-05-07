@@ -78,6 +78,8 @@ services:
       - "./ml-service/finetuned_autocomplete_kaggle:/app/autocomplete_model"
       - "./ml-service/rosberta_chromadb:/app/rosberta_chromadb"
       - "./ml-service/ru-en-RoSBERTa:/app/ru-en-RoSBERTa"
+      - "./ml-service/chroma_qwen_md_3/:/app/chroma_qwen_md_3"
+      - "./ml-service/Qwen3-Embedding-0.6B/:/app/Qwen3-Embedding-0.6B"
     networks:
       - vismuth-net
 

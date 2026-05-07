@@ -68,3 +68,5 @@ data/local/
 ml-service/finetuned_autocomplete_kaggle/model.safetensors
 ml-service/ru-en-RoSBERTa/
 ml-service/rosberta_chromadb/
+ml-service/chroma_qwen_md_3/
+ml-service/Qwen3-Embedding-0.6B/

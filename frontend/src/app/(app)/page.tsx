@@ -17,6 +17,8 @@ import { TemplatePopup } from '@/components/template/TemplatePopup';
 import { CreateTemplatePopup } from '@/components/template/CreateTemplatePopup';
 import { useProtocolStructuresStore } from '@/store/protocolStructuresStore';
 import { ProtocolsPost, StructureProtocolsFields } from '@/api';
+import { useAuthStore } from '@/store/authStore';
+import { useHelpersStore } from '@/store/helpersStore';
 
 interface SectionData {
   id: number;
@@ -42,7 +44,8 @@ export default function Home() {
     fetchStructures,
     fetchStructureById,
   } = useProtocolStructuresStore();
-
+  const { user } = useAuthStore();
+  const { fetchUserSettings } = useHelpersStore();
   const [templateTitle, setTemplateTitle] = useState<string>(
     'Протокол консультации терапевта №1',
   );
@@ -51,7 +54,13 @@ export default function Home() {
   useEffect(() => {
     fetchStructures();
   }, [fetchStructures]);
-
+  useEffect(() => {
+    const userId = user?.id;
+    if (userId) {
+      fetchUserSettings(userId).catch(() => {
+      });
+    }
+  }, [user?.id, fetchUserSettings]);
   const [sections, setSections] = useState<SectionData[]>([]);
   const [currentProtocolStructure, setCurrentProtocolStructure] = useState<
     string | null

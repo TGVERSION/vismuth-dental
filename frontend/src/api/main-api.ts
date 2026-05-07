@@ -33,6 +33,10 @@ import type {
   ProtocolsFields,
   ProtocolsPost,
   ProtocolsPut,
+  UserSettings,
+  UserSettingsPost,
+  UserSettingsPut,
+  UserSettingsPatch,
 } from './index';
 
 export const apiClient = new ApiClient({
@@ -180,5 +184,18 @@ export const mainApi = {
       apiClient.patch<ProtocolsFields>(`/protocols/${id}`, data),
 
     delete: (id: string) => apiClient.delete<void>(`/protocols/${id}`),
+  },
+  userSettings: {
+    getUserSettings: (id: string) =>
+      apiClient.get<UserSettings>(`/user-settings/${id}`),
+
+    postUserSettings: (id: string, data: UserSettingsPost) =>
+      apiClient.post<UserSettings>(`/user-settings/${id}`, data),
+
+    updateUserSettings: (id: string, data: UserSettingsPut) =>
+      apiClient.put<UserSettings>(`/user-settings/${id}`, data),
+
+    patchUserSettings: (id: string, data: UserSettingsPatch) =>
+      apiClient.patch<UserSettings>(`/user-settings/${id}`, data),
   },
 };

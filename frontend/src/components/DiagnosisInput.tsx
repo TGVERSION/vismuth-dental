@@ -4,6 +4,7 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { useMkb10Diagnoses } from '@/hooks/useMkb10Diagnoses';
 import { CandidatesItem, mainApi, Mkb10Item } from '@/api';
+import { useHelpersStore } from '@/store/helpersStore';
 
 interface DiagnosisInputProps {
   id: number;
@@ -20,6 +21,8 @@ export const DiagnosisInput: React.FC<DiagnosisInputProps> = ({
   onValueChange,
   isActive,
 }) => {
+  const { mkbEnabled, autocompleteProvider } = useHelpersStore();
+  const isMkbHelperEnabled = mkbEnabled;
   const [isOpen, setIsOpen] = useState(false);
   const [searchValue, setSearchValue] = useState('');
   const [aiCandidates, setAiCandidates] = useState<CandidatesItem[]>([]);
@@ -32,10 +35,8 @@ export const DiagnosisInput: React.FC<DiagnosisInputProps> = ({
   }, [value]);
   const isValidDiagnosisFormat = (text: string): boolean => {
     if (!text) return false;
-    // Паттерн: код (буквы/цифры) + " – " + название
     return /^[A-Z0-9]+\.?\d*\s*–\s+.+/.test(text.trim());
   };
-  // Для портала
   const [dropdownPos, setDropdownPos] = useState<{
     top: number;
     left: number;
@@ -56,10 +57,9 @@ export const DiagnosisInput: React.FC<DiagnosisInputProps> = ({
 
   const { diagnoses, loading, hasMore, sentinelRef } = useMkb10Diagnoses({
     searchValue,
-    isOpen,
+    isOpen: isOpen,
   });
 
-  // Закрытие при скролле или ресайзе
   useEffect(() => {
     if (!isOpen) return;
     const handleScroll = () => setIsOpen(false);
@@ -71,7 +71,6 @@ export const DiagnosisInput: React.FC<DiagnosisInputProps> = ({
     };
   }, [isOpen]);
 
-  // Вычисление позиции при открытии
   useEffect(() => {
     if (isOpen && inputRef.current) {
       const rect = inputRef.current.getBoundingClientRect();
@@ -84,7 +83,6 @@ export const DiagnosisInput: React.FC<DiagnosisInputProps> = ({
     }
   }, [isOpen]);
 
-  // Клик вне – учитываем и форму, и портал
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       const target = event.target as Node;
@@ -113,13 +111,14 @@ export const DiagnosisInput: React.FC<DiagnosisInputProps> = ({
     }
   }, [isOpen]);
 
-  // Отправка статуса в ML
   const sendMlStatus = useCallback(
     (
       eventType: string,
       selectedText: string = '',
       countSugest: number = -1,
     ) => {
+      if (!isMkbHelperEnabled) return;
+
       mainApi.ml_handlers
         .mlAutocompleteStatus({
           field_name: 'main_diagnosis',
@@ -127,36 +126,44 @@ export const DiagnosisInput: React.FC<DiagnosisInputProps> = ({
           selected_text: selectedText,
           n_candidates: countSugest,
           event_type: eventType,
+          type_autocomplete:
+            autocompleteProvider !== 'off' ? autocompleteProvider : undefined,
         })
-        .catch((error) => {
-          console.error('Failed to send ML status:', error);
-        });
+        .catch((error) => console.error('Failed to send ML status:', error));
     },
-    [value],
+    [value, isMkbHelperEnabled],
   );
 
-  const fetchAiCandidates = useCallback(async (text: string) => {
-    if (!text.trim()) {
-      setAiCandidates([]);
-      return;
-    }
+  const fetchAiCandidates = useCallback(
+    async (text: string) => {
+      if (!isMkbHelperEnabled) {
+        setAiCandidates([]);
+        return;
+      }
 
-    setAiLoading(true);
-    try {
-      const res = await mainApi.ml_handlers.mlMkbCode({
-        field_name: 'main_diagnosis',
-        description: text,
-        n_candidates: 3,
-        use_llm: true,
-      });
-      setAiCandidates(res.candidates || []);
-    } catch (error) {
-      console.error('Failed to fetch AI candidates:', error);
-      setAiCandidates([]);
-    } finally {
-      setAiLoading(false);
-    }
-  }, []);
+      if (!text.trim()) {
+        setAiCandidates([]);
+        return;
+      }
+
+      setAiLoading(true);
+      try {
+        const res = await mainApi.ml_handlers.mlMkbCode({
+          field_name: 'main_diagnosis',
+          description: text,
+          n_candidates: 3,
+          use_llm: true,
+        });
+        setAiCandidates(res.candidates || []);
+      } catch (error) {
+        console.error('Failed to fetch AI candidates:', error);
+        setAiCandidates([]);
+      } finally {
+        setAiLoading(false);
+      }
+    },
+    [isMkbHelperEnabled],
+  );
 
   const useDebounce = <T,>(value: T, delay: number): T => {
     const [debouncedValue, setDebouncedValue] = useState<T>(value);
@@ -173,32 +180,29 @@ export const DiagnosisInput: React.FC<DiagnosisInputProps> = ({
 
   const handleSelect = (diagnosis: Mkb10Item) => {
     const fullDiagnosis = `${diagnosis.code} – ${diagnosis.name}`;
-    onValueChange(id, fullDiagnosis); // Передаём родителю
-    setLocalDraft(null); // Сбрасываем черновик
+    onValueChange(id, fullDiagnosis);
+    setLocalDraft(null);
     setIsOpen(false);
     setSearchValue('');
     sendMlStatus('suggestion_selected', fullDiagnosis, diagnoses.length);
   };
   const handleAiSelect = (candidate: CandidatesItem) => {
     const fullDiagnosis = `${candidate.name}`;
-    onValueChange(id, fullDiagnosis); // Передаём родителю
-    setLocalDraft(null); // Сбрасываем черновик
+    onValueChange(id, fullDiagnosis);
+    setLocalDraft(null);
     setIsOpen(false);
     setSearchValue('');
     sendMlStatus('suggestion_selected', fullDiagnosis, aiCandidates.length);
   };
-  // Потеря фокуса: обрабатываем черновик
+
   const handleBlur = () => {
     if (localDraft !== null) {
       if (localDraft.trim() === '') {
-        // Пользователь полностью очистил поле → удаляем диагноз из протокола
         onValueChange(id, '');
         setLocalDraft(null);
       } else if (!isValidDiagnosisFormat(localDraft)) {
-        // Ввёл что-то, но не выбрал из списка → отменяем ввод, не передаём родителю
         setLocalDraft(null);
       }
-      // Если валидный формат — значит уже выбрано из списка, onValueChange уже вызван
     }
     setTimeout(() => setIsOpen(false), 200);
   };
@@ -210,7 +214,7 @@ export const DiagnosisInput: React.FC<DiagnosisInputProps> = ({
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newValue = e.target.value;
-    setLocalDraft(newValue); // Только локально
+    setLocalDraft(newValue);
     setSearchValue(newValue);
     if (!isOpen) setIsOpen(true);
     if (newValue.length === 0) setAiCandidates([]);
@@ -234,7 +238,6 @@ export const DiagnosisInput: React.FC<DiagnosisInputProps> = ({
     setIsOpen(true);
   };
 
-  // Выпадающий список как портал
   const dropdownContent = (
     <div
       ref={dropdownRef}
@@ -246,36 +249,40 @@ export const DiagnosisInput: React.FC<DiagnosisInputProps> = ({
       }}
       className="p-1.5 max-w-103.5 bg-white rounded-lg shadow-lg border-0 max-h-80 overflow-y-auto custom-scrollbar"
     >
-      <h4 className="text-[#6C757D] text-[12px] font-medium">
-        Наиболее подходящие диагнозы
-      </h4>
-      <div className="pt-1.5 pb-3 border-b mb-3 border-[#E9ECEF]">
-        {aiLoading ? (
-          <div className="px-2.5 py-1.5 text-gray-400 text-sm">
-            Загрузка рекомендаций...
-          </div>
-        ) : aiCandidates.length > 0 ? (
-          aiCandidates.map((cand) => {
-            const percent = Math.round(cand.similarity * 100);
-            return (
-              <div
-                key={`ai-${cand.code}`}
-                onClick={() => handleAiSelect(cand)}
-                className="px-2.5 py-1.5 flex flex-row gap-2.5 items-center cursor-pointer rounded-md transition-colors hover:bg-[#e6efff] text-[#202020]"
-              >
-                <div className="text-sm text-[#5D8CF1] text-right">
-                  {percent}%
-                </div>
-                <div className="text-sm flex-1">{cand.name}</div>
+      {isMkbHelperEnabled && (
+        <>
+          <h4 className="text-[#6C757D] text-[12px] font-medium">
+            Наиболее подходящие диагнозы
+          </h4>
+          <div className="pt-1.5 pb-3 border-b mb-3 border-[#E9ECEF]">
+            {aiLoading ? (
+              <div className="px-2.5 py-1.5 text-gray-400 text-sm">
+                Загрузка рекомендаций...
               </div>
-            );
-          })
-        ) : (
-          <div className="px-2.5 py-1.5 text-gray-400 text-sm">
-            Опишите диагноз система поможет его подобрать
+            ) : aiCandidates.length > 0 ? (
+              aiCandidates.map((cand) => {
+                const percent = Math.round(cand.similarity * 100);
+                return (
+                  <div
+                    key={`ai-${cand.code}`}
+                    onClick={() => handleAiSelect(cand)}
+                    className="px-2.5 py-1.5 flex flex-row gap-2.5 items-center cursor-pointer rounded-md transition-colors hover:bg-[#e6efff] text-[#202020]"
+                  >
+                    <div className="text-sm text-[#5D8CF1] text-right">
+                      {percent}%
+                    </div>
+                    <div className="text-sm flex-1">{cand.name}</div>
+                  </div>
+                );
+              })
+            ) : (
+              <div className="px-2.5 py-1.5 text-gray-400 text-sm">
+                Опишите диагноз система поможет его подобрать
+              </div>
+            )}
           </div>
-        )}
-      </div>
+        </>
+      )}
 
       <h4 className="text-[#6C757D] text-[12px] font-medium">Все диагнозы</h4>
       <div className="py-1.5">
@@ -346,10 +353,9 @@ export const DiagnosisInput: React.FC<DiagnosisInputProps> = ({
           <input
             ref={inputRef}
             type="text"
-            // Показываем черновик, если он есть, иначе — сохранённое значение из props
             value={localDraft !== null ? localDraft : value}
             onChange={handleInputChange}
-            onBlur={handleBlur} // <-- Добавили обработчик потери фокуса
+            onBlur={handleBlur}
             onClick={() => {
               sendMlStatus('form_click');
               handleOpenWithReset();

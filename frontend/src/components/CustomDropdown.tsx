@@ -105,7 +105,6 @@ export function CustomDropdown<T = string, M extends boolean = false>({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // Координаты и адаптивное направление
   const [coords, setCoords] = useState<{
     top: number;
     left: number;
@@ -324,7 +323,7 @@ export function CustomDropdown<T = string, M extends boolean = false>({
         type="button"
         onClick={() => !disabled && setIsOpen((prev) => !prev)}
         disabled={disabled}
-        className={`w-full min-h-11 px-3 py-2 bg-gray-50 border-0 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#5D8CF1] text-left flex items-center justify-between cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed transition-shadow ${
+        className={`w-full h-10 px-3 py-2 bg-gray-50 border-0 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#5D8CF1] text-left flex items-center justify-between cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed transition-shadow ${
           isOpen ? 'ring-2 ring-[#5D8CF1]' : ''
         }`}
         aria-controls="dropdown-list"

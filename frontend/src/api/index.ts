@@ -9,7 +9,8 @@ export interface ApiError {
 export interface CompletePayload {
   field_name: string;
   prefix: string;
-  num_sequences: number;
+  suggestions_count: number;
+  type_autocomplete?: 'ml_autocomplete' | 'dict_autocomplete' | 'off';
 }
 
 export interface CompleteResponse {
@@ -43,6 +44,7 @@ export interface MlStatusPayload {
   selected_text: string;
   n_candidates: number;
   event_type: string;
+  type_autocomplete?: 'ml_autocomplete' | 'dict_autocomplete' | 'off';
 }
 
 export interface MlStatusResponse {
@@ -327,3 +329,26 @@ export interface ProtocolsPut {
   status_protocol: string;
   field_values: Record<string, string>;
 }
+
+export interface UserSettings {
+  id: string;
+  user_id: string;
+  mkb_code: boolean;
+  autocomplete: 'ml_autocomplete' | 'dict_autocomplete' | 'off';
+  fullness_complaints: boolean;
+  created_at: string;
+  updated_at: string | null;
+}
+
+export interface UserSettingsPost {
+  mkb_code: boolean | null;
+  autocomplete: 'ml_autocomplete' | 'dict_autocomplete' | 'off';
+  fullness_complaints: boolean | null;
+}
+
+export interface UserSettingsPut {
+  mkb_code: boolean;
+  autocomplete: 'ml_autocomplete' | 'dict_autocomplete' | 'off';
+  fullness_complaints: boolean;
+}
+export type UserSettingsPatch = Partial<UserSettingsPost>;

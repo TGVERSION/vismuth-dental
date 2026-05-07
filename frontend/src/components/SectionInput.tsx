@@ -12,6 +12,7 @@ import {
 import { Spinner } from './SpinnerFullnes';
 import { FeedbackPopover } from './FeedbackPopover';
 import { createPortal } from 'react-dom';
+import { useHelpersStore } from '@/store/helpersStore';
 
 export interface MlStatusPayload {
   field_name: string;
@@ -49,6 +50,7 @@ const mockApiCall = (
     }, 800);
   });
 };
+
 const getPlainTextFromHTML = (html: string): string => {
   const div = document.createElement('div');
   div.innerHTML = html;
@@ -88,6 +90,13 @@ export const SectionInput: React.FC<SectionInputProps> = ({
   const [isFetchingAnalysis, setIsFetchingAnalysis] = useState(false);
   const [animate, setAnimate] = useState(false);
   const prevActive = useRef(isActive);
+  const { fullnessEnabled, autocompleteProvider } = useHelpersStore();
+
+  const isAutocompleteEnabled = autocompleteProvider !== 'off';
+  const isFullnessEnabled = fullnessEnabled;
+  const isComplaintField =
+    sectionKey === 'complaints' || sectionKey === 'chief_complaint';
+
   useEffect(() => {
     if (isActive && prevActive.current === false) {
       setAnimate(true);
@@ -109,7 +118,8 @@ export const SectionInput: React.FC<SectionInputProps> = ({
     sectionKey,
     debounceMs: 300,
     maxSuggestions: 8,
-    enabled: hasUserInteracted,
+    enabled: hasUserInteracted && isAutocompleteEnabled,
+    autocompleteType: autocompleteProvider,
   });
 
   const initialTextRef = useRef<string>('');
@@ -117,10 +127,9 @@ export const SectionInput: React.FC<SectionInputProps> = ({
     clearTimeout(timerRef.current);
     if (indicatorRef.current) {
       const rect = indicatorRef.current.getBoundingClientRect();
-      // position: fixed – координаты от viewport
-      // низ попапа должен быть чуть выше верха индикатора
+
       setPopoverPosition({
-        bottom: window.innerHeight - rect.top + 8, // 8px отступ
+        bottom: window.innerHeight - rect.top + 8,
         left: rect.left,
       });
     }
@@ -150,8 +159,7 @@ export const SectionInput: React.FC<SectionInputProps> = ({
     selection?.removeAllRanges();
     selection?.addRange(range);
   };
-  const isComplaintField =
-    sectionKey === 'complaints' || sectionKey === 'chief_complaint';
+
   useEffect(() => {
     if (isComplaintField) {
       onAnalysisChange?.(mlAnalysis);
@@ -178,6 +186,8 @@ export const SectionInput: React.FC<SectionInputProps> = ({
     selectedText: string = '',
     countSugest: number = -1,
   ) => {
+    if (!isAutocompleteEnabled) return;
+
     mainApi.ml_handlers
       .mlAutocompleteStatus({
         field_name: sectionKey,
@@ -185,11 +195,13 @@ export const SectionInput: React.FC<SectionInputProps> = ({
         selected_text: selectedText,
         n_candidates: countSugest,
         event_type: eventType,
+        type_autocomplete: autocompleteProvider,
       })
       .catch((error) => {
         console.error('Failed to send ML status:', error);
       });
   };
+
   if (value === '') {
     if (editableRef.current) {
       editableRef.current.innerHTML = '';
@@ -299,15 +311,20 @@ export const SectionInput: React.FC<SectionInputProps> = ({
 
     const plainText = getPlainTextFromHTML(editableRef.current.innerHTML);
     onValueChange(id, plainText);
-    enableAutocomplete();
-    setIsOpen(true);
-    setHighlightedIndex(-1);
+
+    if (isAutocompleteEnabled) {
+      enableAutocomplete();
+      setIsOpen(true);
+      setHighlightedIndex(-1);
+    }
     setMlAnalysis(null);
   };
 
   const handleFocus = () => {
-    enableAutocomplete();
-    setIsOpen(true);
+    if (isAutocompleteEnabled) {
+      enableAutocomplete();
+      setIsOpen(true);
+    }
     closeMlFeedback();
     initialTextRef.current = value;
   };
@@ -315,7 +332,13 @@ export const SectionInput: React.FC<SectionInputProps> = ({
   const handleBlur = () => {
     enableAutocomplete();
     setTimeout(() => setIsOpen(false), 200);
-    if (isComplaintField && value && value.trim().length > 0) {
+
+    if (
+      isComplaintField &&
+      isFullnessEnabled &&
+      value &&
+      value.trim().length > 0
+    ) {
       if (value !== initialTextRef.current) {
         fetchMlAnalysis(value);
         initialTextRef.current = value;
@@ -344,44 +367,48 @@ export const SectionInput: React.FC<SectionInputProps> = ({
       <div className="flex-grow relative">
         <div className="flex items-center gap-3">
           <div className="flex-shrink-0 w-4 h-4" ref={indicatorRef}>
-            {isFetchingAnalysis ? (
-              <Spinner />
-            ) : mlAnalysis ? (
-              <div
-                onMouseEnter={handleMouseEnter}
-                onMouseLeave={handleMouseLeave}
-              >
-                {showPopover &&
-                  isComplaintField &&
-                  !isFetchingAnalysis &&
-                  createPortal(
-                    <FeedbackPopover
-                      color={mlAnalysis.color}
-                      analysis={mlAnalysis.analysis}
-                      suggestedText={mlAnalysis.suggested_text}
-                      onApply={handleApplySuggestion}
-                      onClose={() => setShowPopover(false)}
-                      style={{
-                        position: 'fixed',
-                        bottom: popoverPosition?.bottom,
-                        left: popoverPosition?.left,
-                        zIndex: 9999,
-                      }}
-                    />,
-                    document.body,
-                  )}
-                <div
-                  className={`w-4 h-4 cursor-pointer rounded-full transition-all duration-300 ${
-                    mlAnalysis.color === 'green'
-                      ? 'bg-[#459F49]'
-                      : mlAnalysis.color === 'yellow'
-                        ? 'bg-[#F29100]'
-                        : 'bg-[#D91528]'
-                  }`}
-                />
-              </div>
-            ) : (
-              <div className="w-3 h-3" />
+            {isFullnessEnabled && isComplaintField && (
+              <>
+                {isFetchingAnalysis ? (
+                  <Spinner />
+                ) : mlAnalysis ? (
+                  <div
+                    onMouseEnter={handleMouseEnter}
+                    onMouseLeave={handleMouseLeave}
+                  >
+                    {showPopover &&
+                      isComplaintField &&
+                      !isFetchingAnalysis &&
+                      createPortal(
+                        <FeedbackPopover
+                          color={mlAnalysis.color}
+                          analysis={mlAnalysis.analysis}
+                          suggestedText={mlAnalysis.suggested_text}
+                          onApply={handleApplySuggestion}
+                          onClose={() => setShowPopover(false)}
+                          style={{
+                            position: 'fixed',
+                            bottom: popoverPosition?.bottom,
+                            left: popoverPosition?.left,
+                            zIndex: 9999,
+                          }}
+                        />,
+                        document.body,
+                      )}
+                    <div
+                      className={`w-4 h-4 cursor-pointer rounded-full transition-all duration-300 ${
+                        mlAnalysis.color === 'green'
+                          ? 'bg-[#459F49]'
+                          : mlAnalysis.color === 'yellow'
+                            ? 'bg-[#F29100]'
+                            : 'bg-[#D91528]'
+                      }`}
+                    />
+                  </div>
+                ) : (
+                  <div className="w-3 h-3" />
+                )}
+              </>
             )}
           </div>
           <div
@@ -418,15 +445,15 @@ export const SectionInput: React.FC<SectionInputProps> = ({
               aria-multiline="true"
               data-placeholder="Введите..."
             />
-
-            <AutocompleteSuggestions
-              suggestions={suggestions}
-              highlightedIndex={highlightedIndex}
-              onSelect={handleSuggestionClick}
-              isOpen={isOpen}
-              loading={loading}
-            />
-
+            {isAutocompleteEnabled && (
+              <AutocompleteSuggestions
+                suggestions={suggestions}
+                highlightedIndex={highlightedIndex}
+                onSelect={handleSuggestionClick}
+                isOpen={isOpen}
+                loading={loading}
+              />
+            )}
             {/* {isComplaintField && mlAnalysis && !isFetchingAnalysis && (
               <FeedbackPopover
                 color={mlAnalysis.color}

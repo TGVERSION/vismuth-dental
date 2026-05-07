@@ -360,7 +360,7 @@ export const CreateTemplatePopup: React.FC<CreateTemplatePopupProps> = ({
                     value={templateName}
                     onChange={(e) => setTemplateName(e.target.value)}
                     placeholder="Введите название"
-                    className="w-full px-4 py-2.5 bg-gray-50 border-0 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#5D8CF1]"
+                    className="w-full h-10 px-4 py-2.5 bg-gray-50 border-0 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#5D8CF1]"
                     autoFocus
                   />
                 </div>

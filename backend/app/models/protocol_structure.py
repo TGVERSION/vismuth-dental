@@ -3,7 +3,7 @@ from typing import Optional
 from uuid import UUID, uuid4
 
 from sqlalchemy import Boolean, ForeignKey, Integer, String, Text, TIMESTAMP
-from sqlalchemy.dialects.postgresql import UUID as PG_UUID
+from sqlalchemy.dialects.postgresql import JSONB, UUID as PG_UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from ..db import Base
@@ -85,6 +85,9 @@ class ProtocolStructureField(Base):
     description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     field_type: Mapped[str] = mapped_column(String(255), nullable=False)
     default_value: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    default_value_jsonb: Mapped[Optional[dict | list | str | int | float | bool]] = (
+        mapped_column(JSONB, nullable=True)
+    )
     dictionary: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     protocol_fields_main_id: Mapped[Optional[UUID]] = mapped_column(
         PG_UUID(as_uuid=True),

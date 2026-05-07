@@ -381,6 +381,7 @@ CREATE TABLE IF NOT EXISTS protocol_structures_fields (
     description TEXT,
     field_type VARCHAR(255) NOT NULL,
     default_value TEXT,
+    default_value_jsonb JSONB,
     dictionary VARCHAR(255),
     protocol_fields_main_id UUID REFERENCES protocol_fields_main (id),
     is_required BOOLEAN NOT NULL DEFAULT false,

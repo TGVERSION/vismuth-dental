@@ -179,6 +179,8 @@ export const useHelpersStore = create<HelpersStoreState>((set, get) => ({
         case 'autocomplete': {
           const currentProvider =
             params?.autocompleteProvider ?? autocompleteProvider;
+          const wasActive = userSettings.autocomplete !== 'off';
+
           const initialProvider = userSettings.autocomplete;
           const isTypeChanged =
             wasActive && initialProvider !== currentProvider;
@@ -193,6 +195,7 @@ export const useHelpersStore = create<HelpersStoreState>((set, get) => ({
             settingsPayload.autocomplete = 'off';
             toastMessage = 'Помощник выключен';
           }
+
           optimisticUpdate.autocompleteProvider =
             settingsPayload.autocomplete as AutocompleteProvider;
           break;

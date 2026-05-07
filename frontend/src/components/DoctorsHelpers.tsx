@@ -42,36 +42,25 @@ export const DoctorsHelpers: React.FC<DoctorsHelpersProps> = ({
   const closeModal = () => onClose();
   const currentHelper = getHelperMeta(selectedHelper);
 
-  const isAutocompleteTypeChanged = useMemo(() => {
-    if (selectedHelper !== 'autocomplete') return false;
-    const initial = userSettings?.autocomplete;
-    if (!initial) return false;
-    return initial !== autocompleteProvider;
-  }, [selectedHelper, autocompleteProvider, userSettings?.autocomplete]);
-
   const { applyButtonText, applyButtonClass } = useMemo(() => {
     let isActive = false;
-    if (selectedHelper === 'mkb') isActive = mkbEnabled;
-    else if (selectedHelper === 'fullness') isActive = fullnessEnabled;
-    else if (selectedHelper === 'autocomplete')
-      isActive = autocompleteProvider !== 'off';
+
+    if (selectedHelper === 'mkb') {
+      isActive = mkbEnabled;
+    } else if (selectedHelper === 'fullness') {
+      isActive = fullnessEnabled;
+    } else if (selectedHelper === 'autocomplete') {
+      isActive =
+        autocompleteProvider !== 'off' &&
+        userSettings?.autocomplete === autocompleteProvider;
+    }
 
     if (selectedHelper === 'autocomplete') {
-      if (!isActive) {
-        return {
-          applyButtonText: 'Применить',
-          applyButtonClass: 'bg-[#5D8CF1] hover:bg-[#6FA3F5] text-white',
-        };
-      }
-      if (isAutocompleteTypeChanged) {
-        return {
-          applyButtonText: 'Применить',
-          applyButtonClass: 'bg-[#5D8CF1] hover:bg-[#6FA3F5] text-white',
-        };
-      }
       return {
-        applyButtonText: 'Выключить',
-        applyButtonClass: 'bg-[#FFDCDC] hover:bg-[#FFC0C0] text-[#CE3E3E]',
+        applyButtonText: isActive ? 'Выключить' : 'Применить',
+        applyButtonClass: isActive
+          ? 'bg-[#FFDCDC] hover:bg-[#FFC0C0] text-[#CE3E3E]'
+          : 'bg-[#5D8CF1] hover:bg-[#6FA3F5] text-white',
       };
     }
 
@@ -86,7 +75,30 @@ export const DoctorsHelpers: React.FC<DoctorsHelpersProps> = ({
     mkbEnabled,
     fullnessEnabled,
     autocompleteProvider,
-    isAutocompleteTypeChanged,
+    userSettings?.autocomplete,
+  ]);
+
+  useEffect(() => {
+    if (
+      isOpen &&
+      selectedHelper === 'autocomplete' &&
+      autocompleteProvider !== 'off' &&
+      userSettings?.autocomplete &&
+      userSettings.autocomplete !== 'off' &&
+      userSettings.autocomplete !== autocompleteProvider
+    ) {
+      const userId = user?.id;
+      if (userId) {
+        updateHelperSetting(userId, 'autocomplete', { autocompleteProvider });
+      }
+    }
+  }, [
+    isOpen,
+    selectedHelper,
+    autocompleteProvider,
+    userSettings?.autocomplete,
+    user?.id,
+    updateHelperSetting,
   ]);
 
   useEffect(() => {
@@ -234,7 +246,13 @@ export const DoctorsHelpers: React.FC<DoctorsHelpersProps> = ({
                     )}
                     <button
                       onClick={handleApply}
-                      disabled={isApplying || isLoading}
+                      disabled={
+                        isApplying ||
+                        isLoading ||
+                        (selectedHelper === 'autocomplete' &&
+                          autocompleteProvider === 'off' &&
+                          userSettings?.autocomplete === 'off')
+                      }
                       className={`px-5.5 w-29.75 h-10 py-2.5 flex text-sm items-center h-9.5 cursor-pointer rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${applyButtonClass}`}
                     >
                       {isApplying ? <SpinnerButton /> : applyButtonText}

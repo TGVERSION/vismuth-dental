@@ -6,6 +6,8 @@ import {
   ListsTemplatesResponse,
   ProtocolStructuresFields,
   Protocols,
+  ClinrecCheck,
+  ClinicalFinding,
 } from '@/api';
 import { SectionInput } from '@/components/SectionInput';
 import { Sidebar } from '@/components/Sidebar';
@@ -34,6 +36,23 @@ export interface TemplateUI extends ListsTemplatesResponse {
   groupId?: string;
 }
 
+const LOADING_MESSAGES = [
+  'Принял задачу. Приступаю...',
+  'Открываю базу. Ого, сколько тут...',
+  'Читаю. Медленно, зато внимательно...',
+  'Дочитал раздел. Интересно написано...',
+  'Листаю приложения. Их много...',
+  'Сравниваю с вашим протоколом...',
+  'Смотрю на назначения очень внимательно...',
+  'Сверяю с актуальной версией протокола...',
+  'Нашёл кое-что важное для вас...',
+  'Проверяю себя. На всякий случай...',
+  'Собираю ответ. Ещё чуть-чуть...',
+  'Готовлю результат. Скоро всё...',
+  'Осталось немного. Терпение...',
+  'Финальная сверка. Почти готово',
+];
+
 export default function Home() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -57,8 +76,7 @@ export default function Home() {
   useEffect(() => {
     const userId = user?.id;
     if (userId) {
-      fetchUserSettings(userId).catch(() => {
-      });
+      fetchUserSettings(userId).catch(() => {});
     }
   }, [user?.id, fetchUserSettings]);
   const [sections, setSections] = useState<SectionData[]>([]);
@@ -80,6 +98,25 @@ export default function Home() {
   const [showTemplateMenu, setShowTemplateMenu] = useState(false);
   const templateMenuRef = useRef<HTMLDivElement>(null);
   const hideTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  const [showClinRecPanel, setShowClinRecPanel] = useState(false);
+  const [isLoadingClinRec, setIsLoadingClinRec] = useState(false);
+  const [currentMessageIndex, setCurrentMessageIndex] = useState(0);
+  const [clinRecResults, setClinRecResults] = useState<{
+    critical: ClinicalFinding[];
+    warning: ClinicalFinding[];
+    info: ClinicalFinding[];
+  } | null>(null);
+  const [clinRecError, setClinRecError] = useState<string | null>(null);
+
+  const messageIntervalRef = useRef<NodeJS.Timeout | null>(null);
+
+  const collectProtocolText = useCallback(() => {
+    return sections
+      .map((section) => `${section.label}: ${section.value}.`)
+      .join(' ');
+  }, [sections]);
+
   const handleApplyTemplate = (template: TemplateUI) => {
     if (template.content) {
       setSections((prev) =>
@@ -180,6 +217,84 @@ export default function Home() {
       setIsLoading(false);
     }
   };
+  const handleClinRecCheck = async () => {
+    const protocolText = collectProtocolText();
+
+    if (!protocolText.trim()) {
+      toast.error('Протокол пуст. Заполните хотя бы один раздел.');
+      return;
+    }
+
+    setIsLoadingClinRec(true);
+    setClinRecResults(null);
+    setClinRecError(null);
+    setShowClinRecPanel(true);
+    setCurrentMessageIndex(0);
+
+    messageIntervalRef.current = setInterval(() => {
+      setCurrentMessageIndex((prev) => (prev + 1) % LOADING_MESSAGES.length);
+    }, 6000);
+
+    try {
+      const requestData: ClinrecCheck = {
+        protocol_text: protocolText,
+      };
+
+      const response = await mainApi.ml_handlers.ml_clinrec_check(requestData);
+
+      if (messageIntervalRef.current) {
+        clearInterval(messageIntervalRef.current);
+      }
+
+      const findings: ClinicalFinding[] = response.findings || [];
+
+      setClinRecResults({
+        critical: findings.filter((f) => f.severity === 'critical'),
+        warning: findings.filter((f) => f.severity === 'warning'),
+        info: findings.filter((f) => f.severity === 'info'),
+      });
+
+      const totalFindings = findings.length;
+      if (totalFindings === 0) {
+        toast.success('Протокол соответствует клиническим рекомендациям!');
+      } else {
+        const criticalCount = findings.filter(
+          (f) => f.severity === 'critical',
+        ).length;
+        if (criticalCount > 0) {
+          toast.warning(`Найдено ${criticalCount} критических замечаний`);
+        } else {
+          toast.info(`Найдено ${totalFindings} замечаний`);
+        }
+      }
+    } catch (error) {
+      console.error('Ошибка проверки по клин. реком.:', error);
+      setClinRecError('Не удалось выполнить проверку. Попробуйте позже.');
+      toast.error('Ошибка при проверке протокола');
+    } finally {
+      setIsLoadingClinRec(false);
+      if (messageIntervalRef.current) {
+        clearInterval(messageIntervalRef.current);
+      }
+    }
+  };
+  useEffect(() => {
+    return () => {
+      if (messageIntervalRef.current) {
+        clearInterval(messageIntervalRef.current);
+      }
+    };
+  }, []);
+  const handleCloseClinRecPanel = () => {
+    setShowClinRecPanel(false);
+    setClinRecResults(null);
+    setClinRecError(null);
+    setCurrentMessageIndex(0);
+    if (messageIntervalRef.current) {
+      clearInterval(messageIntervalRef.current);
+    }
+  };
+
   const loadProtocolsList = async () => {
     setIsLoadingList(true);
     try {
@@ -567,18 +682,22 @@ export default function Home() {
         <div className="bg-white rounded-[15px] ml-93.5 w-full max-w-374.75 flex flex-col mr-2 h-[calc(100vh-55px)] custom-scrollbar overflow-hidden">
           <div className="mx-6.25 mt-2 bg-white border-b border-b-[#E9ECEF]">
             <div className="mx-auto mb-2 flex flex-row items-center justify-center gap-6">
-              {sections.find((s) => s.sectionKey === 'main_diagnosis')
-                ?.value && (
-                <button className="cursor-pointer rounded-xl hover:bg-white shadow-custom-hover flex flex-row items-center gap-2 py-3 px-3.75">
-                  <Image
-                    alt="klinReg"
-                    src="/check-all.svg"
-                    width={20}
-                    height={20}
-                  />
-                  Проверить по клин. реком.
-                </button>
-              )}
+              {!showClinRecPanel &&
+                sections.find((s) => s.sectionKey === 'main_diagnosis')
+                  ?.value && (
+                  <button
+                    onClick={handleClinRecCheck}
+                    className="cursor-pointer rounded-xl hover:bg-white shadow-custom-hover flex flex-row items-center gap-2 py-3 px-3.75"
+                  >
+                    <Image
+                      alt="klinReg"
+                      src="/check-all.svg"
+                      width={20}
+                      height={20}
+                    />
+                    Проверить по клин. реком.
+                  </button>
+                )}
               <button className="cursor-pointer rounded-xl hover:bg-white shadow-custom-hover flex flex-row items-center gap-2 py-3 px-3.75">
                 <Image
                   alt="print"
@@ -697,6 +816,93 @@ export default function Home() {
                 </button>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {showClinRecPanel && (
+        <div className="right-2 w-217.5 top-20 mr-2 h-[calc(100vh-90px)] bg-white rounded-[15px] flex flex-col overflow-hidden z-40">
+          <div className="flex items-start justify-between px-6.25 pt-5 border-[#E9ECEF]">
+            <h3 className="text-xl font-medium text-[#202020]">
+              Проверка протокола по клиническим рекомендациям
+            </h3>
+            <button
+              onClick={handleCloseClinRecPanel}
+              className="text-gray-400 hover:text-gray-600 transition-colors"
+            >
+              <Image alt="close" src="/close.svg" width={25} height={25} />
+            </button>
+          </div>
+
+          <div className="flex-1 overflow-y-auto custom-scrollbar">
+            {isLoadingClinRec ? (
+              <div className="text-center pt-9">
+                <p className="text-[#909090] text-md transition-opacity duration-500 ease-in-out">
+                  {LOADING_MESSAGES[currentMessageIndex]}
+                </p>
+              </div>
+            ) : clinRecError ? (
+              <div className="text-center pt-9">
+                <p className="text-red-500 text-center">{clinRecError}</p>
+              </div>
+            ) : clinRecResults ? (
+              <div className="py-7 px-6.25 space-y-5">
+                {clinRecResults.critical.length > 0 && (
+                  <div className="space-y-5">
+                    {clinRecResults.critical.map((finding, index) => (
+                      <div key={`critical-${index}`}>
+                        <p className="text-xl font-medium text-[#D91528] pb-2">
+                          {finding.section}
+                        </p>
+                        <p className="text-md leading-[140%]">
+                          {finding.recommendation}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {clinRecResults.warning.length > 0 && (
+                  <div className="space-y-3">
+                    {clinRecResults.warning.map((finding, index) => (
+                      <div key={`warning-${index}`}>
+                        <p className="text-xl font-medium text-[#F29100] pb-2">
+                          {finding.section}
+                        </p>
+                        <p className="text-md leading-[140%]">
+                          {finding.recommendation}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {clinRecResults.info.length > 0 && (
+                  <div className="space-y-3">
+                    {clinRecResults.info.map((finding, index) => (
+                      <div key={`info-${index}`}>
+                        <p className="text-xl font-medium text-[#5D8CF1] pb-2">
+                          {finding.section}
+                        </p>
+                        <p className="text-md leading-[140%]">
+                          {finding.recommendation}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {clinRecResults.critical.length === 0 &&
+                  clinRecResults.warning.length === 0 &&
+                  clinRecResults.info.length === 0 && (
+                    <div className="flex flex-col items-center justify-center py-20">
+                      <p className="text-green-600 text-center font-medium">
+                        Протокол соответствует клиническим рекомендациям
+                      </p>
+                    </div>
+                  )}
+              </div>
+            ) : null}
           </div>
         </div>
       )}

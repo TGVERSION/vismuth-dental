@@ -14,6 +14,17 @@ interface DiagnosisInputProps {
   onValueChange: (id: number, newValue: string) => void;
 }
 
+const useDebounce = <T,>(value: T, delay: number): T => {
+  const [debouncedValue, setDebouncedValue] = useState<T>(value);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedValue(value), delay);
+    return () => clearTimeout(timer);
+  }, [value, delay]);
+
+  return debouncedValue;
+};
+
 export const DiagnosisInput: React.FC<DiagnosisInputProps> = ({
   id,
   label,
@@ -60,16 +71,16 @@ export const DiagnosisInput: React.FC<DiagnosisInputProps> = ({
     isOpen: isOpen,
   });
 
-  useEffect(() => {
-    if (!isOpen) return;
-    const handleScroll = () => setIsOpen(false);
-    window.addEventListener('scroll', handleScroll, true);
-    window.addEventListener('resize', handleScroll);
-    return () => {
-      window.removeEventListener('scroll', handleScroll, true);
-      window.removeEventListener('resize', handleScroll);
-    };
-  }, [isOpen]);
+  // useEffect(() => {
+  //   if (!isOpen) return;
+  //   const handleScroll = () => setIsOpen(false);
+  //   window.addEventListener('scroll', handleScroll, true);
+  //   window.addEventListener('resize', handleScroll);
+  //   return () => {
+  //     window.removeEventListener('scroll', handleScroll, true);
+  //     window.removeEventListener('resize', handleScroll);
+  //   };
+  // }, [isOpen]);
 
   useEffect(() => {
     if (isOpen && inputRef.current) {
@@ -164,17 +175,6 @@ export const DiagnosisInput: React.FC<DiagnosisInputProps> = ({
     },
     [isMkbHelperEnabled],
   );
-
-  const useDebounce = <T,>(value: T, delay: number): T => {
-    const [debouncedValue, setDebouncedValue] = useState<T>(value);
-
-    useEffect(() => {
-      const timer = setTimeout(() => setDebouncedValue(value), delay);
-      return () => clearTimeout(timer);
-    }, [value, delay]);
-
-    return debouncedValue;
-  };
 
   const debouncedSearchValue = useDebounce(searchValue, 300);
 

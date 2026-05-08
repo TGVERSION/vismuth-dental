@@ -26,6 +26,21 @@ const useDebounce = <T,>(value: T, delay: number): T => {
   return debouncedValue;
 };
 
+const getPlainTextFromHTML = (html: string): string => {
+  const div = document.createElement('div');
+  div.innerHTML = html;
+  return div.textContent || div.innerText || '';
+};
+
+const setCursorToEnd = (element: HTMLElement) => {
+  const range = document.createRange();
+  const selection = window.getSelection();
+  range.selectNodeContents(element);
+  range.collapse(false);
+  selection?.removeAllRanges();
+  selection?.addRange(range);
+};
+
 export const DiagnosisInput: React.FC<DiagnosisInputProps> = ({
   id,
   label,
@@ -41,19 +56,29 @@ export const DiagnosisInput: React.FC<DiagnosisInputProps> = ({
   const [aiLoading, setAiLoading] = useState(false);
   const [animate, setAnimate] = useState(false);
   const prevActive = useRef(isActive);
-  const [localDraft, setLocalDraft] = useState<string | null>(null);
-  useEffect(() => {
-    setLocalDraft(null);
-  }, [value]);
-  const isValidDiagnosisFormat = (text: string): boolean => {
-    if (!text) return false;
-    return /^[A-Z0-9]+\.?\d*\s*–\s+.+/.test(text.trim());
-  };
+
+  const editableRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+  const resizeObserverRef = useRef<ResizeObserver | null>(null);
+
   const [dropdownPos, setDropdownPos] = useState<{
     top: number;
     left: number;
   } | null>(null);
-  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  const isValidDiagnosisFormat = (text: string): boolean => {
+    if (!text) return false;
+    return /^[A-Z0-9]+\.?\d*\s*–\s+.+/.test(text.trim());
+  };
+
+  useEffect(() => {
+    if (!editableRef.current) return;
+    const currentText = getPlainTextFromHTML(editableRef.current.innerHTML);
+    if (currentText !== value) {
+      editableRef.current.textContent = value;
+    }
+  }, [value]);
 
   useEffect(() => {
     if (isActive && prevActive.current === false) {
@@ -64,29 +89,32 @@ export const DiagnosisInput: React.FC<DiagnosisInputProps> = ({
     prevActive.current = isActive;
   }, [isActive]);
 
-  const containerRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
-
   const { diagnoses, loading, hasMore, sentinelRef } = useMkb10Diagnoses({
     searchValue,
     isOpen: isOpen,
   });
+
   const updateDropdownPosition = useCallback(() => {
-    if (isOpen && inputRef.current) {
-      const rect = inputRef.current.getBoundingClientRect();
+    if (isOpen && editableRef.current) {
+      const rect = editableRef.current.getBoundingClientRect();
       setDropdownPos({
         top: rect.bottom + 4,
         left: rect.left,
       });
     }
   }, [isOpen]);
+
   useEffect(() => {
-    if (!isOpen) return;
+    if (!isOpen || !editableRef.current) return;
+
+    resizeObserverRef.current = new ResizeObserver(() => {
+      updateDropdownPosition();
+    });
+    resizeObserverRef.current.observe(editableRef.current);
 
     updateDropdownPosition();
 
     const throttledUpdate = throttle(updateDropdownPosition, 16);
-
     window.addEventListener('scroll', throttledUpdate, {
       passive: true,
       capture: true,
@@ -94,28 +122,16 @@ export const DiagnosisInput: React.FC<DiagnosisInputProps> = ({
     window.addEventListener('resize', throttledUpdate);
 
     return () => {
+      resizeObserverRef.current?.disconnect();
       window.removeEventListener('scroll', throttledUpdate, {
         capture: true,
       } as any);
       window.removeEventListener('resize', throttledUpdate);
     };
   }, [isOpen, updateDropdownPosition]);
-  useEffect(() => {
-    if (isOpen) {
-      updateDropdownPosition();
-    } else {
-      setDropdownPos(null);
-    }
-  }, [isOpen, updateDropdownPosition]);
 
   useEffect(() => {
-    if (isOpen && inputRef.current) {
-      const rect = inputRef.current.getBoundingClientRect();
-      setDropdownPos({
-        top: rect.bottom + 4,
-        left: rect.left,
-      });
-    } else {
+    if (!isOpen) {
       setDropdownPos(null);
     }
   }, [isOpen]);
@@ -134,6 +150,20 @@ export const DiagnosisInput: React.FC<DiagnosisInputProps> = ({
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  useEffect(() => {
+    if (isOpen && editableRef.current) {
+      editableRef.current.focus();
+    }
+  }, [isOpen]);
+
+  useEffect(() => {
+    if (!isOpen) {
+      setAiCandidates([]);
+      setAiLoading(false);
+    }
+  }, [isOpen]);
+
   const throttle = <T extends (...args: any[]) => void>(
     func: T,
     delay: number,
@@ -147,18 +177,6 @@ export const DiagnosisInput: React.FC<DiagnosisInputProps> = ({
       }
     };
   };
-  useEffect(() => {
-    if (isOpen && inputRef.current) {
-      inputRef.current.focus();
-    }
-  }, [isOpen]);
-
-  useEffect(() => {
-    if (!isOpen) {
-      setAiCandidates([]);
-      setAiLoading(false);
-    }
-  }, [isOpen]);
 
   const sendMlStatus = useCallback(
     (
@@ -219,47 +237,57 @@ export const DiagnosisInput: React.FC<DiagnosisInputProps> = ({
   const handleSelect = (diagnosis: Mkb10Item) => {
     const fullDiagnosis = `${diagnosis.code} – ${diagnosis.name}`;
     onValueChange(id, fullDiagnosis);
-    setLocalDraft(null);
     setIsOpen(false);
     setSearchValue('');
+    if (editableRef.current) {
+      editableRef.current.textContent = fullDiagnosis;
+    }
     sendMlStatus('suggestion_selected', fullDiagnosis, diagnoses.length);
   };
   const handleAiSelect = (candidate: CandidatesItem) => {
     const fullDiagnosis = `${candidate.name}`;
     onValueChange(id, fullDiagnosis);
-    setLocalDraft(null);
     setIsOpen(false);
     setSearchValue('');
+    if (editableRef.current) {
+      editableRef.current.textContent = fullDiagnosis;
+    }
     sendMlStatus('suggestion_selected', fullDiagnosis, aiCandidates.length);
   };
 
-  const handleBlur = () => {
-    if (localDraft !== null) {
-      if (localDraft.trim() === '') {
-        onValueChange(id, '');
-        setLocalDraft(null);
-      } else if (!isValidDiagnosisFormat(localDraft)) {
-        setLocalDraft(null);
-      }
-    }
-    setTimeout(() => setIsOpen(false), 200);
+  const handleInput = () => {
+    if (!editableRef.current) return;
+
+    const plainText = getPlainTextFromHTML(editableRef.current.innerHTML);
+    setSearchValue(plainText);
+
+    if (!isOpen) setIsOpen(true);
+    if (plainText.length === 0) setAiCandidates([]);
   };
+
+  const handleFocus = () => {
+    if (!isOpen) setIsOpen(true);
+    sendMlStatus('form_click');
+  };
+
+  const handleBlur = () => {
+    setTimeout(() => setIsOpen(false), 200);
+
+    if (!editableRef.current) return;
+    const plainText = getPlainTextFromHTML(editableRef.current.innerHTML);
+
+    if (plainText.trim() === '') {
+      onValueChange(id, '');
+    }
+  };
+
   useEffect(() => {
     if (isOpen && debouncedSearchValue.trim()) {
       fetchAiCandidates(debouncedSearchValue);
     }
   }, [debouncedSearchValue, isOpen, fetchAiCandidates]);
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newValue = e.target.value;
-    setLocalDraft(newValue);
-    setSearchValue(newValue);
-    if (!isOpen) setIsOpen(true);
-    if (newValue.length === 0) setAiCandidates([]);
-  };
-
   const shouldResetSearch = useRef(true);
-
   useEffect(() => {
     shouldResetSearch.current = true;
   }, [value]);
@@ -387,21 +415,23 @@ export const DiagnosisInput: React.FC<DiagnosisInputProps> = ({
             </div>
           </div>
         </div>
+
         <div className="relative">
-          <input
-            ref={inputRef}
-            type="text"
-            value={localDraft !== null ? localDraft : value}
-            onChange={handleInputChange}
+          <div
+            ref={editableRef}
+            contentEditable
+            suppressContentEditableWarning
+            onInput={handleInput}
+            onFocus={handleFocus}
             onBlur={handleBlur}
-            onClick={() => {
-              sendMlStatus('form_click');
-              handleOpenWithReset();
-            }}
-            onFocus={handleOpenWithReset}
-            placeholder="Введите код или название диагноза..."
-            className="ml-7 text-[#202020] border-0 focus:border-0 focus:outline-none focus:ring-0 w-full bg-transparent placeholder-gray-400 leading-[140%] py-2"
+            onClick={handleOpenWithReset}
+            data-placeholder="Введите код или название диагноза..."
+            className="ml-7 text-[#202020] border-0 focus:border-0 focus:outline-none focus:ring-0 w-full bg-transparent placeholder-gray-400 leading-[140%] py-2 min-h-5.5 whitespace-pre-wrap break-words"
+            style={{ wordBreak: 'break-word' }}
+            role="textbox"
+            aria-multiline="true"
           />
+
           {isOpen &&
             dropdownPos &&
             createPortal(dropdownContent, document.body)}

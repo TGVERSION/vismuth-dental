@@ -37,6 +37,8 @@ import type {
   UserSettingsPost,
   UserSettingsPut,
   UserSettingsPatch,
+  ClinrecCheck,
+  ClinrecCheckResponse,
 } from './index';
 
 export const apiClient = new ApiClient({
@@ -132,6 +134,9 @@ export const mainApi = {
         '/ml_fullness_complaints',
         data,
       ),
+
+    ml_clinrec_check: (data: ClinrecCheck) =>
+      apiClient.post<ClinrecCheckResponse>('/ml_clinrec_check', data),
   },
 
   protocol_structures: {

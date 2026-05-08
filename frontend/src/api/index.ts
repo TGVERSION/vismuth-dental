@@ -352,3 +352,26 @@ export interface UserSettingsPut {
   fullness_complaints: boolean;
 }
 export type UserSettingsPatch = Partial<UserSettingsPost>;
+
+export interface ClinrecCheck {
+  protocol_text: string;
+}
+
+export interface ClinrecCheckResponse {
+  severity_counts: {
+    critical: number;
+    warning: number;
+    info: number;
+  };
+  findings: ClinicalFinding[];
+  compliant_sections: string[];
+  error: string;
+}
+export interface ClinicalFinding {
+  severity: 'critical' | 'warning' | 'info';
+  section: string;
+  issue: string;
+  recommendation: string;
+  guideline_ref: string;
+  guideline_quote: string;
+}

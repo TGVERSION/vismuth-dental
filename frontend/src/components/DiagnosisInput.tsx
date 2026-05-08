@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 'use client';
 
 import { useState, useRef, useEffect, useCallback } from 'react';
@@ -70,17 +71,42 @@ export const DiagnosisInput: React.FC<DiagnosisInputProps> = ({
     searchValue,
     isOpen: isOpen,
   });
+  const updateDropdownPosition = useCallback(() => {
+    if (isOpen && inputRef.current) {
+      const rect = inputRef.current.getBoundingClientRect();
+      setDropdownPos({
+        top: rect.bottom + 4,
+        left: rect.left,
+      });
+    }
+  }, [isOpen]);
+  useEffect(() => {
+    if (!isOpen) return;
 
-  // useEffect(() => {
-  //   if (!isOpen) return;
-  //   const handleScroll = () => setIsOpen(false);
-  //   window.addEventListener('scroll', handleScroll, true);
-  //   window.addEventListener('resize', handleScroll);
-  //   return () => {
-  //     window.removeEventListener('scroll', handleScroll, true);
-  //     window.removeEventListener('resize', handleScroll);
-  //   };
-  // }, [isOpen]);
+    updateDropdownPosition();
+
+    const throttledUpdate = throttle(updateDropdownPosition, 16);
+
+    window.addEventListener('scroll', throttledUpdate, {
+      passive: true,
+      capture: true,
+    });
+    window.addEventListener('resize', throttledUpdate);
+
+    return () => {
+      window.removeEventListener('scroll', throttledUpdate, {
+        capture: true,
+      } as any);
+      window.removeEventListener('resize', throttledUpdate);
+    };
+  }, [isOpen, updateDropdownPosition]);
+  useEffect(() => {
+    if (isOpen) {
+      updateDropdownPosition();
+    } else {
+      setDropdownPos(null);
+    }
+  }, [isOpen, updateDropdownPosition]);
 
   useEffect(() => {
     if (isOpen && inputRef.current) {
@@ -108,7 +134,19 @@ export const DiagnosisInput: React.FC<DiagnosisInputProps> = ({
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
-
+  const throttle = <T extends (...args: any[]) => void>(
+    func: T,
+    delay: number,
+  ): ((...args: Parameters<T>) => void) => {
+    let lastCall = 0;
+    return (...args: Parameters<T>) => {
+      const now = Date.now();
+      if (now - lastCall >= delay) {
+        lastCall = now;
+        func(...args);
+      }
+    };
+  };
   useEffect(() => {
     if (isOpen && inputRef.current) {
       inputRef.current.focus();

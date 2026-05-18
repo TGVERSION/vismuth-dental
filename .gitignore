@@ -65,7 +65,7 @@ docker-compose.override.yml
 data/local/
 
 # ML models (large binaries)
-ml-service/finetuned_autocomplete_kaggle/model.safetensors
+ml-service/finetuned_autocomplete_kaggle/
 ml-service/ru-en-RoSBERTa/
 ml-service/rosberta_chromadb/
 ml-service/chroma_qwen_md_3/

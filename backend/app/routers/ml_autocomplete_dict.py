@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from typing import List
 from sqlalchemy import func
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -54,5 +54,9 @@ async def autocomplete_endpoint(
     request: AutocompleteRequest,
     db: AsyncSession = Depends(get_db)
 ):
-    suggestions = await autocomplete_mixed(db, request.full_text, request.limit)
-    return AutocompleteResponse(suggestions=suggestions)
+    try:
+        suggestions = await autocomplete_mixed(db, request.full_text, request.limit)
+        return AutocompleteResponse(suggestions=suggestions)
+
+    except Exception as e:
+            raise HTTPException(status_code=500, detail=str(e))

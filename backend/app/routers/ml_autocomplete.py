@@ -1,8 +1,6 @@
-import httpx
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ..config import settings
 from ..db import get_db
 from ..deps import get_current_user
 from ..models.service_user import ServiceUser
@@ -15,6 +13,7 @@ from ..schemas.ml_mkb_code import (
     MkbCodeSelectRequest,
     MkbEventType,
 )
+from ..services.ml_proxy import proxy_post_to_ml
 from ..services.redis_stream import (
     build_event_payload,
     get_redis_client,
@@ -22,32 +21,6 @@ from ..services.redis_stream import (
 )
 
 router = APIRouter(tags=["ml_autocomplete"])
-
-
-async def _proxy_to_ml(path: str, body: dict) -> dict:
-    async with httpx.AsyncClient(timeout=20.0) as client:
-        try:
-            response = await client.post(
-                f"{settings.ml_service_url}{path}",
-                json=body,
-            )
-            response.raise_for_status()
-        except httpx.TimeoutException as exc:
-            raise HTTPException(
-                status_code=status.HTTP_504_GATEWAY_TIMEOUT,
-                detail="ml-service timeout",
-            ) from exc
-        except httpx.HTTPStatusError as exc:
-            raise HTTPException(
-                status_code=status.HTTP_502_BAD_GATEWAY,
-                detail=f"ml-service error: {exc.response.text}",
-            ) from exc
-        except httpx.HTTPError as exc:
-            raise HTTPException(
-                status_code=status.HTTP_502_BAD_GATEWAY,
-                detail="ml-service unavailable",
-            ) from exc
-    return response.json()
 
 
 async def _publish_autocomplete_shown(
@@ -86,7 +59,7 @@ async def proxy_ml_autocomplete(
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
                 detail="field_name is required for ml_autocomplete",
             )
-        body = await _proxy_to_ml(
+        body = await proxy_post_to_ml(
             "/autocomplete/complete",
             {
                 "field": payload.field_name,

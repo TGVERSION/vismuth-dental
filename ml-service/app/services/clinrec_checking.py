@@ -1,6 +1,7 @@
 from langchain_core.messages import SystemMessage, HumanMessage
-from .llm_setup import llm_clinrec, clinrec_emb_model, clinrec_collection
+from .llm_setup import llm_clinrec, clinrec_collection
 import json
+from ..schemas.clinrec import ClinicalAnalysis
 
 
 def build_human_prompt(protocol_text: str, retrieved_chunks: list) -> HumanMessage:
@@ -46,7 +47,7 @@ def retrieve_chunks(query_fields: list = None, n_results: int = 3) -> list:
     return unique_chunks
 
 
-def get_clinrec_checking(protocol_text: str) -> dict:
+def get_clinrec_checking(protocol_text: str) -> ClinicalAnalysis:
     """
     Основная функция: извлекает чанки, отправляет в LLM, возвращает результат.
     
@@ -96,22 +97,16 @@ def get_clinrec_checking(protocol_text: str) -> dict:
     # 2. Формируем промпт
     human_msg = build_human_prompt(protocol_text, unique_chunks)
     
-    # 3. Отправляем в LLM
+    # 3. Отправляем в LLM с STRUCTURED OUTPUT
+    structured_llm = llm_clinrec.with_structured_output(ClinicalAnalysis)
+    
     messages = [
         SystemMessage(content=system_prompt),
         human_msg
-        ]
-
+    ]
     
-    response = llm_clinrec.invoke(messages)
+    # Получаем структурированный объект
+    result: ClinicalAnalysis = structured_llm.invoke(messages)
     
-    # 4. Парсим JSON ответ
-    try:
-        result = json.loads(response.content)
-    except json.JSONDecodeError:
-        result = {
-            "error": "Invalid JSON response from LLM",
-            "raw_response": response.content
-        }
-    
+    # Возвращаем как dict для совместимости с эндпоинтом
     return result

@@ -22,7 +22,7 @@ router = APIRouter(prefix="/user-settings", tags=["user-settings"])
 def _ensure_access(current_user: ServiceUser, target_user_id: UUID) -> None:
     if current_user.id == target_user_id:
         return
-    if current_user.role == "admin":
+    if current_user.role == "administrator":
         return
     raise HTTPException(
         status_code=status.HTTP_403_FORBIDDEN,

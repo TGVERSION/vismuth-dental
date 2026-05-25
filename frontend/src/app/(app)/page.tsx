@@ -36,6 +36,11 @@ export interface TemplateUI extends ListsTemplatesResponse {
   groupId?: string;
 }
 
+const SIDEBAR_HIDE_THRESHOLD = 800;
+const MIN_CLINREC_WIDTH = 300;
+const MAX_CLINREC_WIDTH = 900;
+const DEFAULT_CLINREC_WIDTH = 550;
+
 const LOADING_MESSAGES = [
   'Принял задачу. Приступаю...',
   'Открываю базу. Ого, сколько тут...',
@@ -108,6 +113,18 @@ export default function Home() {
     info: ClinicalFinding[];
   } | null>(null);
   const [clinRecError, setClinRecError] = useState<string | null>(null);
+
+  const [clinRecPanelWidth, setClinRecPanelWidth] = useState(
+    DEFAULT_CLINREC_WIDTH,
+  );
+  const [isDraggingDivider, setIsDraggingDivider] = useState(false);
+  const [isSidebarVisible, setIsSidebarVisible] = useState(true);
+  const isDraggingDividerRef = useRef(false);
+  const dragStartXRef = useRef(0);
+  const dragStartWidthRef = useRef(0);
+  const [protocolAreaEl, setProtocolAreaEl] = useState<HTMLDivElement | null>(
+    null,
+  );
 
   const messageIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -545,6 +562,59 @@ export default function Home() {
     setShowTemplateMenu(!showTemplateMenu);
   };
 
+  const handleDividerMouseDown = useCallback(
+    (e: React.MouseEvent) => {
+      e.preventDefault();
+      isDraggingDividerRef.current = true;
+      dragStartXRef.current = e.clientX;
+      dragStartWidthRef.current = clinRecPanelWidth;
+      setIsDraggingDivider(true);
+    },
+    [clinRecPanelWidth],
+  );
+
+  useEffect(() => {
+    if (!isDraggingDivider) return;
+
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!isDraggingDividerRef.current) return;
+      const delta = dragStartXRef.current - e.clientX;
+      const newWidth = Math.max(
+        MIN_CLINREC_WIDTH,
+        Math.min(MAX_CLINREC_WIDTH, dragStartWidthRef.current + delta),
+      );
+      setClinRecPanelWidth(newWidth);
+    };
+
+    const handleMouseUp = () => {
+      isDraggingDividerRef.current = false;
+      setIsDraggingDivider(false);
+    };
+
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mouseup', handleMouseUp);
+
+    return () => {
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [isDraggingDivider]);
+
+  useEffect(() => {
+    if (!protocolAreaEl) return;
+    const observer = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        setIsSidebarVisible(entry.contentRect.width > SIDEBAR_HIDE_THRESHOLD);
+      }
+    });
+    observer.observe(protocolAreaEl);
+    return () => observer.disconnect();
+  }, [protocolAreaEl]);
+
   return (
     <>
       <div className="fixed ml-3 mr-5 left-0 top-20 custom-height w-85.75 flex flex-col bg-[#F3F4F8]">
@@ -679,232 +749,255 @@ export default function Home() {
       )}
 
       {protocolId && !isLoading && (
-        <div className="bg-white rounded-[15px] ml-93.5 w-full max-w-374.75 flex flex-col mr-2 h-[calc(100vh-55px)] custom-scrollbar overflow-hidden">
-          <div className="mx-6.25 mt-2 bg-white border-b border-b-[#E9ECEF]">
-            <div className="mx-auto mb-2 flex flex-row items-center justify-center gap-6">
-              {!showClinRecPanel &&
-                sections.find((s) => s.sectionKey === 'main_diagnosis')
-                  ?.value && (
-                  <button
-                    onClick={handleClinRecCheck}
-                    className="cursor-pointer rounded-xl hover:bg-white shadow-custom-hover flex flex-row items-center gap-2 py-3 px-3.75"
-                  >
-                    <Image
-                      alt="klinReg"
-                      src="/check-all.svg"
-                      width={20}
-                      height={20}
-                    />
-                    Проверить по клин. реком.
-                  </button>
-                )}
-              <button className="cursor-pointer rounded-xl hover:bg-white shadow-custom-hover flex flex-row items-center gap-2 py-3 px-3.75">
-                <Image
-                  alt="print"
-                  src="/print-fill.svg"
-                  width={20}
-                  height={20}
-                />
-                Напечатать протокол
-              </button>
-              <div
-                className="relative"
-                ref={templateMenuRef}
-                onClick={handleTemplateEnter}
-              >
+        <>
+          <div
+            ref={setProtocolAreaEl}
+            className={`bg-white rounded-[15px] ml-93.5 flex-1 min-w-0 flex flex-col h-[calc(100vh-55px)] custom-scrollbar overflow-hidden ${!showClinRecPanel && 'mr-2'}`}
+          >
+            <div className="mx-6.25 mt-2 bg-white border-b border-b-[#E9ECEF]">
+              <div className="mx-auto mb-2 flex flex-row items-center justify-center gap-6">
+                {!showClinRecPanel &&
+                  sections.find((s) => s.sectionKey === 'main_diagnosis')
+                    ?.value && (
+                    <button
+                      onClick={handleClinRecCheck}
+                      className="cursor-pointer rounded-xl hover:bg-white shadow-custom-hover flex flex-row items-center gap-2 py-3 px-3.75"
+                    >
+                      <Image
+                        alt="klinReg"
+                        src="/check-all.svg"
+                        width={20}
+                        height={20}
+                      />
+                      Проверить по клин. реком.
+                    </button>
+                  )}
                 <button className="cursor-pointer rounded-xl hover:bg-white shadow-custom-hover flex flex-row items-center gap-2 py-3 px-3.75">
                   <Image
-                    alt="template"
-                    src="/template-fill.svg"
+                    alt="print"
+                    src="/print-fill.svg"
                     width={20}
                     height={20}
                   />
-                  Шаблоны
+                  Напечатать протокол
                 </button>
-
-                {showTemplateMenu && (
-                  <div className="absolute left-0 top-full mt-2 w-46.25 bg-white rounded-xl shadow-custom p-1.5 z-50 flex flex-col">
-                    <button
-                      onClick={() => {
-                        setShowTemplatePopup(true);
-                        setShowTemplateMenu(false);
-                      }}
-                      className="hover:bg-[#F0F5FF] text-[14px] w-ful rounded-md h-8.25 cursor-pointer px-2.5 py-1.5 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                    >
-                      Использовать шаблон
-                    </button>
-                    <button
-                      onClick={() => {
-                        setShowSaveAsTemplatePopup(true);
-                        setIsFromPage(true);
-                        setShowTemplateMenu(false);
-                      }}
-                      className="hover:bg-[#F0F5FF] text-[14px] cursor-pointer w-full  rounded-md h-8.25 px-2.5 py-1.5 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                    >
-                      Сохранить как шаблон
-                    </button>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-
-          <div className="py-6.25 flex flex-row gap-16 pr-5 mr-2 overflow-hidden">
-            <Sidebar
-              sections={sidebarSections}
-              activeSection={activeSection}
-              onSectionClick={handleSectionClick}
-              sectionStatus={sectionStatus}
-            />
-
-            <div
-              className="flex flex-col gap-9 lg:ml-84.75 lg:w-full overflow-x-hidden overflow-y-auto pr-2"
-              ref={sectionContainerRef}
-            >
-              <div className="text-[40px] pl-6 font-semibold leading-[150%] bg-transparent border-0 focus:outline-none focus:ring-0 w-full">
-                {templateTitle}
-              </div>
-
-              <div className="flex gap-9 flex-col">
-                {sections.map((section) => (
-                  <div
-                    key={section.id}
-                    ref={(el) => {
-                      sectionRefs.current[section.sectionKey] = el;
-                    }}
-                    className="scroll-mt-24"
-                  >
-                    <SectionInput
-                      key={section.id}
-                      id={section.id}
-                      label={section.label}
-                      value={section.value}
-                      onLabelChange={handleLabelChange}
-                      onValueChange={handleValueChange}
-                      sectionKey={section.sectionKey}
-                      onAnalysisChange={(status) => {
-                        setSectionStatus((prev) => ({
-                          ...prev,
-                          [section.sectionKey]: status,
-                        }));
-                      }}
-                      isActive={section.sectionKey === activeSection}
+                <div
+                  className="relative"
+                  ref={templateMenuRef}
+                  onClick={handleTemplateEnter}
+                >
+                  <button className="cursor-pointer rounded-xl hover:bg-white shadow-custom-hover flex flex-row items-center gap-2 py-3 px-3.75">
+                    <Image
+                      alt="template"
+                      src="/template-fill.svg"
+                      width={20}
+                      height={20}
                     />
-                  </div>
-                ))}
-              </div>
-              <div className="flex flex-col gap-3">
-                <button
-                  onClick={() => {
-                    setShowSaveAsTemplatePopup(true);
-                    setIsFromPage(true);
-                  }}
-                  className="hover:bg-[#F0F5FF] text-[#202020] cursor-pointer bg-[#DCE7FF]  rounded-xl h-13 ml-6 px-6 py-2.5 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                >
-                  Сохранить как шаблон
-                </button>
-                <button
-                  onClick={handleSave}
-                  disabled={isSaving}
-                  className="hover:bg-[#769CEF] mb-4 text-white rounded-xl h-13 ml-6 cursor-pointer bg-[#5D8CF1] px-6 py-2.5 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                >
-                  {isSaving ? (
-                    <div className="animate-spin mx-auto my- rounded-full h-5 w-5 border-b-2 border-white"></div>
-                  ) : (
-                    'Сохранить'
-                  )}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+                    Шаблоны
+                  </button>
 
-      {showClinRecPanel && (
-        <div className="right-2 w-217.5 top-20 mr-2 h-[calc(100vh-90px)] bg-white rounded-[15px] flex flex-col overflow-hidden z-40">
-          <div className="flex items-start justify-between px-6.25 pt-5 border-[#E9ECEF]">
-            <h3 className="text-xl font-medium text-[#202020]">
-              Проверка протокола по клиническим рекомендациям
-            </h3>
-            <button
-              onClick={handleCloseClinRecPanel}
-              className="text-gray-400 hover:text-gray-600 transition-colors"
-            >
-              <Image alt="close" src="/close.svg" width={25} height={25} />
-            </button>
-          </div>
-
-          <div className="flex-1 overflow-y-auto custom-scrollbar">
-            {isLoadingClinRec ? (
-              <div className="text-center pt-9">
-                <p className="text-[#909090] text-md transition-opacity duration-500 ease-in-out">
-                  {LOADING_MESSAGES[currentMessageIndex]}
-                </p>
-              </div>
-            ) : clinRecError ? (
-              <div className="text-center pt-9">
-                <p className="text-red-500 text-center">{clinRecError}</p>
-              </div>
-            ) : clinRecResults ? (
-              <div className="py-7 px-6.25 space-y-5">
-                {clinRecResults.critical.length > 0 && (
-                  <div className="space-y-5">
-                    {clinRecResults.critical.map((finding, index) => (
-                      <div key={`critical-${index}`}>
-                        <p className="text-xl font-medium text-[#D91528] pb-2">
-                          {finding.section}
-                        </p>
-                        <p className="text-md leading-[140%]">
-                          {finding.recommendation}
-                        </p>
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                {clinRecResults.warning.length > 0 && (
-                  <div className="space-y-3">
-                    {clinRecResults.warning.map((finding, index) => (
-                      <div key={`warning-${index}`}>
-                        <p className="text-xl font-medium text-[#F29100] pb-2">
-                          {finding.section}
-                        </p>
-                        <p className="text-md leading-[140%]">
-                          {finding.recommendation}
-                        </p>
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                {clinRecResults.info.length > 0 && (
-                  <div className="space-y-3">
-                    {clinRecResults.info.map((finding, index) => (
-                      <div key={`info-${index}`}>
-                        <p className="text-xl font-medium text-[#5D8CF1] pb-2">
-                          {finding.section}
-                        </p>
-                        <p className="text-md leading-[140%]">
-                          {finding.recommendation}
-                        </p>
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                {clinRecResults.critical.length === 0 &&
-                  clinRecResults.warning.length === 0 &&
-                  clinRecResults.info.length === 0 && (
-                    <div className="flex flex-col items-center justify-center py-20">
-                      <p className="text-green-600 text-center font-medium">
-                        Протокол соответствует клиническим рекомендациям
-                      </p>
+                  {showTemplateMenu && (
+                    <div className="absolute left-0 top-full mt-2 w-46.25 bg-white rounded-xl shadow-custom p-1.5 z-50 flex flex-col">
+                      <button
+                        onClick={() => {
+                          setShowTemplatePopup(true);
+                          setShowTemplateMenu(false);
+                        }}
+                        className="hover:bg-[#F0F5FF] text-[14px] w-ful rounded-md h-8.25 cursor-pointer px-2.5 py-1.5 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                      >
+                        Использовать шаблон
+                      </button>
+                      <button
+                        onClick={() => {
+                          setShowSaveAsTemplatePopup(true);
+                          setIsFromPage(true);
+                          setShowTemplateMenu(false);
+                        }}
+                        className="hover:bg-[#F0F5FF] text-[14px] cursor-pointer w-full  rounded-md h-8.25 px-2.5 py-1.5 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                      >
+                        Сохранить как шаблон
+                      </button>
                     </div>
                   )}
+                </div>
               </div>
-            ) : null}
+            </div>
+
+            <div className="py-6.25 flex flex-row gap-16 pr-5 mr-2 overflow-hidden">
+              {isSidebarVisible && (
+                <Sidebar
+                  sections={sidebarSections}
+                  activeSection={activeSection}
+                  onSectionClick={handleSectionClick}
+                  sectionStatus={sectionStatus}
+                />
+              )}
+
+              <div
+                className={`flex flex-col gap-9 overflow-x-hidden overflow-y-auto pr-2 ${isSidebarVisible ? 'lg:ml-84.75 lg:w-full' : 'w-full'}`}
+                ref={sectionContainerRef}
+              >
+                <div className="text-[40px] pl-6 font-semibold leading-[150%] bg-transparent border-0 focus:outline-none focus:ring-0 w-full">
+                  {templateTitle}
+                </div>
+
+                <div className="flex gap-9 flex-col">
+                  {sections.map((section) => (
+                    <div
+                      key={section.id}
+                      ref={(el) => {
+                        sectionRefs.current[section.sectionKey] = el;
+                      }}
+                      className="scroll-mt-24"
+                    >
+                      <SectionInput
+                        key={section.id}
+                        id={section.id}
+                        label={section.label}
+                        value={section.value}
+                        onLabelChange={handleLabelChange}
+                        onValueChange={handleValueChange}
+                        sectionKey={section.sectionKey}
+                        onAnalysisChange={(status) => {
+                          setSectionStatus((prev) => ({
+                            ...prev,
+                            [section.sectionKey]: status,
+                          }));
+                        }}
+                        isActive={section.sectionKey === activeSection}
+                      />
+                    </div>
+                  ))}
+                </div>
+                <div className="flex flex-col gap-3">
+                  <button
+                    onClick={() => {
+                      setShowSaveAsTemplatePopup(true);
+                      setIsFromPage(true);
+                    }}
+                    className="hover:bg-[#F0F5FF] text-[#202020] cursor-pointer bg-[#DCE7FF]  rounded-xl h-13 ml-6 px-6 py-2.5 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  >
+                    Сохранить как шаблон
+                  </button>
+                  <button
+                    onClick={handleSave}
+                    disabled={isSaving}
+                    className="hover:bg-[#769CEF] mb-4 text-white rounded-xl h-13 ml-6 cursor-pointer bg-[#5D8CF1] px-6 py-2.5 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  >
+                    {isSaving ? (
+                      <div className="animate-spin mx-auto my- rounded-full h-5 w-5 border-b-2 border-white"></div>
+                    ) : (
+                      'Сохранить'
+                    )}
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
-        </div>
+
+          {showClinRecPanel && (
+            <>
+              <div
+                className="w-2 mx-1 cursor-col-resize flex-shrink-0 flex items-center justify-center group"
+                onMouseDown={handleDividerMouseDown}
+              >
+                <div className="w-0.5 h-12 bg-gray-300 rounded-full group-hover:bg-[#5D8CF1] transition-colors" />
+              </div>
+              <div
+                className="mr-2 h-[calc(100vh-55px)] bg-white rounded-[15px] flex flex-col overflow-hidden flex-shrink-0"
+                style={{ width: clinRecPanelWidth }}
+              >
+                <div className="flex items-start justify-between px-6.25 pt-5 border-[#E9ECEF]">
+                  <h3 className="text-xl font-medium text-[#202020]">
+                    Проверка протокола по клиническим рекомендациям
+                  </h3>
+                  <button
+                    onClick={handleCloseClinRecPanel}
+                    className="text-gray-400 hover:text-gray-600 transition-colors"
+                  >
+                    <Image
+                      alt="close"
+                      src="/close.svg"
+                      width={25}
+                      height={25}
+                    />
+                  </button>
+                </div>
+
+                <div className="flex-1 overflow-y-auto custom-scrollbar">
+                  {isLoadingClinRec ? (
+                    <div className="text-center pt-9">
+                      <p className="text-[#909090] text-md transition-opacity duration-500 ease-in-out">
+                        {LOADING_MESSAGES[currentMessageIndex]}
+                      </p>
+                    </div>
+                  ) : clinRecError ? (
+                    <div className="text-center pt-9">
+                      <p className="text-red-500 text-center">{clinRecError}</p>
+                    </div>
+                  ) : clinRecResults ? (
+                    <div className="py-7 px-6.25 space-y-5">
+                      {clinRecResults.critical.length > 0 && (
+                        <div className="space-y-5">
+                          {clinRecResults.critical.map((finding, index) => (
+                            <div key={`critical-${index}`}>
+                              <p className="text-xl font-medium text-[#D91528] pb-2">
+                                {finding.section}
+                              </p>
+                              <p className="text-md leading-[140%]">
+                                {finding.recommendation}
+                              </p>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      {clinRecResults.warning.length > 0 && (
+                        <div className="space-y-3">
+                          {clinRecResults.warning.map((finding, index) => (
+                            <div key={`warning-${index}`}>
+                              <p className="text-xl font-medium text-[#F29100] pb-2">
+                                {finding.section}
+                              </p>
+                              <p className="text-md leading-[140%]">
+                                {finding.recommendation}
+                              </p>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      {clinRecResults.info.length > 0 && (
+                        <div className="space-y-3">
+                          {clinRecResults.info.map((finding, index) => (
+                            <div key={`info-${index}`}>
+                              <p className="text-xl font-medium text-[#5D8CF1] pb-2">
+                                {finding.section}
+                              </p>
+                              <p className="text-md leading-[140%]">
+                                {finding.recommendation}
+                              </p>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      {clinRecResults.critical.length === 0 &&
+                        clinRecResults.warning.length === 0 &&
+                        clinRecResults.info.length === 0 && (
+                          <div className="flex flex-col items-center justify-center py-20">
+                            <p className="text-green-600 text-center font-medium">
+                              Протокол соответствует клиническим рекомендациям
+                            </p>
+                          </div>
+                        )}
+                    </div>
+                  ) : null}
+                </div>
+              </div>
+            </>
+          )}
+        </>
       )}
       <TemplatePopup
         isOpen={showTemplatePopup}

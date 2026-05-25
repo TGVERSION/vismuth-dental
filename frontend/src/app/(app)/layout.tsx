@@ -111,7 +111,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         onClose={() => setIsDictionaryOpen(false)}
       />
 
-      <main className="flex bg-[#F3F4F8] min-h-screen w-full gap-5 mx-auto my-20">
+      <main className="flex bg-[#F3F4F8] min-h-screen w-full mx-auto my-20">
         {children}
       </main>
 

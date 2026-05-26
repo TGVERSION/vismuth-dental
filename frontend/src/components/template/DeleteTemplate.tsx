@@ -14,7 +14,6 @@ export const DeleteTemplate: React.FC<DeleteTemplateProps> = ({
   onClose,
   onDelete,
 }) => {
-  //useLockBodyScroll(isOpen);
 
   const handleDelete = async () => {
     try {
@@ -44,19 +43,16 @@ export const DeleteTemplate: React.FC<DeleteTemplateProps> = ({
         className="bg-white rounded-2xl w-full max-w-lg p-5 shadow-2xl animate-fade-in"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Кнопка закрытия */}
         <div className="flex justify-end">
           <button onClick={onClose} className="cursor-pointer">
             <Image alt="close" src="/close.svg" width={25} height={25} />
           </button>
         </div>
 
-        {/* Заголовок */}
         <h2 className="text-[34px] font-medium text-center mb-7.5 px-5">
           Вы действительно хотите удалить шаблон?
         </h2>
 
-        {/* Кнопки действий */}
         <div className="flex flex-col gap-3 px-5 pb-5">
           <button
             onClick={handleDelete}

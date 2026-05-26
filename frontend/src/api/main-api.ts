@@ -39,6 +39,8 @@ import type {
   UserSettingsPatch,
   ClinrecCheck,
   ClinrecCheckResponse,
+  DictionaryNames,
+  RefSearchResponse,
 } from './index';
 
 export const apiClient = new ApiClient({
@@ -190,6 +192,7 @@ export const mainApi = {
 
     delete: (id: string) => apiClient.delete<void>(`/protocols/${id}`),
   },
+
   userSettings: {
     getUserSettings: (id: string) =>
       apiClient.get<UserSettings>(`/user-settings/${id}`),
@@ -202,5 +205,13 @@ export const mainApi = {
 
     patchUserSettings: (id: string, data: UserSettingsPatch) =>
       apiClient.patch<UserSettings>(`/user-settings/${id}`, data),
+  },
+
+  dictionary: {
+    getDictionary: () => apiClient.get<DictionaryNames[]>(`/dictionary`),
+    getDictionaryRef: (
+      name: string,
+      params?: { search?: string; limit?: number; offset?: number },
+    ) => apiClient.get<RefSearchResponse>(`/ref/${name}`, params),
   },
 };

@@ -1,12 +1,11 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import Image from 'next/image';
 import { toast } from 'react-toastify';
 import { CustomDropdown, DropdownOption } from '../CustomDropdown';
-import Example from '../Example';
-import ExampleCheckbox from '../ExampleCheckbox';
-import MultipleDropdownExample from '../MultipleDropdownExample';
+import { ProtocolStructuresSection } from './ProtocolStructuresSection';
+import { DirectoriesSection } from './DirectoriesSection';
 
 interface User {
   id: string;
@@ -69,12 +68,23 @@ export const SettingsPopup: React.FC<SettingsPopupProps> = ({
     toast.success('Роль пользователя обновлена');
   };
 
+  const [deleteConfirmUserId, setDeleteConfirmUserId] = useState<string | null>(
+    null,
+  );
+
   const handleDeleteUser = (userId: string) => {
     setUsers((prevUsers) => prevUsers.filter((user) => user.id !== userId));
+    setDeleteConfirmUserId(null);
     toast.success('Пользователь удален');
   };
 
+  const protocolCloseRef = useRef<(() => void) | null>(null);
+
   const closeModal = () => {
+    if (activeSection === 'protocols' && protocolCloseRef.current) {
+      protocolCloseRef.current();
+      return;
+    }
     onClose();
   };
 
@@ -89,17 +99,17 @@ export const SettingsPopup: React.FC<SettingsPopupProps> = ({
       case 'users':
         return (
           <div className="py-5.25 pl-14 h-full pr-8 flex flex-col gap-9">
-            <div className="overflow-x-auto h-full">
-              <table className="w-full h-full">
-                <tbody className="divide-y divide-gray-100">
-                  {users.map((user) => (
-                    <tr key={user.id} className="group">
-                      <td className="py-4 pr-4">
-                        <span className="text-sm text-[#202020]">
-                          {user.email}
-                        </span>
-                      </td>
-                      <td className="py-4 pr-4">
+            <div className="h-full">
+              <div className="flex flex-col gap-2">
+                {users.map((user) => (
+                  <div
+                    key={user.id}
+                    className={`flex justify-between items-center px-3.75 py-3 rounded-xl cursor-pointer transition-all shadow-custom-hover`}
+                  >
+                    <span className="text-sm text-[#202020]">{user.email}</span>
+
+                    <div className="flex flex-row items-center gap-12.5">
+                      <div className="w-41.25">
                         <CustomDropdown
                           options={roleOptions}
                           value={user.role}
@@ -109,52 +119,39 @@ export const SettingsPopup: React.FC<SettingsPopupProps> = ({
                           showCheckIcon={false}
                           className="w-48"
                         />
-                      </td>
-                      <td className="py-4">
-                        <button
-                          onClick={() => handleDeleteUser(user.id)}
-                          className="cursor-pointer"
-                          aria-label="Удалить пользователя"
-                        >
-                          <Image
-                            src="/delete-gray.svg"
-                            alt="delete"
-                            width={18}
-                            height={18}
-                            className="icon-gray"
-                          />
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+                      </div>
+
+                      <button
+                        onClick={() => setDeleteConfirmUserId(user.id)}
+                        className="cursor-pointer"
+                        aria-label="Удалить пользователя"
+                      >
+                        <Image
+                          src="/delete-gray.svg"
+                          alt="delete"
+                          width={18}
+                          height={18}
+                          className="icon-gray"
+                        />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
-            <Example />
-            <ExampleCheckbox />
-            <MultipleDropdownExample />
           </div>
         );
 
       case 'protocols':
         return (
-          <div className="py-5.25 pl-14 h-full pr-8 flex flex-col gap-9">
-            <div className="flex items-center justify-center h-64 text-gray-500">
-              <p className="text-lg">
-                Раздел «Структуры протоколов» в разработке
-              </p>
-            </div>
-          </div>
+          <ProtocolStructuresSection
+            onPopupClose={onClose}
+            externalCloseRef={protocolCloseRef}
+          />
         );
 
       case 'directories':
-        return (
-          <div className="py-5.25 pl-14 h-full pr-8 flex flex-col gap-9">
-            <div className="flex items-center justify-center h-64 text-gray-500">
-              <p className="text-lg">Раздел «Справочники» в разработке</p>
-            </div>
-          </div>
-        );
+        return <DirectoriesSection />;
 
       default:
         return null;
@@ -181,7 +178,6 @@ export const SettingsPopup: React.FC<SettingsPopupProps> = ({
           onClick={(e) => e.stopPropagation()}
         >
           <div className="flex flex-1">
-
             <div className="border-r border-[#E9ECEF] p-8 flex gap-4 flex-col max-w-102.25">
               <h2 className="text-[34px] font-semibold text-[#202020]">
                 Настройки
@@ -194,7 +190,7 @@ export const SettingsPopup: React.FC<SettingsPopupProps> = ({
                       className={`px-3.75 py-3 rounded-lg cursor-pointer transition-all ${
                         activeSection === item.id
                           ? 'bg-white shadow-custom'
-                          : 'hover:bg-white hover:shadow-custom-hover'
+                          : 'hover:bg-white shadow-custom-hover'
                       }`}
                       onClick={() => handleSectionChange(item.id)}
                     >
@@ -222,13 +218,16 @@ export const SettingsPopup: React.FC<SettingsPopupProps> = ({
               </div>
 
               <div>
-                <div className="flex items-center justify-between pb-6 border-b px-8 border-gray-200">
-                  <div className="flex items-center gap-3">
-                    <h3 className="text-3xl font-medium text-[#202020]">
-                      {getSectionTitle()}
-                    </h3>
-                  </div>
-                </div>
+                {activeSection !== 'protocols' &&
+                  activeSection !== 'directories' && (
+                    <div className="flex items-center justify-between pb-6 border-b px-8 border-gray-200">
+                      <div className="flex items-center gap-3">
+                        <h3 className="text-3xl font-medium text-[#202020]">
+                          {getSectionTitle()}
+                        </h3>
+                      </div>
+                    </div>
+                  )}
 
                 {renderSectionContent()}
               </div>
@@ -236,6 +235,52 @@ export const SettingsPopup: React.FC<SettingsPopupProps> = ({
           </div>
         </div>
       </div>
+
+      {deleteConfirmUserId && (
+        <div
+          className="modal-overlay fixed inset-0 flex items-center justify-center bg-black/40"
+          onClick={() => setDeleteConfirmUserId(null)}
+        >
+          <div
+            className="bg-white rounded-[15px] px-10 py-10 w-141.25 shadow-2xl flex flex-col animate-fade-in relative"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              type="button"
+              onClick={() => setDeleteConfirmUserId(null)}
+              className="absolute top-5 right-5 cursor-pointer"
+            >
+              <Image alt="close" src="/close.svg" width={25} height={25} />
+            </button>
+
+            <div className="flex flex-col text-center">
+              <p className="text-[34px] font-medium text-center mb-5">
+                Вы действительно хотите удалить пользователя?
+              </p>
+              <p className="mb-7.5  text-[18px] text-center text-[#6C757D]">
+                Для входа этому пользователю придётся зарегистрироваться заново
+              </p>
+            </div>
+
+            <div className="flex flex-col gap-3">
+              <button
+                type="button"
+                onClick={() => handleDeleteUser(deleteConfirmUserId)}
+                className="w-full h-12 bg-[#F15D5D] hover:bg-[#F26E6E] text-white rounded-2xl text-base transition-colors cursor-pointer"
+              >
+                Удалить
+              </button>
+              <button
+                type="button"
+                onClick={() => setDeleteConfirmUserId(null)}
+                className="w-full h-12 bg-[#E8EEFF] hover:bg-[#D6E0FF] text-[#202020] rounded-2xl text-base transition-colors cursor-pointer"
+              >
+                Оставить
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 };

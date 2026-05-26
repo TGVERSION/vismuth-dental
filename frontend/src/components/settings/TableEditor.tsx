@@ -11,7 +11,6 @@ import {
 const HEADER_HEIGHT_PX = 36;
 const ROW_HEIGHT_PX = 34;
 const MAX_VISIBLE_ROWS = 10;
-// 36 + 10 * 34 = 376
 const MAX_TABLE_HEIGHT = HEADER_HEIGHT_PX + MAX_VISIBLE_ROWS * ROW_HEIGHT_PX;
 
 export interface Column {
@@ -31,6 +30,7 @@ interface TableEditorProps {
   rows: string[][];
   onColumnsChange: (columns: Column[]) => void;
   onRowsChange: (rows: string[][]) => void;
+  onScrollNearBottom?: () => void;
 }
 
 export function TableEditor({
@@ -38,6 +38,7 @@ export function TableEditor({
   rows,
   onColumnsChange,
   onRowsChange,
+  onScrollNearBottom,
 }: TableEditorProps) {
   const wrapRef = useRef<HTMLDivElement>(null);
   const outerRef = useRef<HTMLDivElement>(null);
@@ -57,7 +58,6 @@ export function TableEditor({
   const [colBtnPos, setColBtnPos] = useState<OverlayPos[]>([]);
   const [rowBtnPos, setRowBtnPos] = useState<OverlayPos[]>([]);
 
-  // ── Position computation ───────────────────────────────────────────────
   const computePositions = useCallback(() => {
     const wrap = wrapRef.current;
     const outer = outerRef.current;
@@ -106,9 +106,22 @@ export function TableEditor({
     computePositions();
   }, [columns.length, rows.length, colGeometry, computePositions]);
 
+  const onScrollNearBottomRef = useRef(onScrollNearBottom);
+  useEffect(() => {
+    onScrollNearBottomRef.current = onScrollNearBottom;
+  }, [onScrollNearBottom]);
+
   useEffect(() => {
     const scroll = scrollRef.current;
-    const onEvent = () => requestAnimationFrame(computePositions);
+    const onEvent = () => {
+      requestAnimationFrame(computePositions);
+      if (scroll) {
+        const { scrollTop, scrollHeight, clientHeight } = scroll;
+        if (scrollHeight - scrollTop - clientHeight < 80) {
+          onScrollNearBottomRef.current?.();
+        }
+      }
+    };
     scroll?.addEventListener('scroll', onEvent);
     window.addEventListener('resize', onEvent);
     return () => {
@@ -117,7 +130,6 @@ export function TableEditor({
     };
   }, [computePositions]);
 
-  // ── Column operations ──────────────────────────────────────────────────
   const addColumn = useCallback(
     (afterIndex: number) => {
       const next = [...columns];
@@ -156,7 +168,6 @@ export function TableEditor({
     [columns, onColumnsChange],
   );
 
-  // ── Row operations ─────────────────────────────────────────────────────
   const addRow = useCallback(
     (afterIndex: number) => {
       const next = [...rows];
@@ -187,7 +198,6 @@ export function TableEditor({
     [rows, onRowsChange],
   );
 
-  // ── Column resize ──────────────────────────────────────────────────────
   const startResize = useCallback(
     (e: React.MouseEvent, ci: number) => {
       e.preventDefault();
@@ -212,10 +222,8 @@ export function TableEditor({
     [onColumnsChange],
   );
 
-  // ── Render ─────────────────────────────────────────────────────────────
   return (
     <div ref={wrapRef} className="relative pt-2.25">
-      {/* Table */}
       <div
         ref={outerRef}
         className="border border-[#E5E7EB] rounded-lg overflow-hidden"
@@ -226,7 +234,7 @@ export function TableEditor({
           style={{ maxHeight: MAX_TABLE_HEIGHT }}
         >
           <table ref={tableRef} className="border-collapse w-full table-fixed">
-            {/* ── Header ── */}
+
             <thead>
               <tr>
                 {columns.map((col, ci) => (
@@ -251,7 +259,6 @@ export function TableEditor({
                       />
                     </div>
 
-                    {/* Column delete ✕ */}
                     {hoveredCol === ci && (
                       <button
                         type="button"
@@ -265,7 +272,6 @@ export function TableEditor({
                       </button>
                     )}
 
-                    {/* Resize handle */}
                     <div
                       onMouseDown={(e) => startResize(e, ci)}
                       className="absolute -right-0.75 top-0 bottom-0 w-1.5 cursor-col-resize z-10"
@@ -273,7 +279,6 @@ export function TableEditor({
                   </th>
                 ))}
 
-                {/* Actions column header — no left divider, no right border */}
                 <th
                   data-actions="true"
                   style={{ borderLeftStyle: 'hidden' }}
@@ -282,7 +287,6 @@ export function TableEditor({
               </tr>
             </thead>
 
-            {/* ── Body ── */}
             <tbody>
               {rows.map((row, ri) => (
                 <tr
@@ -297,7 +301,6 @@ export function TableEditor({
                       className="border-r border-b border-[#E5E7EB] relative p-0"
                       style={{ height: ROW_HEIGHT_PX }}
                     >
-                      {/* Resize handle on body cells */}
                       <div
                         onMouseDown={(e) => startResize(e, ci)}
                         className="absolute -right-0.75 top-0 bottom-0 w-1.5 cursor-col-resize z-10"
@@ -312,8 +315,6 @@ export function TableEditor({
                       />
                     </td>
                   ))}
-
-                  {/* Actions cell — row delete */}
                   <td
                     style={{ borderLeftStyle: 'hidden' }}
                     className="border-r-0 border-b border-[#E5E7EB] w-9 min-w-9 p-0 text-center align-middle"
@@ -335,7 +336,6 @@ export function TableEditor({
         </div>
       </div>
 
-      {/* Overlay — column + buttons */}
       {colBtnPos.map((pos, ci) =>
         (hoveredCol === ci || plusColHovered === ci) && pos.visible ? (
           <button
@@ -352,7 +352,6 @@ export function TableEditor({
         ) : null,
       )}
 
-      {/* Overlay — row + buttons */}
       {rowBtnPos.map((pos, ri) =>
         (hoveredRow === ri || plusRowHovered === ri) && pos.visible ? (
           <button

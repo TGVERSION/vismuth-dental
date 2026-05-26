@@ -266,14 +266,16 @@ export interface StructureProtocolsFields {
 
 export interface StructureProtocolsFieldsSmall {
   field_name: string;
-  field_label: string;
-  description: string;
+  field_label: string | null;
+  description: string | null;
   field_type: string;
-  default_value: string;
-  dictionary: string;
-  protocol_fields_main_id: string;
-  is_required: boolean;
-  sort_order: number;
+  default_value: string | null;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  default_value_jsonb: any | null;
+  dictionary: string | null;
+  protocol_fields_main_id: string | null;
+  is_required: boolean | null;
+  sort_order: number | null;
 }
 
 export interface ProtocolFcieldsMain {
@@ -374,4 +376,21 @@ export interface ClinicalFinding {
   recommendation: string;
   guideline_ref: string;
   guideline_quote: string;
+}
+
+export interface DictionaryNames {
+  id: number;
+  oid: string;
+  name: string;
+  created_at: string;
+  updated_at: string;
+  deleted_at: string;
+}
+
+export interface RefSearchResponse {
+  name: string;
+  total: number;
+  limit: number;
+  offset: number;
+  items: Record<string, unknown>[];
 }

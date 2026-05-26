@@ -290,14 +290,14 @@ export default function AuthForms() {
                 )}
               </button>
             </form>
-            <div className="flex justify-between mt-7.5 text-sm">
-              <button
+            <div className="flex justify-center mt-7.5 text-sm">
+              {/* <button
                 onClick={() => console.log('Forgot password')}
                 disabled={loading}
                 className="text-[#5D8CF1] hover:text-[#769CEF] cursor-pointer transition-colors"
               >
                 Забыли пароль?
-              </button>
+              </button> */}
               <button
                 onClick={switchToRegister}
                 disabled={loading}

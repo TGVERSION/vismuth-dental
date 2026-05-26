@@ -62,3 +62,14 @@ async def require_admin(
             detail="Access denied",
         )
     return current_user
+
+
+async def require_admin_or_head_of_department(
+    current_user: ServiceUser = Depends(get_current_user),
+) -> ServiceUser:
+    if current_user.role not in {"administrator", "head_of_department"}:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Access denied",
+        )
+    return current_user

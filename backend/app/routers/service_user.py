@@ -8,7 +8,11 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..db import get_db
-from ..deps import get_current_user, require_admin
+from ..deps import (
+    get_current_user,
+    require_admin,
+    require_admin_or_head_of_department,
+)
 from ..models.service_user import ServiceUser
 from ..schemas.service_user import (
     ServiceUserIdRead,
@@ -70,7 +74,7 @@ async def get_service_user_me(
 
 @router.get("/service_user_ids", response_model=List[ServiceUserIdRead])
 async def list_service_user_ids(
-    _: ServiceUser = Depends(require_admin),
+    _: ServiceUser = Depends(require_admin_or_head_of_department),
     db: AsyncSession = Depends(get_db),
 ) -> List[ServiceUserIdRead]:
     stmt = (
@@ -85,7 +89,7 @@ async def list_service_user_ids(
 @router.get("/service_user/{user_id}", response_model=ServiceUserRead)
 async def get_service_user(
     user_id: UUID,
-    _: ServiceUser = Depends(require_admin),
+    _: ServiceUser = Depends(require_admin_or_head_of_department),
     db: AsyncSession = Depends(get_db),
 ) -> ServiceUserRead:
     user = _ensure_user_found(await _load_user(db, user_id))
@@ -96,7 +100,7 @@ async def get_service_user(
 async def replace_service_user(
     user_id: UUID,
     payload: ServiceUserUpdate,
-    _: ServiceUser = Depends(require_admin),
+    _: ServiceUser = Depends(require_admin_or_head_of_department),
     db: AsyncSession = Depends(get_db),
 ) -> ServiceUserRead:
     user = _ensure_user_found(await _load_user(db, user_id))
@@ -131,7 +135,7 @@ async def replace_service_user(
 async def patch_service_user(
     user_id: UUID,
     payload: ServiceUserPatch,
-    _: ServiceUser = Depends(require_admin),
+    _: ServiceUser = Depends(require_admin_or_head_of_department),
     db: AsyncSession = Depends(get_db),
 ) -> ServiceUserRead:
     update_data = payload.model_dump(exclude_unset=True)
@@ -177,7 +181,7 @@ async def patch_service_user(
 @router.delete("/service_user/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_service_user(
     user_id: UUID,
-    _: ServiceUser = Depends(require_admin),
+    _: ServiceUser = Depends(require_admin_or_head_of_department),
     db: AsyncSession = Depends(get_db),
 ) -> None:
     user = _ensure_user_found(await _load_user(db, user_id))

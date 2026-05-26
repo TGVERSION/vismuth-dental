@@ -9,7 +9,7 @@ from ..schemas.ml_mkb_code import (
     MkbCodeSelectRequest,
     MkbEventType,
 )
-from ..services.ml_proxy import proxy_post_to_ml
+from ..services.ml_proxy import MlProxyLogContext, proxy_post_to_ml
 from ..services.redis_stream import build_event_payload, get_redis_client, publish_event
 
 router = APIRouter(prefix="/ml_mkb_code", tags=["ml_mkb_code"])
@@ -27,6 +27,10 @@ async def proxy_mkb_code(
             "n_candidates": payload.n_candidates,
             "use_llm": payload.use_llm,
         },
+        log_context=MlProxyLogContext(
+            user_id=current_user.id,
+            endpoint_name="ml_mkb_code",
+        ),
     )
 
     redis = get_redis_client()

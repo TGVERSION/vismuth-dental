@@ -13,7 +13,7 @@ from ..schemas.ml_mkb_code import (
     MkbCodeSelectRequest,
     MkbEventType,
 )
-from ..services.ml_proxy import proxy_post_to_ml
+from ..services.ml_proxy import MlProxyLogContext, proxy_post_to_ml
 from ..services.redis_stream import (
     build_event_payload,
     get_redis_client,
@@ -66,6 +66,10 @@ async def proxy_ml_autocomplete(
                 "prefix": payload.prefix,
                 "num_sequences": payload.suggestions_count,
             },
+            log_context=MlProxyLogContext(
+                user_id=current_user.id,
+                endpoint_name="ml_autocomplete",
+            ),
         )
     else:
         suggestions = await autocomplete_mixed(

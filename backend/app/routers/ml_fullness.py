@@ -6,7 +6,7 @@ from ..schemas.ml_fullness_complaints import (
     MlFullnessComplaintsRequest,
     MlFullnessComplaintsResponse,
 )
-from ..services.ml_proxy import proxy_post_to_ml
+from ..services.ml_proxy import MlProxyLogContext, proxy_post_to_ml
 from ..services.redis_stream import (
     build_fullness_complaints_payload,
     get_redis_client,
@@ -29,6 +29,10 @@ async def proxy_ml_fullness_complaints(
         {
             "example_prompt": payload.example_prompt,
         },
+        log_context=MlProxyLogContext(
+            user_id=current_user.id,
+            endpoint_name="ml_fullness_complaints",
+        ),
     )
 
     redis = get_redis_client()

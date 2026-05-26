@@ -57,5 +57,28 @@ def build_fullness_complaints_payload(
     return {"event": json.dumps(payload, ensure_ascii=False)}
 
 
+def build_ml_response_log_payload(
+    *,
+    user_id: UUID,
+    endpoint_name: str,
+    ml_path: str,
+    response_status: str,
+    http_status_code: int | None = None,
+    response_comment: str | None = None,
+    response_payload: dict | list | None = None,
+) -> dict[str, str]:
+    payload = {
+        "event_kind": "ml_response_log",
+        "user_id": str(user_id),
+        "endpoint_name": endpoint_name,
+        "ml_path": ml_path,
+        "http_status_code": http_status_code,
+        "response_status": response_status,
+        "response_comment": response_comment,
+        "response_payload": response_payload,
+    }
+    return {"event": json.dumps(payload, ensure_ascii=False)}
+
+
 async def publish_event(redis: Redis, payload: dict[str, str]) -> str:
     return await redis.xadd(settings.redis_stream_key, payload, id="*")

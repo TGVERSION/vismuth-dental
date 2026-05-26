@@ -701,6 +701,35 @@ CREATE INDEX IF NOT EXISTS idx_fullness_complaints_stats_status
 
 
 -- =========================================
+-- Логи upstream-ответов ML proxy endpoint'ов
+-- =========================================
+
+CREATE TABLE IF NOT EXISTS ml_response_logs (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL REFERENCES service_user(id),
+    endpoint_name VARCHAR(64) NOT NULL,
+    ml_path VARCHAR(128) NOT NULL,
+    http_status_code INTEGER,
+    response_status VARCHAR(64) NOT NULL,
+    response_comment TEXT,
+    response_payload JSONB,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_ml_response_logs_user_id
+    ON ml_response_logs (user_id);
+
+CREATE INDEX IF NOT EXISTS idx_ml_response_logs_endpoint_name
+    ON ml_response_logs (endpoint_name);
+
+CREATE INDEX IF NOT EXISTS idx_ml_response_logs_response_status
+    ON ml_response_logs (response_status);
+
+CREATE INDEX IF NOT EXISTS idx_ml_response_logs_created_at
+    ON ml_response_logs (created_at);
+
+
+-- =========================================
 -- Таблицы автодополнения
 -- =========================================
 -- Таблица словаря

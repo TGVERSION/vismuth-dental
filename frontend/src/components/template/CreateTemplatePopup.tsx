@@ -189,14 +189,14 @@ export const CreateTemplatePopup: React.FC<CreateTemplatePopupProps> = ({
   const transformTemplate = (template: TemplatesResponse): TemplateUI => {
     const content: Record<string, string> = {};
     template.fields?.forEach((field: FieldsTypeFull) => {
-      content[field.field_name] = field.field_value;
+      if (field.field_name) content[field.field_name] = field.field_value ?? '';
     });
     return {
       ...template,
-      name: template.protocol_name,
+      name: template.protocol_name || '',
       type: template.privacy === 'personal' ? 'personal' : 'general',
       content,
-      groupId: template.group_id,
+      groupId: template.group_id ?? undefined,
     };
   };
 

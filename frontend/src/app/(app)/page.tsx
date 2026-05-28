@@ -173,7 +173,7 @@ export default function Home() {
         .sort((a, b) => a.sort_order - b.sort_order)
         .map((field, index) => ({
           id: index + 1,
-          label: field.field_label,
+          label: field.field_label || '',
           value: field.default_value || '',
           sectionKey: field.field_name,
           fieldMeta: field,
@@ -674,7 +674,7 @@ export default function Home() {
                   consultations.reduce(
                     (acc, consultation) => {
                       const year = new Date(
-                        consultation.updated_at,
+                        consultation.updated_at || '',
                       ).getFullYear();
                       if (!acc[year]) acc[year] = [];
                       acc[year].push(consultation);
@@ -691,7 +691,7 @@ export default function Home() {
                       yearConsultations.reduce(
                         (acc, consultation) => {
                           const month = new Date(
-                            consultation.updated_at,
+                            consultation.updated_at || '',
                           ).toLocaleDateString('ru-RU', { month: 'long' });
                           if (!acc[month]) acc[month] = [];
                           acc[month].push(consultation);
@@ -722,7 +722,7 @@ export default function Home() {
                                 `Протокол №${consultation.id.slice(-12)}`}
                             </p>
                             <span className="text-[14px] text-[#6C757D]">
-                              {formatDate(consultation.updated_at)}
+                              {formatDate(consultation.updated_at || '')}
                             </span>
                           </div>
                         ))}

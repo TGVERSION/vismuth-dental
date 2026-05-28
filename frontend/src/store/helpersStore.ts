@@ -130,7 +130,7 @@ export const useHelpersStore = create<HelpersStoreState>((set, get) => ({
         autocompleteProvider:
           settings.autocomplete === 'off'
             ? 'off'
-            : (settings.autocomplete ?? 'dict_autocomplete'),
+            : ((settings.autocomplete ?? 'dict_autocomplete') as AutocompleteProvider),
       });
     } catch (error) {
       console.error('Failed to fetch user settings:', error);

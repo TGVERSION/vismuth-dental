@@ -195,15 +195,15 @@ export const TemplatePopup: React.FC<TemplatePopupProps> = ({
     const content: Record<string, string> = {};
     if ('fields' in template && Array.isArray(template.fields)) {
       template.fields.forEach((field: FieldsTypeFull) => {
-        content[field.field_name] = field.field_value;
+        if (field.field_name) content[field.field_name] = field.field_value ?? '';
       });
     }
     return {
       ...template,
-      name: template.protocol_name,
+      name: template.protocol_name || '',
       type: template.privacy === 'personal' ? 'personal' : 'general',
       content,
-      groupId: template.group_id,
+      groupId: template.group_id ?? undefined,
     };
   };
 
@@ -328,8 +328,12 @@ export const TemplatePopup: React.FC<TemplatePopupProps> = ({
           await mainApi.templates.update(template.id, {
             protocol_name: template.protocol_name,
             group_id: null,
-            privacy: template.privacy,
-            fields: fullTemplate.fields || [],
+            privacy: template.privacy as 'general' | 'personal' | null,
+            fields: (fullTemplate.fields || []).map((f) => ({
+              field_name: f.field_name ?? '',
+              field_type: f.field_type ?? 'text',
+              field_value: f.field_value,
+            })),
             protocol_structure_id: fullTemplate.protocol_structure_id,
           });
         }
@@ -375,8 +379,12 @@ export const TemplatePopup: React.FC<TemplatePopupProps> = ({
         await mainApi.templates.update(id, {
           protocol_name: newName,
           group_id: fullTemplate.group_id || '',
-          privacy: fullTemplate.privacy,
-          fields: fullTemplate.fields || [],
+          privacy: fullTemplate.privacy as 'general' | 'personal' | null,
+          fields: (fullTemplate.fields || []).map((f) => ({
+            field_name: f.field_name ?? '',
+            field_type: f.field_type ?? 'text',
+            field_value: f.field_value,
+          })),
           protocol_structure_id: fullTemplate.protocol_structure_id,
         });
 

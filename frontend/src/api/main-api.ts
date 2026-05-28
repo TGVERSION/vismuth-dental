@@ -62,6 +62,12 @@ export const apiClient = new ApiClient({
   retryDelay: 100,
 });
 
+const mlLongRunningApiClient = new ApiClient({
+  baseUrl: '/api/main',
+  timeout: 1200000,
+  retries: 0,
+});
+
 export const mainApi = {
   serviceUsers: {
     register: (data: LoginRequest) =>
@@ -148,8 +154,7 @@ export const mainApi = {
     update: (id: string, data: ProtocolTemplateUpdate) =>
       apiClient.put<TemplatesResponse>(`/protocol-templates/${id}`, data),
 
-    delete: (id: string) =>
-      apiClient.delete<void>(`/protocol-templates/${id}`),
+    delete: (id: string) => apiClient.delete<void>(`/protocol-templates/${id}`),
   },
 
   mkb10: {
@@ -163,22 +168,25 @@ export const mainApi = {
 
   ml_handlers: {
     mlMkbCode: (data: MlMkbCodePayload) =>
-      apiClient.post<MlMkbCodeResponse>('/ml_mkb_code', data),
+      mlLongRunningApiClient.post<MlMkbCodeResponse>('/ml_mkb_code', data),
 
     mlAutocomplete: (data: CompletePayload) =>
-      apiClient.post<CompleteResponse>('/ml_autocomplete', data),
+      mlLongRunningApiClient.post<CompleteResponse>('/ml_autocomplete', data),
 
     mlAutocompleteStatus: (data: MlStatusPayload) =>
-      apiClient.post<MlStatusResponse>('/ml_autocomplete_stats', data),
+      mlLongRunningApiClient.post<MlStatusResponse>('/ml_autocomplete_stats', data),
 
     mlFullnessComplaint: (data: mlFullnessComplaintPayload) =>
-      apiClient.post<mlFullnessComplaintResponse>(
+      mlLongRunningApiClient.post<mlFullnessComplaintResponse>(
         '/ml_fullness_complaints',
         data,
       ),
 
     ml_clinrec_check: (data: ClinrecCheck) =>
-      apiClient.post<ClinrecCheckResponse>('/ml_clinrec_check', data),
+      mlLongRunningApiClient.post<ClinrecCheckResponse>(
+        '/ml_clinrec_check',
+        data,
+      ),
   },
 
   autocompleteDict: {

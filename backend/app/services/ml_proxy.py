@@ -96,7 +96,7 @@ async def proxy_post_to_ml(
     path: str,
     body: dict,
     *,
-    timeout: float = 20.0,
+    timeout: float = 180.0,
     log_context: MlProxyLogContext | None = None,
 ) -> dict:
     async with httpx.AsyncClient(timeout=timeout) as client:

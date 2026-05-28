@@ -9,6 +9,7 @@ import {
   mlFullnessComplaintPayload,
   mlFullnessComplaintResponse,
 } from '@/api';
+import type { MkbEventType } from '@/api';
 import { Spinner } from './SpinnerFullnes';
 import { FeedbackPopover } from './FeedbackPopover';
 import { createPortal } from 'react-dom';
@@ -182,7 +183,7 @@ export const SectionInput: React.FC<SectionInputProps> = ({
   };
 
   const sendMlStatus = (
-    eventType: string,
+    eventType: MkbEventType,
     selectedText: string = '',
     countSugest: number = -1,
   ) => {
@@ -381,7 +382,7 @@ export const SectionInput: React.FC<SectionInputProps> = ({
                       !isFetchingAnalysis &&
                       createPortal(
                         <FeedbackPopover
-                          color={mlAnalysis.color}
+                          color={mlAnalysis.color as 'green' | 'red' | 'yellow'}
                           analysis={mlAnalysis.analysis}
                           suggestedText={mlAnalysis.suggested_text}
                           onApply={handleApplySuggestion}

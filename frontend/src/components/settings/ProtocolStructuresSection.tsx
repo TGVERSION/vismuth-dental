@@ -726,6 +726,7 @@ export function ProtocolStructuresSection({
   const [isLoadingList, setIsLoadingList] = useState(false);
 
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [currentVersion, setCurrentVersion] = useState(1);
   const [structureName, setStructureName] = useState('');
   const [structureCode, setStructureCode] = useState('');
   const [fields, setFields] = useState<LocalField[]>([]);
@@ -835,6 +836,7 @@ export function ProtocolStructuresSection({
           structure.id,
         );
       setEditingId(structure.id);
+      setCurrentVersion(detail.version);
       setStructureName(detail.structure_name);
       setStructureCode(detail.structure_code);
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -883,6 +885,7 @@ export function ProtocolStructuresSection({
 
   const createNew = () => {
     setEditingId(null);
+    setCurrentVersion(1);
     setStructureName('');
     setStructureCode('');
     setFields([]);
@@ -917,7 +920,7 @@ export function ProtocolStructuresSection({
       structure_code: code,
       structure_name: structureName,
       description: '',
-      version: 1,
+      version: editingId ? currentVersion + 1 : 1,
       is_active: true,
       fields: apiFields,
     };

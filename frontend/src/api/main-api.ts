@@ -2,6 +2,8 @@ import { ApiClient } from './base-client';
 import type {
   ConsultationsRequest,
   ConsultationsResponse,
+  ConsultationViewResponse,
+  ConsultationViewPatchRequest,
   ListConsultationsResponse,
   LoginRequest,
   LoginResponse,
@@ -18,21 +20,29 @@ import type {
   ListsGroupsResponse,
   GroupRequest,
   GroupResponse,
+  TemplateGroupUpdate,
   ListsTemplatesResponse,
   TemplatesRequest,
   TemplatesResponse,
+  ProtocolTemplateUpdate,
   mlFullnessComplaintPayload,
   mlFullnessComplaintResponse,
   ServiceUserData,
+  ServiceUserRead,
+  ServiceUserIdRead,
+  ServiceUserUpdate,
+  ServiceUserPatch,
   ProtocolStructures,
   ProtocolStructuresFields,
   ProtocolStructuresPost,
+  ProtocolStructuresPut,
   ProtocolStructuresPatch,
   ProtocolFcieldsMain,
   Protocols,
   ProtocolsFields,
   ProtocolsPost,
   ProtocolsPut,
+  ProtocolsPatch,
   UserSettings,
   UserSettingsPost,
   UserSettingsPut,
@@ -41,6 +51,8 @@ import type {
   ClinrecCheckResponse,
   DictionaryNames,
   RefSearchResponse,
+  AutocompleteRequest,
+  AutocompleteResponse,
 } from './index';
 
 export const apiClient = new ApiClient({
@@ -48,6 +60,12 @@ export const apiClient = new ApiClient({
   timeout: 10000,
   retries: 3,
   retryDelay: 100,
+});
+
+const mlLongRunningApiClient = new ApiClient({
+  baseUrl: '/api/main',
+  timeout: 1200000,
+  retries: 0,
 });
 
 export const mainApi = {
@@ -64,6 +82,21 @@ export const mainApi = {
     logout: () => apiClient.post<LoginResponse>('/auth/logout'),
 
     serviceUser: () => apiClient.get<ServiceUserData>('/service_user'),
+
+    listServiceUserIds: () =>
+      apiClient.get<ServiceUserIdRead[]>('/service_user_ids'),
+
+    getServiceUser: (user_id: string) =>
+      apiClient.get<ServiceUserRead>(`/service_user/${user_id}`),
+
+    updateServiceUser: (user_id: string, data: ServiceUserUpdate) =>
+      apiClient.put<ServiceUserRead>(`/service_user/${user_id}`, data),
+
+    patchServiceUser: (user_id: string, data: ServiceUserPatch) =>
+      apiClient.patch<ServiceUserRead>(`/service_user/${user_id}`, data),
+
+    deleteServiceUser: (user_id: string) =>
+      apiClient.delete<void>(`/service_user/${user_id}`),
   },
 
   consultations: {
@@ -80,6 +113,20 @@ export const mainApi = {
       apiClient.put<ConsultationsResponse>(`/consultations/${id}`, data),
 
     delete: (id: string) => apiClient.delete<void>(`/consultations/${id}`),
+
+    getConsultationView: (consultation_id: string) =>
+      apiClient.get<ConsultationViewResponse>(
+        `/consultations/${consultation_id}/view`,
+      ),
+
+    patchConsultationView: (
+      consultation_id: string,
+      data: ConsultationViewPatchRequest,
+    ) =>
+      apiClient.patch<ConsultationViewResponse>(
+        `/consultations/${consultation_id}/view`,
+        data,
+      ),
   },
 
   templateGroups: {
@@ -88,7 +135,7 @@ export const mainApi = {
     create: (data: GroupRequest) =>
       apiClient.post<GroupResponse>('/template-groups', data),
 
-    update: (id: string, data: GroupRequest) =>
+    update: (id: string, data: TemplateGroupUpdate) =>
       apiClient.put<GroupResponse>(`/template-groups/${id}`, data),
 
     delete: (id: string) => apiClient.delete<void>(`/template-groups/${id}`),
@@ -101,12 +148,10 @@ export const mainApi = {
     create: (data: TemplatesRequest) =>
       apiClient.post<TemplatesResponse>('/protocol-templates', data),
 
-    getTemplate: (consultation_id: string) =>
-      apiClient.get<TemplatesResponse>(
-        `/protocol-templates/${consultation_id}`,
-      ),
+    getTemplate: (template_id: string) =>
+      apiClient.get<TemplatesResponse>(`/protocol-templates/${template_id}`),
 
-    update: (id: string, data: TemplatesRequest) =>
+    update: (id: string, data: ProtocolTemplateUpdate) =>
       apiClient.put<TemplatesResponse>(`/protocol-templates/${id}`, data),
 
     delete: (id: string) => apiClient.delete<void>(`/protocol-templates/${id}`),
@@ -114,7 +159,7 @@ export const mainApi = {
 
   mkb10: {
     diagnisisList: (data: Mkb10Request) =>
-      apiClient.get<Mkb10Response>('/mkb10/', {
+      apiClient.get<Mkb10Response>('/mkb10', {
         page: data.page,
         size: data.size,
         searchValue: data.searchValue,
@@ -123,22 +168,33 @@ export const mainApi = {
 
   ml_handlers: {
     mlMkbCode: (data: MlMkbCodePayload) =>
-      apiClient.post<MlMkbCodeResponse>('/ml_mkb_code', data),
+      mlLongRunningApiClient.post<MlMkbCodeResponse>('/ml_mkb_code', data),
 
     mlAutocomplete: (data: CompletePayload) =>
-      apiClient.post<CompleteResponse>('/ml_autocomplete', data),
+      mlLongRunningApiClient.post<CompleteResponse>('/ml_autocomplete', data),
 
     mlAutocompleteStatus: (data: MlStatusPayload) =>
-      apiClient.post<MlStatusResponse>('/ml_autocomplete_stats', data),
+      mlLongRunningApiClient.post<MlStatusResponse>('/ml_autocomplete_stats', data),
 
     mlFullnessComplaint: (data: mlFullnessComplaintPayload) =>
-      apiClient.post<mlFullnessComplaintResponse>(
+      mlLongRunningApiClient.post<mlFullnessComplaintResponse>(
         '/ml_fullness_complaints',
         data,
       ),
 
     ml_clinrec_check: (data: ClinrecCheck) =>
-      apiClient.post<ClinrecCheckResponse>('/ml_clinrec_check', data),
+      mlLongRunningApiClient.post<ClinrecCheckResponse>(
+        '/ml_clinrec_check',
+        data,
+      ),
+  },
+
+  autocompleteDict: {
+    complete: (data: AutocompleteRequest) =>
+      apiClient.post<AutocompleteResponse>(
+        '/autocomplete_dict/complete_dict',
+        data,
+      ),
   },
 
   protocol_structures: {
@@ -151,7 +207,7 @@ export const mainApi = {
     getProtocolStructuresById: (id: string) =>
       apiClient.get<ProtocolStructuresFields>(`/protocol-structures/${id}`),
 
-    updateProtocolStructuresById: (id: string, data: ProtocolStructuresPost) =>
+    updateProtocolStructuresById: (id: string, data: ProtocolStructuresPut) =>
       apiClient.put<ProtocolStructuresFields>(
         `/protocol-structures/${id}`,
         data,
@@ -187,7 +243,7 @@ export const mainApi = {
     updateProtocolsById: (id: string, data: ProtocolsPut) =>
       apiClient.put<ProtocolsFields>(`/protocols/${id}`, data),
 
-    patchProtocolStructuresById: (id: string, data: ProtocolsPut) =>
+    patchProtocolsById: (id: string, data: ProtocolsPatch) =>
       apiClient.patch<ProtocolsFields>(`/protocols/${id}`, data),
 
     delete: (id: string) => apiClient.delete<void>(`/protocols/${id}`),

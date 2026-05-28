@@ -44,9 +44,9 @@ export const CreateGroupPopup: React.FC<CreateGroupPopupProps> = ({
     template: ListsTemplatesResponse | TemplatesResponse,
   ): TemplateUI => ({
     ...template,
-    name: template.protocol_name,
+    name: template.protocol_name || '',
     type: template.privacy === 'personal' ? 'personal' : 'general',
-    groupId: template.group_id,
+    groupId: template.group_id ?? undefined,
   });
 
   useEffect(() => {
@@ -104,8 +104,12 @@ export const CreateGroupPopup: React.FC<CreateGroupPopupProps> = ({
           await mainApi.templates.update(templateId, {
             protocol_name: template.protocol_name,
             group_id: newGroup.id,
-            privacy: template.privacy,
-            fields: fullTemplate.fields || [],
+            privacy: template.privacy as 'general' | 'personal' | null,
+            fields: (fullTemplate.fields || []).map((f) => ({
+              field_name: f.field_name ?? '',
+              field_type: f.field_type ?? 'text',
+              field_value: f.field_value,
+            })),
             protocol_structure_id: fullTemplate.protocol_structure_id,
           });
         }

@@ -5,6 +5,7 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { useMkb10Diagnoses } from '@/hooks/useMkb10Diagnoses';
 import { CandidatesItem, mainApi, Mkb10Item } from '@/api';
+import type { MkbEventType } from '@/api';
 import { useHelpersStore } from '@/store/helpersStore';
 
 interface DiagnosisInputProps {
@@ -180,7 +181,7 @@ export const DiagnosisInput: React.FC<DiagnosisInputProps> = ({
 
   const sendMlStatus = useCallback(
     (
-      eventType: string,
+      eventType: MkbEventType,
       selectedText: string = '',
       countSugest: number = -1,
     ) => {
@@ -221,7 +222,7 @@ export const DiagnosisInput: React.FC<DiagnosisInputProps> = ({
           n_candidates: 3,
           use_llm: true,
         });
-        setAiCandidates(res.candidates || []);
+        setAiCandidates((res.candidates as unknown as CandidatesItem[]) || []);
       } catch (error) {
         console.error('Failed to fetch AI candidates:', error);
         setAiCandidates([]);

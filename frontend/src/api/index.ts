@@ -5,12 +5,17 @@ export interface ApiError {
   detail: string;
 }
 
+// Enums
+export type AutocompleteType = 'ml_autocomplete' | 'dict_autocomplete';
+export type MkbEventType = 'form_click' | 'autocomplete_shown' | 'suggestion_selected';
+export type ProtocolPrivacy = 'general' | 'personal';
+
 //ML
 export interface CompletePayload {
-  field_name: string;
+  field_name?: string | null;
   prefix: string;
-  suggestions_count: number;
-  type_autocomplete?: 'ml_autocomplete' | 'dict_autocomplete' | 'off';
+  suggestions_count?: number;
+  type_autocomplete?: AutocompleteType;
 }
 
 export interface CompleteResponse {
@@ -20,15 +25,15 @@ export interface CompleteResponse {
 export interface MlMkbCodePayload {
   field_name: string;
   description: string;
-  n_candidates: number;
-  use_llm: boolean;
+  n_candidates?: number;
+  use_llm?: boolean;
 }
 
 export interface MlMkbCodeResponse {
-  extracted_diagnosis: string;
-  candidates: CandidatesItem[];
-  best_code: string;
-  best_name: string;
+  extracted_diagnosis: string | null;
+  candidates: Record<string, unknown>[];
+  best_code: string | null;
+  best_name: string | null;
 }
 
 export interface CandidatesItem {
@@ -41,10 +46,10 @@ export interface CandidatesItem {
 export interface MlStatusPayload {
   field_name: string;
   description: string;
-  selected_text: string;
   n_candidates: number;
-  event_type: string;
-  type_autocomplete?: 'ml_autocomplete' | 'dict_autocomplete' | 'off';
+  selected_text?: string | null;
+  event_type: MkbEventType;
+  type_autocomplete?: AutocompleteType;
 }
 
 export interface MlStatusResponse {
@@ -56,54 +61,28 @@ export interface mlFullnessComplaintPayload {
 }
 
 export interface mlFullnessComplaintResponse {
-  status: 'complete' | 'incomplete';
-  color: 'green' | 'yellow' | 'red';
+  status: string;
+  color: string;
   analysis: string;
   suggested_text: string;
 }
 
+// Autocomplete Dict
+export interface AutocompleteRequest {
+  full_text: string;
+  limit?: number;
+}
+
+export interface AutocompleteResponse {
+  suggestions: string[];
+}
+
 //Main
-export interface ConsultationsRequest {
-  id: string;
-  external_system: number;
-  external_patient_id: number;
-  external_doctor_id: number;
-  external_visit_id: number;
-  consultation_datetime: string;
-  complaints: string;
-  disease_anamnesis: string;
-  disease_history: string;
-  patient_condition: string;
-  life_anamnesis: string;
-  bad_habits: string;
-  allergy_anamnesis: string;
-  vital_parameters: string;
-  objective_data: string;
-  clinical_assessment: string;
-  consultation_conclusion: string;
-  main_diagnosis: string;
-  comorbid_diagnoses: string;
-  recommendations: string;
-  prescriptions: string;
-  status_protocol: string;
-  protocol_template_id: string;
-}
-export interface ConsultationsResponse extends ConsultationsRequest {
-  deleted_at: string;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface ListConsultationsResponse {
-  id: string;
-  updated_at: string;
-  protocol_name: string;
-}
-
 export interface LoginRequest {
   login: string;
   password: string;
 }
+
 export interface LoginResponse {
   detail: string;
 }
@@ -112,22 +91,151 @@ export interface RegisterConfirmRequest {
   login: string;
   code: string;
 }
+
+export interface UserPublic {
+  id: string;
+  login: string;
+  role: string;
+}
+
 export interface TokenResponse {
   access_token: string;
   token_type: string;
-  user: ServiceUserData;
+  user: UserPublic;
 }
 
 export interface ServiceUserData {
   id?: string;
   login: string;
-  first_name: string;
-  last_name: string;
-  role: 'doctor' | 'head_of_department' | 'administrator';
-  is_active: true;
+  first_name: string | null;
+  last_name: string | null;
+  role: string;
+  is_active: boolean;
   created_at: string;
-  updated_at: string;
-  deleted_at: string;
+  updated_at: string | null;
+  deleted_at: string | null;
+}
+
+export interface ServiceUserRead {
+  id: string;
+  login: string;
+  first_name: string | null;
+  last_name: string | null;
+  role: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string | null;
+  deleted_at: string | null;
+}
+
+export interface ServiceUserIdRead {
+  id: string;
+  login: string;
+  role: string;
+}
+
+export interface ServiceUserUpdate {
+  login: string;
+  first_name?: string | null;
+  last_name?: string | null;
+  role: string;
+  is_active: boolean;
+  password?: string | null;
+}
+
+export interface ServiceUserPatch {
+  login?: string | null;
+  first_name?: string | null;
+  last_name?: string | null;
+  role?: string | null;
+  is_active?: boolean | null;
+  password?: string | null;
+}
+
+export interface ConsultationsRequest {
+  external_system?: number | null;
+  external_patient_id?: number | null;
+  external_doctor_id?: number | null;
+  external_visit_id?: number | null;
+  consultation_datetime?: string | null;
+  complaints?: string | null;
+  disease_anamnesis?: string | null;
+  disease_history?: string | null;
+  patient_condition?: string | null;
+  life_anamnesis?: string | null;
+  bad_habits?: string | null;
+  allergy_anamnesis?: string | null;
+  vital_parameters?: string | null;
+  objective_data?: string | null;
+  clinical_assessment?: string | null;
+  consultation_conclusion?: string | null;
+  main_diagnosis?: string | null;
+  comorbid_diagnoses?: string | null;
+  recommendations?: string | null;
+  prescriptions?: string | null;
+  protocol_name?: string | null;
+  status_protocol?: string | null;
+  protocol_template_id?: string | null;
+  [key: string]: unknown;
+}
+
+export interface ConsultationsResponse {
+  id: string;
+  service_user?: string | null;
+  extra_fields?: Record<string, unknown> | null;
+  external_system?: number | null;
+  external_patient_id?: number | null;
+  external_doctor_id?: number | null;
+  external_visit_id?: number | null;
+  consultation_datetime?: string | null;
+  complaints?: string | null;
+  disease_anamnesis?: string | null;
+  disease_history?: string | null;
+  patient_condition?: string | null;
+  life_anamnesis?: string | null;
+  bad_habits?: string | null;
+  allergy_anamnesis?: string | null;
+  vital_parameters?: string | null;
+  objective_data?: string | null;
+  clinical_assessment?: string | null;
+  consultation_conclusion?: string | null;
+  main_diagnosis?: string | null;
+  comorbid_diagnoses?: string | null;
+  recommendations?: string | null;
+  prescriptions?: string | null;
+  protocol_name?: string | null;
+  status_protocol?: string | null;
+  protocol_template_id?: string | null;
+  created_at: string;
+  updated_at: string | null;
+  deleted_at: string | null;
+}
+
+export interface ListConsultationsResponse {
+  id: string;
+  updated_at: string | null;
+  protocol_name?: string | null;
+}
+
+export interface ConsultationViewField {
+  key: string;
+  label: string;
+  type: string;
+  value?: unknown;
+  is_extra?: boolean;
+}
+
+export interface ConsultationViewResponse {
+  fields: ConsultationViewField[];
+}
+
+export interface ConsultationViewPatchItem {
+  key: string;
+  value?: unknown;
+}
+
+export interface ConsultationViewPatchRequest {
+  fields?: ConsultationViewPatchItem[];
 }
 
 export interface Mkb10Item {
@@ -141,8 +249,8 @@ export interface Mkb10Response {
   items: Mkb10Item[];
 }
 export interface Mkb10Request {
-  page: number;
-  size: number;
+  page?: number;
+  size?: number;
   searchValue?: string;
 }
 
@@ -155,53 +263,70 @@ export interface GroupRequest {
   group_name: string;
 }
 
-export interface GroupResponse extends ListsGroupsResponse {
+export interface GroupResponse {
+  id: string;
+  group_name: string;
   creator_id: string;
   created_at: string;
-  updated_at: string;
-  deleted_at: string;
+  updated_at: string | null;
+  deleted_at: string | null;
+}
+
+export interface TemplateGroupUpdate {
+  group_name: string;
 }
 
 export interface ListsTemplatesResponse {
   id: string;
-  protocol_name: string;
-  group_id: string;
-  protocol_structure_id: string;
-  privacy: string;
+  protocol_name: string | null;
+  group_id: string | null;
+  protocol_structure_id: string | null;
+  privacy: string | null;
 }
 
 export interface TemplatesRequest {
   protocol_name: string;
-  group_id: string | null;
-  privacy: string;
-  protocol_structure_id: string;
-  fields: FieldsType[];
+  privacy: ProtocolPrivacy;
+  group_id?: string | null;
+  protocol_structure_id?: string | null;
+  fields?: FieldsType[];
 }
 
 export interface FieldsType {
   field_name: string;
   field_type: string;
-  field_value: string;
+  field_value?: string | null;
 }
 
-export interface FieldsTypeFull extends FieldsType {
+export interface FieldsTypeFull {
   id: string;
+  field_name: string | null;
+  field_type: string | null;
+  field_value: string | null;
   created_at: string;
-  updated_at: string;
-  deleted_at: string;
+  updated_at: string | null;
+  deleted_at: string | null;
 }
 
 export interface TemplatesResponse {
   id: string;
-  protocol_name: string;
-  group_id: string;
-  protocol_structure_id: string;
-  creator_id: string;
-  privacy: string;
+  protocol_name: string | null;
+  group_id: string | null;
+  protocol_structure_id: string | null;
+  creator_id: string | null;
+  privacy: string | null;
   created_at: string;
-  updated_at: string;
-  deleted_at: string;
+  updated_at: string | null;
+  deleted_at: string | null;
   fields: FieldsTypeFull[];
+}
+
+export interface ProtocolTemplateUpdate {
+  protocol_name?: string | null;
+  privacy?: ProtocolPrivacy | null;
+  group_id?: string | null;
+  protocol_structure_id?: string | null;
+  fields?: FieldsType[] | null;
 }
 
 export interface ProtocolStructures {
@@ -209,31 +334,41 @@ export interface ProtocolStructures {
   creator_id: string;
   structure_code: string;
   structure_name: string;
-  description: string;
+  description: string | null;
   version: number;
   is_active: boolean;
   created_at: string;
-  updated_at: string;
-  deleted_at: string;
+  updated_at: string | null;
+  deleted_at: string | null;
 }
 
 export interface ProtocolStructuresPost {
   structure_code: string;
   structure_name: string;
-  description: string;
-  version: number;
-  is_active: boolean;
-  fields: StructureProtocolsFieldsSmall[];
+  description?: string | null;
+  version?: number;
+  is_active?: boolean;
+  fields?: StructureProtocolsFieldsSmall[];
 }
-export interface ProtocolStructuresPatch {
+
+export interface ProtocolStructuresPut {
   structure_code: string;
   structure_name: string;
-  description: string;
-  version: number;
-  is_active: boolean;
-  fields_add: StructureProtocolsFieldsSmall[];
-  fields_update: ProtocolStructuresFields[];
-  fields_delete: string[];
+  description?: string | null;
+  version?: number;
+  is_active?: boolean;
+  fields?: StructureProtocolsFieldsSmall[];
+}
+
+export interface ProtocolStructuresPatch {
+  structure_code?: string | null;
+  structure_name?: string | null;
+  description?: string | null;
+  version?: number | null;
+  is_active?: boolean | null;
+  fields_add?: StructureProtocolsFieldsSmall[];
+  fields_update?: StructureProtocolsFieldsPatch[];
+  fields_delete?: string[];
 }
 
 export interface ProtocolStructuresFields {
@@ -241,30 +376,18 @@ export interface ProtocolStructuresFields {
   creator_id: string;
   structure_code: string;
   structure_name: string;
-  description: string;
+  description: string | null;
   version: number;
   is_active: boolean;
   created_at: string;
-  updated_at: string;
-  deleted_at: string;
+  updated_at: string | null;
+  deleted_at: string | null;
   fields: StructureProtocolsFields[];
 }
 
 export interface StructureProtocolsFields {
   id: string;
   protocol_structure_id: string;
-  field_name: string;
-  field_label: string;
-  description: string;
-  field_type: string;
-  default_value: string;
-  dictionary: string;
-  protocol_fields_main_id: string;
-  is_required: boolean;
-  sort_order: number;
-}
-
-export interface StructureProtocolsFieldsSmall {
   field_name: string;
   field_label: string | null;
   description: string | null;
@@ -274,85 +397,118 @@ export interface StructureProtocolsFieldsSmall {
   default_value_jsonb: any | null;
   dictionary: string | null;
   protocol_fields_main_id: string | null;
-  is_required: boolean | null;
-  sort_order: number | null;
+  is_required: boolean;
+  sort_order: number;
+}
+
+export interface StructureProtocolsFieldsSmall {
+  field_name: string;
+  field_label?: string | null;
+  description?: string | null;
+  field_type: string;
+  default_value?: string | null;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  default_value_jsonb?: any | null;
+  dictionary?: string | null;
+  protocol_fields_main_id?: string | null;
+  is_required?: boolean;
+  sort_order?: number;
+}
+
+export interface StructureProtocolsFieldsPatch {
+  id: string;
+  field_name?: string | null;
+  field_label?: string | null;
+  description?: string | null;
+  field_type?: string | null;
+  default_value?: string | null;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  default_value_jsonb?: any | null;
+  dictionary?: string | null;
+  protocol_fields_main_id?: string | null;
+  is_required?: boolean | null;
+  sort_order?: number | null;
 }
 
 export interface ProtocolFcieldsMain {
   id: string;
-  field_name: string;
-  field_label: string;
-  description: string;
-  endpoint_link: string;
+  field_name: string | null;
+  field_label: string | null;
+  description: string | null;
+  endpoint_link: string | null;
   created_at: string;
-  updated_at: string;
-  deleted_at: string;
+  updated_at: string | null;
+  deleted_at: string | null;
 }
 
 export interface Protocols {
   id: string;
-  service_user: string;
-  protocol_structure_id: string;
-  patient_id: number;
-  doctor_id: string;
-  protocol_name: string;
-  status_protocol: string;
+  service_user: string | null;
+  protocol_structure_id: string | null;
+  patient_id: number | null;
+  doctor_id: string | null;
+  protocol_name: string | null;
+  status_protocol: string | null;
   created_at: string;
-  updated_at: string;
-  deleted_at: string;
+  updated_at: string | null;
+  deleted_at: string | null;
 }
+
 export interface ProtocolsFields {
   id: string;
-  service_user: string;
-  protocol_structure_id: string;
-  patient_id: number;
-  doctor_id: string;
-  protocol_name: string;
-  status_protocol: string;
+  service_user: string | null;
+  protocol_structure_id: string | null;
+  patient_id: number | null;
+  doctor_id: string | null;
+  protocol_name: string | null;
+  status_protocol: string | null;
   created_at: string;
-  updated_at: string;
-  deleted_at: string;
-  field_values: Record<string, string>;
+  updated_at: string | null;
+  deleted_at: string | null;
+  field_values: Record<string, string | null>;
 }
 
 export interface ProtocolsPost {
   protocol_structure_id: string;
-  patient_id: number | null;
-  doctor_id: string | null;
-  protocol_name: string;
-  status_protocol: string;
-  field_values: Record<string, string>;
+  patient_id?: number | null;
+  doctor_id?: string | null;
+  protocol_name?: string | null;
+  status_protocol?: string | null;
+  field_values?: Record<string, string | null>;
 }
 
 export interface ProtocolsPut {
-  patient_id: number | null;
-  doctor_id: string | null;
-  protocol_name: string;
-  status_protocol: string;
-  field_values: Record<string, string>;
+  patient_id?: number | null;
+  doctor_id?: string | null;
+  protocol_name?: string | null;
+  status_protocol?: string | null;
+  field_values?: Record<string, string | null>;
 }
+
+export type ProtocolsPatch = ProtocolsPut;
 
 export interface UserSettings {
   id: string;
   user_id: string;
   mkb_code: boolean;
-  autocomplete: 'ml_autocomplete' | 'dict_autocomplete' | 'off';
+  autocomplete: string;
   fullness_complaints: boolean;
   created_at: string;
   updated_at: string | null;
 }
 
 export interface UserSettingsPost {
-  mkb_code: boolean | null;
-  autocomplete: 'ml_autocomplete' | 'dict_autocomplete' | 'off';
-  fullness_complaints: boolean | null;
+  mkb_code?: boolean | null;
+  autocomplete?: string | null;
+  fullness_complaints?: boolean | null;
 }
 
 export interface UserSettingsPut {
   mkb_code: boolean;
-  autocomplete: 'ml_autocomplete' | 'dict_autocomplete' | 'off';
+  autocomplete: string;
   fullness_complaints: boolean;
 }
+
 export type UserSettingsPatch = Partial<UserSettingsPost>;
 
 export interface ClinrecCheck {
@@ -360,17 +516,14 @@ export interface ClinrecCheck {
 }
 
 export interface ClinrecCheckResponse {
-  severity_counts: {
-    critical: number;
-    warning: number;
-    info: number;
-  };
+  severity_counts: Record<string, number>;
   findings: ClinicalFinding[];
   compliant_sections: string[];
-  error: string;
+  error: string | null;
 }
+
 export interface ClinicalFinding {
-  severity: 'critical' | 'warning' | 'info';
+  severity: string;
   section: string;
   issue: string;
   recommendation: string;
@@ -383,8 +536,8 @@ export interface DictionaryNames {
   oid: string;
   name: string;
   created_at: string;
-  updated_at: string;
-  deleted_at: string;
+  updated_at: string | null;
+  deleted_at: string | null;
 }
 
 export interface RefSearchResponse {

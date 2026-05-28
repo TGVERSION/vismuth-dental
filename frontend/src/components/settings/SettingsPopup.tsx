@@ -1,17 +1,13 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import Image from 'next/image';
 import { toast } from 'react-toastify';
 import { CustomDropdown, DropdownOption } from '../CustomDropdown';
 import { ProtocolStructuresSection } from './ProtocolStructuresSection';
 import { DirectoriesSection } from './DirectoriesSection';
-
-interface User {
-  id: string;
-  email: string;
-  role: string;
-}
+import { mainApi } from '@/api';
+import type { ServiceUserIdRead } from '@/api';
 
 type SettingsSection = 'users' | 'protocols' | 'directories';
 
@@ -25,27 +21,15 @@ export const SettingsPopup: React.FC<SettingsPopupProps> = ({
   onClose,
 }) => {
   const [activeSection, setActiveSection] = useState<SettingsSection>('users');
-  const [users, setUsers] = useState<User[]>([
-    { id: '1', email: 'test@gmail.com', role: 'admin' },
-    { id: '2', email: 'test1@gmail.com', role: 'department_head' },
-    { id: '3', email: 'test2@gmail.com', role: 'doctor' },
-    { id: '10', email: 'test@gmail.com', role: 'admin' },
-    { id: '20', email: 'test1@gmail.com', role: 'department_head' },
-    { id: '30', email: 'test2@gmail.com', role: 'doctor' },
-    { id: '11', email: 'test@gmail.com', role: 'admin' },
-    { id: '12', email: 'test1@gmail.com', role: 'department_head' },
-    { id: '13', email: 'test2@gmail.com', role: 'doctor' },
-    { id: '21', email: 'test@gmail.com', role: 'admin' },
-    { id: '22', email: 'test1@gmail.com', role: 'department_head' },
-    { id: '23', email: 'test2@gmail.com', role: 'doctor' },
-    { id: '31', email: 'test@gmail.com', role: 'admin' },
-    { id: '32', email: 'test1@gmail.com', role: 'department_head' },
-    { id: '33', email: 'test2@gmail.com', role: 'doctor' },
-  ]);
+  const [users, setUsers] = useState<ServiceUserIdRead[]>([]);
+  const [usersLoading, setUsersLoading] = useState(false);
+  const [deleteConfirmUserId, setDeleteConfirmUserId] = useState<string | null>(
+    null,
+  );
 
   const roleOptions: DropdownOption<string>[] = [
-    { value: 'admin', label: 'Админ' },
-    { value: 'department_head', label: 'Зав.отделением' },
+    { value: 'administrator', label: 'Админ' },
+    { value: 'head_of_department', label: 'Зав.отделением' },
     { value: 'doctor', label: 'Врач' },
   ];
 
@@ -55,27 +39,43 @@ export const SettingsPopup: React.FC<SettingsPopupProps> = ({
     { id: 'directories', label: 'Справочники' },
   ];
 
-  const getRoleLabel = (value: string) => {
-    return roleOptions.find((opt) => opt.value === value)?.label || value;
+  useEffect(() => {
+    if (!isOpen || activeSection !== 'users') return;
+    const load = async () => {
+      setUsersLoading(true);
+      try {
+        const data = await mainApi.serviceUsers.listServiceUserIds();
+        setUsers(data);
+      } catch {
+        toast.error('Не удалось загрузить пользователей');
+      } finally {
+        setUsersLoading(false);
+      }
+    };
+    load();
+  }, [isOpen, activeSection]);
+
+  const handleRoleChange = async (userId: string, newRole: string) => {
+    try {
+      await mainApi.serviceUsers.patchServiceUser(userId, { role: newRole });
+      setUsers((prev) =>
+        prev.map((u) => (u.id === userId ? { ...u, role: newRole } : u)),
+      );
+      toast.success('Роль пользователя обновлена');
+    } catch {
+      toast.error('Не удалось обновить роль');
+    }
   };
 
-  const handleRoleChange = (userId: string, newRole: string) => {
-    setUsers((prevUsers) =>
-      prevUsers.map((user) =>
-        user.id === userId ? { ...user, role: newRole } : user,
-      ),
-    );
-    toast.success('Роль пользователя обновлена');
-  };
-
-  const [deleteConfirmUserId, setDeleteConfirmUserId] = useState<string | null>(
-    null,
-  );
-
-  const handleDeleteUser = (userId: string) => {
-    setUsers((prevUsers) => prevUsers.filter((user) => user.id !== userId));
-    setDeleteConfirmUserId(null);
-    toast.success('Пользователь удален');
+  const handleDeleteUser = async (userId: string) => {
+    try {
+      await mainApi.serviceUsers.deleteServiceUser(userId);
+      setUsers((prev) => prev.filter((u) => u.id !== userId));
+      setDeleteConfirmUserId(null);
+      toast.success('Пользователь удален');
+    } catch {
+      toast.error('Не удалось удалить пользователя');
+    }
   };
 
   const protocolCloseRef = useRef<(() => void) | null>(null);
@@ -101,42 +101,50 @@ export const SettingsPopup: React.FC<SettingsPopupProps> = ({
           <div className="py-5.25 pl-14 h-full pr-8 flex flex-col gap-9">
             <div className="h-full">
               <div className="flex flex-col gap-2">
-                {users.map((user) => (
-                  <div
-                    key={user.id}
-                    className={`flex justify-between items-center px-3.75 py-3 rounded-xl cursor-pointer transition-all shadow-custom-hover`}
-                  >
-                    <span className="text-sm text-[#202020]">{user.email}</span>
-
-                    <div className="flex flex-row items-center gap-12.5">
-                      <div className="w-41.25">
-                        <CustomDropdown
-                          options={roleOptions}
-                          value={user.role}
-                          onChange={(newRole) =>
-                            handleRoleChange(user.id, newRole)
-                          }
-                          showCheckIcon={false}
-                          className="w-48"
-                        />
-                      </div>
-
-                      <button
-                        onClick={() => setDeleteConfirmUserId(user.id)}
-                        className="cursor-pointer"
-                        aria-label="Удалить пользователя"
+                {usersLoading ? (
+                  <div className="animate-spin mx-auto my-40 rounded-full h-10 w-10 border-b-2 border-[#5D8CF1]"></div>
+                ) : (
+                  <>
+                    {users.map((user) => (
+                      <div
+                        key={user.id}
+                        className={`flex justify-between items-center px-3.75 py-3 rounded-xl cursor-pointer transition-all shadow-custom-hover`}
                       >
-                        <Image
-                          src="/delete-gray.svg"
-                          alt="delete"
-                          width={18}
-                          height={18}
-                          className="icon-gray"
-                        />
-                      </button>
-                    </div>
-                  </div>
-                ))}
+                        <span className="text-sm text-[#202020]">
+                          {user.login}
+                        </span>
+
+                        <div className="flex flex-row items-center gap-12.5">
+                          <div className="w-41.25">
+                            <CustomDropdown
+                              options={roleOptions}
+                              value={user.role}
+                              onChange={(newRole) =>
+                                handleRoleChange(user.id, newRole)
+                              }
+                              showCheckIcon={false}
+                              className="w-48"
+                            />
+                          </div>
+
+                          <button
+                            onClick={() => setDeleteConfirmUserId(user.id)}
+                            className="cursor-pointer"
+                            aria-label="Удалить пользователя"
+                          >
+                            <Image
+                              src="/delete-gray.svg"
+                              alt="delete"
+                              width={18}
+                              height={18}
+                              className="icon-gray"
+                            />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </>
+                )}
               </div>
             </div>
           </div>

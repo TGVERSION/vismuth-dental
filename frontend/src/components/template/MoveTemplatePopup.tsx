@@ -70,8 +70,12 @@ export const MoveTemplatePopup: React.FC<MoveTemplatePopupProps> = ({
       await mainApi.templates.update(templateId, {
         protocol_name: template.protocol_name,
         group_id: selectedGroupId || null,
-        privacy: template.privacy,
-        fields: template.fields || [],
+        privacy: template.privacy as 'general' | 'personal' | null,
+        fields: (template.fields || []).map((f) => ({
+          field_name: f.field_name ?? '',
+          field_type: f.field_type ?? 'text',
+          field_value: f.field_value,
+        })),
         protocol_structure_id: template.protocol_structure_id,
       });
 

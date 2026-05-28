@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { toast } from 'react-toastify';
 import { mainApi } from '@/api';
 import type { DictionaryNames } from '@/api';
@@ -9,41 +9,44 @@ import { EditDictionaryModal } from './EditDictionaryModal';
 export function DirectoriesSection() {
   const [directories, setDirectories] = useState<DictionaryNames[]>([]);
   const [counts, setCounts] = useState<Record<string, number>>({});
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [selectedDict, setSelectedDict] = useState<DictionaryNames | null>(
     null,
   );
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalKey, setModalKey] = useState(0);
 
-  const loadDirectories = useCallback(async () => {
-    setIsLoading(true);
-    try {
-      const data = await mainApi.dictionary.getDictionary();
-      setDirectories(data);
+  useEffect(() => {
+    let cancelled = false;
 
-      const countResults = await Promise.allSettled(
-        data.map((dict) =>
-          mainApi.dictionary.getDictionaryRef(dict.name, { limit: 1 }),
-        ),
-      );
-      const newCounts: Record<string, number> = {};
-      countResults.forEach((result, i) => {
-        if (result.status === 'fulfilled') {
-          newCounts[data[i].name] = result.value.total;
+    mainApi.dictionary
+      .getDictionary()
+      .then((data) => {
+        if (cancelled) return;
+        setDirectories(data);
+        setIsLoading(false);
+
+        data.forEach((dict) => {
+          mainApi.dictionary
+            .getDictionaryRef(dict.name, { limit: 1 })
+            .then((result) => {
+              if (!cancelled)
+                setCounts((prev) => ({ ...prev, [dict.name]: result.total }));
+            })
+            .catch(() => {});
+        });
+      })
+      .catch(() => {
+        if (!cancelled) {
+          toast.error('Не удалось загрузить справочники');
+          setIsLoading(false);
         }
       });
-      setCounts(newCounts);
-    } catch {
-      toast.error('Не удалось загрузить справочники');
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
 
-  useEffect(() => {
-    loadDirectories();
-  }, [loadDirectories]);
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const openDict = (dict: DictionaryNames) => {
     setSelectedDict(dict);

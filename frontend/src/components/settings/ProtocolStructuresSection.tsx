@@ -29,6 +29,22 @@ const getTypeLabel = (type: string) =>
 
 const isOptionsType = (type: string) => type === 'radio' || type === 'checkbox';
 
+const DICT_LIMIT = 50;
+
+const extractDictEntries = (
+  items: Record<string, unknown>[],
+): DropdownOption<string>[] => {
+  if (!items.length) return [];
+  const nonIdKeys = Object.keys(items[0]).filter((k) => k !== 'row_id');
+  const firstKey =
+    nonIdKeys.find((k) => typeof items[0][k] !== 'number') ?? nonIdKeys[0];
+  if (!firstKey) return [];
+  return items
+    .map((item) => String(item[firstKey] ?? ''))
+    .filter(Boolean)
+    .map((text) => ({ value: text, label: text }));
+};
+
 interface LocalOption {
   localId: string;
   text: string;
@@ -138,6 +154,10 @@ function FieldRow({
 }) {
   const [isHovered, setIsHovered] = useState(false);
   const [dictEntries, setDictEntries] = useState<DropdownOption<string>[]>([]);
+  const [dictSearchInput, setDictSearchInput] = useState('');
+  const [dictOffset, setDictOffset] = useState(0);
+  const [dictHasMore, setDictHasMore] = useState(false);
+  const [dictLoading, setDictLoading] = useState(false);
   const [draggedOptId, setDraggedOptId] = useState<string | null>(null);
   const [dropOptTarget, setDropOptTarget] = useState<{
     localId: string;
@@ -166,34 +186,54 @@ function FieldRow({
       return;
     }
     let cancelled = false;
-    mainApi.dictionary
-      .getDictionaryRef(field.dictionary, { limit: 200, offset: 0 })
-      .then((res) => {
-        if (cancelled) return;
-        if (!res.items.length) {
-          setDictEntries([]);
-          return;
-        }
-        const keys = Object.keys(res.items[0]).filter((k) => k !== 'row_id');
-        const firstKey = keys[0];
-        if (!firstKey) {
-          setDictEntries([]);
-          return;
-        }
-        setDictEntries(
-          res.items
-            .map((item) => String(item[firstKey] ?? ''))
-            .filter(Boolean)
-            .map((text) => ({ value: text, label: text })),
-        );
-      })
-      .catch(() => {
-        if (!cancelled) setDictEntries([]);
-      });
+    const delay = dictSearchInput ? 300 : 0;
+    const timer = setTimeout(() => {
+      if (cancelled) return;
+      setDictLoading(true);
+      mainApi.dictionary
+        .getDictionaryRef(field.dictionary!, {
+          search: dictSearchInput || undefined,
+          limit: DICT_LIMIT,
+          offset: 0,
+        })
+        .then((res) => {
+          if (cancelled) return;
+          setDictEntries(extractDictEntries(res.items));
+          setDictHasMore(res.offset + res.items.length < res.total);
+          setDictOffset(res.items.length);
+          setDictLoading(false);
+        })
+        .catch(() => {
+          if (!cancelled) {
+            setDictEntries([]);
+            setDictHasMore(false);
+            setDictLoading(false);
+          }
+        });
+    }, delay);
     return () => {
       cancelled = true;
+      clearTimeout(timer);
     };
-  }, [isExpanded, field.dictionary, field.field_type]);
+  }, [isExpanded, field.dictionary, field.field_type, dictSearchInput]);
+
+  const handleDictLoadMore = useCallback(() => {
+    if (!field.dictionary || dictLoading || !dictHasMore) return;
+    setDictLoading(true);
+    mainApi.dictionary
+      .getDictionaryRef(field.dictionary, {
+        search: dictSearchInput || undefined,
+        limit: DICT_LIMIT,
+        offset: dictOffset,
+      })
+      .then((res) => {
+        setDictEntries((prev) => [...prev, ...extractDictEntries(res.items)]);
+        setDictHasMore(res.offset + res.items.length < res.total);
+        setDictOffset((prev) => prev + res.items.length);
+      })
+      .catch(() => setDictHasMore(false))
+      .finally(() => setDictLoading(false));
+  }, [field.dictionary, dictLoading, dictHasMore, dictSearchInput, dictOffset]);
 
   const isPreset = !!field.protocol_fields_main_id;
   const showControls = isHovered || isExpanded;
@@ -344,7 +384,10 @@ function FieldRow({
                   <CustomDropdown
                     options={dictionaryOptions}
                     value={field.dictionary || ''}
-                    onChange={(v) => onUpdate({ dictionary: v || null })}
+                    onChange={(v) => {
+                      setDictSearchInput('');
+                      onUpdate({ dictionary: v || null });
+                    }}
                     placeholder="Не выбран"
                     showCheckIcon
                   />
@@ -388,7 +431,10 @@ function FieldRow({
                     <CustomDropdown
                       options={dictionaryOptions}
                       value={field.dictionary || ''}
-                      onChange={(v) => onUpdate({ dictionary: v || null })}
+                      onChange={(v) => {
+                        setDictSearchInput('');
+                        onUpdate({ dictionary: v || null });
+                      }}
                       placeholder="Не выбран"
                       showCheckIcon
                     />
@@ -398,9 +444,9 @@ function FieldRow({
                       Значение по умолчанию
                     </label>
                     {field.field_type === 'multiselect' &&
-                    field.dictionary &&
-                    dictEntries.length > 0 ? (
+                    field.dictionary ? (
                       <CustomDropdown<string, true>
+                        key={field.dictionary}
                         options={dictEntries}
                         value={
                           field.default_value
@@ -418,11 +464,14 @@ function FieldRow({
                         placeholder="Не выбрано"
                         showCheckIcon
                         multiple={true}
+                        onSearch={setDictSearchInput}
+                        onLoadMore={handleDictLoadMore}
+                        hasMore={dictHasMore}
+                        isLoading={dictLoading}
                       />
-                    ) : field.field_type === 'select' &&
-                      field.dictionary &&
-                      dictEntries.length > 0 ? (
+                    ) : field.field_type === 'select' && field.dictionary ? (
                       <CustomDropdown
+                        key={field.dictionary}
                         options={[
                           { value: '', label: 'Не выбрано' },
                           ...dictEntries,
@@ -431,6 +480,28 @@ function FieldRow({
                         onChange={(v) => onUpdate({ default_value: v || null })}
                         placeholder="Не выбрано"
                         showCheckIcon
+                        onSearch={setDictSearchInput}
+                        onLoadMore={handleDictLoadMore}
+                        hasMore={dictHasMore}
+                        isLoading={dictLoading}
+                      />
+                    ) : field.dictionary ? (
+                      <CustomDropdown
+                        key={field.dictionary}
+                        options={[
+                          { value: '', label: 'Не выбрано' },
+                          ...dictEntries,
+                        ]}
+                        value={field.default_value || ''}
+                        onChange={(v) =>
+                          onUpdate({ default_value: v || null })
+                        }
+                        placeholder="Не выбрано"
+                        showCheckIcon
+                        onSearch={setDictSearchInput}
+                        onLoadMore={handleDictLoadMore}
+                        hasMore={dictHasMore}
+                        isLoading={dictLoading}
                       />
                     ) : (
                       <input
@@ -439,8 +510,9 @@ function FieldRow({
                         onChange={(e) =>
                           onUpdate({ default_value: e.target.value || null })
                         }
-                        placeholder="Введите значение"
-                        className="w-full h-10 px-3 py-2 bg-gray-50 rounded-lg text-sm text-[#202020] border-0 outline-none focus:ring-2 focus:ring-[#5D8CF1] transition-shadow"
+                        placeholder="Сначала выберите справочник"
+                        disabled
+                        className="w-full h-10 px-3 py-2 bg-gray-50 rounded-lg text-sm text-[#202020] border-0 outline-none focus:ring-2 focus:ring-[#5D8CF1] transition-shadow disabled:opacity-50 disabled:cursor-not-allowed"
                       />
                     )}
                   </div>
@@ -901,20 +973,33 @@ export function ProtocolStructuresSection({
     }
 
     const code = structureCode || slugify(structureName);
-    const apiFields: StructureProtocolsFieldsSmall[] = fields.map((f, i) => ({
-      field_name: f.field_name || slugify(f.field_label) || `field_${i}`,
-      field_label: f.field_label || null,
-      description: null,
-      field_type: f.field_type,
-      default_value: isOptionsType(f.field_type) ? null : f.default_value,
-      default_value_jsonb: isOptionsType(f.field_type)
-        ? serializeOptions(f.options, f.field_type)
-        : null,
-      dictionary: f.dictionary || null,
-      protocol_fields_main_id: f.protocol_fields_main_id || null,
-      is_required: f.is_required,
-      sort_order: i,
-    }));
+    const usedNames = new Set<string>();
+    const apiFields: StructureProtocolsFieldsSmall[] = fields.map((f, i) => {
+      const baseName =
+        f.field_name ||
+        (f.field_label ? slugify(f.field_label) : `field_${i}`);
+      let name = baseName;
+      if (usedNames.has(name)) {
+        let counter = 2;
+        while (usedNames.has(`${baseName}_${counter}`)) counter++;
+        name = `${baseName}_${counter}`;
+      }
+      usedNames.add(name);
+      return {
+        field_name: name,
+        field_label: f.field_label || null,
+        description: null,
+        field_type: f.field_type,
+        default_value: isOptionsType(f.field_type) ? null : f.default_value,
+        default_value_jsonb: isOptionsType(f.field_type)
+          ? serializeOptions(f.options, f.field_type)
+          : null,
+        dictionary: f.dictionary || null,
+        protocol_fields_main_id: f.protocol_fields_main_id || null,
+        is_required: f.is_required,
+        sort_order: i,
+      };
+    });
 
     const body: ProtocolStructuresPost = {
       structure_code: code,

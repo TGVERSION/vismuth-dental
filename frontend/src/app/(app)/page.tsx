@@ -620,7 +620,10 @@ export default function Home() {
       <div className="fixed ml-3 mr-5 left-0 top-20 custom-height w-85.75 flex flex-col bg-[#F3F4F8]">
         <div className="relative" ref={createMenuRef}>
           <button
-            onClick={() => setShowCreateMenu(!showCreateMenu)}
+            onClick={() => {
+              if (!showCreateMenu) fetchStructures();
+              setShowCreateMenu(!showCreateMenu);
+            }}
             className="shrink-0 w-full hover:text-[#769CEF] bg-white rounded-xl h-13 cursor-pointer text-[#5D8CF1] px-6 transition-colors"
           >
             Создать новый протокол
@@ -865,6 +868,7 @@ export default function Home() {
                           }));
                         }}
                         isActive={section.sectionKey === activeSection}
+                        fieldMeta={section.fieldMeta}
                       />
                     </div>
                   ))}

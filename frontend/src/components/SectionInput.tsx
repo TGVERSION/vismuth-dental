@@ -1,6 +1,6 @@
 'use client';
 
-import { ChangeEvent, useEffect, useRef, useState, useCallback } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import { useAutocomplete } from '@/hooks/useAutocomplete';
 import { AutocompleteSuggestions } from './AutocompleteSuggestions';
 import { DiagnosisInput } from './DiagnosisInput';
@@ -9,11 +9,14 @@ import {
   mlFullnessComplaintPayload,
   mlFullnessComplaintResponse,
 } from '@/api';
-import type { MkbEventType } from '@/api';
+import type { MkbEventType, StructureProtocolsFields } from '@/api';
 import { Spinner } from './SpinnerFullnes';
 import { FeedbackPopover } from './FeedbackPopover';
 import { createPortal } from 'react-dom';
 import { useHelpersStore } from '@/store/helpersStore';
+import { RadioButton } from './RadioButton';
+import { Checkbox } from './Checkbox';
+import { CustomDropdown } from './CustomDropdown';
 
 export interface MlStatusPayload {
   field_name: string;
@@ -34,23 +37,8 @@ interface SectionInputProps {
   onAnalysisChange?: (
     status: { color: string; analysis: string } | null,
   ) => void;
+  fieldMeta?: StructureProtocolsFields;
 }
-const mockApiCall = (
-  text: mlFullnessComplaintPayload,
-): Promise<mlFullnessComplaintResponse> => {
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      resolve({
-        status: 'incomplete',
-        color: 'yellow',
-        analysis:
-          'Отсутствует информация о связи симптомов с определенными факторами (провокация/облегчение).',
-        suggested_text:
-          'Жалобы на боль в поясничной области, с иррадиацией в правую ногу, интенсивность до 7 баллов. Отмечает слабость в ногах, ограничение самостоятельного передвижения, периодически возникают отеки голеней. Симптомы провоцируются [факторы], облегчаются [факторы].',
-      });
-    }, 800);
-  });
-};
 
 const getPlainTextFromHTML = (html: string): string => {
   const div = document.createElement('div');
@@ -65,15 +53,23 @@ const formatTextWithPlaceholders = (text: string): string => {
   );
 };
 
+function parseFieldOptions(jsonb: unknown): string[] {
+  if (!jsonb || typeof jsonb !== 'object') return [];
+  const data = jsonb as { options?: unknown };
+  if (!Array.isArray(data.options)) return [];
+  return (data.options as unknown[]).map(String).filter(Boolean);
+}
+
 export const SectionInput: React.FC<SectionInputProps> = ({
   id,
   label,
   value,
   sectionKey,
-  onLabelChange,
+  onLabelChange: _onLabelChange,
   onValueChange,
   onAnalysisChange,
   isActive,
+  fieldMeta,
 }) => {
   const editableRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -93,7 +89,13 @@ export const SectionInput: React.FC<SectionInputProps> = ({
   const prevActive = useRef(isActive);
   const { fullnessEnabled, autocompleteProvider } = useHelpersStore();
 
-  const isAutocompleteEnabled = autocompleteProvider !== 'off';
+  const [dictOptions, setDictOptions] = useState<string[]>([]);
+  const [isDictLoading, setIsDictLoading] = useState(false);
+
+  const fieldType = fieldMeta?.field_type ?? 'text';
+  const isTextField = fieldType === 'text';
+
+  const isAutocompleteEnabled = autocompleteProvider !== 'off' && isTextField;
   const isFullnessEnabled = fullnessEnabled;
   const isComplaintField =
     sectionKey === 'complaints' || sectionKey === 'chief_complaint';
@@ -106,6 +108,7 @@ export const SectionInput: React.FC<SectionInputProps> = ({
     }
     prevActive.current = isActive;
   }, [isActive]);
+
   const {
     suggestions,
     isOpen,
@@ -123,12 +126,64 @@ export const SectionInput: React.FC<SectionInputProps> = ({
     autocompleteType: autocompleteProvider,
   });
 
+  // Fetch dictionary options for select/multiselect fields with a dictionary reference
+  useEffect(() => {
+    const dict = fieldMeta?.dictionary;
+    if (!dict || (fieldType !== 'select' && fieldType !== 'multiselect')) return;
+
+    let cancelled = false;
+    setIsDictLoading(true);
+
+    const fetchAll = async () => {
+      const PAGE_SIZE = 100;
+      let offset = 0;
+      const allItems: Record<string, unknown>[] = [];
+      let firstKey: string | null = null;
+
+      while (true) {
+        const res = await mainApi.dictionary.getDictionaryRef(dict, {
+          limit: PAGE_SIZE,
+          offset,
+        });
+        if (cancelled) return;
+        if (!res.items.length) break;
+        if (!firstKey) {
+          const keys = Object.keys(res.items[0]).filter((k) => k !== 'row_id');
+          firstKey =
+            keys.find((k) => typeof res.items[0][k] !== 'number') ??
+            keys[0] ??
+            null;
+        }
+        allItems.push(...res.items);
+        if (allItems.length >= res.total || res.items.length < PAGE_SIZE) break;
+        offset += PAGE_SIZE;
+      }
+
+      if (!firstKey) {
+        setDictOptions([]);
+        return;
+      }
+      setDictOptions(
+        allItems.map((item) => String(item[firstKey!] ?? '')).filter(Boolean),
+      );
+    };
+
+    fetchAll()
+      .catch(() => setDictOptions([]))
+      .finally(() => {
+        if (!cancelled) setIsDictLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [fieldMeta?.dictionary, fieldType]);
+
   const initialTextRef = useRef<string>('');
   const handleMouseEnter = useCallback(() => {
     clearTimeout(timerRef.current);
     if (indicatorRef.current) {
       const rect = indicatorRef.current.getBoundingClientRect();
-
       setPopoverPosition({
         bottom: window.innerHeight - rect.top + 8,
         left: rect.left,
@@ -143,15 +198,18 @@ export const SectionInput: React.FC<SectionInputProps> = ({
       setShowPopover(false);
     }, 300);
   }, []);
+
   useEffect(() => {
     if (!showPopover) return;
     const handleScroll = () => setShowPopover(false);
     window.addEventListener('scroll', handleScroll, true);
     return () => window.removeEventListener('scroll', handleScroll, true);
   }, [showPopover]);
+
   useEffect(() => {
     return () => clearTimeout(timerRef.current);
   }, []);
+
   const setCursorToEnd = (element: HTMLElement) => {
     const range = document.createRange();
     const selection = window.getSelection();
@@ -166,8 +224,9 @@ export const SectionInput: React.FC<SectionInputProps> = ({
       onAnalysisChange?.(mlAnalysis);
     }
   }, [mlAnalysis, isComplaintField]);
+
   useEffect(() => {
-    if (!editableRef.current) return;
+    if (!editableRef.current || !isTextField) return;
     const currentText = getPlainTextFromHTML(editableRef.current.innerHTML);
     if (currentText !== value) {
       if (value === '') {
@@ -176,7 +235,7 @@ export const SectionInput: React.FC<SectionInputProps> = ({
         editableRef.current.innerHTML = formatTextWithPlaceholders(value);
       }
     }
-  }, [value]);
+  }, [value, isTextField]);
 
   const enableAutocomplete = () => {
     if (!hasUserInteracted) setHasUserInteracted(true);
@@ -203,12 +262,13 @@ export const SectionInput: React.FC<SectionInputProps> = ({
       });
   };
 
-  if (value === '') {
+  if (isTextField && value === '') {
     if (editableRef.current) {
       editableRef.current.innerHTML = '';
       editableRef.current.textContent = '';
     }
   }
+
   const handleSuggestionClick = (suggestion: string) => {
     if (editableRef.current) {
       editableRef.current.innerHTML = formatTextWithPlaceholders(suggestion);
@@ -244,8 +304,6 @@ export const SectionInput: React.FC<SectionInputProps> = ({
       try {
         const response =
           await mainApi.ml_handlers.mlFullnessComplaint(dataToSend);
-        //await mockApiCall(dataToSend);
-
         setMlAnalysis(response);
       } catch (error) {
         console.error('Failed to fetch analysis:', error);
@@ -363,61 +421,195 @@ export const SectionInput: React.FC<SectionInputProps> = ({
     );
   }
 
+  const renderLabel = () => (
+    <div className="flex items-center gap-3">
+      <div className="shrink-0 w-4 h-4" ref={indicatorRef}>
+        {isFullnessEnabled && isComplaintField && (
+          <>
+            {isFetchingAnalysis ? (
+              <Spinner />
+            ) : mlAnalysis ? (
+              <div
+                onMouseEnter={handleMouseEnter}
+                onMouseLeave={handleMouseLeave}
+              >
+                {showPopover &&
+                  isComplaintField &&
+                  !isFetchingAnalysis &&
+                  createPortal(
+                    <FeedbackPopover
+                      color={mlAnalysis.color as 'green' | 'red' | 'yellow'}
+                      analysis={mlAnalysis.analysis}
+                      suggestedText={mlAnalysis.suggested_text}
+                      onApply={handleApplySuggestion}
+                      onClose={() => setShowPopover(false)}
+                      style={{
+                        position: 'fixed',
+                        bottom: popoverPosition?.bottom,
+                        left: popoverPosition?.left,
+                        zIndex: 9999,
+                      }}
+                    />,
+                    document.body,
+                  )}
+                <div
+                  className={`w-4 h-4 cursor-pointer rounded-full transition-all duration-300 ${
+                    mlAnalysis.color === 'green'
+                      ? 'bg-[#459F49]'
+                      : mlAnalysis.color === 'yellow'
+                        ? 'bg-[#F29100]'
+                        : 'bg-[#D91528]'
+                  }`}
+                />
+              </div>
+            ) : (
+              <div className="w-3 h-3" />
+            )}
+          </>
+        )}
+      </div>
+      <div
+        className={`text-[30px] font-medium leading-[140%] text-[#202020] mb-1 ${animate ? 'animate-scale-pulse' : ''}`}
+      >
+        {label}
+      </div>
+    </div>
+  );
+
+  // select field
+  if (fieldType === 'select') {
+    const opts = fieldMeta?.dictionary
+      ? dictOptions
+      : parseFieldOptions(fieldMeta?.default_value_jsonb);
+    const dropdownOptions = opts.map((opt) => ({ value: opt, label: opt }));
+
+    return (
+      <div ref={containerRef} className="flex flex-col mb-6 relative">
+        {renderLabel()}
+        <div className="ml-7 mt-1">
+          {isDictLoading ? (
+            <div className="text-sm text-gray-400">Загрузка...</div>
+          ) : (
+            <CustomDropdown
+              options={dropdownOptions}
+              value={value}
+              onChange={(v) => onValueChange(id, v)}
+              placeholder="Выберите..."
+            />
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // multiselect field — checkboxes allowing multiple values (stored as comma-separated)
+  if (fieldType === 'multiselect') {
+    const opts = fieldMeta?.dictionary
+      ? dictOptions
+      : parseFieldOptions(fieldMeta?.default_value_jsonb);
+    const selectedValues = value
+      ? value
+          .split(',')
+          .map((s) => s.trim())
+          .filter(Boolean)
+      : [];
+
+    const handleMultiselectChange = (opt: string, checked: boolean) => {
+      const next = checked
+        ? [...selectedValues, opt]
+        : selectedValues.filter((v) => v !== opt);
+      onValueChange(id, next.join(', '));
+    };
+
+    return (
+      <div ref={containerRef} className="flex flex-col mb-6 relative">
+        {renderLabel()}
+        <div className="ml-7 mt-2 flex flex-col gap-2">
+          {isDictLoading ? (
+            <div className="text-sm text-gray-400">Загрузка...</div>
+          ) : (
+            opts.map((opt) => (
+              <Checkbox
+                key={opt}
+                id={`multiselect-${id}-${opt}`}
+                checked={selectedValues.includes(opt)}
+                onChange={(checked) => handleMultiselectChange(opt, checked)}
+              >
+                <span className="text-[16px] text-[#202020]">{opt}</span>
+              </Checkbox>
+            ))
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // radio field
+  if (fieldType === 'radio') {
+    const opts = parseFieldOptions(fieldMeta?.default_value_jsonb);
+
+    return (
+      <div ref={containerRef} className="flex flex-col mb-6 relative">
+        {renderLabel()}
+        <div className="ml-7 mt-2 flex flex-col gap-2">
+          {opts.map((opt) => (
+            <RadioButton
+              key={opt}
+              id={`radio-${id}-${opt}`}
+              name={`radio-${sectionKey}-${id}`}
+              value={opt}
+              checked={value === opt}
+              onChange={() => onValueChange(id, opt)}
+            >
+              <span className="text-[16px] text-[#202020]">{opt}</span>
+            </RadioButton>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  // checkbox field — multiple choices, stored as comma-separated
+  if (fieldType === 'checkbox') {
+    const opts = parseFieldOptions(fieldMeta?.default_value_jsonb);
+    const selectedValues = value
+      ? value
+          .split(',')
+          .map((s) => s.trim())
+          .filter(Boolean)
+      : [];
+
+    const handleCheckboxChange = (opt: string, checked: boolean) => {
+      const next = checked
+        ? [...selectedValues, opt]
+        : selectedValues.filter((v) => v !== opt);
+      onValueChange(id, next.join(', '));
+    };
+
+    return (
+      <div ref={containerRef} className="flex flex-col mb-6 relative">
+        {renderLabel()}
+        <div className="ml-7 mt-2 flex flex-col gap-2">
+          {opts.map((opt) => (
+            <Checkbox
+              key={opt}
+              id={`checkbox-${id}-${opt}`}
+              checked={selectedValues.includes(opt)}
+              onChange={(checked) => handleCheckboxChange(opt, checked)}
+            >
+              <span className="text-[16px] text-[#202020]">{opt}</span>
+            </Checkbox>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  // Default: text field with contentEditable, autocomplete and ML analysis
   return (
     <div ref={containerRef} className="flex flex-col mb-6 relative">
-      <div className="flex-grow relative">
-        <div className="flex items-center gap-3">
-          <div className="flex-shrink-0 w-4 h-4" ref={indicatorRef}>
-            {isFullnessEnabled && isComplaintField && (
-              <>
-                {isFetchingAnalysis ? (
-                  <Spinner />
-                ) : mlAnalysis ? (
-                  <div
-                    onMouseEnter={handleMouseEnter}
-                    onMouseLeave={handleMouseLeave}
-                  >
-                    {showPopover &&
-                      isComplaintField &&
-                      !isFetchingAnalysis &&
-                      createPortal(
-                        <FeedbackPopover
-                          color={mlAnalysis.color as 'green' | 'red' | 'yellow'}
-                          analysis={mlAnalysis.analysis}
-                          suggestedText={mlAnalysis.suggested_text}
-                          onApply={handleApplySuggestion}
-                          onClose={() => setShowPopover(false)}
-                          style={{
-                            position: 'fixed',
-                            bottom: popoverPosition?.bottom,
-                            left: popoverPosition?.left,
-                            zIndex: 9999,
-                          }}
-                        />,
-                        document.body,
-                      )}
-                    <div
-                      className={`w-4 h-4 cursor-pointer rounded-full transition-all duration-300 ${
-                        mlAnalysis.color === 'green'
-                          ? 'bg-[#459F49]'
-                          : mlAnalysis.color === 'yellow'
-                            ? 'bg-[#F29100]'
-                            : 'bg-[#D91528]'
-                      }`}
-                    />
-                  </div>
-                ) : (
-                  <div className="w-3 h-3" />
-                )}
-              </>
-            )}
-          </div>
-          <div
-            className={`text-[30px] font-medium leading-[140%] text-[#202020] mb-1 ${animate ? 'animate-scale-pulse' : ''}`}
-          >
-            {label}
-          </div>
-        </div>
+      <div className="grow relative">
+        {renderLabel()}
 
         <div className="flex ml-7 items-center gap-3">
           <div className="relative w-full">
@@ -440,7 +632,7 @@ export const SectionInput: React.FC<SectionInputProps> = ({
                 setIsComposing(false);
                 handleInput();
               }}
-              className="text-[#202020] border-0 focus:border-0 focus:outline-none focus:ring-0 w-full resize-none bg-transparent min-h-5.5 leading-[140%] text-[16px] whitespace-pre-wrap break-words"
+              className="text-[#202020] border-0 focus:border-0 focus:outline-none focus:ring-0 w-full resize-none bg-transparent min-h-5.5 leading-[140%] text-[16px] whitespace-pre-wrap wrap-break-word"
               style={{ wordBreak: 'break-word' }}
               role="textbox"
               aria-multiline="true"
@@ -455,15 +647,6 @@ export const SectionInput: React.FC<SectionInputProps> = ({
                 loading={loading}
               />
             )}
-            {/* {isComplaintField && mlAnalysis && !isFetchingAnalysis && (
-              <FeedbackPopover
-                color={mlAnalysis.color}
-                analysis={mlAnalysis.analysis}
-                suggestedText={mlAnalysis.suggested_text}
-                onApply={handleApplySuggestion}
-                onClose={closeMlFeedback}
-              />
-            )} */}
           </div>
         </div>
       </div>

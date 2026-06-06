@@ -30,7 +30,6 @@ export interface CustomDropdownProps<T = string, M extends boolean = false> {
   className?: string;
   dropdownClassName?: string;
   optionClassName?: string;
-  // Исправленная строка:
   renderTrigger?: (
     option: DropdownOption<T> | DropdownOption<T>[],
   ) => ReactNode;
@@ -39,6 +38,10 @@ export interface CustomDropdownProps<T = string, M extends boolean = false> {
   position?: 'top' | 'bottom';
   multiple?: M;
   'aria-label'?: string;
+  onSearch?: (query: string) => void;
+  onLoadMore?: () => void;
+  hasMore?: boolean;
+  isLoading?: boolean;
 }
 
 export function CustomDropdown<T = string, M extends boolean = false>({
@@ -56,10 +59,16 @@ export function CustomDropdown<T = string, M extends boolean = false>({
   position = 'bottom',
   multiple = false as M,
   'aria-label': ariaLabel,
+  onSearch,
+  onLoadMore,
+  hasMore = false,
+  isLoading = false,
 }: CustomDropdownProps<T, M>) {
   const [isOpen, setIsOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
   const containerRef = useRef<HTMLDivElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
   // Хелперы для работы с одиночным и множественным выбором
   const getValues = (): T[] => {
@@ -221,15 +230,31 @@ export function CustomDropdown<T = string, M extends boolean = false>({
     }
   };
 
-  const sortedOptions = [...options].sort((a, b) => {
-    const aSelected = isSelected(a.value);
-    const bSelected = isSelected(b.value);
-    if (aSelected && !bSelected) return -1;
-    if (!aSelected && bSelected) return 1;
-    return 0;
-  });
+  useEffect(() => {
+    if (isOpen && onSearch) {
+      requestAnimationFrame(() => searchInputRef.current?.focus());
+    }
+  }, [isOpen, onSearch]);
+
+  const sortedOptions = onSearch
+    ? options
+    : [...options].sort((a, b) => {
+        const aSelected = isSelected(a.value);
+        const bSelected = isSelected(b.value);
+        if (aSelected && !bSelected) return -1;
+        if (!aSelected && bSelected) return 1;
+        return 0;
+      });
 
   const selectedOptions = options.filter((opt) => isSelected(opt.value));
+
+  const handleListScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    if (!onLoadMore || !hasMore || isLoading) return;
+    const el = e.currentTarget;
+    if (el.scrollHeight - el.scrollTop - el.clientHeight < 100) {
+      onLoadMore();
+    }
+  };
 
   const dropdownList = (
     <div
@@ -244,66 +269,96 @@ export function CustomDropdown<T = string, M extends boolean = false>({
         zIndex: 9999,
       }}
       id="dropdown-list"
-      role="listbox"
-      aria-multiselectable={multiple}
-      className={`bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden animate-fade-in max-h-60 overflow-y-auto ${
-        dropdownClassName
-      }`}
+      className={`bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden animate-fade-in flex flex-col ${dropdownClassName}`}
     >
-      {sortedOptions.map((option) => {
-        const optionIsSelected = isSelected(option.value);
-        const isDisabled = option.disabled;
+      {onSearch && (
+        <div className="p-2 border-b border-gray-100 shrink-0">
+          <input
+            ref={searchInputRef}
+            type="text"
+            value={searchQuery}
+            onChange={(e) => {
+              setSearchQuery(e.target.value);
+              onSearch(e.target.value);
+            }}
+            placeholder="Поиск..."
+            className="w-full px-3 py-1.5 text-sm bg-gray-50 rounded-lg border-0 outline-none focus:ring-2 focus:ring-[#5D8CF1] transition-shadow"
+            onClick={(e) => e.stopPropagation()}
+            onKeyDown={(e) => e.stopPropagation()}
+          />
+        </div>
+      )}
+      <div
+        role="listbox"
+        aria-multiselectable={multiple}
+        className="overflow-y-auto"
+        onScroll={handleListScroll}
+      >
+        {sortedOptions.map((option) => {
+          const optionIsSelected = isSelected(option.value);
+          const isDisabled = option.disabled;
 
-        return (
-          <button
-            key={String(option.value)}
-            type="button"
-            role="option"
-            aria-selected={optionIsSelected}
-            onClick={() => handleValueChange(option.value)}
-            disabled={isDisabled}
-            className={`w-full cursor-pointer px-4 py-3 text-left flex items-center gap-3 hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
-              optionIsSelected ? 'bg-gray-50' : ''
-            } ${optionClassName}`}
-          >
-            <div className="flex-1 flex items-center gap-3">
-              {renderOption ? (
-                renderOption(option, optionIsSelected)
-              ) : (
-                <>
-                  {option.icon && (
-                    <Image
-                      src={option.icon}
-                      alt=""
-                      width={16}
-                      height={16}
-                      className="flex-shrink-0"
-                    />
-                  )}
-                  <span className="text-sm text-[#202020]">{option.label}</span>
-                  {option.badgeClass && (
-                    <span
-                      className={`text-xs px-2 py-0.5 rounded-full ${option.badgeClass}`}
-                    >
-                      {option.label}
-                    </span>
-                  )}
-                </>
+          return (
+            <button
+              key={String(option.value)}
+              type="button"
+              role="option"
+              aria-selected={optionIsSelected}
+              onClick={() => handleValueChange(option.value)}
+              disabled={isDisabled}
+              className={`w-full cursor-pointer px-4 py-3 text-left flex items-center gap-3 hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
+                optionIsSelected ? 'bg-gray-50' : ''
+              } ${optionClassName}`}
+            >
+              <div className="flex-1 flex items-center gap-3">
+                {renderOption ? (
+                  renderOption(option, optionIsSelected)
+                ) : (
+                  <>
+                    {option.icon && (
+                      <Image
+                        src={option.icon}
+                        alt=""
+                        width={16}
+                        height={16}
+                        className="shrink-0"
+                      />
+                    )}
+                    <span className="text-sm text-[#202020]">{option.label}</span>
+                    {option.badgeClass && (
+                      <span
+                        className={`text-xs px-2 py-0.5 rounded-full ${option.badgeClass}`}
+                      >
+                        {option.label}
+                      </span>
+                    )}
+                  </>
+                )}
+              </div>
+
+              {showCheckIcon && optionIsSelected && (
+                <Image
+                  src="/check.svg"
+                  alt="selected"
+                  width={16}
+                  height={16}
+                  className="shrink-0 ml-auto"
+                />
               )}
-            </div>
-
-            {showCheckIcon && optionIsSelected && (
-              <Image
-                src="/check.svg"
-                alt="selected"
-                width={16}
-                height={16}
-                className="flex-shrink-0 ml-auto"
-              />
-            )}
-          </button>
-        );
-      })}
+            </button>
+          );
+        })}
+        {isLoading && (
+          <div className="px-4 py-3 text-center text-sm text-[#6C757D]">
+            Загрузка...
+          </div>
+        )}
+        {!isLoading && options.length === 0 && (
+          <div className="px-4 py-3 text-center text-sm text-[#6C757D]">
+            Ничего не найдено
+          </div>
+        )}
+      </div>
     </div>
   );
 
@@ -342,7 +397,7 @@ export function CustomDropdown<T = string, M extends boolean = false>({
           alt="toggle"
           width={10}
           height={10}
-          className={`transition-transform duration-200 flex-shrink-0 ${
+          className={`transition-transform duration-200 shrink-0 ${
             isOpen ? 'rotate-180' : ''
           }`}
         />

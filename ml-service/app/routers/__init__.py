@@ -1,10 +1,9 @@
 from fastapi import FastAPI
 
-from .routers.autocomplete import router as autocomplete_router
-from .routers.mkb_code import router as mkb_router
-from .routers.protocol_fullness import router as protocol_fullness_router
-from .routers.clinrec import router as clinrec_router
-
+from .autocomplete import router as autocomplete_router
+from .mkb_code import router as mkb_router
+from .protocol_fullness import router as protocol_fullness_router
+from .clinrec import router as clinrec_router
 
 app = FastAPI(title="Vismuth ML Service")
 app.include_router(autocomplete_router)

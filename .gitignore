@@ -66,7 +66,9 @@ data/local/
 
 # ML models (large binaries)
 ml-service/finetuned_autocomplete_kaggle/
+ml-service/autocomplete_model/
 ml-service/ru-en-RoSBERTa/
 ml-service/rosberta_chromadb/
 ml-service/chroma_qwen_md_3/
 ml-service/Qwen3-Embedding-0.6B/
+AGENTS.md

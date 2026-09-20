@@ -75,7 +75,7 @@ services:
     ports:
       - "8001:8000"
     volumes:
-      - "./ml-service/finetuned_autocomplete_kaggle:/app/autocomplete_model"
+      - "./ml-service/autocomplete_model:/app/autocomplete_model"
       - "./ml-service/rosberta_chromadb:/app/rosberta_chromadb"
       - "./ml-service/ru-en-RoSBERTa:/app/ru-en-RoSBERTa"
       - "./ml-service/chroma_qwen_md_3/:/app/chroma_qwen_md_3"

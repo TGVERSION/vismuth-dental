@@ -1,26 +1,16 @@
 from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel
 import torch
 from transformers import AutoTokenizer, GPT2LMHeadModel
 import re
-from typing import List, Optional
+
+from app.schemas import CompletionRequest, CompletionResponse
 
 router = APIRouter(prefix="/autocomplete", tags=["autocomplete"])
 
 
-class CompletionRequest(BaseModel):
-    field: str
-    prefix: str
-    num_sequences: int = 5
-
-
-class CompletionResponse(BaseModel):
-    suggestions: List[str]
-
-
 device = torch.device('cpu')
-tokenizer = AutoTokenizer.from_pretrained("/app/autocomplete_model")
-model = GPT2LMHeadModel.from_pretrained("/app/autocomplete_model").to(device)
+tokenizer = AutoTokenizer.from_pretrained("./autocomplete_model")
+model = GPT2LMHeadModel.from_pretrained("./autocomplete_model").to(device)
 
 if tokenizer.pad_token is None:
     tokenizer.pad_token = tokenizer.eos_token

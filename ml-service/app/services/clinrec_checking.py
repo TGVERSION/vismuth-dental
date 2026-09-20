@@ -1,7 +1,7 @@
 from langchain_core.messages import SystemMessage, HumanMessage
-from .llm_setup import llm_clinrec, clinrec_collection
+from .llm_setup import llm_clinrec, clinrec_emb_model, clinrec_collection
+from .prompts import CLINREC_SYSTEM_PROMPT, CLINREC_HUMAN_PROMPT_TEMPLATE
 import json
-from ..schemas.clinrec import ClinicalAnalysis
 
 
 def build_human_prompt(protocol_text: str, retrieved_chunks: list) -> HumanMessage:
@@ -10,15 +10,10 @@ def build_human_prompt(protocol_text: str, retrieved_chunks: list) -> HumanMessa
         f"[{i+1}] {chunk}" for i, chunk in enumerate(retrieved_chunks)
     ])
     
-    human_prompt = f"""
-Клинические рекомендации (релевантные фрагменты):
-{guidelines_text}
-
-Протокол врача (разбит по полям):
-{protocol_text}
-
-Проанализируй соответствие протокола клиническим рекомендациям. Верни JSON.
-"""
+    human_prompt = CLINREC_HUMAN_PROMPT_TEMPLATE.format(
+        guidelines_text=guidelines_text,
+        protocol_text=protocol_text
+    )
     return HumanMessage(content=human_prompt)
 
 
@@ -47,7 +42,7 @@ def retrieve_chunks(query_fields: list = None, n_results: int = 3) -> list:
     return unique_chunks
 
 
-def get_clinrec_checking(protocol_text: str) -> ClinicalAnalysis:
+def get_clinrec_checking(protocol_text: str) -> dict:
     """
     Основная функция: извлекает чанки, отправляет в LLM, возвращает результат.
     
@@ -57,56 +52,28 @@ def get_clinrec_checking(protocol_text: str) -> ClinicalAnalysis:
     Returns:
         dict: JSON из ответа LLM
     """
-    system_prompt = """
-Ты — медицинский эксперт по клиническим рекомендациям. Анализируешь протокол врача на соответствие переданным фрагментам клинреков.
-
-Правила:
-1. Используй ТОЛЬКО переданные фрагменты клинреков.
-2. Пустое поле протокола = замечание только если клинрек ТРЕБУЕТ.
-3. Различай "не задокументировано" (warning) и "нарушено" (critical).
-4. Максимум 10 замечаний. Приоритет клинической значимости.
-5. В поле guideline_quote — дословная цитата из клинрека.
-
-Уровни severity:
-- critical: явное нарушение обязательного требования
-- warning: рекомендация не выполнена, но допустимо
-- info: полезно, но не обязательно
-
-Формат ответа (строго JSON):
-{
-"severity_counts": {"critical": 0, "warning": 0, "info": 0},
-"findings": [
-{
-"severity": "critical|warning|info",
-"section": "Название раздела протокола",
-"issue": "Что не так",
-"recommendation": "Как исправить",
-"guideline_ref": "Заголовок раздела клинрека",
-"guideline_quote": "Дословная цитата"
-}
-],
-"compliant_sections": ["список полей", "которые соответствуют"]
-}
-
-Если замечаний нет: findings = [], severity_counts все 0.
-"""
-
     # 1. Извлекаем чанки
     unique_chunks = retrieve_chunks()
     
     # 2. Формируем промпт
     human_msg = build_human_prompt(protocol_text, unique_chunks)
     
-    # 3. Отправляем в LLM с STRUCTURED OUTPUT
-    structured_llm = llm_clinrec.with_structured_output(ClinicalAnalysis)
-    
+    # 3. Отправляем в LLM
     messages = [
-        SystemMessage(content=system_prompt),
+        SystemMessage(content=CLINREC_SYSTEM_PROMPT),
         human_msg
-    ]
+        ]
+
     
-    # Получаем структурированный объект
-    result: ClinicalAnalysis = structured_llm.invoke(messages)
+    response = llm_clinrec.invoke(messages)
     
-    # Возвращаем как dict для совместимости с эндпоинтом
+    # 4. Парсим JSON ответ
+    try:
+        result = json.loads(response.content)
+    except json.JSONDecodeError:
+        result = {
+            "error": "Invalid JSON response from LLM",
+            "raw_response": response.content
+        }
+    
     return result

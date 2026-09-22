@@ -30,6 +30,7 @@ from ..security import (
     verify_password,
     verify_registration_code,
 )
+from ..services.roles import set_user_role, user_role_load_options
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -188,7 +189,6 @@ async def register_confirm(
         password_hash=pending.password_hash,
         first_name=None,
         last_name=None,
-        role=settings.default_user_role,
         is_active=True,
         created_at=now,
         updated_at=None,
@@ -196,10 +196,17 @@ async def register_confirm(
     )
     db.add(user)
     await db.flush()
+    await set_user_role(db, user, settings.default_user_role)
     db.add(UserSettings(user_id=user.id))
     await db.delete(pending)
     await db.commit()
-    await db.refresh(user)
+
+    result = await db.execute(
+        select(ServiceUser)
+        .options(*user_role_load_options())
+        .where(ServiceUser.id == user.id),
+    )
+    user = result.scalar_one()
 
     token = create_access_token(user.id, {"role": user.role})
     return TokenResponse(
@@ -216,7 +223,9 @@ async def login(
     login_norm = _normalize_login(str(payload.login))
 
     result = await db.execute(
-        select(ServiceUser).where(func.lower(ServiceUser.login) == login_norm),
+        select(ServiceUser)
+        .options(*user_role_load_options())
+        .where(func.lower(ServiceUser.login) == login_norm),
     )
     user = result.scalar_one_or_none()
     if user is None:

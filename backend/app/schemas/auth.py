@@ -1,6 +1,9 @@
 from uuid import UUID
+from typing import Literal
 
 from pydantic import BaseModel, EmailStr, Field
+
+RoleName = Literal["super_admin", "admin", "doctor", "patient"]
 
 
 class RegisterRequest(BaseModel):
@@ -21,7 +24,8 @@ class LoginRequest(BaseModel):
 class UserPublic(BaseModel):
     id: UUID
     login: str
-    role: str
+    role: RoleName
+    role_name_ru: str
 
     class Config:
         from_attributes = True

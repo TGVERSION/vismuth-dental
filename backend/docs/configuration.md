@@ -24,7 +24,7 @@ URL собираются так:
 | `JWT_SECRET` | `dev-only-change-me-in-production` | Секрет подписи (сменить в проде) |
 | `JWT_ALGORITHM` | `HS256` | Алгоритм |
 | `ACCESS_TOKEN_EXPIRE_MINUTES` | `60` | TTL access token |
-| `DEFAULT_USER_ROLE` | `doctor` | Роль при регистрации |
+| `DEFAULT_USER_ROLE` | `doctor` | Роль при регистрации (`super_admin` \| `admin` \| `doctor` \| `patient`) |
 
 ## Регистрация / SMTP
 

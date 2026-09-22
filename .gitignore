@@ -72,3 +72,4 @@ ml-service/rosberta_chromadb/
 ml-service/chroma_qwen_md_3/
 ml-service/Qwen3-Embedding-0.6B/
 AGENTS.md
+ml-service/autocomplete_model

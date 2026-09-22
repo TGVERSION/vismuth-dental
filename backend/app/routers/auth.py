@@ -96,7 +96,7 @@ async def register(
         if "registration_pending" in err:
             detail = (
                 "Таблица registration_pending не найдена в БД. "
-                "Выполните DDL из main_schema.sql (создание registration_pending)."
+                "Выполните: alembic upgrade head."
             )
         else:
             detail = f"Ошибка PostgreSQL: {err}"

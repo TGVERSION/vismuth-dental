@@ -61,7 +61,7 @@ async def search_mkb10(
         err = str(e.orig) if getattr(e, "orig", None) else str(e)
         detail = (
             "Таблица ref_mkb10 не найдена в БД. "
-            "Выполните DDL из main_schema.sql (создание ref_mkb10)."
+            "Выполните: alembic upgrade head (и при необходимости seed_refs)."
             if "ref_mkb10" in err
             else f"Ошибка PostgreSQL: {err}"
         )

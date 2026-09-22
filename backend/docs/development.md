@@ -62,6 +62,25 @@ docker compose exec backend alembic current
 docker compose up -d --build backend backend-worker
 ```
 
-## Тесты endpoints
+## Manual smoke (endpoints)
 
-В репозитории есть Jupyter-ноутбук [`test_ipynb/test_endpoints.ipynb`](../test_ipynb/test_endpoints.ipynb) для ручной проверки API.
+Ручная проверка живого API через Jupyter + Python-модули (не pytest).
+
+Структура [`test_ipynb/`](../test_ipynb/):
+
+| Файл | Назначение |
+|------|------------|
+| `_client.py` | `SmokeContext`, `print_response`, login/register/logout |
+| `groups/*.py` | suites по группам роутеров (`run_*`) |
+| `test_endpoints.ipynb` | тонкий runner backend (`localhost:8000`) |
+| `ml_service.py` + `test_ml_endpoints.ipynb` | прямой smoke ml-service (`:8001`) |
+| `smtp_check.py` + `test_smtp.ipynb` | проверка SMTP |
+
+Как запускать:
+
+1. `docker compose up -d` из корня `vismuth/`.
+2. Открыть `test_ipynb/test_endpoints.ipynb`, cwd kernel = `backend/test_ipynb/` (или `backend/`).
+3. Задать `email`/`password` в ячейке setup → `login(ctx)` (или register → код с почты → confirm).
+4. Гонять секции по одной (`groups.protocols.run_all(ctx)`) или подряд сверху вниз.
+
+Лишнего в smoke нет: `/consultations` и мутации `/dictionary` удалены; есть `/roles`, `/autocomplete_dict/complete_dict`, `/ml_mkb_code/select`.

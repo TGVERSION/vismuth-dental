@@ -23,7 +23,16 @@ service_user 1 ── 1 service_user_role N ── 1 role
 
 `PRIVILEGED_ROLE_NAMES = { super_admin, admin }`.
 
-`super_admin` — отдельная роль под будущие расширенные права; пока по доступу совпадает с `admin`.
+`super_admin` — платформенная роль поставщика сервиса. Endpoint'ы `/super-admin/*` доступны **только** ей (`require_roles("super_admin")`).  
+`admin` остаётся privileged для legacy CRUD users / general templates, но **не** видит супер-админку клиник.
+
+## Клиника: роли через membership
+
+Права внутри клиники **не** кодируются глобальной ролью `admin`:
+
+- таблица `clinic_membership`: флаги `is_clinic_admin`, `is_doctor` (можно оба);
+- приглашённый через invite получает глобальную роль `doctor` + membership с нужными флагами;
+- API администратора клиники (позже) будет проверять membership, не `require_privileged`.
 
 ## Миграция старых значений
 
@@ -54,3 +63,4 @@ service_user 1 ── 1 service_user_role N ── 1 role
 | `deps.require_privileged` | CRUD service_user |
 | `user_settings._ensure_access` | свой user **или** privileged |
 | `protocol_templates` | `privacy=general` create/update/delete |
+| `deps.require_roles("super_admin")` | `/super-admin/clinics*` |

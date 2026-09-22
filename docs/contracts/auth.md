@@ -38,3 +38,20 @@
 - **Поведение:** сервер токен не отзывает; ответ `{ detail: "logged_out" }`
 - **Frontend:** удалить token из storage / store
 - **Код:** `logout`
+
+## GET /auth/invitations/{token}
+
+- **Auth:** none
+- **Назначение:** превью приглашения по raw token из ссылки
+- **Поведение:** `404` нет/used/deleted; `410` expired; иначе email, clinic_name, роли, expires_at
+- **Frontend:** страница `/invite/accept` до формы пароля
+- **Код:** `preview_invitation`
+
+## POST /auth/invitations/accept
+
+- **Auth:** none
+- **Назначение:** принять invite → создать user + membership + JWT
+- **Поведение:** проверяет token / expiry / clinic; `409` если email уже занят; создаёт `service_user` (глобальная роль `doctor`), `user_settings`, `clinic_membership` (флаги из invite, status `active`); помечает invite `used_at`
+- **Ответ (смысл):** как login — `access_token` + `user`
+- **Frontend:** форма пароля после превью; persist token
+- **Код:** `accept_invitation`

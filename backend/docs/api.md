@@ -23,7 +23,9 @@ Authorization: Bearer <access_token>
 ```
 
 Проверка: [`deps.get_current_user`](../app/deps.py). Роль: `service_user_role` → `role`; в ответах `role` + `role_name_ru`.  
-Privileged (`super_admin` \| `admin`): [`require_privileged`](../app/deps.py). Подробнее: [roles-and-permissions.md](../../docs/domains/roles-and-permissions.md).
+Privileged (`super_admin` \| `admin`): [`require_privileged`](../app/deps.py).  
+Только `super_admin`: [`require_roles("super_admin")`](../app/deps.py) на `/super-admin/*`.  
+Подробнее: [roles-and-permissions.md](../../docs/domains/roles-and-permissions.md).
 
 ## Системные
 
@@ -38,6 +40,11 @@ Privileged (`super_admin` \| `admin`): [`require_privileged`](../app/deps.py). �
 | service_user | [service-user.md](../../docs/contracts/service-user.md) | me, CRUD, список id |
 | roles | [roles.md](../../docs/contracts/roles.md) | `GET /roles` |
 | user-settings | [user-settings.md](../../docs/contracts/user-settings.md) | `/user-settings` |
+
+## Super-admin (клиники)
+
+Контракт: [super-admin-clinics.md](../../docs/contracts/super-admin-clinics.md).  
+Префикс `/super-admin/clinics` — только роль `super_admin`. Invite accept/preview — в [auth.md](../../docs/contracts/auth.md).
 
 ## Протоколы и шаблоны
 

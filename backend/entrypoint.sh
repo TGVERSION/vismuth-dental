@@ -31,7 +31,7 @@ echo "[entrypoint] alembic upgrade head"
 alembic upgrade head
 
 echo "[entrypoint] seed refs (idempotent)"
-python sql/seed/seed_refs.py
+PYTHONPATH=/app python sql/seed/seed_refs.py
 
 echo "[entrypoint] starting: $*"
 exec "$@"

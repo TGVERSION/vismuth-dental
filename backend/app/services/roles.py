@@ -35,12 +35,19 @@ async def set_user_role(
     role_name: str,
 ) -> None:
     role = await get_role_by_name(db, role_name)
-    if user.user_role_link is None:
-        user.user_role_link = ServiceUserRole(user_id=user.id, role_id=role.id)
-        user.user_role_link.role = role
+    result = await db.execute(
+        select(ServiceUserRole).where(ServiceUserRole.user_id == user.id),
+    )
+    link = result.scalar_one_or_none()
+    if link is None:
+        link = ServiceUserRole(user_id=user.id, role_id=role.id)
+        link.role = role
+        db.add(link)
+        user.user_role_link = link
     else:
-        user.user_role_link.role_id = role.id
-        user.user_role_link.role = role
+        link.role_id = role.id
+        link.role = role
+        user.user_role_link = link
 
 
 def user_has_any_role(user: ServiceUser, *role_names: str) -> bool:

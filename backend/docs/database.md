@@ -14,6 +14,7 @@ Source of truth схемы: [`alembic/versions/`](../alembic/versions/). Ста�
 | `0004_protocols_and_templates` | `protocols`, `protocol_fields`, шаблоны и группы |
 | `0005_ml_tables_and_functions` | stats/logs, `ml_unigrams`/`ml_bigrams`, SQL-функции autocomplete |
 | `0006_roles` | справочник `role` (`name`, `name_ru`), связь `service_user_role` (1 роль на user), drop `service_user.role` |
+| `0007_clinics` | `clinic`, `clinic_membership`, `clinic_invitation` (тенанты, участники, invite) |
 
 Порядок важен из‑за FK (`service_user` раньше протоколов и т.д.).
 
@@ -23,6 +24,17 @@ Source of truth схемы: [`alembic/versions/`](../alembic/versions/). Ста�
 - Таблица `service_user_role`: PK = `user_id` → пока **одна** роль на пользователя.
 - Миграция данных: `administrator` / `head_of_department` → `admin`, `doctor` → `doctor`.
 - Privileged (CRUD users, чужие settings, general templates): `super_admin` или `admin`.
+- API `/super-admin/*` — только `super_admin` (не `admin`).
+
+### Клиники (0007)
+
+| Таблица | Суть |
+|--------|------|
+| `clinic` | Тенант: name, phone, email, logo_url, brand_color, doctors_limit, access_until, access_type (`trial`\|`paid`), public_slug; timestamps |
+| `clinic_membership` | user↔clinic: `is_clinic_admin`, `is_doctor`, status (`active`\|`deactivated`), photo_url; timestamps |
+| `clinic_invitation` | Invite: email, token_hash, роли, expires_at, used_at; soft-delete = revoke; timestamps |
+
+Статус подписки **не хранится** — вычисляется по `access_until` + `access_type`.
 
 ## Команды (из каталога `backend/` или контейнера)
 
@@ -72,7 +84,7 @@ docker compose exec -T db pg_dump -U vismuth vismuth > backup_$(date +%F).sql
 2. После `git pull` и rebuild:
 
 - таблица `alembic_version` на старой БД отсутствует;
-- entrypoint вызовет `alembic upgrade head` и попытается прогнать `0001`…`0006`;
+- entrypoint вызовет `alembic upgrade head` и попытается прогнать `0001`…`0007`;
 - из‑за `CREATE TABLE IF NOT EXISTS` / `ON CONFLICT DO NOTHING` на совпадающей схеме обычно проходит «вхолостую»;
 - seed увидит `ref_mkb10` и **не перезапишет** справочники.
 
@@ -82,6 +94,6 @@ docker compose exec -T db pg_dump -U vismuth vismuth > backup_$(date +%F).sql
 docker compose run --rm backend alembic stamp head
 ```
 
-(либо после успешного первого `upgrade` проверить `alembic current` → `0006_roles`).
+(либо после успешного первого `upgrade` проверить `alembic current` → `0007_clinics`).
 
 4. Таблица вроде старого `ref_mis` на сервере **не удаляются** автоматически — просто больше не создаются новыми миграциями.

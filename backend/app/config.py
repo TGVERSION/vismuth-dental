@@ -32,6 +32,12 @@ class Settings(BaseModel):
         os.getenv("REGISTRATION_CODE_MAX_ATTEMPTS", "5"),
     )
 
+    frontend_public_url: str = os.getenv(
+        "FRONTEND_PUBLIC_URL",
+        "http://localhost:3000",
+    )
+    invite_expire_days: int = int(os.getenv("INVITE_EXPIRE_DAYS", "7"))
+
     default_user_role: str = os.getenv("DEFAULT_USER_ROLE", "doctor")
     ml_service_url: str = os.getenv("ML_SERVICE_URL", "http://ml-service:8000")
 

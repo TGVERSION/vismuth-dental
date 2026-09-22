@@ -45,12 +45,15 @@ backend/
 
 | Документ | О чём |
 |----------|--------|
+| [../docs/contracts/](../docs/contracts/) | **Контракты API** (поведение для frontend / агентов) |
+| [../docs/domains/](../docs/domains/) | Доменные модели (роли и права) |
+| [../AGENTS.md](../AGENTS.md) | Инструкции для AI-агентов |
 | [docs/architecture.md](docs/architecture.md) | Слои приложения, docker-процессы, зависимости |
 | [docs/configuration.md](docs/configuration.md) | Переменные окружения |
 | [docs/database.md](docs/database.md) | Alembic, seed, деплой на существующую БД |
-| [docs/api.md](docs/api.md) | Группы API и auth |
+| [docs/api.md](docs/api.md) | Индекс групп API + ссылки на contracts |
 | [docs/ml-and-worker.md](docs/ml-and-worker.md) | Proxy на ml-service, Redis, worker |
 | [docs/development.md](docs/development.md) | Как добавлять миграции, endpoints, справочники |
 | [sql/README.md](sql/README.md) | Краткая шпаргалка по migrate/seed |
 
-Детали request/response — в Swagger (`/docs`), не дублируются в markdown.
+Детали request/response — в Swagger (`/docs`). Поведение endpoint'ов — в `vismuth/docs/contracts/`.

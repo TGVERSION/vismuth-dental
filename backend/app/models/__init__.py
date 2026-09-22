@@ -11,3 +11,6 @@ from .fullness_complaints_stats import FullnessComplaintsStats  # noqa: F401
 from .ml_response_log import MlResponseLog  # noqa: F401
 from .user_settings import UserSettings  # noqa: F401
 from .dictionary import Dictionary  # noqa: F401
+from .clinic import Clinic  # noqa: F401
+from .clinic_membership import ClinicMembership  # noqa: F401
+from .clinic_invitation import ClinicInvitation  # noqa: F401

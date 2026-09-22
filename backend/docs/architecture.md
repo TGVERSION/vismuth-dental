@@ -12,14 +12,15 @@ HTTP → routers → schemas (валидация)
 | Каталог | Назначение |
 |---------|------------|
 | `routers/` | FastAPI-роуты, бизнес-логика endpoint'ов |
+| `routers/super_admin/` | Endpoint'ы только для `super_admin` (клиники, …) |
 | `schemas/` | Pydantic request/response |
 | `models/` | SQLAlchemy ORM → таблицы Postgres |
 | `db.py` | async engine, session (`get_db`) |
-| `deps.py` | зависимости: текущий пользователь (JWT) |
+| `deps.py` | зависимости: текущий пользователь (JWT), `require_roles` / `require_privileged` |
 | `config.py` | настройки из env |
 | `security.py` | JWT / password hash |
-| `email.py` | SMTP для кода регистрации |
-| `services/` | исходящие вызовы (ML, Redis) |
+| `email.py` | SMTP (регистрация, clinic invite) |
+| `services/` | исходящие вызовы (ML, Redis), helpers (roles, clinic_access) |
 | `workers/` | фоновый consumer событий |
 
 Точка входа API: [`app/main.py`](../app/main.py) — сборка `FastAPI` и `include_router`.

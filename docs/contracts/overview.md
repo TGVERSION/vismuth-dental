@@ -19,9 +19,10 @@ Authorization: Bearer <access_token>
 
 | Режим | Смысл |
 |-------|--------|
-| **none** | Публичный (register/login, часть dict-autocomplete) |
+| **none** | Публичный (register/login, invite preview/accept, часть dict-autocomplete) |
 | **JWT** | Валидный токен → активный, не soft-deleted `service_user` |
 | **privileged** | JWT + роль `super_admin` или `admin` |
+| **super_admin** | JWT + роль `super_admin` (группа `/super-admin/*`) |
 
 Ошибки auth (типично): `401` не аутентифицирован / битый токен / user не найден / удалён; `403` inactive или нет прав.
 
@@ -46,14 +47,19 @@ Logout **не** инвалидирует JWT на сервере — клиен�
 - чужие `/user-settings/{user_id}`
 - шаблоны протоколов с `privacy: general` (create / update / delete / смена privacy на general)
 
+Только `super_admin`:
+
+- `/super-admin/clinics*` (CRUD клиник, invitations)
+
 ## Группы контрактов
 
 | Файл | Группа |
 |------|--------|
-| [auth.md](auth.md) | `/auth` |
+| [auth.md](auth.md) | `/auth` (в т.ч. invitations) |
 | [roles.md](roles.md) | `/roles` |
 | [service-user.md](service-user.md) | `/service_user*` |
 | [user-settings.md](user-settings.md) | `/user-settings` |
+| [super-admin-clinics.md](super-admin-clinics.md) | `/super-admin/clinics` |
 | [protocols.md](protocols.md) | `/protocols` |
 | [protocol-templates.md](protocol-templates.md) | `/protocol-templates` |
 | [protocol-structures.md](protocol-structures.md) | `/protocol-structures`, `/protocol-fields-main` |

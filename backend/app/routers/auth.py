@@ -10,6 +10,9 @@ from ..config import settings
 from ..db import get_db
 from ..deps import get_current_user
 from ..email import send_registration_code
+from ..models.clinic import Clinic
+from ..models.clinic_invitation import ClinicInvitation
+from ..models.clinic_membership import ClinicMembership
 from ..models.registration_pending import RegistrationPending
 from ..models.service_user import ServiceUser
 from ..models.user_settings import UserSettings
@@ -22,6 +25,11 @@ from ..schemas.auth import (
     TokenResponse,
     UserPublic,
 )
+from ..schemas.invitation import (
+    InvitationAcceptRequest,
+    InvitationAcceptResponse,
+    InvitationPreview,
+)
 from ..security import (
     create_access_token,
     generate_registration_code,
@@ -30,6 +38,7 @@ from ..security import (
     verify_password,
     verify_registration_code,
 )
+from ..services.clinic_access import hash_invite_token
 from ..services.roles import set_user_role, user_role_load_options
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -37,6 +46,20 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 
 def _normalize_login(login: str) -> str:
     return login.strip().lower()
+
+
+async def _load_active_invitation(
+    db: AsyncSession,
+    token: str,
+) -> ClinicInvitation | None:
+    token_hash = hash_invite_token(token)
+    result = await db.execute(
+        select(ClinicInvitation).where(
+            ClinicInvitation.token_hash == token_hash,
+            ClinicInvitation.deleted_at.is_(None),
+        ),
+    )
+    return result.scalar_one_or_none()
 
 
 @router.post("/register", response_model=RegisterResponse)
@@ -261,3 +284,131 @@ async def logout(
     _: ServiceUser = Depends(get_current_user),
 ) -> MessageResponse:
     return MessageResponse(detail="logged_out")
+
+
+@router.get("/invitations/{token}", response_model=InvitationPreview)
+async def preview_invitation(
+    token: str,
+    db: AsyncSession = Depends(get_db),
+) -> InvitationPreview:
+    invitation = await _load_active_invitation(db, token)
+    if invitation is None or invitation.used_at is not None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Invitation not found",
+        )
+
+    now = datetime.now(timezone.utc)
+    if invitation.expires_at < now:
+        raise HTTPException(
+            status_code=status.HTTP_410_GONE,
+            detail="Invitation expired",
+        )
+
+    clinic_result = await db.execute(
+        select(Clinic).where(
+            Clinic.id == invitation.clinic_id,
+            Clinic.deleted_at.is_(None),
+        ),
+    )
+    clinic = clinic_result.scalar_one_or_none()
+    if clinic is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Clinic not found",
+        )
+
+    return InvitationPreview(
+        email=invitation.email,
+        clinic_name=clinic.name,
+        clinic_id=str(clinic.id),
+        first_name=invitation.first_name,
+        last_name=invitation.last_name,
+        is_clinic_admin=invitation.is_clinic_admin,
+        is_doctor=invitation.is_doctor,
+        expires_at=invitation.expires_at,
+    )
+
+
+@router.post("/invitations/accept", response_model=InvitationAcceptResponse)
+async def accept_invitation(
+    payload: InvitationAcceptRequest,
+    db: AsyncSession = Depends(get_db),
+) -> InvitationAcceptResponse:
+    invitation = await _load_active_invitation(db, payload.token)
+    if invitation is None or invitation.used_at is not None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Invitation not found",
+        )
+
+    now = datetime.now(timezone.utc)
+    if invitation.expires_at < now:
+        raise HTTPException(
+            status_code=status.HTTP_410_GONE,
+            detail="Invitation expired",
+        )
+
+    clinic_result = await db.execute(
+        select(Clinic).where(
+            Clinic.id == invitation.clinic_id,
+            Clinic.deleted_at.is_(None),
+        ),
+    )
+    clinic = clinic_result.scalar_one_or_none()
+    if clinic is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Clinic not found",
+        )
+
+    email_norm = invitation.email.lower()
+    existing_user = await db.execute(
+        select(ServiceUser).where(func.lower(ServiceUser.login) == email_norm),
+    )
+    if existing_user.scalar_one_or_none() is not None:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="User with this email already exists",
+        )
+
+    first_name = payload.first_name if payload.first_name is not None else invitation.first_name
+    last_name = payload.last_name if payload.last_name is not None else invitation.last_name
+
+    user = ServiceUser(
+        login=email_norm,
+        password_hash=hash_password(payload.password),
+        first_name=first_name,
+        last_name=last_name,
+        is_active=True,
+        created_at=now,
+    )
+    db.add(user)
+    await db.flush()
+    await set_user_role(db, user, "doctor")
+    db.add(UserSettings(user_id=user.id))
+    db.add(
+        ClinicMembership(
+            clinic_id=clinic.id,
+            user_id=user.id,
+            is_clinic_admin=invitation.is_clinic_admin,
+            is_doctor=invitation.is_doctor,
+            status="active",
+            created_at=now,
+        ),
+    )
+    invitation.used_at = now
+    invitation.updated_at = now
+    await db.commit()
+
+    result = await db.execute(
+        select(ServiceUser)
+        .options(*user_role_load_options())
+        .where(ServiceUser.id == user.id),
+    )
+    user = result.scalar_one()
+    token = create_access_token(user.id, {"role": user.role})
+    return InvitationAcceptResponse(
+        access_token=token,
+        user=UserPublic.model_validate(user),
+    )

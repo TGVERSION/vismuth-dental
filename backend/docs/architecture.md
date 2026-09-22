@@ -33,11 +33,11 @@ HTTP → routers → schemas (валидация)
 | `backend` | `uvicorn app.main:app --host 0.0.0.0 --port 8000` | HTTP API |
 | `backend-worker` | `python -m app.workers.ml_mkb_events_worker` | пишет stats/logs из Redis Stream |
 
-Оба проходят общий [`scripts/entrypoint.sh`](../scripts/entrypoint.sh):
+Оба проходят общий [`entrypoint.sh`](../entrypoint.sh):
 
 1. ожидание Postgres;
 2. `alembic upgrade head`;
-3. `python -m scripts.seed_refs`;
+3. `python sql/seed/seed_refs.py`;
 4. `exec` переданной команды.
 
 ## Внешние зависимости

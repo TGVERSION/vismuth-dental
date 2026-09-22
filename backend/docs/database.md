@@ -31,20 +31,20 @@ alembic upgrade head
 alembic downgrade -1
 alembic current
 alembic history
-python -m scripts.seed_refs
+python sql/seed/seed_refs.py
 ```
 
 В Docker:
 
 ```bash
 docker compose exec backend alembic current
-docker compose exec backend python -m scripts.seed_refs
+docker compose exec backend python sql/seed/seed_refs.py
 ```
 
 ## Seed справочников
 
 - CSV: [`sql/seed/ref/*.csv`](../sql/seed/ref/) — имена таблиц без timestamp.
-- Скрипт: [`scripts/seed_refs.py`](../scripts/seed_refs.py) — `nan` → NULL, `COPY`, `setval` для `row_id`.
+- Скрипт: [`sql/seed/seed_refs.py`](../sql/seed/seed_refs.py) — `nan` → NULL, `COPY`, `setval` для `row_id`.
 - Идемпотентность: если в `ref_mkb10` уже есть строки → **весь seed пропускается**.
 
 Entrypoint вызывает seed после каждой миграции; на заполненной БД это no-op.

@@ -22,7 +22,7 @@ docker compose up -d --build
 
 1. ждёт Postgres;
 2. `alembic upgrade head`;
-3. `python -m scripts.seed_refs` (если справочники ещё пустые);
+3. `python sql/seed/seed_refs.py` (если справочники ещё пустые);
 4. запускает CMD (`uvicorn` или worker).
 
 ## Структура каталогов
@@ -36,8 +36,8 @@ backend/
     services/          # ML proxy, Redis
     workers/           # consumer Redis Stream
   alembic/             # миграции схемы БД
-  scripts/             # entrypoint, seed_refs
-  sql/seed/ref/        # CSV справочников
+  sql/seed/            # CSV справочников + seed_refs.py
+  entrypoint.sh        # wait PG → migrate → seed → CMD
   docs/                # эта документация
 ```
 

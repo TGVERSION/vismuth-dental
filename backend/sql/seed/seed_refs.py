@@ -13,7 +13,7 @@ from psycopg2 import sql
 
 from app.config import settings
 
-SEED_DIR = Path(__file__).resolve().parent.parent / "sql" / "seed" / "ref"
+SEED_DIR = Path(__file__).resolve().parent / "ref"
 
 REF_TABLES = [
     "ref_patient_condition",

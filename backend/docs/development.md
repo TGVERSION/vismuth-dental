@@ -33,15 +33,15 @@ alembic upgrade head
 2. Строка в реестр `dictionary` (OID + имя таблицы) — в той же или следующей миграции.
 3. CSV → [`sql/seed/ref/<table>.csv`](../sql/seed/ref/) (колонки = имена полей таблицы, UTF-8, `,`).
 4. Whitelist и поля поиска в [`dictionaries_config.py`](../app/dictionaries_config.py) (`REF_TABLES`, `SEARCH_FIELDS`).
-5. Список таблиц в [`scripts/seed_refs.py`](../scripts/seed_refs.py) (`REF_TABLES`).
+5. Список таблиц в [`sql/seed/seed_refs.py`](../sql/seed/seed_refs.py) (`REF_TABLES`).
 6. На пустой БД seed подхватит файл; на уже заполненной `ref_mkb10` автоматический seed **не** зальёт новый CSV — импорт вручную:
 
 ```bash
 # временно очищать refs нельзя на проде; для локалки:
-# либо TRUNCATE нужной таблицы и python -m scripts.seed_refs
+# либо TRUNCATE нужной таблицы и python sql/seed/seed_refs.py
 # (seed сейчас выходит сразу, если ref_mkb10 непустой —
 #  для одной новой таблицы может понадобиться точечный COPY)
-docker compose exec backend python -m scripts.seed_refs
+docker compose exec backend python sql/seed/seed_refs.py
 ```
 
 Учтите: текущий seed при непустом `ref_mkb10` пропускает **все** таблицы. Для добавления одного нового справочника на живую БД обычно делают одноразовый импорт или дорабатывают скрипт.

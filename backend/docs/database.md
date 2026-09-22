@@ -13,8 +13,16 @@ Source of truth схемы: [`alembic/versions/`](../alembic/versions/). Ста�
 | `0003_protocol_catalog` | `protocol_fields_main`, `protocol_structures`, `protocol_structures_fields` |
 | `0004_protocols_and_templates` | `protocols`, `protocol_fields`, шаблоны и группы |
 | `0005_ml_tables_and_functions` | stats/logs, `ml_unigrams`/`ml_bigrams`, SQL-функции autocomplete |
+| `0006_roles` | справочник `role` (`name`, `name_ru`), связь `service_user_role` (1 роль на user), drop `service_user.role` |
 
 Порядок важен из‑за FK (`service_user` раньше протоколов и т.д.).
+
+### Роли пользователей
+
+- Таблица `role`: код `name` + отображаемое имя `name_ru` (`super_admin` / Супер-админ, `admin` / Админ, `doctor` / Врач, `patient` / Пациент).
+- Таблица `service_user_role`: PK = `user_id` → пока **одна** роль на пользователя.
+- Миграция данных: `administrator` / `head_of_department` → `admin`, `doctor` → `doctor`.
+- Privileged (CRUD users, чужие settings, general templates): `super_admin` или `admin`.
 
 ## Команды (из каталога `backend/` или контейнера)
 
@@ -64,7 +72,7 @@ docker compose exec -T db pg_dump -U vismuth vismuth > backup_$(date +%F).sql
 2. После `git pull` и rebuild:
 
 - таблица `alembic_version` на старой БД отсутствует;
-- entrypoint вызовет `alembic upgrade head` и попытается прогнать `0001`…`0005`;
+- entrypoint вызовет `alembic upgrade head` и попытается прогнать `0001`…`0006`;
 - из‑за `CREATE TABLE IF NOT EXISTS` / `ON CONFLICT DO NOTHING` на совпадающей схеме обычно проходит «вхолостую»;
 - seed увидит `ref_mkb10` и **не перезапишет** справочники.
 
@@ -74,6 +82,6 @@ docker compose exec -T db pg_dump -U vismuth vismuth > backup_$(date +%F).sql
 docker compose run --rm backend alembic stamp head
 ```
 
-(либо после успешного первого `upgrade` проверить `alembic current` → `0005_ml_tables_and_functions`).
+(либо после успешного первого `upgrade` проверить `alembic current` → `0006_roles`).
 
 4. Таблица вроде старого `ref_mis` на сервере **не удаляются** автоматически — просто больше не создаются новыми миграциями.

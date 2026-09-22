@@ -10,6 +10,7 @@ from ..db import get_db
 from ..deps import get_current_user
 from ..models.protocol_structure import ProtocolStructure
 from ..models.protocol_template import ProtocolTemplate, ProtocolTemplateField
+from ..models.role import PRIVILEGED_ROLE_NAMES
 from ..models.service_user import ServiceUser
 from ..models.template_group import TemplateGroup
 from ..schemas.protocol_template import (
@@ -24,7 +25,7 @@ from ..services.protocol_template_access import get_accessible_protocol_template
 
 router = APIRouter(prefix="/protocol-templates", tags=["protocol-templates"])
 
-_ROLES_ALLOWED_GENERAL_PRIVACY = frozenset({"head_of_department", "administrator"})
+_ROLES_ALLOWED_GENERAL_PRIVACY = PRIVILEGED_ROLE_NAMES
 
 
 @router.get(

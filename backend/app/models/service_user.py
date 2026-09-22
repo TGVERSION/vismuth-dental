@@ -1,12 +1,15 @@
 from datetime import datetime, timezone
-from typing import Optional
+from typing import Optional, TYPE_CHECKING
 from uuid import UUID, uuid4
 
 from sqlalchemy import TIMESTAMP, Boolean, String, Text
 from sqlalchemy.dialects.postgresql import UUID as PG_UUID
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from ..db import Base
+
+if TYPE_CHECKING:
+    from .role import ServiceUserRole
 
 
 class ServiceUser(Base):
@@ -24,7 +27,6 @@ class ServiceUser(Base):
     first_name: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     last_name: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
 
-    role: Mapped[str] = mapped_column(String(50), nullable=False, default="admin")
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
 
     created_at: Mapped[datetime] = mapped_column(
@@ -40,3 +42,24 @@ class ServiceUser(Base):
         nullable=True,
     )
 
+    user_role_link: Mapped[Optional["ServiceUserRole"]] = relationship(
+        "ServiceUserRole",
+        back_populates="user",
+        uselist=False,
+        cascade="all, delete-orphan",
+        lazy="selectin",
+    )
+
+    @property
+    def role(self) -> str:
+        link = self.user_role_link
+        if link is None or link.role is None:
+            return "doctor"
+        return link.role.name
+
+    @property
+    def role_name_ru(self) -> str:
+        link = self.user_role_link
+        if link is None or link.role is None:
+            return "Врач"
+        return link.role.name_ru

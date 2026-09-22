@@ -7,8 +7,10 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from .db import get_db
+from .models.role import PRIVILEGED_ROLE_NAMES
 from .models.service_user import ServiceUser
 from .security import decode_access_token_sub
+from .services.roles import user_has_any_role, user_role_load_options
 
 bearer_scheme = HTTPBearer(auto_error=False)
 
@@ -32,7 +34,11 @@ async def get_current_user(
             headers={"WWW-Authenticate": "Bearer"},
         ) from None
 
-    stmt = select(ServiceUser).where(ServiceUser.id == user_id)
+    stmt = (
+        select(ServiceUser)
+        .options(*user_role_load_options())
+        .where(ServiceUser.id == user_id)
+    )
     result = await db.execute(stmt)
     user = result.scalar_one_or_none()
     if user is None:
@@ -53,10 +59,24 @@ async def get_current_user(
     return user
 
 
-async def require_admin(
+def require_roles(*role_names: str):
+    async def _dependency(
+        current_user: ServiceUser = Depends(get_current_user),
+    ) -> ServiceUser:
+        if not user_has_any_role(current_user, *role_names):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Access denied",
+            )
+        return current_user
+
+    return _dependency
+
+
+async def require_privileged(
     current_user: ServiceUser = Depends(get_current_user),
 ) -> ServiceUser:
-    if current_user.role != "administrator":
+    if not user_has_any_role(current_user, *PRIVILEGED_ROLE_NAMES):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Access denied",
@@ -64,12 +84,6 @@ async def require_admin(
     return current_user
 
 
-async def require_admin_or_head_of_department(
-    current_user: ServiceUser = Depends(get_current_user),
-) -> ServiceUser:
-    if current_user.role not in {"administrator", "head_of_department"}:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Access denied",
-        )
-    return current_user
+# Backward-compatible aliases used by older imports
+require_admin = require_privileged
+require_admin_or_head_of_department = require_privileged

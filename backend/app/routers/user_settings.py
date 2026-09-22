@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..db import get_db
 from ..deps import get_current_user
+from ..models.role import PRIVILEGED_ROLE_NAMES
 from ..models.service_user import ServiceUser
 from ..models.user_settings import UserSettings
 from ..schemas.user_settings import (
@@ -15,6 +16,7 @@ from ..schemas.user_settings import (
     UserSettingsRead,
     UserSettingsUpdate,
 )
+from ..services.roles import user_has_any_role
 
 router = APIRouter(prefix="/user-settings", tags=["user-settings"])
 
@@ -22,7 +24,7 @@ router = APIRouter(prefix="/user-settings", tags=["user-settings"])
 def _ensure_access(current_user: ServiceUser, target_user_id: UUID) -> None:
     if current_user.id == target_user_id:
         return
-    if current_user.role == "administrator":
+    if user_has_any_role(current_user, *PRIVILEGED_ROLE_NAMES):
         return
     raise HTTPException(
         status_code=status.HTTP_403_FORBIDDEN,

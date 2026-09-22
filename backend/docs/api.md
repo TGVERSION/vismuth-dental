@@ -21,7 +21,9 @@
 Authorization: Bearer <access_token>
 ```
 
-Проверка: [`deps.get_current_user`](../app/deps.py) (JWT → `service_user`, активный и не soft-deleted).
+Проверка: [`deps.get_current_user`](../app/deps.py) (JWT → `service_user`, активный и не soft-deleted). Роль читается из `service_user_role` → `role`; в ответах пользователя: `role` (код) и `role_name_ru` (кириллица).
+
+Privileged-доступ (`super_admin` или `admin`): CRUD `service_user`, чужие `user-settings`, создание/правка общих (`privacy: general`) protocol templates — dependency [`require_privileged`](../app/deps.py).
 
 ## Системные
 
@@ -34,6 +36,7 @@ Authorization: Bearer <access_token>
 | Группа | Пути (кратко) |
 |--------|----------------|
 | service_user | `GET /service_user` (me), CRUD `/service_user/{id}`, список id |
+| roles | `GET /roles` — справочник ролей (`name`, `name_ru`) |
 | user-settings | `/user-settings` — GET/POST/PUT/PATCH настроек помощников |
 
 ## Протоколы и шаблоны

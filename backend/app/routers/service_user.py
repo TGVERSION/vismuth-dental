@@ -8,11 +8,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..db import get_db
-from ..deps import (
-    get_current_user,
-    require_admin,
-    require_admin_or_head_of_department,
-)
+from ..deps import get_current_user, require_privileged
 from ..models.service_user import ServiceUser
 from ..schemas.service_user import (
     ServiceUserIdRead,
@@ -22,6 +18,7 @@ from ..schemas.service_user import (
     ServiceUserUpdate,
 )
 from ..security import hash_password
+from ..services.roles import set_user_role, user_role_load_options
 
 router = APIRouter(tags=["service_user"])
 
@@ -31,9 +28,13 @@ def _normalize_login(login: str) -> str:
 
 
 async def _load_user(db: AsyncSession, user_id: UUID) -> ServiceUser | None:
-    stmt = select(ServiceUser).where(
-        ServiceUser.id == user_id,
-        ServiceUser.deleted_at.is_(None),
+    stmt = (
+        select(ServiceUser)
+        .options(*user_role_load_options())
+        .where(
+            ServiceUser.id == user_id,
+            ServiceUser.deleted_at.is_(None),
+        )
     )
     result = await db.execute(stmt)
     return result.scalar_one_or_none()
@@ -74,11 +75,12 @@ async def get_service_user_me(
 
 @router.get("/service_user_ids", response_model=List[ServiceUserIdRead])
 async def list_service_user_ids(
-    _: ServiceUser = Depends(require_admin_or_head_of_department),
+    _: ServiceUser = Depends(require_privileged),
     db: AsyncSession = Depends(get_db),
 ) -> List[ServiceUserIdRead]:
     stmt = (
         select(ServiceUser)
+        .options(*user_role_load_options())
         .where(ServiceUser.deleted_at.is_(None))
         .order_by(ServiceUser.created_at.desc())
     )
@@ -89,7 +91,7 @@ async def list_service_user_ids(
 @router.get("/service_user/{user_id}", response_model=ServiceUserRead)
 async def get_service_user(
     user_id: UUID,
-    _: ServiceUser = Depends(require_admin_or_head_of_department),
+    _: ServiceUser = Depends(require_privileged),
     db: AsyncSession = Depends(get_db),
 ) -> ServiceUserRead:
     user = _ensure_user_found(await _load_user(db, user_id))
@@ -100,7 +102,7 @@ async def get_service_user(
 async def replace_service_user(
     user_id: UUID,
     payload: ServiceUserUpdate,
-    _: ServiceUser = Depends(require_admin_or_head_of_department),
+    _: ServiceUser = Depends(require_privileged),
     db: AsyncSession = Depends(get_db),
 ) -> ServiceUserRead:
     user = _ensure_user_found(await _load_user(db, user_id))
@@ -111,7 +113,7 @@ async def replace_service_user(
     user.login = login_norm
     user.first_name = payload.first_name
     user.last_name = payload.last_name
-    user.role = payload.role
+    await set_user_role(db, user, payload.role)
     user.is_active = payload.is_active
     if payload.password is not None:
         user.password_hash = hash_password(payload.password)
@@ -120,7 +122,7 @@ async def replace_service_user(
     try:
         await db.flush()
         await db.commit()
-        await db.refresh(user)
+        user = _ensure_user_found(await _load_user(db, user_id))
     except IntegrityError as exc:
         await db.rollback()
         raise HTTPException(
@@ -135,7 +137,7 @@ async def replace_service_user(
 async def patch_service_user(
     user_id: UUID,
     payload: ServiceUserPatch,
-    _: ServiceUser = Depends(require_admin_or_head_of_department),
+    _: ServiceUser = Depends(require_privileged),
     db: AsyncSession = Depends(get_db),
 ) -> ServiceUserRead:
     update_data = payload.model_dump(exclude_unset=True)
@@ -157,7 +159,7 @@ async def patch_service_user(
     if "last_name" in update_data:
         user.last_name = update_data["last_name"]
     if "role" in update_data and update_data["role"] is not None:
-        user.role = update_data["role"]
+        await set_user_role(db, user, update_data["role"])
     if "is_active" in update_data and update_data["is_active"] is not None:
         user.is_active = update_data["is_active"]
     if "password" in update_data and update_data["password"] is not None:
@@ -167,7 +169,7 @@ async def patch_service_user(
     try:
         await db.flush()
         await db.commit()
-        await db.refresh(user)
+        user = _ensure_user_found(await _load_user(db, user_id))
     except IntegrityError as exc:
         await db.rollback()
         raise HTTPException(
@@ -181,7 +183,7 @@ async def patch_service_user(
 @router.delete("/service_user/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_service_user(
     user_id: UUID,
-    _: ServiceUser = Depends(require_admin_or_head_of_department),
+    _: ServiceUser = Depends(require_privileged),
     db: AsyncSession = Depends(get_db),
 ) -> None:
     user = _ensure_user_found(await _load_user(db, user_id))

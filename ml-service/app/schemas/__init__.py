@@ -7,11 +7,13 @@ from .chat_form import (
     ChatMessages,
     ChatAnswer,
 )
+from .summarize_form import PatientFormSummary
 
 __all__ = [
     "ChatMessage",
     "ChatMessages",
     "ChatAnswer",
+    "PatientFormSummary",
     "CompletionRequest",
     "CompletionResponse",
     "MKBRequest",

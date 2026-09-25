@@ -26,4 +26,8 @@ class Settings(BaseModel):
     llm_temperature_clinrec: float = float(os.getenv("LLM_TEMPERATURE", "0.1"))
     llm_max_tokens_clinrec: int = int(os.getenv("LLM_MAX_TOKENS", "2000"))
 
+    llm_model_collect_form: str = os.getenv("LLM_MODEL", "GigaChat-2-Pro")
+    llm_temperature_collect_form: float = float(os.getenv("LLM_TEMPERATURE", "0.3"))
+    llm_max_tokens_collect_form: int = int(os.getenv("LLM_MAX_TOKENS", "200"))
+
 settings = Settings()

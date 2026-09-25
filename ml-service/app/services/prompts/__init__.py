@@ -3,6 +3,7 @@ from .complaints_fullness import COMPLAINTS_SYSTEM_PROMPT
 from .dis_anamnes_fullness import DIS_ANAMNES_SYSTEM_PROMPT
 from .life_anamnes_fullness import LIFE_ANAMNES_SYSTEM_PROMPT
 from .clinrec_checking import CLINREC_SYSTEM_PROMPT, CLINREC_HUMAN_PROMPT_TEMPLATE
+from .collect_form import COLLECT_FORM_SYSTEM_PROMPT
 
 __all__ = [
     "MKB_SYSTEM_PROMPT",
@@ -11,4 +12,5 @@ __all__ = [
     "LIFE_ANAMNES_SYSTEM_PROMPT",
     "CLINREC_SYSTEM_PROMPT",
     "CLINREC_HUMAN_PROMPT_TEMPLATE",
+    "COLLECT_FORM_SYSTEM_PROMPT",
 ]

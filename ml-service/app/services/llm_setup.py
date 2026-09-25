@@ -37,6 +37,14 @@ llm_clinrec = GigaChat(
     verify_ssl_certs=False
 )
 
+llm_collect_form = GigaChat(
+    model=settings.llm_model_collect_form,
+    temperature=settings.llm_temperature_collect_form,
+    max_tokens=settings.llm_max_tokens_collect_form,
+    credentials=settings.gigachat_token,
+    verify_ssl_certs=False
+)
+
 mkb_emb_model = SentenceTransformer(settings.mkb_model_path)
 mkb_emb_model.to('cpu')
 mkb_client = chromadb.PersistentClient(path=settings.mkb_chromadb_path)

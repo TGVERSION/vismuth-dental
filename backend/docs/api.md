@@ -81,10 +81,10 @@ Whitelist: [`dictionaries_config.py`](../app/dictionaries_config.py).
 
 | Путь | Назначение |
 |------|------------|
-| `POST /ml_autocomplete` | Proxy → ml-service (или dict-режим) |
-| `POST /ml_mkb_code` | Proxy подбора кода МКБ |
-| `POST /ml_fullness_complaints` | Proxy проверки полноты |
-| `POST /ml_clinrec_check` | Proxy клинических рекомендаций |
+| `POST /ml_autocomplete` | Proxy → ml-service (или dict-режим); ML-режим при истёкшей подписке — `503 subscription_expired` |
+| `POST /ml_mkb_code` | Proxy подбора кода МКБ; при истёкшей подписке — `503 subscription_expired` |
+| `POST /ml_fullness_complaints` | Proxy проверки полноты; при истёкшей подписке — `503 subscription_expired` |
+| `POST /ml_clinrec_check` | Proxy клинических рекомендаций; при истёкшей подписке — `503 subscription_expired` |
 | `POST /autocomplete_dict/complete_dict` | Dict-autocomplete в Postgres |
 
 ## Регистрация роутеров

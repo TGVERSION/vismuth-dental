@@ -14,6 +14,7 @@ from ..schemas.ml_mkb_code import (
     MkbEventType,
 )
 from ..services.ml_proxy import MlProxyLogContext, proxy_post_to_ml
+from ..services.questionnaire_limits import ensure_user_clinic_subscription_active
 from ..services.redis_stream import (
     build_event_payload,
     get_redis_client,
@@ -59,6 +60,7 @@ async def proxy_ml_autocomplete(
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
                 detail="field_name is required for ml_autocomplete",
             )
+        await ensure_user_clinic_subscription_active(db, current_user)
         body = await proxy_post_to_ml(
             "/autocomplete/complete",
             {

@@ -8,7 +8,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..db import get_db
 from ..deps import get_active_doctor_membership, get_current_user
-from ..models.clinic import Clinic
 from ..models.protocol import Protocol, ProtocolField
 from ..models.protocol_structure import ProtocolFieldMain, ProtocolStructure, ProtocolStructureField
 from ..models.questionnaire import Questionnaire, QuestionnaireAnswer
@@ -22,7 +21,7 @@ from ..schemas.questionnaire import (
     QuestionnaireAnswerItem,
 )
 from ..services.questionnaire_flow import specialization_name
-from ..services.questionnaire_limits import ensure_clinic_subscription_active
+from ..services.questionnaire_limits import ensure_user_clinic_subscription_active
 from ..services.questionnaire_process import schedule_processing
 
 router = APIRouter(prefix="/questionnaires", tags=["questionnaires"])
@@ -249,16 +248,7 @@ async def process_questionnaire(
     db: AsyncSession = Depends(get_db),
 ) -> DoctorQuestionnaireDetail:
     membership = await get_active_doctor_membership(current_user, db)
-    clinic_result = await db.execute(
-        select(Clinic).where(Clinic.id == membership.clinic_id),
-    )
-    clinic = clinic_result.scalar_one_or_none()
-    if clinic is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Clinic not found",
-        )
-    ensure_clinic_subscription_active(clinic)
+    await ensure_user_clinic_subscription_active(db, current_user)
 
     result = await db.execute(
         select(Questionnaire).where(

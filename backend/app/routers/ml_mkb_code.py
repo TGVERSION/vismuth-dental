@@ -1,5 +1,7 @@
 from fastapi import APIRouter, Depends
+from sqlalchemy.ext.asyncio import AsyncSession
 
+from ..db import get_db
 from ..deps import get_current_user
 from ..models.service_user import ServiceUser
 from ..schemas.ml_mkb_code import (
@@ -10,6 +12,7 @@ from ..schemas.ml_mkb_code import (
     MkbEventType,
 )
 from ..services.ml_proxy import MlProxyLogContext, proxy_post_to_ml
+from ..services.questionnaire_limits import ensure_user_clinic_subscription_active
 from ..services.redis_stream import build_event_payload, get_redis_client, publish_event
 
 router = APIRouter(prefix="/ml_mkb_code", tags=["ml_mkb_code"])
@@ -19,7 +22,9 @@ router = APIRouter(prefix="/ml_mkb_code", tags=["ml_mkb_code"])
 async def proxy_mkb_code(
     payload: MkbCodeProxyRequest,
     current_user: ServiceUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
 ) -> MkbCodeProxyResponse:
+    await ensure_user_clinic_subscription_active(db, current_user)
     body = await proxy_post_to_ml(
         "/mkb_code",
         {

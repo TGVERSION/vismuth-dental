@@ -6,11 +6,13 @@
 
 Почти всё: **JWT**, без role-checks. Исключение: `POST /autocomplete_dict/complete_dict` — **без auth**.
 
+**Подписка:** у пользователя с active `clinic_membership` при `access_status=expired` ML-ручки ниже отвечают `503` + `detail.code=subscription_expired` (до вызова ml-service). Без membership (супер-админ, старые пользователи) — без блокировки. Dict-режим, stats/select и `/autocomplete_dict` токены не тратят — проверку не делают.
+
 ## POST /ml_autocomplete
 
 - **Auth:** JWT
 - **Назначение:** автодополнение текста поля
-- **Поведение:** при `type=ml_autocomplete` → ML `/autocomplete/complete` (`field_name` обязателен, иначе `422`); иначе dict `autocomplete_mixed`. Событие в Redis `autocomplete_shown`
+- **Поведение:** при `type=ml_autocomplete` → проверка подписки → ML `/autocomplete/complete` (`field_name` обязателен, иначе `422`); иначе dict `autocomplete_mixed` (без проверки подписки). Событие в Redis `autocomplete_shown`
 - **Frontend:** подсказки при вводе в протоколе
 - **Код:** `proxy_ml_autocomplete`
 
@@ -18,28 +20,28 @@
 
 - **Auth:** JWT
 - **Назначение:** зафиксировать выбор suggestion / stats
-- **Поведение:** Redis event
+- **Поведение:** Redis event (подписку не проверяет)
 - **Код:** `push_selected_event`
 
 ## POST /ml_mkb_code
 
 - **Auth:** JWT
 - **Назначение:** подбор кода МКБ через ML
-- **Поведение:** proxy ML `/mkb_code`; лог; Redis `autocomplete_shown`
+- **Поведение:** проверка подписки; proxy ML `/mkb_code`; лог; Redis `autocomplete_shown`
 - **Код:** `proxy_mkb_code`
 
 ## POST /ml_mkb_code/select
 
 - **Auth:** JWT
 - **Назначение:** событие выбора кода (скрыт из OpenAPI)
-- **Поведение:** только Redis event
+- **Поведение:** только Redis event (подписку не проверяет)
 - **Код:** `push_selected_event`
 
 ## POST /ml_fullness_complaints
 
 - **Auth:** JWT
 - **Назначение:** проверка полноты жалоб
-- **Поведение:** proxy ML `/fullness/complaints`; Redis event со status/color/analysis/suggested_text
+- **Поведение:** проверка подписки; proxy ML `/fullness/complaints`; Redis event со status/color/analysis/suggested_text
 - **Frontend:** индикатор полноты поля
 - **Код:** `proxy_ml_fullness_complaints`
 
@@ -47,7 +49,7 @@
 
 - **Auth:** JWT
 - **Назначение:** проверка клинических рекомендаций
-- **Поведение:** proxy ML `/clinrec_checking/check` с `protocol_text`; без Redis
+- **Поведение:** проверка подписки; proxy ML `/clinrec_checking/check` с `protocol_text`; без Redis
 - **Код:** `proxy_ml_clinrec_check`
 
 ## POST /autocomplete_dict/complete_dict

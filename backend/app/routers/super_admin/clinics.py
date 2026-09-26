@@ -59,10 +59,12 @@ def _to_clinic_read(
     *,
     free_codes_ratio: float | None = None,
     clinic_daily_limit_exceeded: bool = False,
+    questionnaires_completed_month: int = 0,
 ) -> ClinicRead:
     fields = clinic_to_read_fields(clinic, doctors_count_value)
     fields["free_codes_ratio"] = free_codes_ratio
     fields["clinic_daily_limit_exceeded"] = clinic_daily_limit_exceeded
+    fields["questionnaires_completed_month"] = questionnaires_completed_month
     return ClinicRead.model_validate(fields)
 
 
@@ -107,6 +109,7 @@ async def list_clinics(
         clinic_daily_limit_exceeded,
         free_codes_ratio,
     )
+    from ...services.questionnaire_statistics import completed_counts_for_month
 
     result = await db.execute(
         select(Clinic)
@@ -114,6 +117,10 @@ async def list_clinics(
         .order_by(Clinic.created_at.desc()),
     )
     clinics = list(result.scalars().all())
+    month_counts = await completed_counts_for_month(
+        db,
+        [clinic.id for clinic in clinics],
+    )
     out: List[ClinicRead] = []
     for clinic in clinics:
         count = await doctors_count(db, clinic.id)
@@ -125,6 +132,7 @@ async def list_clinics(
                 count,
                 free_codes_ratio=ratio,
                 clinic_daily_limit_exceeded=exceeded,
+                questionnaires_completed_month=month_counts.get(clinic.id, 0),
             ),
         )
     return out
@@ -140,16 +148,19 @@ async def get_clinic(
         clinic_daily_limit_exceeded,
         free_codes_ratio,
     )
+    from ...services.questionnaire_statistics import completed_counts_for_month
 
     clinic = await get_clinic_or_404(db, clinic_id)
     count = await doctors_count(db, clinic.id)
     ratio = await free_codes_ratio(db, clinic.id)
     exceeded = await clinic_daily_limit_exceeded(db, clinic.id)
+    month_counts = await completed_counts_for_month(db, [clinic.id])
     return _to_clinic_read(
         clinic,
         count,
         free_codes_ratio=ratio,
         clinic_daily_limit_exceeded=exceeded,
+        questionnaires_completed_month=month_counts.get(clinic.id, 0),
     )
 
 

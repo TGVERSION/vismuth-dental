@@ -55,3 +55,14 @@
 - **Auth:** clinic admin / super_admin
 - **Поведение:** membership `deactivated`, `user.is_active=false`, место в лимите освобождается; публичная ссылка врача → заглушка
 - **Код:** `deactivate_member`
+
+## GET /clinics/{clinic_id}/statistics
+
+- **Auth:** clinic admin / super_admin
+- **Назначение:** статистика анкет клиники за период
+- **Поведение:** query `period=week|month` **или** пара `from`/`to` (`date`, inclusive); default `month`. Вместе period и from/to → `422`. Заполненные — по `completed_at`; брошенные — по `last_activity_at`. Разрезы: всего / primary-repeat / протоколы / по врачам / брошено по шагу (`ai_clarify` → `ai_question_n`)
+- **Ответ (смысл):** скаляры + `by_doctor[]` + `abandoned_by_step[]` (только count > 0)
+- **Frontend:** таблица «Статистика» в админке клиники
+- **Код:** `clinic_admin.py` → `get_clinic_statistics`
+
+Подробнее: [questionnaire-statistics.md](questionnaire-statistics.md).

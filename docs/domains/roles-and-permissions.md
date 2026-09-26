@@ -67,6 +67,6 @@ service_user 1 ── 1 service_user_role N ── 1 role
 | `deps.require_privileged` | CRUD service_user |
 | `user_settings._ensure_access` | свой user **или** privileged |
 | `protocol_templates` | `privacy=general` create/update/delete |
-| `deps.require_roles("super_admin")` | `/super-admin/clinics*` |
+| `deps.require_roles("super_admin")` | `/super-admin/clinics*`, `/super-admin/statistics` |
 | `deps.require_clinic_admin` | `/clinics/{clinic_id}*` |
 | doctor membership | `/questionnaires*` |

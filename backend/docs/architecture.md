@@ -12,7 +12,7 @@ HTTP → routers → schemas (валидация)
 | Каталог | Назначение |
 |---------|------------|
 | `routers/` | FastAPI-роуты, бизнес-логика endpoint'ов |
-| `routers/super_admin/` | Endpoint'ы только для `super_admin` (клиники, …) |
+| `routers/super_admin/` | Endpoint'ы только для `super_admin` (клиники, статистика анкет, …) |
 | `schemas/` | Pydantic request/response |
 | `models/` | SQLAlchemy ORM → таблицы Postgres |
 | `db.py` | async engine, session (`get_db`) |

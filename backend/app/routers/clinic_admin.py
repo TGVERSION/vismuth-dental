@@ -1,8 +1,8 @@
-from datetime import datetime, timezone
-from typing import List
+from datetime import date, datetime, timezone
+from typing import List, Literal, Optional
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -24,6 +24,7 @@ from ..schemas.clinic_admin import (
     MyClinicRead,
     SpecializationRead,
 )
+from ..schemas.questionnaire_statistics import ClinicQuestionnaireStatistics
 from ..services.clinic_access import clinic_to_read_fields
 from ..services.clinic_members import (
     create_invitation,
@@ -35,6 +36,7 @@ from ..services.clinic_members import (
     set_membership_specializations,
     validate_specialization_ids,
 )
+from ..services.questionnaire_statistics import clinic_statistics, resolve_period
 
 router = APIRouter(tags=["clinic-admin"])
 
@@ -127,6 +129,29 @@ async def get_clinic_admin(
         access_status_code=fields["access_status_code"],
         access_status_label=fields["access_status_label"],
     )
+
+
+@router.get(
+    "/clinics/{clinic_id}/statistics",
+    response_model=ClinicQuestionnaireStatistics,
+)
+async def get_clinic_statistics(
+    clinic_id: UUID,
+    period: Optional[Literal["week", "month"]] = Query(default=None),
+    date_from: Optional[date] = Query(default=None, alias="from"),
+    date_to: Optional[date] = Query(default=None, alias="to"),
+    _: ServiceUser = Depends(require_clinic_admin),
+    db: AsyncSession = Depends(get_db),
+) -> ClinicQuestionnaireStatistics:
+    await get_clinic_or_404(db, clinic_id)
+    try:
+        start, end = resolve_period(period=period, date_from=date_from, date_to=date_to)
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=str(e),
+        ) from e
+    return await clinic_statistics(db, clinic_id, start, end)
 
 
 @router.patch("/clinics/{clinic_id}", response_model=ClinicAdminRead)

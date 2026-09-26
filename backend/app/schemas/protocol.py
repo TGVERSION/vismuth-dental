@@ -40,6 +40,8 @@ class ProtocolListItem(BaseModel):
     created_at: datetime
     updated_at: datetime | None = None
     deleted_at: datetime | None = None
+    source_questionnaire_id: UUID | None = None
+    created_from_questionnaire: bool = False
 
     class Config:
         from_attributes = True
@@ -57,6 +59,8 @@ class ProtocolRead(BaseModel):
     updated_at: datetime | None = None
     deleted_at: datetime | None = None
     field_values: dict[UUID, str | None]
+    source_questionnaire_id: UUID | None = None
+    created_from_questionnaire: bool = False
 
     class Config:
         from_attributes = True

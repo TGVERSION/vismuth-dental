@@ -12,6 +12,7 @@ REF_TABLES: dict[str, str] = {
     "ref_mkb10": "ref_mkb10",
     "ref_diagnosis_justification": "ref_diagnosis_justification",
     "ref_disease_character": "ref_disease_character",
+    "ref_specialization": "ref_specialization",
 }
 
 SEARCH_FIELDS: dict[str, list[str]] = {
@@ -28,4 +29,5 @@ SEARCH_FIELDS: dict[str, list[str]] = {
     "ref_mkb10": ["mkb_code", "mkb_name"],
     "ref_diagnosis_justification": ["name"],
     "ref_disease_character": ["name"],
+    "ref_specialization": ["code", "name"],
 }

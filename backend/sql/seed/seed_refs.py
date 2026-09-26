@@ -29,6 +29,7 @@ REF_TABLES = [
     "ref_mkb10",
     "ref_diagnosis_justification",
     "ref_disease_character",
+    "ref_specialization",
 ]
 
 NULL_TOKENS = {"", "nan", "NaN", "NAN", "None", "none", "NULL", "null"}
@@ -97,10 +98,6 @@ def main() -> int:
     conn.autocommit = False
     try:
         with conn.cursor() as cur:
-            if _table_has_rows(cur, "ref_mkb10"):
-                print("ref_mkb10 already has data — skip seed")
-                return 0
-
             total = 0
             for table in REF_TABLES:
                 csv_path = SEED_DIR / f"{table}.csv"

@@ -15,6 +15,8 @@ Source of truth схемы: [`alembic/versions/`](../alembic/versions/). Ста�
 | `0005_ml_tables_and_functions` | stats/logs, `ml_unigrams`/`ml_bigrams`, SQL-функции autocomplete |
 | `0006_roles` | справочник `role` (`name`, `name_ru`), связь `service_user_role` (1 роль на user), drop `service_user.role` |
 | `0007_clinics` | `clinic`, `clinic_membership`, `clinic_invitation` (тенанты, участники, invite) |
+| `0008_specializations` | `ref_specialization`, M2M специализаций, `middle_name`, `membership.public_slug` |
+| `0009_questionnaires` | `questionnaire`, `questionnaire_answer`, связь протокол↔анкета |
 
 Порядок важен из‑за FK (`service_user` раньше протоколов и т.д.).
 
@@ -31,10 +33,16 @@ Source of truth схемы: [`alembic/versions/`](../alembic/versions/). Ста�
 | Таблица | Суть |
 |--------|------|
 | `clinic` | Тенант: name, phone, email, logo_url, brand_color, doctors_limit, access_until, access_type (`trial`\|`paid`), public_slug; timestamps |
-| `clinic_membership` | user↔clinic: `is_clinic_admin`, `is_doctor`, status (`active`\|`deactivated`), photo_url; timestamps |
-| `clinic_invitation` | Invite: email, token_hash, роли, expires_at, used_at; soft-delete = revoke; timestamps |
+| `clinic_membership` | user↔clinic: `is_clinic_admin`, `is_doctor`, status (`active`\|`deactivated`), photo_url, **public_slug**; timestamps |
+| `clinic_invitation` | Invite: email, ФИО (+ middle_name), photo_url, token_hash, роли, expires_at, used_at; soft-delete = revoke |
+| `ref_specialization` | Справочник специализаций (seed CSV) |
+| `clinic_membership_specialization` / `clinic_invitation_specialization` | M2M специализаций |
+| `questionnaire` | Анкета пациента: шаги, код, AI-флаги, patient info, protocol_id |
+| `questionnaire_answer` | Реплики/ответы (CASCADE) |
 
 Статус подписки **не хранится** — вычисляется по `access_until` + `access_type`.
+
+`protocols.source_questionnaire_id` (SET NULL) + `created_from_questionnaire` — связь с анкетой.
 
 ## Команды (из каталога `backend/` или контейнера)
 

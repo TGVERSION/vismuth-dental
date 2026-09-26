@@ -188,6 +188,8 @@ def _to_read(protocol: Protocol, field_values: dict[UUID, str | None]) -> Protoc
         updated_at=protocol.updated_at,
         deleted_at=protocol.deleted_at,
         field_values=field_values,
+        source_questionnaire_id=protocol.source_questionnaire_id,
+        created_from_questionnaire=bool(protocol.created_from_questionnaire),
     )
 
 

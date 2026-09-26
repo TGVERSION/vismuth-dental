@@ -16,12 +16,12 @@ HTTP → routers → schemas (валидация)
 | `schemas/` | Pydantic request/response |
 | `models/` | SQLAlchemy ORM → таблицы Postgres |
 | `db.py` | async engine, session (`get_db`) |
-| `deps.py` | зависимости: текущий пользователь (JWT), `require_roles` / `require_privileged` |
+| `deps.py` | зависимости: текущий пользователь (JWT), `require_roles` / `require_privileged` / `require_clinic_admin` |
 | `config.py` | настройки из env |
 | `security.py` | JWT / password hash |
 | `email.py` | SMTP (регистрация, clinic invite) |
-| `services/` | исходящие вызовы (ML, Redis), helpers (roles, clinic_access) |
-| `workers/` | фоновый consumer событий |
+| `services/` | ML proxy, Redis, clinic_members, questionnaire_* |
+| `workers/` | фоновые consumer'ы |
 
 Точка входа API: [`app/main.py`](../app/main.py) — сборка `FastAPI` и `include_router`.
 
@@ -33,6 +33,7 @@ HTTP → routers → schemas (валидация)
 |-----------------|---------|------|
 | `backend` | `uvicorn app.main:app --host 0.0.0.0 --port 8000` | HTTP API |
 | `backend-worker` | `python -m app.workers.ml_mkb_events_worker` | пишет stats/logs из Redis Stream |
+| `questionnaire-worker` | `python -m app.workers.questionnaire_maintenance` | abandon 24h + purge 45d анкет |
 
 Оба проходят общий [`entrypoint.sh`](../entrypoint.sh):
 

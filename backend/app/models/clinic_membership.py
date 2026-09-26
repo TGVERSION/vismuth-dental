@@ -43,6 +43,7 @@ class ClinicMembership(Base):
         default="active",
     )
     photo_url: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    public_slug: Mapped[str] = mapped_column(String(32), nullable=False)
 
     created_at: Mapped[datetime] = mapped_column(
         TIMESTAMP(timezone=True),

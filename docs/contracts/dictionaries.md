@@ -1,7 +1,8 @@
 # Dictionaries & MKB-10
 
 Код: [`dictionaries.py`](../../backend/app/routers/dictionaries.py), [`mkb10.py`](../../backend/app/routers/mkb10.py).  
-Whitelist ref-таблиц: `backend/app/dictionaries_config.py`.
+Whitelist ref-таблиц: `backend/app/dictionaries_config.py` (включая `ref_specialization`).  
+Для UI клиники предпочтителен `GET /specializations` ([clinic-admin.md](clinic-admin.md)).
 
 Все ниже: **JWT**, без role-checks.
 

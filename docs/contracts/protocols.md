@@ -4,6 +4,8 @@
 
 Все endpoint'ы: **JWT**. Доступ только к своим протоколам (`service_user == current_user`); чужие → `404`. Role-checks нет.
 
+В ответах: `source_questionnaire_id`, `created_from_questionnaire` (пометка «создан из анкеты» переживает удаление анкеты через 45 дней). Создание из анкеты — `POST /questionnaires/{id}/protocol` ([questionnaires.md](questionnaires.md)).
+
 ## GET /protocols
 
 - **Auth:** JWT

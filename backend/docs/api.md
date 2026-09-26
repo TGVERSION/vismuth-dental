@@ -46,6 +46,14 @@ Privileged (`super_admin` \| `admin`): [`require_privileged`](../app/deps.py).
 Контракт: [super-admin-clinics.md](../../docs/contracts/super-admin-clinics.md).  
 Префикс `/super-admin/clinics` — только роль `super_admin`. Invite accept/preview — в [auth.md](../../docs/contracts/auth.md).
 
+## Админка клиники и анкеты
+
+| Группа | Контракт | Префикс |
+|--------|----------|---------|
+| clinic-admin | [clinic-admin.md](../../docs/contracts/clinic-admin.md) | `/clinics/{id}`, `/specializations`, `/me/clinic` |
+| questionnaire-public | [questionnaire-public.md](../../docs/contracts/questionnaire-public.md) | `/public` |
+| questionnaires | [questionnaires.md](../../docs/contracts/questionnaires.md) | `/questionnaires` |
+
 ## Протоколы и шаблоны
 
 | Группа | Контракт | Префикс |

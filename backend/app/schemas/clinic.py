@@ -44,6 +44,8 @@ class ClinicRead(BaseModel):
     access_status_code: AccessStatusCode
     access_status_label: str
     doctors_count: int = 0
+    free_codes_ratio: Optional[float] = None
+    clinic_daily_limit_exceeded: bool = False
     created_at: datetime
     updated_at: Optional[datetime]
     deleted_at: Optional[datetime]
@@ -55,8 +57,11 @@ class ClinicInvitationCreate(BaseModel):
     email: EmailStr
     first_name: Optional[str] = Field(default=None, max_length=255)
     last_name: Optional[str] = Field(default=None, max_length=255)
+    middle_name: Optional[str] = Field(default=None, max_length=255)
+    photo_url: Optional[str] = None
     is_clinic_admin: bool = True
     is_doctor: bool = False
+    specialization_ids: list[int] = Field(default_factory=list)
 
 
 class ClinicInvitationRead(BaseModel):
@@ -65,6 +70,8 @@ class ClinicInvitationRead(BaseModel):
     email: str
     first_name: Optional[str]
     last_name: Optional[str]
+    middle_name: Optional[str] = None
+    photo_url: Optional[str] = None
     is_clinic_admin: bool
     is_doctor: bool
     expires_at: datetime

@@ -1,4 +1,5 @@
 from typing import Optional
+from uuid import UUID
 
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
@@ -7,6 +8,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from .db import get_db
+from .models.clinic_membership import ClinicMembership
 from .models.role import PRIVILEGED_ROLE_NAMES
 from .models.service_user import ServiceUser
 from .security import decode_access_token_sub
@@ -82,6 +84,53 @@ async def require_privileged(
             detail="Access denied",
         )
     return current_user
+
+
+async def require_clinic_admin(
+    clinic_id: UUID,
+    current_user: ServiceUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> ServiceUser:
+    if user_has_any_role(current_user, "super_admin"):
+        return current_user
+
+    result = await db.execute(
+        select(ClinicMembership).where(
+            ClinicMembership.clinic_id == clinic_id,
+            ClinicMembership.user_id == current_user.id,
+            ClinicMembership.is_clinic_admin.is_(True),
+            ClinicMembership.status == "active",
+            ClinicMembership.deleted_at.is_(None),
+        ),
+    )
+    membership = result.scalar_one_or_none()
+    if membership is None:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Clinic admin access required",
+        )
+    return current_user
+
+
+async def get_active_doctor_membership(
+    current_user: ServiceUser,
+    db: AsyncSession,
+) -> ClinicMembership:
+    result = await db.execute(
+        select(ClinicMembership).where(
+            ClinicMembership.user_id == current_user.id,
+            ClinicMembership.is_doctor.is_(True),
+            ClinicMembership.status == "active",
+            ClinicMembership.deleted_at.is_(None),
+        ),
+    )
+    membership = result.scalar_one_or_none()
+    if membership is None:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Doctor membership required",
+        )
+    return membership
 
 
 # Backward-compatible aliases used by older imports

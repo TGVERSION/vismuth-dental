@@ -18,6 +18,9 @@ from .routers.ml_autocomplete_dict import router as ml_complete_router
 from .routers.user_settings import router as user_settings_router
 from .routers.roles import router as roles_router
 from .routers.super_admin.clinics import router as super_admin_clinics_router
+from .routers.clinic_admin import router as clinic_admin_router
+from .routers.public_questionnaire import router as public_questionnaire_router
+from .routers.questionnaires import router as questionnaires_router
 
 
 app = FastAPI(title="Vismuth Clinical Decision Support")
@@ -39,6 +42,9 @@ app.include_router(protocols_router)
 app.include_router(ml_complete_router)
 app.include_router(user_settings_router)
 app.include_router(super_admin_clinics_router)
+app.include_router(clinic_admin_router)
+app.include_router(public_questionnaire_router)
+app.include_router(questionnaires_router)
 
 
 @app.get("/health", tags=["system"])

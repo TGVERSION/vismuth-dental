@@ -59,6 +59,25 @@ Invite создаётся даже при сбое SMTP: в ответе `invite
 | `REDIS_CONSUMER_GROUP` | `ml_mkb_code_group` | Consumer group |
 | `REDIS_CONSUMER_NAME` | `backend-worker-1` | Имя consumer |
 
+## Анкета пациента
+
+| Переменная | Default | Описание |
+|------------|---------|----------|
+| `QUESTIONNAIRE_AI_TIMEOUT` | `20` | Timeout вызова `/collect_form` (сек) |
+| `QUESTIONNAIRE_ANSWER_MAX_LEN` | `1000` | Обрезка ответа |
+| `QUESTIONNAIRE_AI_PRIMARY_MAX` | `6` | Лимит уточняющих (первичный) |
+| `QUESTIONNAIRE_AI_REPEAT_MAX` | `2` | Лимит уточняющих (повторный) |
+| `QUESTIONNAIRE_DEVICE_LIMIT_PER_HOUR` | `5` | С устройства |
+| `QUESTIONNAIRE_IP_LIMIT_PER_HOUR` | `30` | С IP |
+| `QUESTIONNAIRE_CLINIC_DAILY_PER_DOCTOR` | `30` | Суточный лимит × активные врачи |
+| `QUESTIONNAIRE_CLINIC_DAILY_MIN` | `100` | Минимум суточного лимита клиники |
+| `QUESTIONNAIRE_ABANDON_HOURS` | `24` | Брошенная анкета |
+| `QUESTIONNAIRE_RETENTION_DAYS` | `45` | Удаление completed |
+| `QUESTIONNAIRE_CODE_WINDOW_DAYS` | `30` | Уникальность кода |
+| `QUESTIONNAIRE_APPOINTMENT_DAYS_AHEAD` | `30` | Календарь записи |
+| `QUESTIONNAIRE_TIME_SLOTS` | `09:00,…,18:00` | CSV слотов времени |
+| `TRUST_PROXY` | `false` | Брать IP из `X-Forwarded-For` |
+
 ## Локальный запуск vs docker
 
 | Контекст | `POSTGRES_HOST` | `ML_SERVICE_URL` |

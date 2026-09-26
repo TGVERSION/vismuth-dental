@@ -38,6 +38,19 @@
 
 Worker использует тот же image и entrypoint (migrate + seed), затем свою CMD.
 
+## Questionnaire maintenance
+
+Процесс: `python -m app.workers.questionnaire_maintenance` (compose `questionnaire-worker`).
+
+Каждые ~10 минут:
+
+1. `in_progress` без активности > `QUESTIONNAIRE_ABANDON_HOURS` → `abandoned`, ответы и ПДн стираются, `current_step` остаётся;
+2. `completed` старше `QUESTIONNAIRE_RETENTION_DAYS` → удаление (у протокола остаётся `created_from_questionnaire`).
+
+## Что не хранится в worker
+
+Бизнес-факт выбора пациента в UI протоколов — только через HTTP API, не через stream.
+
 ## Dict-autocomplete без ML
 
 `POST /autocomplete_dict/complete_dict` работает через SQL-функции `search_by_prefix` / `predict_by_prefix` по таблицам `ml_unigrams` / `ml_bigrams` (создаются миграцией `0005`). Данные словаря в seed refs **не** входят — таблицы могут быть пустыми, пока их не заполнят отдельно.

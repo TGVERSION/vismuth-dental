@@ -49,6 +49,57 @@ class Settings(BaseModel):
     redis_consumer_group: str = os.getenv("REDIS_CONSUMER_GROUP", "ml_mkb_code_group")
     redis_consumer_name: str = os.getenv("REDIS_CONSUMER_NAME", "backend-worker-1")
 
+    questionnaire_ai_timeout: float = float(
+        os.getenv("QUESTIONNAIRE_AI_TIMEOUT", "20"),
+    )
+    questionnaire_answer_max_len: int = int(
+        os.getenv("QUESTIONNAIRE_ANSWER_MAX_LEN", "1000"),
+    )
+    questionnaire_ai_primary_max: int = int(
+        os.getenv("QUESTIONNAIRE_AI_PRIMARY_MAX", "6"),
+    )
+    questionnaire_ai_repeat_max: int = int(
+        os.getenv("QUESTIONNAIRE_AI_REPEAT_MAX", "2"),
+    )
+    questionnaire_device_limit_per_hour: int = int(
+        os.getenv("QUESTIONNAIRE_DEVICE_LIMIT_PER_HOUR", "5"),
+    )
+    questionnaire_ip_limit_per_hour: int = int(
+        os.getenv("QUESTIONNAIRE_IP_LIMIT_PER_HOUR", "30"),
+    )
+    questionnaire_clinic_daily_per_doctor: int = int(
+        os.getenv("QUESTIONNAIRE_CLINIC_DAILY_PER_DOCTOR", "30"),
+    )
+    questionnaire_clinic_daily_min: int = int(
+        os.getenv("QUESTIONNAIRE_CLINIC_DAILY_MIN", "100"),
+    )
+    questionnaire_abandon_hours: int = int(
+        os.getenv("QUESTIONNAIRE_ABANDON_HOURS", "24"),
+    )
+    questionnaire_retention_days: int = int(
+        os.getenv("QUESTIONNAIRE_RETENTION_DAYS", "45"),
+    )
+    questionnaire_code_window_days: int = int(
+        os.getenv("QUESTIONNAIRE_CODE_WINDOW_DAYS", "30"),
+    )
+    questionnaire_appointment_days_ahead: int = int(
+        os.getenv("QUESTIONNAIRE_APPOINTMENT_DAYS_AHEAD", "30"),
+    )
+    trust_proxy: bool = os.getenv("TRUST_PROXY", "false").lower() in {
+        "1",
+        "true",
+        "yes",
+    }
+    questionnaire_time_slots: str = os.getenv(
+        "QUESTIONNAIRE_TIME_SLOTS",
+        "09:00,09:30,10:00,10:30,11:00,11:30,12:00,12:30,"
+        "13:00,13:30,14:00,14:30,15:00,15:30,16:00,16:30,17:00,17:30,18:00",
+    )
+
+    @property
+    def appointment_time_slots(self) -> list[str]:
+        return [s.strip() for s in self.questionnaire_time_slots.split(",") if s.strip()]
+
     @property
     def database_url_async(self) -> str:
         return (

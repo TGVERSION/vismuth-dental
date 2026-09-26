@@ -57,3 +57,8 @@
 - **Поведение:** SQL funcs `search_by_prefix` / `predict_by_prefix`; `{ suggestions: [...] }`; `500` на ошибке
 - **Frontend:** dict-режим (также вызывается изнутри `/ml_autocomplete`)
 - **Код:** `autocomplete_endpoint`
+
+## Использование /collect_form из анкеты
+
+Публичный flow пациента (`questionnaire-public.md`) вызывает ml-service `POST /collect_form` через `proxy_post_to_ml` **без** отдельного backend proxy-endpoint для врача.  
+Лимиты и fallback — на стороне backend; контракт ML не менялся.

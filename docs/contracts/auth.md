@@ -51,7 +51,7 @@
 
 - **Auth:** none
 - **Назначение:** принять invite → создать user + membership + JWT
-- **Поведение:** проверяет token / expiry / clinic; `409` если email уже занят; создаёт `service_user` (глобальная роль `doctor`), `user_settings`, `clinic_membership` (флаги из invite, status `active`); помечает invite `used_at`
+- **Поведение:** проверяет token / expiry / clinic; `409` если email уже занят; создаёт `service_user` (глобальная роль `doctor`, копирует first/last/**middle_name**), `user_settings`, `clinic_membership` (флаги и `photo_url` из invite, status `active`, генерирует **`public_slug`**); копирует специализации из `clinic_invitation_specialization` → `clinic_membership_specialization`; помечает invite `used_at`
 - **Ответ (смысл):** как login — `access_token` + `user`
 - **Frontend:** форма пароля после превью; persist token
 - **Код:** `accept_invitation`

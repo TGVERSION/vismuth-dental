@@ -14,3 +14,9 @@ from .dictionary import Dictionary  # noqa: F401
 from .clinic import Clinic  # noqa: F401
 from .clinic_membership import ClinicMembership  # noqa: F401
 from .clinic_invitation import ClinicInvitation  # noqa: F401
+from .specialization import RefSpecialization  # noqa: F401
+from .clinic_membership_specialization import (  # noqa: F401
+    ClinicMembershipSpecialization,
+    ClinicInvitationSpecialization,
+)
+from .questionnaire import Questionnaire, QuestionnaireAnswer  # noqa: F401

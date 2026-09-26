@@ -47,6 +47,21 @@ services:
     networks:
       - vismuth-net
 
+  questionnaire-worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: vismuth-questionnaire-worker
+    restart: unless-stopped
+    env_file:
+      - .env
+    depends_on:
+      - db
+      - redis
+    command: ["python", "-m", "app.workers.questionnaire_maintenance"]
+    networks:
+      - vismuth-net
+
   frontend:
     build:
       context: ./frontend

@@ -32,7 +32,11 @@ service_user 1 ── 1 service_user_role N ── 1 role
 
 - таблица `clinic_membership`: флаги `is_clinic_admin`, `is_doctor` (можно оба);
 - приглашённый через invite получает глобальную роль `doctor` + membership с нужными флагами;
-- API администратора клиники (позже) будет проверять membership, не `require_privileged`.
+- API администратора клиники: `deps.require_clinic_admin` — `super_admin` **или** активный membership с `is_clinic_admin` (`/clinics/{id}/*`);
+- раздел анкет врача: активный membership с `is_doctor` (`/questionnaires`).
+
+Специализации врача: M2M `clinic_membership_specialization` ↔ `ref_specialization`.  
+Публичная ссылка врача: `clinic_membership.public_slug`.
 
 ## Миграция старых значений
 
@@ -64,3 +68,5 @@ service_user 1 ── 1 service_user_role N ── 1 role
 | `user_settings._ensure_access` | свой user **или** privileged |
 | `protocol_templates` | `privacy=general` create/update/delete |
 | `deps.require_roles("super_admin")` | `/super-admin/clinics*` |
+| `deps.require_clinic_admin` | `/clinics/{clinic_id}*` |
+| doctor membership | `/questionnaires*` |

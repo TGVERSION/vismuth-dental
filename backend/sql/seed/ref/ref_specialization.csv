@@ -1,0 +1,21 @@
+"row_id","id","code","name"
+1,1,therapist,Терапевт
+2,2,cardiologist,Кардиолог
+3,3,neurologist,Невролог
+4,4,surgeon,Хирург
+5,5,otolaryngologist,Оториноларинголог
+6,6,ophthalmologist,Офтальмолог
+7,7,dermatologist,Дерматолог
+8,8,gastroenterologist,Гастроэнтеролог
+9,9,endocrinologist,Эндокринолог
+10,10,urologist,Уролог
+11,11,gynecologist,Гинеколог
+12,12,pediatrician,Педиатр
+13,13,psychiatrist,Психиатр
+14,14,traumatologist,Травматолог-ортопед
+15,15,pulmonologist,Пульмонолог
+16,16,rheumatologist,Ревматолог
+17,17,oncologist,Онколог
+18,18,allergologist,Аллерголог-иммунолог
+19,19,dentist,Стоматолог
+20,20,general_practice,Врач общей практики

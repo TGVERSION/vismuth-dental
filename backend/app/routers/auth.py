@@ -39,7 +39,12 @@ from ..security import (
     verify_registration_code,
 )
 from ..services.clinic_access import hash_invite_token
+from ..services.clinic_members import (
+    set_membership_specializations,
+    unique_membership_public_slug,
+)
 from ..services.roles import set_user_role, user_role_load_options
+from ..models.clinic_membership_specialization import ClinicInvitationSpecialization
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -374,12 +379,14 @@ async def accept_invitation(
 
     first_name = payload.first_name if payload.first_name is not None else invitation.first_name
     last_name = payload.last_name if payload.last_name is not None else invitation.last_name
+    middle_name = invitation.middle_name
 
     user = ServiceUser(
         login=email_norm,
         password_hash=hash_password(payload.password),
         first_name=first_name,
         last_name=last_name,
+        middle_name=middle_name,
         is_active=True,
         created_at=now,
     )
@@ -387,16 +394,28 @@ async def accept_invitation(
     await db.flush()
     await set_user_role(db, user, "doctor")
     db.add(UserSettings(user_id=user.id))
-    db.add(
-        ClinicMembership(
-            clinic_id=clinic.id,
-            user_id=user.id,
-            is_clinic_admin=invitation.is_clinic_admin,
-            is_doctor=invitation.is_doctor,
-            status="active",
-            created_at=now,
+
+    membership = ClinicMembership(
+        clinic_id=clinic.id,
+        user_id=user.id,
+        is_clinic_admin=invitation.is_clinic_admin,
+        is_doctor=invitation.is_doctor,
+        status="active",
+        photo_url=invitation.photo_url,
+        public_slug=await unique_membership_public_slug(db),
+        created_at=now,
+    )
+    db.add(membership)
+    await db.flush()
+
+    spec_result = await db.execute(
+        select(ClinicInvitationSpecialization.specialization_id).where(
+            ClinicInvitationSpecialization.invitation_id == invitation.id,
         ),
     )
+    specialization_ids = [row[0] for row in spec_result.all()]
+    await set_membership_specializations(db, membership.id, specialization_ids)
+
     invitation.used_at = now
     invitation.updated_at = now
     await db.commit()

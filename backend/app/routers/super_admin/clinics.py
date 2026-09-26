@@ -1,19 +1,16 @@
-import asyncio
 from datetime import datetime, timezone
 from typing import List
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy import func, select
+from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ...db import get_db
 from ...deps import require_roles
-from ...email import send_clinic_invite
 from ...models.clinic import Clinic
 from ...models.clinic_invitation import ClinicInvitation
-from ...models.clinic_membership import ClinicMembership
 from ...models.service_user import ServiceUser
 from ...schemas.clinic import (
     ClinicCreate,
@@ -24,12 +21,13 @@ from ...schemas.clinic import (
     ClinicRead,
 )
 from ...services.clinic_access import (
-    build_invite_url,
     clinic_to_read_fields,
-    generate_invite_token,
     generate_public_slug,
-    hash_invite_token,
-    invite_expires_at,
+)
+from ...services.clinic_members import (
+    create_invitation,
+    doctors_count,
+    get_clinic_or_404,
 )
 
 router = APIRouter(prefix="/super-admin/clinics", tags=["super-admin-clinics"])
@@ -39,50 +37,6 @@ require_super_admin = require_roles("super_admin")
 
 def _normalize_email(email: str) -> str:
     return email.strip().lower()
-
-
-async def _get_clinic_or_404(db: AsyncSession, clinic_id: UUID) -> Clinic:
-    result = await db.execute(
-        select(Clinic).where(
-            Clinic.id == clinic_id,
-            Clinic.deleted_at.is_(None),
-        ),
-    )
-    clinic = result.scalar_one_or_none()
-    if clinic is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Clinic not found",
-        )
-    return clinic
-
-
-async def _doctors_count(db: AsyncSession, clinic_id: UUID) -> int:
-    membership_count = await db.execute(
-        select(func.count())
-        .select_from(ClinicMembership)
-        .where(
-            ClinicMembership.clinic_id == clinic_id,
-            ClinicMembership.is_doctor.is_(True),
-            ClinicMembership.status == "active",
-            ClinicMembership.deleted_at.is_(None),
-        ),
-    )
-    active = int(membership_count.scalar_one() or 0)
-
-    invited_count = await db.execute(
-        select(func.count())
-        .select_from(ClinicInvitation)
-        .where(
-            ClinicInvitation.clinic_id == clinic_id,
-            ClinicInvitation.is_doctor.is_(True),
-            ClinicInvitation.used_at.is_(None),
-            ClinicInvitation.deleted_at.is_(None),
-            ClinicInvitation.expires_at > datetime.now(timezone.utc),
-        ),
-    )
-    invited = int(invited_count.scalar_one() or 0)
-    return active + invited
 
 
 async def _unique_public_slug(db: AsyncSession) -> str:
@@ -99,20 +53,17 @@ async def _unique_public_slug(db: AsyncSession) -> str:
     )
 
 
-def _to_clinic_read(clinic: Clinic, doctors_count: int) -> ClinicRead:
-    return ClinicRead.model_validate(clinic_to_read_fields(clinic, doctors_count))
-
-
-async def _send_invite_email(
-    email: str,
-    clinic_name: str,
-    invite_url: str,
-) -> tuple[bool, str | None]:
-    try:
-        await asyncio.to_thread(send_clinic_invite, email, clinic_name, invite_url)
-        return True, None
-    except Exception as e:
-        return False, str(e)
+def _to_clinic_read(
+    clinic: Clinic,
+    doctors_count_value: int,
+    *,
+    free_codes_ratio: float | None = None,
+    clinic_daily_limit_exceeded: bool = False,
+) -> ClinicRead:
+    fields = clinic_to_read_fields(clinic, doctors_count_value)
+    fields["free_codes_ratio"] = free_codes_ratio
+    fields["clinic_daily_limit_exceeded"] = clinic_daily_limit_exceeded
+    return ClinicRead.model_validate(fields)
 
 
 @router.post("", response_model=ClinicRead, status_code=status.HTTP_201_CREATED)
@@ -152,6 +103,11 @@ async def list_clinics(
     _: ServiceUser = Depends(require_super_admin),
     db: AsyncSession = Depends(get_db),
 ) -> List[ClinicRead]:
+    from ...services.questionnaire_limits import (
+        clinic_daily_limit_exceeded,
+        free_codes_ratio,
+    )
+
     result = await db.execute(
         select(Clinic)
         .where(Clinic.deleted_at.is_(None))
@@ -160,8 +116,17 @@ async def list_clinics(
     clinics = list(result.scalars().all())
     out: List[ClinicRead] = []
     for clinic in clinics:
-        count = await _doctors_count(db, clinic.id)
-        out.append(_to_clinic_read(clinic, count))
+        count = await doctors_count(db, clinic.id)
+        ratio = await free_codes_ratio(db, clinic.id)
+        exceeded = await clinic_daily_limit_exceeded(db, clinic.id)
+        out.append(
+            _to_clinic_read(
+                clinic,
+                count,
+                free_codes_ratio=ratio,
+                clinic_daily_limit_exceeded=exceeded,
+            ),
+        )
     return out
 
 
@@ -171,9 +136,21 @@ async def get_clinic(
     _: ServiceUser = Depends(require_super_admin),
     db: AsyncSession = Depends(get_db),
 ) -> ClinicRead:
-    clinic = await _get_clinic_or_404(db, clinic_id)
-    count = await _doctors_count(db, clinic.id)
-    return _to_clinic_read(clinic, count)
+    from ...services.questionnaire_limits import (
+        clinic_daily_limit_exceeded,
+        free_codes_ratio,
+    )
+
+    clinic = await get_clinic_or_404(db, clinic_id)
+    count = await doctors_count(db, clinic.id)
+    ratio = await free_codes_ratio(db, clinic.id)
+    exceeded = await clinic_daily_limit_exceeded(db, clinic.id)
+    return _to_clinic_read(
+        clinic,
+        count,
+        free_codes_ratio=ratio,
+        clinic_daily_limit_exceeded=exceeded,
+    )
 
 
 @router.patch("/{clinic_id}", response_model=ClinicRead)
@@ -183,7 +160,7 @@ async def patch_clinic(
     _: ServiceUser = Depends(require_super_admin),
     db: AsyncSession = Depends(get_db),
 ) -> ClinicRead:
-    clinic = await _get_clinic_or_404(db, clinic_id)
+    clinic = await get_clinic_or_404(db, clinic_id)
     data = payload.model_dump(exclude_unset=True)
     if "email" in data and data["email"] is not None:
         data["email"] = _normalize_email(str(data["email"]))
@@ -196,7 +173,7 @@ async def patch_clinic(
 
     await db.commit()
     await db.refresh(clinic)
-    count = await _doctors_count(db, clinic.id)
+    count = await doctors_count(db, clinic.id)
     return _to_clinic_read(clinic, count)
 
 
@@ -206,13 +183,13 @@ async def delete_clinic(
     _: ServiceUser = Depends(require_super_admin),
     db: AsyncSession = Depends(get_db),
 ) -> ClinicRead:
-    clinic = await _get_clinic_or_404(db, clinic_id)
+    clinic = await get_clinic_or_404(db, clinic_id)
     now = datetime.now(timezone.utc)
     clinic.deleted_at = now
     clinic.updated_at = now
     await db.commit()
     await db.refresh(clinic)
-    count = await _doctors_count(db, clinic.id)
+    count = await doctors_count(db, clinic.id)
     return _to_clinic_read(clinic, count)
 
 
@@ -221,79 +198,26 @@ async def delete_clinic(
     response_model=ClinicInvitationCreated,
     status_code=status.HTTP_201_CREATED,
 )
-async def create_invitation(
+async def create_invitation_endpoint(
     clinic_id: UUID,
     payload: ClinicInvitationCreate,
     current_user: ServiceUser = Depends(require_super_admin),
     db: AsyncSession = Depends(get_db),
 ) -> ClinicInvitationCreated:
-    if not payload.is_clinic_admin and not payload.is_doctor:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invitation must have is_clinic_admin or is_doctor",
-        )
-
-    clinic = await _get_clinic_or_404(db, clinic_id)
-    email_norm = _normalize_email(str(payload.email))
-
-    existing_user = await db.execute(
-        select(ServiceUser.id).where(
-            func.lower(ServiceUser.login) == email_norm,
-            ServiceUser.deleted_at.is_(None),
-        ),
-    )
-    if existing_user.scalar_one_or_none() is not None:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="User with this email already exists",
-        )
-
-    pending = await db.execute(
-        select(ClinicInvitation).where(
-            ClinicInvitation.clinic_id == clinic_id,
-            func.lower(ClinicInvitation.email) == email_norm,
-            ClinicInvitation.used_at.is_(None),
-            ClinicInvitation.deleted_at.is_(None),
-        ),
-    )
-    if pending.scalar_one_or_none() is not None:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="Pending invitation for this email already exists",
-        )
-
-    raw_token = generate_invite_token()
-    now = datetime.now(timezone.utc)
-    invitation = ClinicInvitation(
-        clinic_id=clinic.id,
-        email=email_norm,
+    clinic = await get_clinic_or_404(db, clinic_id)
+    invitation, invite_url, email_sent, email_error = await create_invitation(
+        db,
+        clinic=clinic,
+        created_by_user_id=current_user.id,
+        email=str(payload.email),
         first_name=payload.first_name,
         last_name=payload.last_name,
-        token_hash=hash_invite_token(raw_token),
+        middle_name=payload.middle_name,
+        photo_url=payload.photo_url,
         is_clinic_admin=payload.is_clinic_admin,
         is_doctor=payload.is_doctor,
-        expires_at=invite_expires_at(now),
-        created_by_user_id=current_user.id,
-        created_at=now,
+        specialization_ids=payload.specialization_ids,
     )
-    db.add(invitation)
-    try:
-        await db.commit()
-    except IntegrityError as e:
-        await db.rollback()
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="Invitation conflict",
-        ) from e
-    await db.refresh(invitation)
-
-    invite_url = build_invite_url(raw_token)
-    email_sent, email_error = await _send_invite_email(
-        email_norm,
-        clinic.name,
-        invite_url,
-    )
-
     base = ClinicInvitationRead.model_validate(invitation)
     return ClinicInvitationCreated(
         **base.model_dump(),
@@ -312,7 +236,7 @@ async def list_invitations(
     _: ServiceUser = Depends(require_super_admin),
     db: AsyncSession = Depends(get_db),
 ) -> List[ClinicInvitationRead]:
-    await _get_clinic_or_404(db, clinic_id)
+    await get_clinic_or_404(db, clinic_id)
     result = await db.execute(
         select(ClinicInvitation)
         .where(
@@ -328,13 +252,15 @@ async def list_invitations(
     "/{clinic_id}/invitations/{invitation_id}/resend",
     response_model=ClinicInvitationCreated,
 )
-async def resend_invitation(
+async def resend_invitation_endpoint(
     clinic_id: UUID,
     invitation_id: UUID,
     _: ServiceUser = Depends(require_super_admin),
     db: AsyncSession = Depends(get_db),
 ) -> ClinicInvitationCreated:
-    clinic = await _get_clinic_or_404(db, clinic_id)
+    from ...services.clinic_members import resend_invitation
+
+    clinic = await get_clinic_or_404(db, clinic_id)
     result = await db.execute(
         select(ClinicInvitation).where(
             ClinicInvitation.id == invitation_id,
@@ -348,27 +274,11 @@ async def resend_invitation(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Invitation not found",
         )
-    if invitation.used_at is not None:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invitation already used",
-        )
-
-    raw_token = generate_invite_token()
-    now = datetime.now(timezone.utc)
-    invitation.token_hash = hash_invite_token(raw_token)
-    invitation.expires_at = invite_expires_at(now)
-    invitation.updated_at = now
-    await db.commit()
-    await db.refresh(invitation)
-
-    invite_url = build_invite_url(raw_token)
-    email_sent, email_error = await _send_invite_email(
-        invitation.email,
-        clinic.name,
-        invite_url,
+    invitation, invite_url, email_sent, email_error = await resend_invitation(
+        db,
+        clinic=clinic,
+        invitation=invitation,
     )
-
     base = ClinicInvitationRead.model_validate(invitation)
     return ClinicInvitationCreated(
         **base.model_dump(),

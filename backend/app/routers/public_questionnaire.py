@@ -2,7 +2,7 @@ import secrets
 from typing import Optional
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Header, HTTPException, Request, status
+from fastapi import APIRouter, BackgroundTasks, Depends, Header, HTTPException, Request, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -37,6 +37,7 @@ from ..services.questionnaire_limits import (
     hash_ip,
     hash_session_token,
 )
+from ..services.questionnaire_process import schedule_processing
 
 router = APIRouter(prefix="/public", tags=["public-questionnaire"])
 
@@ -362,6 +363,7 @@ async def get_step(
 async def post_answer(
     questionnaire_id: UUID,
     payload: QuestionnaireAnswerRequest,
+    background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
     x_questionnaire_token: Optional[str] = Header(
         default=None,
@@ -373,7 +375,7 @@ async def post_answer(
         questionnaire_id,
         x_questionnaire_token,
     )
-    descriptor, _ = await apply_answer(
+    descriptor, _, should_process = await apply_answer(
         db,
         questionnaire,
         step_key=payload.step_key,
@@ -388,4 +390,6 @@ async def post_answer(
         appointment_time=payload.appointment_time,
         none_answer=payload.none,
     )
+    if should_process:
+        schedule_processing(background_tasks, questionnaire_id)
     return _step_response(descriptor)

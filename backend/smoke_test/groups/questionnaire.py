@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import time
 import uuid
 from datetime import date, timedelta
 
@@ -405,7 +406,7 @@ def run_public_repeat_flow(ctx: SmokeContext) -> None:
 
 
 def run_doctor_list_and_protocol(ctx: SmokeContext) -> None:
-    """Список анкет врача + создание протокола (JWT врача + structure)."""
+    """Список анкет врача + process + создание протокола (JWT врача + structure)."""
     if not ctx.require_token():
         return
     code = ctx.ids.get("questionnaire_code")
@@ -421,13 +422,34 @@ def run_doctor_list_and_protocol(ctx: SmokeContext) -> None:
     items = listing.json()
     assert any(i["id"] == qid for i in items), items
 
-    print("=== GET /questionnaires/{id} ===")
+    print("=== GET /questionnaires/{id} (processing_status) ===")
     detail = ctx.get(f"/questionnaires/{qid}")
     print_response(detail)
     assert detail.ok, detail.text
     d = detail.json()
     assert d["code"] == code
     assert isinstance(d.get("answers"), list)
+    status_val = d.get("processing_status")
+    assert status_val in {None, "pending", "done", "failed"}, status_val
+
+    # short poll if still pending (background summarize)
+    if status_val == "pending":
+        for _ in range(15):
+            time.sleep(1)
+            detail = ctx.get(f"/questionnaires/{qid}")
+            assert detail.ok, detail.text
+            d = detail.json()
+            status_val = d.get("processing_status")
+            if status_val in {"done", "failed"}:
+                break
+        print(f"  processing_status after poll: {status_val}")
+
+    print("=== POST /questionnaires/{id}/process ===")
+    process_resp = ctx.post(f"/questionnaires/{qid}/process")
+    print_response(process_resp)
+    assert process_resp.status_code == 202, process_resp.text
+    process_body = process_resp.json()
+    assert process_body.get("processing_status") == "pending"
 
     structure_id = ctx.ids.get("protocol_structure_id")
     if not structure_id:
@@ -436,6 +458,15 @@ def run_doctor_list_and_protocol(ctx: SmokeContext) -> None:
             "сначала protocol_structures.run_create; создание протокола пропущено"
         )
         return
+
+    # wait briefly so protocol can use structured if ML finished
+    for _ in range(10):
+        detail = ctx.get(f"/questionnaires/{qid}")
+        assert detail.ok, detail.text
+        d = detail.json()
+        if d.get("processing_status") in {"done", "failed"}:
+            break
+        time.sleep(1)
 
     print("=== POST /questionnaires/{id}/protocol ===")
     proto = ctx.post(

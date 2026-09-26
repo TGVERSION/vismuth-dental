@@ -1,13 +1,14 @@
 from datetime import date, datetime, timezone
-from typing import List, Optional
+from typing import Any, List, Optional
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, status
 from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..db import get_db
 from ..deps import get_active_doctor_membership, get_current_user
+from ..models.clinic import Clinic
 from ..models.protocol import Protocol, ProtocolField
 from ..models.protocol_structure import ProtocolFieldMain, ProtocolStructure, ProtocolStructureField
 from ..models.questionnaire import Questionnaire, QuestionnaireAnswer
@@ -21,6 +22,8 @@ from ..schemas.questionnaire import (
     QuestionnaireAnswerItem,
 )
 from ..services.questionnaire_flow import specialization_name
+from ..services.questionnaire_limits import ensure_clinic_subscription_active
+from ..services.questionnaire_process import schedule_processing
 
 router = APIRouter(prefix="/questionnaires", tags=["questionnaires"])
 
@@ -81,6 +84,72 @@ def _map_answers_to_fields(answers: list[QuestionnaireAnswer]) -> dict[str, str]
         else:
             result["complaints"] = prefix
     return result
+
+
+def _map_structured_to_fields(structured: dict[str, Any]) -> dict[str, str]:
+    result = {
+        "complaints": str(structured.get("complaints") or ""),
+        "life_anamnesis": str(structured.get("life_anamnesis") or ""),
+        "allergy_anamnesis": str(structured.get("allergy_anamnesis") or ""),
+    }
+    medications = str(structured.get("medications") or "").strip()
+    if medications:
+        result["medications"] = medications
+    return result
+
+
+def _apply_medications_fallback(
+    mapped: dict[str, str],
+    structure_field_names: set[str],
+) -> dict[str, str]:
+    """Если в структуре нет поля medications — дописать препараты в complaints."""
+    meds = mapped.get("medications")
+    if not meds:
+        return mapped
+    if "medications" in structure_field_names:
+        return mapped
+    out = dict(mapped)
+    prefix = f"Препараты: {meds}"
+    if out.get("complaints"):
+        out["complaints"] = out["complaints"] + "\n" + prefix
+    else:
+        out["complaints"] = prefix
+    out.pop("medications", None)
+    return out
+
+
+async def _build_doctor_detail(
+    db: AsyncSession,
+    questionnaire: Questionnaire,
+) -> DoctorQuestionnaireDetail:
+    answers = await _answers_for_mapping(db, questionnaire.id)
+    spec_name = await specialization_name(db, questionnaire.specialization_id)
+    return DoctorQuestionnaireDetail(
+        id=questionnaire.id,
+        visit_type=questionnaire.visit_type,
+        specialization_name=spec_name,
+        patient_first_name=questionnaire.patient_first_name,
+        patient_middle_name=questionnaire.patient_middle_name,
+        appointment_date=questionnaire.appointment_date,
+        appointment_time=questionnaire.appointment_time,
+        code=questionnaire.code,
+        ai_unavailable=questionnaire.ai_unavailable,
+        protocol_id=questionnaire.protocol_id,
+        structured=questionnaire.structured,
+        gaps=questionnaire.gaps,
+        processing_status=questionnaire.processing_status,
+        answers=[
+            QuestionnaireAnswerItem(
+                seq=a.seq,
+                step_key=a.step_key,
+                kind=a.kind,
+                question_text=a.question_text,
+                answer_text=a.answer_text,
+                choice=a.choice,
+            )
+            for a in answers
+        ],
+    )
 
 
 @router.get("", response_model=List[DoctorQuestionnaireListItem])
@@ -165,34 +234,52 @@ async def get_questionnaire(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Questionnaire not found",
         )
-    answers = await _answers_for_mapping(db, questionnaire.id)
-    spec_name = await specialization_name(db, questionnaire.specialization_id)
-    return DoctorQuestionnaireDetail(
-        id=questionnaire.id,
-        visit_type=questionnaire.visit_type,
-        specialization_name=spec_name,
-        patient_first_name=questionnaire.patient_first_name,
-        patient_middle_name=questionnaire.patient_middle_name,
-        appointment_date=questionnaire.appointment_date,
-        appointment_time=questionnaire.appointment_time,
-        code=questionnaire.code,
-        ai_unavailable=questionnaire.ai_unavailable,
-        protocol_id=questionnaire.protocol_id,
-        structured=questionnaire.structured,
-        gaps=questionnaire.gaps,
-        processing_status=questionnaire.processing_status,
-        answers=[
-            QuestionnaireAnswerItem(
-                seq=a.seq,
-                step_key=a.step_key,
-                kind=a.kind,
-                question_text=a.question_text,
-                answer_text=a.answer_text,
-                choice=a.choice,
-            )
-            for a in answers
-        ],
+    return await _build_doctor_detail(db, questionnaire)
+
+
+@router.post(
+    "/{questionnaire_id}/process",
+    response_model=DoctorQuestionnaireDetail,
+    status_code=status.HTTP_202_ACCEPTED,
+)
+async def process_questionnaire(
+    questionnaire_id: UUID,
+    background_tasks: BackgroundTasks,
+    current_user: ServiceUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> DoctorQuestionnaireDetail:
+    membership = await get_active_doctor_membership(current_user, db)
+    clinic_result = await db.execute(
+        select(Clinic).where(Clinic.id == membership.clinic_id),
     )
+    clinic = clinic_result.scalar_one_or_none()
+    if clinic is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Clinic not found",
+        )
+    ensure_clinic_subscription_active(clinic)
+
+    result = await db.execute(
+        select(Questionnaire).where(
+            Questionnaire.id == questionnaire_id,
+            Questionnaire.doctor_membership_id == membership.id,
+            Questionnaire.status == "completed",
+        ),
+    )
+    questionnaire = result.scalar_one_or_none()
+    if questionnaire is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Questionnaire not found",
+        )
+
+    questionnaire.processing_status = "pending"
+    questionnaire.updated_at = datetime.now(timezone.utc)
+    await db.commit()
+    await db.refresh(questionnaire)
+    schedule_processing(background_tasks, questionnaire.id)
+    return await _build_doctor_detail(db, questionnaire)
 
 
 @router.post(
@@ -252,7 +339,16 @@ async def create_protocol_from_questionnaire(
     mains = {m.id: m for m in main_result.scalars().all()}
 
     answers = await _answers_for_mapping(db, questionnaire.id)
-    mapped = _map_answers_to_fields(answers)
+    if questionnaire.structured:
+        mapped = _map_structured_to_fields(questionnaire.structured)
+        structure_field_names = {
+            mains[sf.protocol_fields_main_id].field_name
+            for sf in structure_fields
+            if sf.protocol_fields_main_id and sf.protocol_fields_main_id in mains
+        }
+        mapped = _apply_medications_fallback(mapped, structure_field_names)
+    else:
+        mapped = _map_answers_to_fields(answers)
 
     now = datetime.now(timezone.utc)
     protocol = Protocol(

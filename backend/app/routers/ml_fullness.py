@@ -1,5 +1,7 @@
 from fastapi import APIRouter, Depends
+from sqlalchemy.ext.asyncio import AsyncSession
 
+from ..db import get_db
 from ..deps import get_current_user
 from ..models.service_user import ServiceUser
 from ..schemas.ml_fullness_complaints import (
@@ -7,6 +9,7 @@ from ..schemas.ml_fullness_complaints import (
     MlFullnessComplaintsResponse,
 )
 from ..services.ml_proxy import MlProxyLogContext, proxy_post_to_ml
+from ..services.questionnaire_limits import ensure_user_clinic_subscription_active
 from ..services.redis_stream import (
     build_fullness_complaints_payload,
     get_redis_client,
@@ -23,7 +26,9 @@ router = APIRouter(tags=["ml_fullness"])
 async def proxy_ml_fullness_complaints(
     payload: MlFullnessComplaintsRequest,
     current_user: ServiceUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
 ) -> MlFullnessComplaintsResponse:
+    await ensure_user_clinic_subscription_active(db, current_user)
     body = await proxy_post_to_ml(
         "/fullness/complaints",
         {

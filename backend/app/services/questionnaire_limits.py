@@ -9,7 +9,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..config import settings
 from ..models.clinic import Clinic
+from ..models.clinic_membership import ClinicMembership
 from ..models.questionnaire import Questionnaire
+from ..models.service_user import ServiceUser
 from ..services.clinic_access import compute_access_status
 from ..services.clinic_members import active_doctors_count
 from ..services.redis_stream import get_redis_client
@@ -146,6 +148,32 @@ def ensure_clinic_subscription_active(clinic: Clinic) -> None:
                 "phone": clinic.phone,
             },
         )
+
+
+async def ensure_user_clinic_subscription_active(
+    db: AsyncSession,
+    user: ServiceUser,
+) -> None:
+    """Блокирует ML при истёкшем доступе клиники пользователя.
+
+    Без active membership (супер-админ, старые пользователи) — без блокировки.
+    Несколько membership — отказ, если истекла хотя бы одна клиника.
+    """
+    result = await db.execute(
+        select(Clinic)
+        .join(ClinicMembership, ClinicMembership.clinic_id == Clinic.id)
+        .where(
+            ClinicMembership.user_id == user.id,
+            ClinicMembership.status == "active",
+            ClinicMembership.deleted_at.is_(None),
+            Clinic.deleted_at.is_(None),
+        ),
+    )
+    clinics = list(result.scalars().all())
+    if not clinics:
+        return
+    for clinic in clinics:
+        ensure_clinic_subscription_active(clinic)
 
 
 async def free_codes_ratio(db: AsyncSession, clinic_id: UUID) -> float:

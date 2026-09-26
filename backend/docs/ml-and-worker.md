@@ -7,8 +7,9 @@
 Роутеры backend (`ml_autocomplete`, `ml_mkb_code`, `ml_fullness`, `ml_clinrec_check`):
 
 1. проверяют JWT / пользователя;
-2. проксируют тело запроса в ml-service;
-3. при наличии контекста публикуют событие лога ответа в Redis Stream.
+2. при active membership и `expired` клинике отвечают `503` + `subscription_expired` (до upstream); без membership — без блокировки; dict-ветка `/ml_autocomplete` проверку не делает;
+3. проксируют тело запроса в ml-service;
+4. при наличии контекста публикуют событие лога ответа в Redis Stream.
 
 Ошибки upstream превращаются в HTTP-ошибки FastAPI с `detail` от ml-service, если он есть.
 

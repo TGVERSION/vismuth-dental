@@ -23,7 +23,7 @@ JWT + активный `clinic_membership` с `is_doctor`. Видны тольк
 
 - **Auth:** JWT (свой doctor)
 - **Назначение:** повторная фоновая обработка анкеты через `/summarize_form` (тратит токены ML)
-- **Поведение:** проверка подписки клиники (`503` + `subscription_expired` при истёкшем доступе); `processing_status=pending`; ответ `202` с detail; ML в BackgroundTasks. При ошибке/таймауте — `failed`, исходные ответы и прежний `structured` не затираются
+- **Поведение:** тот же helper, что у ML proxy (`ensure_user_clinic_subscription_active`): `503` + `subscription_expired` при истёкшем доступе клиники; `processing_status=pending`; ответ `202` с detail; ML в BackgroundTasks. При ошибке/таймауте — `failed`, исходные ответы и прежний `structured` не затираются
 - **Код:** `process_questionnaire`
 
 ## POST /questionnaires/{id}/protocol

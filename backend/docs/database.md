@@ -28,7 +28,7 @@ Source of truth схемы: [`alembic/versions/`](../alembic/versions/). Ста�
 - Privileged (CRUD users, чужие settings, general templates): `super_admin` или `admin`.
 - API `/super-admin/*` — только `super_admin` (не `admin`).
 
-### Клиники (0007)
+### Клиники, специализации и анкеты (0007–0009)
 
 | Таблица | Суть |
 |--------|------|
@@ -37,7 +37,7 @@ Source of truth схемы: [`alembic/versions/`](../alembic/versions/). Ста�
 | `clinic_invitation` | Invite: email, ФИО (+ middle_name), photo_url, token_hash, роли, expires_at, used_at; soft-delete = revoke |
 | `ref_specialization` | Справочник специализаций (seed CSV) |
 | `clinic_membership_specialization` / `clinic_invitation_specialization` | M2M специализаций |
-| `questionnaire` | Анкета пациента: шаги, код, AI-флаги, patient info, protocol_id |
+| `questionnaire` | Анкета пациента: шаги, `code` CHAR(4), AI-флаги, patient info, protocol_id |
 | `questionnaire_answer` | Реплики/ответы (CASCADE) |
 
 Статус подписки **не хранится** — вычисляется по `access_until` + `access_type`.
@@ -65,9 +65,9 @@ docker compose exec backend python sql/seed/seed_refs.py
 
 - CSV: [`sql/seed/ref/*.csv`](../sql/seed/ref/) — имена таблиц без timestamp.
 - Скрипт: [`sql/seed/seed_refs.py`](../sql/seed/seed_refs.py) — `nan` → NULL, `COPY`, `setval` для `row_id`.
-- Идемпотентность: если в `ref_mkb10` уже есть строки → **весь seed пропускается**.
+- Идемпотентность: **каждая** таблица из `REF_TABLES` сидится отдельно; если в таблице уже есть строки — она пропускается. Новые справочники (например `ref_specialization`) заливаются на уже заполненной БД без очистки остальных refs.
 
-Entrypoint вызывает seed после каждой миграции; на заполненной БД это no-op.
+Entrypoint вызывает seed после каждой миграции; на полностью заполненных refs это no-op.
 
 ## Fresh volume
 
@@ -92,9 +92,9 @@ docker compose exec -T db pg_dump -U vismuth vismuth > backup_$(date +%F).sql
 2. После `git pull` и rebuild:
 
 - таблица `alembic_version` на старой БД отсутствует;
-- entrypoint вызовет `alembic upgrade head` и попытается прогнать `0001`…`0007`;
+- entrypoint вызовет `alembic upgrade head` и попытается прогнать `0001`…head;
 - из‑за `CREATE TABLE IF NOT EXISTS` / `ON CONFLICT DO NOTHING` на совпадающей схеме обычно проходит «вхолостую»;
-- seed увидит `ref_mkb10` и **не перезапишет** справочники.
+- seed заполнит только **пустые** `ref_*` (уже заполненные не трогает).
 
 3. Если схема уже полная и совпадает с миграциями — безопаснее один раз пометить head **без** повторного DDL:
 
@@ -102,6 +102,6 @@ docker compose exec -T db pg_dump -U vismuth vismuth > backup_$(date +%F).sql
 docker compose run --rm backend alembic stamp head
 ```
 
-(либо после успешного первого `upgrade` проверить `alembic current` → `0007_clinics`).
+(либо после успешного первого `upgrade` проверить `alembic current` → `0009_questionnaires`).
 
-4. Таблица вроде старого `ref_mis` на сервере **не удаляются** автоматически — просто больше не создаются новыми миграциями.
+4. Таблицы вроде старого `ref_mis` на сервере **не удаляются** автоматически — просто больше не создаются новыми миграциями.

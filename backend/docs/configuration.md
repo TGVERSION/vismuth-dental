@@ -35,7 +35,7 @@ URL собираются так:
 | `SMTP_USER` / `SMTP_PASSWORD` / `SMTP_FROM` | `""` | Учётные данные отправителя |
 | `REGISTRATION_CODE_EXPIRE_MINUTES` | `15` | TTL кода из письма |
 | `REGISTRATION_CODE_MAX_ATTEMPTS` | `5` | Лимит попыток ввода кода |
-| `FRONTEND_PUBLIC_URL` | `http://localhost:3000` | База ссылок invite (`/invite/accept?token=…`) |
+| `FRONTEND_PUBLIC_URL` | `http://localhost:3000` | База ссылок invite и публичных анкет (`/invite/accept?token=…`, `/q/{slug}`) |
 | `INVITE_EXPIRE_DAYS` | `7` | TTL приглашения в клинику |
 
 Без рабочего SMTP регистрация не сможет отправить код.  

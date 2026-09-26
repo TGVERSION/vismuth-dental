@@ -51,6 +51,7 @@ Logout **не** инвалидирует JWT на сервере — клиен�
 Только `super_admin`:
 
 - `/super-admin/clinics*` (CRUD клиник, invitations)
+- `/super-admin/statistics` (сводная статистика анкет)
 
 ## Группы контрактов
 
@@ -61,6 +62,7 @@ Logout **не** инвалидирует JWT на сервере — клиен�
 | [service-user.md](service-user.md) | `/service_user*` |
 | [user-settings.md](user-settings.md) | `/user-settings` |
 | [super-admin-clinics.md](super-admin-clinics.md) | `/super-admin/clinics` |
+| [questionnaire-statistics.md](questionnaire-statistics.md) | `/clinics/{id}/statistics`, `/super-admin/statistics` |
 | [clinic-admin.md](clinic-admin.md) | `/clinics/{id}`, `/specializations`, `/me/clinic` |
 | [questionnaire-public.md](questionnaire-public.md) | `/public/*` анкета пациента |
 | [questionnaires.md](questionnaires.md) | `/questionnaires` раздел врача |

@@ -15,10 +15,12 @@ Helpers: [`backend/app/services/clinic_access.py`](../../backend/app/services/cl
 
 `doctors_count` = активные membership с `is_doctor` + незавершённые (не used, не deleted, не expired) invitations с `is_doctor`.
 
-В list/get также: `free_codes_ratio` (доля свободных 4-значных кодов за 30 дней), `clinic_daily_limit_exceeded` (предупреждения супер-админу).
+В list/get также: `free_codes_ratio` (доля свободных 4-значных кодов за 30 дней), `clinic_daily_limit_exceeded` (предупреждения супер-админу), `questionnaires_completed_month` (заполненные анкеты за текущий календарный месяц UTC).
 
 Поля `logo_url` / `photo_url` — URL под будущее S3; загрузки файлов нет.
 Invite врача: `specialization_ids` обязательны при `is_doctor=true` (см. [clinic-admin.md](clinic-admin.md)).
+
+Статистика по всем клиникам: [questionnaire-statistics.md](questionnaire-statistics.md) (`GET /super-admin/statistics`).
 
 ## POST /super-admin/clinics
 

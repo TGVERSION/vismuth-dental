@@ -46,6 +46,7 @@ class ClinicRead(BaseModel):
     doctors_count: int = 0
     free_codes_ratio: Optional[float] = None
     clinic_daily_limit_exceeded: bool = False
+    questionnaires_completed_month: int = 0
     created_at: datetime
     updated_at: Optional[datetime]
     deleted_at: Optional[datetime]

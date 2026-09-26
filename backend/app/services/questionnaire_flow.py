@@ -458,7 +458,8 @@ async def apply_answer(
     appointment_date: date | None = None,
     appointment_time: str | None = None,
     none_answer: bool = False,
-) -> tuple[StepDescriptor, bool]:
+) -> tuple[StepDescriptor, bool, bool]:
+    should_process = False
     if questionnaire.status != "in_progress":
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -688,6 +689,8 @@ async def apply_answer(
         questionnaire.status = "completed"
         questionnaire.completed_at = now
         questionnaire.current_step = "code"
+        questionnaire.processing_status = "pending"
+        should_process = True
 
     else:
         raise HTTPException(
@@ -699,4 +702,4 @@ async def apply_answer(
     await db.refresh(questionnaire)
     descriptor = await build_step_descriptor(db, questionnaire)
     descriptor.truncated = truncated
-    return descriptor, truncated
+    return descriptor, truncated, should_process

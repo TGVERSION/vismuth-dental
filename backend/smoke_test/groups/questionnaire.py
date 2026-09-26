@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import time
 import uuid
 from datetime import date, timedelta
 
@@ -404,8 +405,32 @@ def run_public_repeat_flow(ctx: SmokeContext) -> None:
     )
 
 
-def run_doctor_list_and_protocol(ctx: SmokeContext) -> None:
-    """Список анкет врача + создание протокола (JWT врача + structure)."""
+def _poll_processing_status(
+    ctx: SmokeContext,
+    qid: str,
+    *,
+    max_seconds: int = 20,
+) -> dict:
+    """Ждёт processing_status in {done, failed}. Возвращает detail JSON."""
+    detail_body: dict = {}
+    for i in range(max_seconds):
+        detail = ctx.get(f"/questionnaires/{qid}")
+        assert detail.ok, detail.text
+        detail_body = detail.json()
+        status_val = detail_body.get("processing_status")
+        if status_val in {"done", "failed"}:
+            print(f"  processing_status={status_val} after {i}s")
+            return detail_body
+        time.sleep(1)
+    print(
+        f"  processing_status still "
+        f"{detail_body.get('processing_status')!r} after {max_seconds}s",
+    )
+    return detail_body
+
+
+def run_doctor_list(ctx: SmokeContext) -> None:
+    """GET /questionnaires?code=… + карточка; poll processing после выдачи кода."""
     if not ctx.require_token():
         return
     code = ctx.ids.get("questionnaire_code")
@@ -421,13 +446,71 @@ def run_doctor_list_and_protocol(ctx: SmokeContext) -> None:
     items = listing.json()
     assert any(i["id"] == qid for i in items), items
 
-    print("=== GET /questionnaires/{id} ===")
+    print("=== GET /questionnaires/{id} (processing_status) ===")
     detail = ctx.get(f"/questionnaires/{qid}")
     print_response(detail)
     assert detail.ok, detail.text
     d = detail.json()
     assert d["code"] == code
     assert isinstance(d.get("answers"), list)
+    status_val = d.get("processing_status")
+    assert status_val in {None, "pending", "done", "failed"}, status_val
+
+    if status_val == "pending":
+        d = _poll_processing_status(ctx, qid)
+        status_val = d.get("processing_status")
+
+    if status_val == "done":
+        structured = d.get("structured")
+        assert isinstance(structured, dict), structured
+        for key in (
+            "complaints",
+            "medications",
+            "allergy_anamnesis",
+            "life_anamnesis",
+        ):
+            assert key in structured, (key, structured)
+        assert isinstance(d.get("gaps"), list), d.get("gaps")
+        print(f"  structured keys ok, gaps={d.get('gaps')!r}")
+
+
+def run_process(ctx: SmokeContext) -> None:
+    """POST /questionnaires/{id}/process → 202, затем poll до done/failed."""
+    if not ctx.require_token():
+        return
+    qid = ctx.ids.get("questionnaire_id")
+    if not qid:
+        print("Сначала run_public_primary_flow (нужен questionnaire_id)")
+        return
+
+    print("=== POST /questionnaires/{id}/process ===")
+    process_resp = ctx.post(f"/questionnaires/{qid}/process")
+    print_response(process_resp)
+    assert process_resp.status_code == 202, process_resp.text
+    process_body = process_resp.json()
+    assert process_body.get("processing_status") == "pending"
+    assert process_body.get("id") == qid
+
+    d = _poll_processing_status(ctx, qid)
+    status_val = d.get("processing_status")
+    assert status_val in {"done", "failed", "pending"}, status_val
+    if status_val == "done":
+        structured = d.get("structured")
+        assert isinstance(structured, dict), structured
+        print(f"  process done, structured={structured!r}")
+    elif status_val == "failed":
+        print("  process failed (ML timeout/error) — answers must remain")
+        assert isinstance(d.get("answers"), list) and d["answers"]
+
+
+def run_create_protocol(ctx: SmokeContext) -> None:
+    """POST /questionnaires/{id}/protocol + повтор → 409."""
+    if not ctx.require_token():
+        return
+    qid = ctx.ids.get("questionnaire_id")
+    if not qid:
+        print("Сначала run_public_primary_flow (нужен questionnaire_id)")
+        return
 
     structure_id = ctx.ids.get("protocol_structure_id")
     if not structure_id:
@@ -436,6 +519,13 @@ def run_doctor_list_and_protocol(ctx: SmokeContext) -> None:
             "сначала protocol_structures.run_create; создание протокола пропущено"
         )
         return
+
+    # дать фону закончить, если process ещё pending
+    detail = ctx.get(f"/questionnaires/{qid}")
+    assert detail.ok, detail.text
+    d = detail.json()
+    if d.get("processing_status") == "pending":
+        d = _poll_processing_status(ctx, qid)
 
     print("=== POST /questionnaires/{id}/protocol ===")
     proto = ctx.post(
@@ -449,6 +539,25 @@ def run_doctor_list_and_protocol(ctx: SmokeContext) -> None:
     assert body.get("source_questionnaire_id") == qid
     ctx.ids["protocol_from_questionnaire_id"] = body["id"]
 
+    if d.get("processing_status") == "done" and isinstance(d.get("structured"), dict):
+        structured = d["structured"]
+        field_values = body.get("field_values") or {}
+        # если ML/chronic дали текст — хотя бы одно поле протокола непустое
+        has_content = any(
+            (structured.get(k) or "").strip()
+            for k in (
+                "complaints",
+                "medications",
+                "allergy_anamnesis",
+                "life_anamnesis",
+            )
+        )
+        if has_content:
+            assert any(
+                (v or "").strip() for v in field_values.values()
+            ), field_values
+            print(f"  protocol fields filled from structured ({len(field_values)} fields)")
+
     print("=== POST /questionnaires/{id}/protocol (повтор → 409) ===")
     again = ctx.post(
         f"/questionnaires/{qid}/protocol",
@@ -456,6 +565,13 @@ def run_doctor_list_and_protocol(ctx: SmokeContext) -> None:
     )
     print_response(again)
     assert again.status_code == 409, again.text
+
+
+def run_doctor_list_and_protocol(ctx: SmokeContext) -> None:
+    """Список + process + протокол (для run_all и одной ячейки notebook)."""
+    run_doctor_list(ctx)
+    run_process(ctx)
+    run_create_protocol(ctx)
 
 
 def run_device_limit(ctx: SmokeContext) -> None:
@@ -489,7 +605,7 @@ def run_device_limit(ctx: SmokeContext) -> None:
 
 
 def run_all(ctx: SmokeContext, *, include_device_limit: bool = False) -> None:
-    """Полный suite: setup → links → primary → doctor list/protocol → repeat.
+    """Полный suite: setup → links → primary → list/process/protocol → repeat.
 
     Ожидает JWT super_admin на входе. В конце ctx — врач.
     Для протокола нужен protocol_structure_id (секция structures раньше).

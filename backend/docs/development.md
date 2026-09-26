@@ -80,4 +80,4 @@ docker compose up -d --build backend backend-worker questionnaire-worker
 3. Задать `email`/`password` в ячейке setup → `login(ctx)` (или register → код с почты → confirm).
 4. Гонять секции по одной (`groups.protocols.run_all(ctx)`, `questionnaire.run_setup_clinic_with_doctor(ctx)`, …) или подряд сверху вниз.
 
-Секция анкеты (в notebook) требует JWT `super_admin` на setup; дальше ctx переключается на врача. Для `POST /questionnaires/{id}/protocol` заранее создайте structure (`protocol_structures.run_crud(..., delete=False)`).
+Секция анкеты (в notebook) требует JWT `super_admin` на setup; дальше ctx переключается на врача. После primary: `run_doctor_list` (poll `processing_status`) → `run_process` → `run_create_protocol`. Для протокола заранее создайте structure (`protocol_structures.run_crud(..., delete=False)`).

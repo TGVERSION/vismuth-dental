@@ -7,10 +7,12 @@
 
 ## Ограничения ML (без правок ml-service)
 
-Backend вызывает `POST {ML_SERVICE_URL}/collect_form`.  
+Backend вызывает `POST {ML_SERVICE_URL}/collect_form` на шаге уточнений.  
 Сигнала «вопросов достаточно» нет: лимит 6/2, skip, эвристика (нет `?`, пусто, >300 символов, повтор).  
 Специализация и тип приёма — первая служебная реплика в `messages`.  
 Timeout: `QUESTIONNAIRE_AI_TIMEOUT` (~20s). Ошибка → `ai_unavailable`, фиксированные вопросы продолжаются.
+
+После выдачи кода (`patient_info` → `completed`) backend ставит `processing_status=pending` и в BackgroundTasks вызывает `POST {ML_SERVICE_URL}/summarize_form` (ответ пациенту ML не ждёт).
 
 ## GET /public/links/{slug}
 
@@ -39,6 +41,6 @@ Timeout: `QUESTIONNAIRE_AI_TIMEOUT` (~20s). Ошибка → `ai_unavailable`, �
 
 - **Auth:** `X-Questionnaire-Token`
 - **Назначение:** ответ на текущий шаг → следующий дескриптор
-- **Поведение:** валидация `step_key`; обрезка текста до 1000 (`truncated: true`); на `ai_clarify` — вызов `/collect_form`; финал `patient_info` выдаёт 4-значный код (уникален в клинике 30 дней)
+- **Поведение:** валидация `step_key`; обрезка текста до 1000 (`truncated: true`); на `ai_clarify` — вызов `/collect_form`; финал `patient_info` выдаёт 4-значный код (уникален в клинике 30 дней) и запускает фоновую обработку (`summarize_form`)
 - **Тело:** `step_key` + `value` / `choice` / `skip` / `none` / поля выбора врача / patient_info
 - **Код:** `post_answer`

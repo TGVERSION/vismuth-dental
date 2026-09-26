@@ -37,7 +37,7 @@ Source of truth схемы: [`alembic/versions/`](../alembic/versions/). Ста�
 | `clinic_invitation` | Invite: email, ФИО (+ middle_name), photo_url, token_hash, роли, expires_at, used_at; soft-delete = revoke |
 | `ref_specialization` | Справочник специализаций (seed CSV) |
 | `clinic_membership_specialization` / `clinic_invitation_specialization` | M2M специализаций |
-| `questionnaire` | Анкета пациента: шаги, `code` CHAR(4), AI-флаги, patient info, protocol_id |
+| `questionnaire` | Анкета пациента: шаги, `code` CHAR(4), AI-флаги, patient info, protocol_id, `structured`/`gaps`/`processing_status` (после `/summarize_form`) |
 | `questionnaire_answer` | Реплики/ответы (CASCADE) |
 
 Статус подписки **не хранится** — вычисляется по `access_until` + `access_type`.

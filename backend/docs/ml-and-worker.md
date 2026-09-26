@@ -47,6 +47,10 @@ Worker использует тот же image и entrypoint (migrate + seed), з
 1. `in_progress` без активности > `QUESTIONNAIRE_ABANDON_HOURS` → `abandoned`, ответы и ПДн стираются, `current_step` остаётся;
 2. `completed` старше `QUESTIONNAIRE_RETENTION_DAYS` → удаление (у протокола остаётся `created_from_questionnaire`).
 
+## Обработка анкеты после кода
+
+Не через worker: сразу после выдачи кода (и по `POST /questionnaires/{id}/process`) FastAPI `BackgroundTasks` вызывает [`questionnaire_process.run_questionnaire_processing`](../app/services/questionnaire_process.py) → `POST {ML_SERVICE_URL}/summarize_form`. Результат в `questionnaire.structured` / `gaps` / `processing_status` (`pending` → `done` | `failed`). Timeout — тот же `QUESTIONNAIRE_AI_TIMEOUT`.
+
 ## Что не хранится в worker
 
 Бизнес-факт выбора пациента в UI протоколов — только через HTTP API, не через stream.

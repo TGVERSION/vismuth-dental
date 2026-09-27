@@ -27,7 +27,7 @@ export const EditTemplatePopup: React.FC<EditTemplateProps> = ({
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex justify-end">
-          <button onClick={onClose} className="cursor-pointer">
+          <button type="button" onClick={onClose} className="cursor-pointer">
             <Image alt="close" src="/close.svg" width={25} height={25} />
           </button>
         </div>
@@ -38,12 +38,14 @@ export const EditTemplatePopup: React.FC<EditTemplateProps> = ({
 
         <div className="flex flex-col gap-3 px-5 pb-5">
           <button
+            type="button"
             onClick={onEdit}
             className="cursor-pointer h-12 w-full py-3 bg-[#5D8CF1] hover:bg-[#769CEF] text-white rounded-xl transition-colors"
           >
             Да, открыть редактор
           </button>
           <button
+            type="button"
             onClick={onClose}
             className="cursor-pointer h-12 w-full py-3 bg-[#DCE7FF] hover:bg-[#F0F5FF] rounded-xl transition-colors"
           >

@@ -1,9 +1,7 @@
 export const FeedbackPopover = ({
   color,
-  analysis,
   suggestedText,
   onApply,
-  onClose,
   style,
 }: {
   color: 'green' | 'yellow' | 'red';
@@ -61,6 +59,7 @@ export const FeedbackPopover = ({
               </p>
               <div className="flex justify-start">
                 <button
+                  type="button"
                   onClick={onApply}
                   className="px-3 py-1.25 bg-[#5D8CF1] hover:bg-[#769CEF] cursor-pointer text-white text-sm rounded-xl transition-all"
                 >

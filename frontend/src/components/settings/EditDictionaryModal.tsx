@@ -48,11 +48,14 @@ export function EditDictionaryModal({
   onClose,
   dictionary,
 }: EditDictionaryModalProps) {
-  const [data, setData] = useState<ModalData>(() => makeInitialData(dictionary));
+  const [data, setData] = useState<ModalData>(() =>
+    makeInitialData(dictionary),
+  );
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const keysRef = useRef<string[]>([]);
 
-  const isLoading = !!dictionary && data.totalCount === null && !data.isLoadError;
+  const isLoading =
+    !!dictionary && data.totalCount === null && !data.isLoadError;
 
   useEffect(() => {
     if (!dictionary) return;
@@ -72,8 +75,14 @@ export function EditDictionaryModal({
 
         const keys = Object.keys(res.items[0]).filter((k) => k !== 'row_id');
         keysRef.current = keys;
-        const columns = keys.map((key, idx) => ({ id: `col-${idx}`, name: key, width: 150 }));
-        const rows = res.items.map((item) => keys.map((key) => String(item[key] ?? '')));
+        const columns = keys.map((key, idx) => ({
+          id: `col-${idx}`,
+          name: key,
+          width: 150,
+        }));
+        const rows = res.items.map((item) =>
+          keys.map((key) => String(item[key] ?? '')),
+        );
 
         setData((prev) => ({
           ...prev,
@@ -87,7 +96,9 @@ export function EditDictionaryModal({
         if (!cancelled) setData((prev) => ({ ...prev, isLoadError: true }));
       });
 
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [dictionary]);
 
   const loadMore = useCallback(() => {
@@ -96,28 +107,33 @@ export function EditDictionaryModal({
 
     setIsLoadingMore(true);
     mainApi.dictionary
-      .getDictionaryRef(dictionary.name, { limit: LIMIT, offset: data.loadedCount })
+      .getDictionaryRef(dictionary.name, {
+        limit: LIMIT,
+        offset: data.loadedCount,
+      })
       .then((res) => {
         const keys = keysRef.current;
         if (!keys.length) return;
-        const newRows = res.items.map((item) => keys.map((key) => String(item[key] ?? '')));
+        const newRows = res.items.map((item) =>
+          keys.map((key) => String(item[key] ?? '')),
+        );
         setData((prev) => ({
           ...prev,
           rows: [...prev.rows, ...newRows],
           loadedCount: prev.loadedCount + newRows.length,
         }));
       })
-      .catch(() => {/* ignore */})
+      .catch(() => {
+        /* ignore */
+      })
       .finally(() => setIsLoadingMore(false));
   }, [dictionary, isLoadingMore, isLoading, data.totalCount, data.loadedCount]);
 
   const handleSave = useCallback(() => {
-    console.log('Сохранённые данные:', {
-      dictionaryName: data.dictionaryName,
-      columns: data.columns,
-      rows: data.rows,
-    });
-  }, [data]);
+    // Сохранение словаря не реализовано: обработчик только печатал
+    // содержимое в консоль. Вывод убран (данные справочника не должны
+    // попадать в консоль браузера), поведение прежнее — см. M15 в код-ревью.
+  }, []);
 
   const handleOverlayClick = useCallback(
     (e: React.MouseEvent<HTMLDivElement>) => {
@@ -128,7 +144,8 @@ export function EditDictionaryModal({
 
   if (!isOpen) return null;
 
-  const hasMore = data.totalCount !== null && data.loadedCount < data.totalCount;
+  const hasMore =
+    data.totalCount !== null && data.loadedCount < data.totalCount;
 
   return (
     <div
@@ -137,7 +154,7 @@ export function EditDictionaryModal({
     >
       <div className="bg-white rounded-xl w-160 h-auto pr-5 pt-5 pb-10 pl-10 shadow-[0_8px_32px_rgba(0,0,0,0.12)] animate-fade-in">
         <div className="flex justify-end">
-          <button onClick={onClose} className="cursor-pointer">
+          <button type="button" onClick={onClose} className="cursor-pointer">
             <Image alt="close" src="/close.svg" width={20} height={20} />
           </button>
         </div>
@@ -152,39 +169,57 @@ export function EditDictionaryModal({
           <input
             type="text"
             value={data.dictionaryName}
-            onChange={(e) => setData((prev) => ({ ...prev, dictionaryName: e.target.value }))}
+            onChange={(e) =>
+              setData((prev) => ({ ...prev, dictionaryName: e.target.value }))
+            }
             placeholder="Введите название"
             readOnly={!!dictionary}
             className={`w-full border-0 h-10 rounded-lg px-3 py-2 text-sm text-[#202020] bg-[#F2F4F7] outline-none mb-4 transition-colors ${
-              dictionary ? 'opacity-60 cursor-default' : 'focus:border-[#5D8CF1]'
+              dictionary
+                ? 'opacity-60 cursor-default'
+                : 'focus:border-[#5D8CF1]'
             }`}
           />
 
           {data.totalCount !== null && (
             <p className="text-xs text-[#6C757D] mb-3">
               Показано{' '}
-              <span className="text-[#5D8CF1]">{data.loadedCount.toLocaleString('ru-RU')}</span>
-              {' '}из{' '}
-              <span className="text-[#5D8CF1]">{data.totalCount.toLocaleString('ru-RU')}</span>
+              <span className="text-[#5D8CF1]">
+                {data.loadedCount.toLocaleString('ru-RU')}
+              </span>{' '}
+              из{' '}
+              <span className="text-[#5D8CF1]">
+                {data.totalCount.toLocaleString('ru-RU')}
+              </span>
             </p>
           )}
 
           <div className="mb-5">
             {isLoading ? (
-              <p className="text-sm text-gray-400 py-8 text-center">Загрузка данных...</p>
+              <p className="text-sm text-gray-400 py-8 text-center">
+                Загрузка данных...
+              </p>
             ) : data.isLoadError ? (
-              <p className="text-sm text-red-400 py-8 text-center">Не удалось загрузить данные</p>
+              <p className="text-sm text-red-400 py-8 text-center">
+                Не удалось загрузить данные
+              </p>
             ) : (
               <>
                 <TableEditor
                   columns={data.columns}
                   rows={data.rows}
-                  onColumnsChange={(columns) => setData((prev) => ({ ...prev, columns }))}
-                  onRowsChange={(rows) => setData((prev) => ({ ...prev, rows }))}
+                  onColumnsChange={(columns) =>
+                    setData((prev) => ({ ...prev, columns }))
+                  }
+                  onRowsChange={(rows) =>
+                    setData((prev) => ({ ...prev, rows }))
+                  }
                   onScrollNearBottom={hasMore ? loadMore : undefined}
                 />
                 {isLoadingMore && (
-                  <p className="text-xs text-gray-400 text-center mt-2">Загрузка...</p>
+                  <p className="text-xs text-gray-400 text-center mt-2">
+                    Загрузка...
+                  </p>
                 )}
               </>
             )}

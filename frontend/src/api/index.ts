@@ -7,7 +7,10 @@ export interface ApiError {
 
 // Enums
 export type AutocompleteType = 'ml_autocomplete' | 'dict_autocomplete';
-export type MkbEventType = 'form_click' | 'autocomplete_shown' | 'suggestion_selected';
+export type MkbEventType =
+  | 'form_click'
+  | 'autocomplete_shown'
+  | 'suggestion_selected';
 export type ProtocolPrivacy = 'general' | 'personal';
 
 //ML
@@ -546,4 +549,51 @@ export interface RefSearchResponse {
   limit: number;
   offset: number;
   items: Record<string, unknown>[];
+}
+
+// Запись приёма и распознавание речи.
+//
+// Контракт согласуется со смежной командой: на момент написания эндпоинтов
+// `/speech/*` в backend нет. Описание — в docs/plans/voice-input-2026-08-29,
+// раздел «Внешние зависимости».
+
+export interface SpeechSessionCreate {
+  protocol_id: string;
+}
+
+export interface SpeechSession {
+  session_id: string;
+}
+
+/** Ответ на загрузку фрагмента. Тело не используется, важен сам код 202. */
+export interface SpeechChunkAccepted {
+  session_id: string;
+  seq: number;
+}
+
+export type SpeechSessionStatusValue =
+  | 'recording'
+  | 'processing'
+  | 'done'
+  | 'error';
+
+export interface SpeechSessionStatus {
+  session_id: string;
+  protocol_id: string;
+  status: SpeechSessionStatusValue;
+  /**
+   * Начало записи, ISO 8601. Нужно, чтобы различать записи одного протокола:
+   * приём могли записать несколько раз.
+   */
+  created_at: string | null;
+  /** Доля выполненной обработки от 0 до 1, если сервер её сообщает. */
+  progress: number | null;
+  /** Полная расшифровка приёма. */
+  transcript: string | null;
+  /**
+   * Распределение текста по полям: ключ — UUID поля структуры протокола,
+   * тот же, которым фронтенд оперирует в `field_values`.
+   */
+  field_values: Record<string, string> | null;
+  error: string | null;
 }

@@ -17,6 +17,14 @@ import { useHelpersStore } from '@/store/helpersStore';
 import { RadioButton } from './RadioButton';
 import { Checkbox } from './Checkbox';
 import { CustomDropdown } from './CustomDropdown';
+import { isComplaintsField, isMainDiagnosisField } from '@/lib/protocol-fields';
+import { formatTextWithPlaceholders } from '@/lib/text';
+import {
+  formatMultiValue,
+  parseMultiValue,
+  toggleMultiValue,
+} from '@/lib/field-values';
+import { logError } from '@/lib/logger';
 
 export interface MlStatusPayload {
   field_name: string;
@@ -39,19 +47,6 @@ interface SectionInputProps {
   ) => void;
   fieldMeta?: StructureProtocolsFields;
 }
-
-const getPlainTextFromHTML = (html: string): string => {
-  const div = document.createElement('div');
-  div.innerHTML = html;
-  return div.textContent || div.innerText || '';
-};
-
-const formatTextWithPlaceholders = (text: string): string => {
-  return text.replace(
-    /\[([^\]]+)\]/g,
-    '<span class="placeholder-bracket" data-placeholder="$1">[$1]</span>',
-  );
-};
 
 function parseFieldOptions(jsonb: unknown): string[] {
   if (!jsonb || typeof jsonb !== 'object') return [];
@@ -85,6 +80,7 @@ export const SectionInput: React.FC<SectionInputProps> = ({
   const [mlAnalysis, setMlAnalysis] =
     useState<mlFullnessComplaintResponse | null>(null);
   const [isFetchingAnalysis, setIsFetchingAnalysis] = useState(false);
+  const [analysisFailed, setAnalysisFailed] = useState(false);
   const [animate, setAnimate] = useState(false);
   const prevActive = useRef(isActive);
   const { fullnessEnabled, autocompleteProvider } = useHelpersStore();
@@ -97,8 +93,13 @@ export const SectionInput: React.FC<SectionInputProps> = ({
 
   const isAutocompleteEnabled = autocompleteProvider !== 'off' && isTextField;
   const isFullnessEnabled = fullnessEnabled;
-  const isComplaintField =
-    sectionKey === 'complaints' || sectionKey === 'chief_complaint';
+  const isComplaintField = isComplaintsField(sectionKey, label);
+  // Типы полей, которые умеют подтягивать варианты из справочника.
+  const usesDictionary =
+    fieldType === 'select' ||
+    fieldType === 'multiselect' ||
+    fieldType === 'radio' ||
+    fieldType === 'checkbox';
 
   useEffect(() => {
     if (isActive && prevActive.current === false) {
@@ -129,7 +130,7 @@ export const SectionInput: React.FC<SectionInputProps> = ({
   // Fetch dictionary options for select/multiselect fields with a dictionary reference
   useEffect(() => {
     const dict = fieldMeta?.dictionary;
-    if (!dict || (fieldType !== 'select' && fieldType !== 'multiselect')) return;
+    if (!dict || !usesDictionary) return;
 
     let cancelled = false;
     setIsDictLoading(true);
@@ -177,9 +178,18 @@ export const SectionInput: React.FC<SectionInputProps> = ({
     return () => {
       cancelled = true;
     };
-  }, [fieldMeta?.dictionary, fieldType]);
+  }, [fieldMeta?.dictionary, usesDictionary]);
 
   const initialTextRef = useRef<string>('');
+  const blurTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(
+    () => () => {
+      if (blurTimerRef.current) clearTimeout(blurTimerRef.current);
+    },
+    [],
+  );
+
   const handleMouseEnter = useCallback(() => {
     clearTimeout(timerRef.current);
     if (indicatorRef.current) {
@@ -223,11 +233,17 @@ export const SectionInput: React.FC<SectionInputProps> = ({
     if (isComplaintField) {
       onAnalysisChange?.(mlAnalysis);
     }
+    // onAnalysisChange приходит из родителя инлайновой стрелкой: добавление
+    // в зависимости вызвало бы цикл. Стабилизация колбэка — задача F-3.3.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mlAnalysis, isComplaintField]);
 
+  // Синхронизация contentEditable со значением. Раньше пустое значение
+  // дополнительно чистилось прямо в теле рендера — побочный эффект вне
+  // useEffect несовместим с конкурентным рендерингом React.
   useEffect(() => {
     if (!editableRef.current || !isTextField) return;
-    const currentText = getPlainTextFromHTML(editableRef.current.innerHTML);
+    const currentText = editableRef.current.textContent ?? '';
     if (currentText !== value) {
       if (value === '') {
         editableRef.current.innerHTML = '';
@@ -258,16 +274,9 @@ export const SectionInput: React.FC<SectionInputProps> = ({
         type_autocomplete: autocompleteProvider,
       })
       .catch((error) => {
-        console.error('Failed to send ML status:', error);
+        logError('Failed to send ML status:', error);
       });
   };
-
-  if (isTextField && value === '') {
-    if (editableRef.current) {
-      editableRef.current.innerHTML = '';
-      editableRef.current.textContent = '';
-    }
-  }
 
   const handleSuggestionClick = (suggestion: string) => {
     if (editableRef.current) {
@@ -291,39 +300,57 @@ export const SectionInput: React.FC<SectionInputProps> = ({
     }
   };
 
-  const fetchMlAnalysis = useCallback(
-    async (textToAnalyze: string) => {
-      if (isFetchingAnalysis) return;
-      if (!textToAnalyze || textToAnalyze.trim().length < 5) return;
+  // Текст, ожидающий проверки, и признак идущего цикла. Раньше правка,
+  // сделанная пока летел предыдущий запрос, молча отбрасывалась, и врач видел
+  // оценку устаревшего текста.
+  const pendingAnalysisTextRef = useRef<string | null>(null);
+  const analysisRunningRef = useRef(false);
 
-      setIsFetchingAnalysis(true);
-      setMlAnalysis(null);
-      const dataToSend: mlFullnessComplaintPayload = {
-        example_prompt: textToAnalyze,
-      };
-      try {
+  const fetchMlAnalysis = useCallback(async (textToAnalyze: string) => {
+    // Порог по длине убран намеренно: короткая запись — это ровно тот случай,
+    // когда проверка полноты должна сказать «мало деталей».
+    if (!textToAnalyze.trim()) return;
+
+    pendingAnalysisTextRef.current = textToAnalyze;
+    if (analysisRunningRef.current) return;
+
+    analysisRunningRef.current = true;
+    setIsFetchingAnalysis(true);
+    setMlAnalysis(null);
+    setAnalysisFailed(false);
+
+    try {
+      while (pendingAnalysisTextRef.current !== null) {
+        const text = pendingAnalysisTextRef.current;
+        pendingAnalysisTextRef.current = null;
+
+        const payload: mlFullnessComplaintPayload = { example_prompt: text };
         const response =
-          await mainApi.ml_handlers.mlFullnessComplaint(dataToSend);
-        setMlAnalysis(response);
-      } catch (error) {
-        console.error('Failed to fetch analysis:', error);
-      } finally {
-        setIsFetchingAnalysis(false);
+          await mainApi.ml_handlers.mlFullnessComplaint(payload);
+
+        // Пока запрос летел, врач мог дописать ещё — тогда результат уже
+        // неактуален, и цикл пойдёт на следующий круг.
+        if (pendingAnalysisTextRef.current === null) {
+          setMlAnalysis(response);
+        }
       }
-    },
-    [isFetchingAnalysis],
-  );
+    } catch (error) {
+      logError('Не удалось проверить полноту жалоб:', error);
+      setAnalysisFailed(true);
+    } finally {
+      pendingAnalysisTextRef.current = null;
+      analysisRunningRef.current = false;
+      setIsFetchingAnalysis(false);
+    }
+  }, []);
 
   const handleApplySuggestion = () => {
     if (mlAnalysis?.suggested_text) {
       onValueChange(id, mlAnalysis.suggested_text);
       setMlAnalysis(null);
+      setAnalysisFailed(false);
       initialTextRef.current = '';
     }
-  };
-
-  const closeMlFeedback = () => {
-    setMlAnalysis(null);
   };
 
   const handlePlaceholderClick = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -359,7 +386,7 @@ export const SectionInput: React.FC<SectionInputProps> = ({
     selection?.removeAllRanges();
     selection?.addRange(range);
 
-    const plainText = getPlainTextFromHTML(editable.innerHTML);
+    const plainText = editable.textContent ?? '';
     onValueChange(id, plainText);
     initialTextRef.current = '';
   };
@@ -368,7 +395,7 @@ export const SectionInput: React.FC<SectionInputProps> = ({
     if (isComposing) return;
     if (!editableRef.current) return;
 
-    const plainText = getPlainTextFromHTML(editableRef.current.innerHTML);
+    const plainText = editableRef.current.textContent ?? '';
     onValueChange(id, plainText);
 
     if (isAutocompleteEnabled) {
@@ -377,6 +404,7 @@ export const SectionInput: React.FC<SectionInputProps> = ({
       setHighlightedIndex(-1);
     }
     setMlAnalysis(null);
+    setAnalysisFailed(false);
   };
 
   const handleFocus = () => {
@@ -384,13 +412,18 @@ export const SectionInput: React.FC<SectionInputProps> = ({
       enableAutocomplete();
       setIsOpen(true);
     }
-    closeMlFeedback();
+    // Результат проверки при входе в поле не гасим: раньше он пропадал
+    // навсегда, если врач заглянул в поле и вышел, ничего не изменив.
+    // Устаревшую оценку снимает handleInput — при первой же правке текста.
     initialTextRef.current = value;
   };
 
   const handleBlur = () => {
     enableAutocomplete();
-    setTimeout(() => setIsOpen(false), 200);
+    // Задержка нужна, чтобы клик по подсказке успел отработать до закрытия
+    // списка. Таймер держим в ref и снимаем при размонтировании.
+    if (blurTimerRef.current) clearTimeout(blurTimerRef.current);
+    blurTimerRef.current = setTimeout(() => setIsOpen(false), 200);
 
     if (
       isComplaintField &&
@@ -409,7 +442,9 @@ export const SectionInput: React.FC<SectionInputProps> = ({
     handleKeyDown(e, handleSuggestionSelect);
   };
 
-  if (sectionKey === 'main_diagnosis') {
+  // Подпись учитываем только для текстовых полей: поле «Диагноз» типа
+  // «выбор из списка» не должно подменяться вводом с подбором МКБ-10.
+  if (isMainDiagnosisField(sectionKey, isTextField ? label : undefined)) {
     return (
       <DiagnosisInput
         id={id}
@@ -462,6 +497,14 @@ export const SectionInput: React.FC<SectionInputProps> = ({
                   }`}
                 />
               </div>
+            ) : analysisFailed ? (
+              // Раньше сбой запроса уходил только в консоль, и врач считал,
+              // что проверка прошла и замечаний нет.
+              <div
+                className="w-4 h-4 rounded-full border-2 border-dashed border-[#909090]"
+                title="Проверка полноты не выполнена. Попробуйте выйти из поля ещё раз."
+                aria-label="Проверка полноты не выполнена"
+              />
             ) : (
               <div className="w-3 h-3" />
             )}
@@ -507,18 +550,11 @@ export const SectionInput: React.FC<SectionInputProps> = ({
     const opts = fieldMeta?.dictionary
       ? dictOptions
       : parseFieldOptions(fieldMeta?.default_value_jsonb);
-    const selectedValues = value
-      ? value
-          .split(',')
-          .map((s) => s.trim())
-          .filter(Boolean)
-      : [];
+    const selectedValues = parseMultiValue(value, opts);
 
     const handleMultiselectChange = (opt: string, checked: boolean) => {
-      const next = checked
-        ? [...selectedValues, opt]
-        : selectedValues.filter((v) => v !== opt);
-      onValueChange(id, next.join(', '));
+      const next = toggleMultiValue(selectedValues, opt, checked, opts);
+      onValueChange(id, formatMultiValue(next));
     };
 
     return (
@@ -546,24 +582,30 @@ export const SectionInput: React.FC<SectionInputProps> = ({
 
   // radio field
   if (fieldType === 'radio') {
-    const opts = parseFieldOptions(fieldMeta?.default_value_jsonb);
+    const opts = fieldMeta?.dictionary
+      ? dictOptions
+      : parseFieldOptions(fieldMeta?.default_value_jsonb);
 
     return (
       <div ref={containerRef} className="flex flex-col mb-6 relative">
         {renderLabel()}
         <div className="ml-7 mt-2 flex flex-col gap-2">
-          {opts.map((opt) => (
-            <RadioButton
-              key={opt}
-              id={`radio-${id}-${opt}`}
-              name={`radio-${sectionKey}-${id}`}
-              value={opt}
-              checked={value === opt}
-              onChange={() => onValueChange(id, opt)}
-            >
-              <span className="text-[16px] text-[#202020]">{opt}</span>
-            </RadioButton>
-          ))}
+          {isDictLoading ? (
+            <div className="text-sm text-gray-400">Загрузка...</div>
+          ) : (
+            opts.map((opt) => (
+              <RadioButton
+                key={opt}
+                id={`radio-${id}-${opt}`}
+                name={`radio-${sectionKey}-${id}`}
+                value={opt}
+                checked={value === opt}
+                onChange={() => onValueChange(id, opt)}
+              >
+                <span className="text-[16px] text-[#202020]">{opt}</span>
+              </RadioButton>
+            ))
+          )}
         </div>
       </div>
     );
@@ -571,35 +613,34 @@ export const SectionInput: React.FC<SectionInputProps> = ({
 
   // checkbox field — multiple choices, stored as comma-separated
   if (fieldType === 'checkbox') {
-    const opts = parseFieldOptions(fieldMeta?.default_value_jsonb);
-    const selectedValues = value
-      ? value
-          .split(',')
-          .map((s) => s.trim())
-          .filter(Boolean)
-      : [];
+    const opts = fieldMeta?.dictionary
+      ? dictOptions
+      : parseFieldOptions(fieldMeta?.default_value_jsonb);
+    const selectedValues = parseMultiValue(value, opts);
 
     const handleCheckboxChange = (opt: string, checked: boolean) => {
-      const next = checked
-        ? [...selectedValues, opt]
-        : selectedValues.filter((v) => v !== opt);
-      onValueChange(id, next.join(', '));
+      const next = toggleMultiValue(selectedValues, opt, checked, opts);
+      onValueChange(id, formatMultiValue(next));
     };
 
     return (
       <div ref={containerRef} className="flex flex-col mb-6 relative">
         {renderLabel()}
         <div className="ml-7 mt-2 flex flex-col gap-2">
-          {opts.map((opt) => (
-            <Checkbox
-              key={opt}
-              id={`checkbox-${id}-${opt}`}
-              checked={selectedValues.includes(opt)}
-              onChange={(checked) => handleCheckboxChange(opt, checked)}
-            >
-              <span className="text-[16px] text-[#202020]">{opt}</span>
-            </Checkbox>
-          ))}
+          {isDictLoading ? (
+            <div className="text-sm text-gray-400">Загрузка...</div>
+          ) : (
+            opts.map((opt) => (
+              <Checkbox
+                key={opt}
+                id={`checkbox-${id}-${opt}`}
+                checked={selectedValues.includes(opt)}
+                onChange={(checked) => handleCheckboxChange(opt, checked)}
+              >
+                <span className="text-[16px] text-[#202020]">{opt}</span>
+              </Checkbox>
+            ))
+          )}
         </div>
       </div>
     );

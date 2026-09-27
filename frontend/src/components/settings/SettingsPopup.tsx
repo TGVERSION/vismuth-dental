@@ -128,6 +128,7 @@ export const SettingsPopup: React.FC<SettingsPopupProps> = ({
                           </div>
 
                           <button
+                            type="button"
                             onClick={() => setDeleteConfirmUserId(user.id)}
                             className="cursor-pointer"
                             aria-label="Удалить пользователя"
@@ -218,6 +219,7 @@ export const SettingsPopup: React.FC<SettingsPopupProps> = ({
             <div className="flex-1">
               <div className="flex justify-end">
                 <button
+                  type="button"
                   onClick={closeModal}
                   className="mt-2.5 mr-2.5 cursor-pointer transition-colors"
                 >

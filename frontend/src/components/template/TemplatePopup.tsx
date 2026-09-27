@@ -1,13 +1,12 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { mainApi } from '@/api';
 import type {
   ListsGroupsResponse,
   ListsTemplatesResponse,
   TemplatesResponse,
   FieldsTypeFull,
-  ProtocolStructures,
 } from '@/api';
 import Image from 'next/image';
 import { CreateGroupPopup } from '../groups/CreateGroupPopup';
@@ -22,6 +21,7 @@ import { EditTemplatePopup } from './EditTemplatePopup';
 import { EditTemplateContentPopup } from './EditTemplateContentPopup';
 import { useProtocolStructuresStore } from '@/store/protocolStructuresStore';
 import type { ProtocolStructuresFields } from '@/api';
+import { logError } from '@/lib/logger';
 
 export interface TemplateGroupUI extends ListsGroupsResponse {
   name: string;
@@ -46,7 +46,7 @@ export const TemplatePopup: React.FC<TemplatePopupProps> = ({
   onClose,
   onApply,
 }) => {
-  const { structures, fetchStructureById } = useProtocolStructuresStore();
+  const { fetchStructureById } = useProtocolStructuresStore();
 
   const [groups, setGroups] = useState<TemplateGroupUI[]>([]);
   const [templates, setTemplates] = useState<TemplateUI[]>([]);
@@ -57,7 +57,6 @@ export const TemplatePopup: React.FC<TemplatePopupProps> = ({
   const [loading, setLoading] = useState(false);
   const [templateLoading, setTemplateLoading] = useState(false);
   const [openRename, setOpenRename] = useState(false);
-  const [openEdit, setOpenEdit] = useState(false);
   const [openMove, setOpenMove] = useState(false);
 
   const [openGroupRename, setOpenGroupRename] = useState(false);
@@ -65,7 +64,9 @@ export const TemplatePopup: React.FC<TemplatePopupProps> = ({
     null,
   );
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
-  const [hoveredItem, setHoveredItem] = useState<string | null>(null);
+  // Подсветка наведения решена через CSS; состояние осталось от прежней
+  // реализации и ничего не читает.
+  const [_hoveredItem, setHoveredItem] = useState<string | null>(null);
   const [showCreateMenu, setShowCreateMenu] = useState(false);
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
@@ -117,7 +118,7 @@ export const TemplatePopup: React.FC<TemplatePopupProps> = ({
           }));
         }
       } catch (error) {
-        console.error('Ошибка загрузки структуры:', error);
+        logError('Ошибка загрузки структуры:', error);
       }
     };
 
@@ -142,7 +143,7 @@ export const TemplatePopup: React.FC<TemplatePopupProps> = ({
         const transformed = transformTemplate(fullTemplate);
         setSelectedTemplate(transformed);
       } catch (error) {
-        console.error('Ошибка загрузки шаблона:', error);
+        logError('Ошибка загрузки шаблона:', error);
       }
     }
     setShowEditContentPopup(false);
@@ -181,6 +182,7 @@ export const TemplatePopup: React.FC<TemplatePopupProps> = ({
 
   useEffect(() => {
     if (isOpen) loadTemplates();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen]);
 
   const transformGroup = (group: ListsGroupsResponse): TemplateGroupUI => ({
@@ -195,7 +197,8 @@ export const TemplatePopup: React.FC<TemplatePopupProps> = ({
     const content: Record<string, string> = {};
     if ('fields' in template && Array.isArray(template.fields)) {
       template.fields.forEach((field: FieldsTypeFull) => {
-        if (field.field_name) content[field.field_name] = field.field_value ?? '';
+        if (field.field_name)
+          content[field.field_name] = field.field_value ?? '';
       });
     }
     return {
@@ -232,7 +235,7 @@ export const TemplatePopup: React.FC<TemplatePopupProps> = ({
       setGroups(groupsWithTemplates);
       setTemplates(ungroupedTemplates);
     } catch (error) {
-      console.error('Ошибка загрузки шаблонов:', error);
+      logError('Ошибка загрузки шаблонов:', error);
       toast.error('Не удалось загрузить шаблоны', {
         position: 'top-right',
         autoClose: 4000,
@@ -249,7 +252,7 @@ export const TemplatePopup: React.FC<TemplatePopupProps> = ({
       const transformed = transformTemplate(fullTemplate);
       setSelectedTemplate(transformed);
     } catch (error) {
-      console.error('Ошибка загрузки шаблона:', error);
+      logError('Ошибка загрузки шаблона:', error);
       toast.error('Не удалось загрузить шаблон', {
         position: 'top-right',
         autoClose: 4000,
@@ -308,7 +311,7 @@ export const TemplatePopup: React.FC<TemplatePopupProps> = ({
         setSelectedTemplate(null);
       }
     } catch (error) {
-      console.error('Ошибка удаления шаблона:', error);
+      logError('Ошибка удаления шаблона:', error);
       toast.error('Не удалось удалить шаблон', {
         position: 'top-right',
         autoClose: 4000,
@@ -345,7 +348,7 @@ export const TemplatePopup: React.FC<TemplatePopupProps> = ({
       }
       loadTemplates();
     } catch (error) {
-      console.error('Ошибка удаления группы:', error);
+      logError('Ошибка удаления группы:', error);
       toast.error('Не удалось удалить группу', {
         position: 'top-right',
         autoClose: 4000,
@@ -412,7 +415,7 @@ export const TemplatePopup: React.FC<TemplatePopupProps> = ({
         }
       }
     } catch (error) {
-      console.error('Ошибка переименования:', error);
+      logError('Ошибка переименования:', error);
       toast.error('Не удалось переименовать', {
         position: 'top-right',
         autoClose: 4000,
@@ -470,6 +473,7 @@ export const TemplatePopup: React.FC<TemplatePopupProps> = ({
               {!loading && (
                 <div className="relative w-102.2">
                   <button
+                    type="button"
                     data-create-menu-trigger
                     onClick={() => setShowCreateMenu(!showCreateMenu)}
                     className="px-4 py-2 text-sm h-12 cursor-pointer bg-[#5D8CF1] text-white rounded-lg hover:bg-[#769CEF] transition-colors w-full"
@@ -479,6 +483,7 @@ export const TemplatePopup: React.FC<TemplatePopupProps> = ({
                   {showCreateMenu && (
                     <div className="absolute p-1.5 right-0 top-full bg-white border-0 rounded-lg shadow-lg py-2 mt-1.25 z-10 template-create-menu w-full">
                       <button
+                        type="button"
                         onClick={(e) => {
                           e.stopPropagation();
                           e.preventDefault();
@@ -489,6 +494,7 @@ export const TemplatePopup: React.FC<TemplatePopupProps> = ({
                         Создать шаблон
                       </button>
                       <button
+                        type="button"
                         onClick={(e) => {
                           e.stopPropagation();
                           e.preventDefault();
@@ -543,6 +549,7 @@ export const TemplatePopup: React.FC<TemplatePopupProps> = ({
                               {expandedGroups.has(group.id) && (
                                 <div className="flex items-center gap-3.75 relative group">
                                   <button
+                                    type="button"
                                     onClick={(e) => {
                                       e.stopPropagation();
                                       requestDeleteGroup(
@@ -563,6 +570,7 @@ export const TemplatePopup: React.FC<TemplatePopupProps> = ({
                                     />
                                   </button>
                                   <button
+                                    type="button"
                                     onClick={(e) => {
                                       e.stopPropagation();
                                       setOpenGroupRename(true);
@@ -580,6 +588,7 @@ export const TemplatePopup: React.FC<TemplatePopupProps> = ({
                                     />
                                   </button>
                                   <button
+                                    type="button"
                                     onClick={(e) => {
                                       e.stopPropagation();
                                       handleCreate('template', group.id);
@@ -699,6 +708,7 @@ export const TemplatePopup: React.FC<TemplatePopupProps> = ({
             <div className="flex-1">
               <div className="flex justify-end">
                 <button
+                  type="button"
                   onClick={closeModal}
                   className="mt-2.5 mr-2.5 cursor-pointer transition-colors"
                 >
@@ -734,6 +744,7 @@ export const TemplatePopup: React.FC<TemplatePopupProps> = ({
                     <div className="flex items-center w-91.25 justify-end gap-2">
                       <div className="relative h-8.5">
                         <button
+                          type="button"
                           className="h-8.5 cursor-pointer"
                           title="Другие действия"
                           onClick={(e) => {
@@ -756,9 +767,9 @@ export const TemplatePopup: React.FC<TemplatePopupProps> = ({
                         {openMenuId === selectedTemplate.id && (
                           <div className="absolute right-0 top-full mt-1 bg-white border-0 rounded-lg shadow-lg p-1.5 z-10 template-actions-menu min-w-37.5">
                             <button
+                              type="button"
                               onClick={(e) => {
                                 e.stopPropagation();
-                                setOpenEdit(true);
                                 handleEditConfirm();
                                 setOpenMenuId(null);
                               }}
@@ -767,6 +778,7 @@ export const TemplatePopup: React.FC<TemplatePopupProps> = ({
                               Редактировать
                             </button>
                             <button
+                              type="button"
                               onClick={(e) => {
                                 e.stopPropagation();
                                 setOpenRename(true);
@@ -777,6 +789,7 @@ export const TemplatePopup: React.FC<TemplatePopupProps> = ({
                               Переименовать
                             </button>
                             <button
+                              type="button"
                               onClick={(e) => {
                                 e.stopPropagation();
                                 setOpenMove(true);
@@ -787,6 +800,7 @@ export const TemplatePopup: React.FC<TemplatePopupProps> = ({
                               Переместить
                             </button>
                             <button
+                              type="button"
                               onClick={(e) => {
                                 e.stopPropagation();
                                 requestDeleteTemplate(
@@ -802,6 +816,7 @@ export const TemplatePopup: React.FC<TemplatePopupProps> = ({
                         )}
                       </div>
                       <button
+                        type="button"
                         onClick={handleApply}
                         className="px-6 py-2 h-9.5 bg-[#5D8CF1] cursor-pointer text-white rounded-lg hover:bg-[#769CEF] transition-colors"
                       >

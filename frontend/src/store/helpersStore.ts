@@ -1,9 +1,21 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { create } from 'zustand';
+import { createJSONStorage, persist } from 'zustand/middleware';
 import { mainApi, UserSettings, UserSettingsPost } from '@/api';
+import { ApiError } from '@/api/base-client';
 import { toast } from 'react-toastify';
+import { logError } from '@/lib/logger';
 
-export type HelperId = 'mkb' | 'autocomplete' | 'fullness';
+export type HelperId = 'mkb' | 'autocomplete' | 'fullness' | 'voice';
+
+/**
+ * Помощники, состояние которых хранится на сервере в `user_settings`.
+ *
+ * Запись приёма в этот список не входит: в схеме `user_settings` поля под неё
+ * нет, и завести его может только backend. До тех пор её флаг живёт локально
+ * (см. `persist` ниже) — настройка не переезжает на другое устройство.
+ */
+const SERVER_BACKED_HELPERS: HelperId[] = ['mkb', 'autocomplete', 'fullness'];
 export type AutocompleteProvider =
   | 'ml_autocomplete'
   | 'dict_autocomplete'
@@ -30,6 +42,7 @@ interface HelpersStoreState {
 
   mkbEnabled: boolean;
   fullnessEnabled: boolean;
+  voiceEnabled: boolean;
   autocompleteProvider: AutocompleteProvider;
 
   setUserSettings: (settings: UserSettings) => void;
@@ -78,6 +91,20 @@ export const HELPERS_META: Record<HelperId, HelperMeta> = {
     whenNotToRely:
       'Помощник не знает конкретного пациента и его истории. Он предлагает статистически частые продолжения из обучающих данных, а не клинически точные фразы для данного случая. Всегда проверяйте подсказку перед принятием',
   },
+  voice: {
+    id: 'voice',
+    name: 'Запись приёма',
+    icon: '/voice.svg',
+    provider: 'VISMUTH',
+    url: 'https://vismuth.ru',
+    likes: 0,
+    howItWorks:
+      'Нажмите «Записать приём» в верхней панели протокола и ведите консультацию как обычно. После остановки записи речь распознаётся, а текст раскладывается по разделам протокола. Поля, заполненные из записи, подсвечены — каждое можно вернуть к прежнему виду',
+    whenUseful:
+      'Когда хочется вести приём, а не печатать: помощник заполняет разделы по ходу разговора и оставляет вам правку и проверку',
+    whenNotToRely:
+      'Помощник может распределить текст не по тем разделам, особенно если разговор шёл не по порядку. Проверяйте каждое заполненное поле: то, что вы написали руками, не заменяется — текст из записи дописывается ниже. Записывать приём можно только с согласия пациента',
+  },
   fullness: {
     id: 'fullness',
     name: 'Проверка полноты полей',
@@ -102,175 +129,246 @@ export const AUTOCOMPLETE_OPTIONS: {
   { value: 'ml_autocomplete', label: 'Нейросеть' },
 ];
 
-export const useHelpersStore = create<HelpersStoreState>((set, get) => ({
-  userSettings: null,
-  isLoading: false,
-  isApplying: false,
-  selectedHelper: 'mkb',
-  mkbEnabled: false,
-  fullnessEnabled: false,
-  autocompleteProvider: 'dict_autocomplete',
+export const useHelpersStore = create<HelpersStoreState>()(
+  persist(
+    (set, get) => ({
+      userSettings: null,
+      isLoading: false,
+      isApplying: false,
+      selectedHelper: 'mkb',
+      mkbEnabled: false,
+      fullnessEnabled: false,
+      // Запись приёма по умолчанию выключена: функция появляется в интерфейсе
+      // только после того, как врач включил её в помощниках.
+      voiceEnabled: false,
+      autocompleteProvider: 'dict_autocomplete',
 
-  setUserSettings: (settings) => set({ userSettings: settings }),
-  setLoading: (isLoading) => set({ isLoading }),
-  setApplying: (isApplying) => set({ isApplying }),
-  setSelectedHelper: (selectedHelper) => set({ selectedHelper }),
-  setAutocompleteProvider: (autocompleteProvider) =>
-    set({ autocompleteProvider }),
+      setUserSettings: (settings) => set({ userSettings: settings }),
+      setLoading: (isLoading) => set({ isLoading }),
+      setApplying: (isApplying) => set({ isApplying }),
+      setSelectedHelper: (selectedHelper) => set({ selectedHelper }),
+      setAutocompleteProvider: (autocompleteProvider) =>
+        set({ autocompleteProvider }),
 
-  fetchUserSettings: async (userId: string) => {
-    try {
-      set({ isLoading: true });
-      const settings = await mainApi.userSettings.getUserSettings(userId);
-      set({ userSettings: settings });
+      fetchUserSettings: async (userId: string) => {
+        try {
+          set({ isLoading: true });
+          const settings = await mainApi.userSettings.getUserSettings(userId);
+          set({ userSettings: settings });
 
-      set({
-        mkbEnabled: settings.mkb_code === true,
-        fullnessEnabled: settings.fullness_complaints === true,
-        autocompleteProvider:
-          settings.autocomplete === 'off'
-            ? 'off'
-            : ((settings.autocomplete ?? 'dict_autocomplete') as AutocompleteProvider),
-      });
-    } catch (error) {
-      console.error('Failed to fetch user settings:', error);
-      toast.error('Не удалось загрузить настройки помощников');
-      throw error;
-    } finally {
-      set({ isLoading: false });
-    }
-  },
-
-  updateHelperSetting: async (
-    userId: string,
-    helperId: HelperId,
-    params?: { autocompleteProvider?: AutocompleteProvider },
-  ) => {
-    const {
-      userSettings,
-      autocompleteProvider,
-      mkbEnabled,
-      fullnessEnabled,
-      isHelperActive,
-    } = get();
-
-    if (!userSettings) {
-      return { success: false, message: 'Настройки не загружены' };
-    }
-
-    try {
-      set({ isApplying: true });
-
-      const wasActive = isHelperActive(helperId);
-      const settingsPayload: Partial<Record<keyof UserSettingsPost, any>> = {};
-      let toastMessage = '';
-      const optimisticUpdate: Partial<HelpersStoreState> = {};
-
-      switch (helperId) {
-        case 'mkb': {
-          const newValue = !mkbEnabled;
-          settingsPayload.mkb_code = newValue;
-          optimisticUpdate.mkbEnabled = newValue;
-          toastMessage = newValue
-            ? 'Помощник активирован'
-            : 'Помощник выключен';
-          break;
-        }
-        case 'autocomplete': {
-          const currentProvider =
-            params?.autocompleteProvider ?? autocompleteProvider;
-          const wasActive = userSettings.autocomplete !== 'off';
-
-          const initialProvider = userSettings.autocomplete;
-          const isTypeChanged =
-            wasActive && initialProvider !== currentProvider;
-
-          if (!wasActive) {
-            settingsPayload.autocomplete = currentProvider;
-            toastMessage = 'Помощник активирован';
-          } else if (isTypeChanged) {
-            settingsPayload.autocomplete = currentProvider;
-            toastMessage = 'Тип помощника успешно изменён';
-          } else {
-            settingsPayload.autocomplete = 'off';
-            toastMessage = 'Помощник выключен';
+          set({
+            mkbEnabled: settings.mkb_code === true,
+            fullnessEnabled: settings.fullness_complaints === true,
+            autocompleteProvider:
+              settings.autocomplete === 'off'
+                ? 'off'
+                : ((settings.autocomplete ??
+                    'dict_autocomplete') as AutocompleteProvider),
+          });
+        } catch (error) {
+          // 404 — это не сбой, а первый вход: строки настроек у пользователя ещё
+          // нет. Заводим её со значениями по умолчанию, иначе экран настроек
+          // помощников остаётся нерабочим (updateHelperSetting требует userSettings).
+          if (error instanceof ApiError && error.status === 404) {
+            try {
+              const created = await mainApi.userSettings.postUserSettings(
+                userId,
+                {
+                  mkb_code: true,
+                  autocomplete: 'dict_autocomplete',
+                  fullness_complaints: true,
+                },
+              );
+              set({
+                userSettings: created,
+                mkbEnabled: created.mkb_code === true,
+                fullnessEnabled: created.fullness_complaints === true,
+                autocompleteProvider:
+                  created.autocomplete === 'off'
+                    ? 'off'
+                    : ((created.autocomplete ??
+                        'dict_autocomplete') as AutocompleteProvider),
+              });
+              return;
+            } catch (createError) {
+              logError('Failed to create default user settings:', createError);
+              // Не показываем тост: помощники просто останутся выключенными.
+              return;
+            }
           }
 
-          optimisticUpdate.autocompleteProvider =
-            settingsPayload.autocomplete as AutocompleteProvider;
-          break;
+          logError('Failed to fetch user settings:', error);
+          toast.error('Не удалось загрузить настройки помощников');
+          throw error;
+        } finally {
+          set({ isLoading: false });
         }
-        case 'fullness': {
-          const newValue = !fullnessEnabled;
-          settingsPayload.fullness_complaints = newValue;
-          optimisticUpdate.fullnessEnabled = newValue;
-          toastMessage = newValue
-            ? 'Помощник активирован'
-            : 'Помощник выключен';
-          break;
+      },
+
+      updateHelperSetting: async (
+        userId: string,
+        helperId: HelperId,
+        params?: { autocompleteProvider?: AutocompleteProvider },
+      ) => {
+        const {
+          userSettings,
+          autocompleteProvider,
+          mkbEnabled,
+          fullnessEnabled,
+          voiceEnabled,
+        } = get();
+
+        if (!userSettings) {
+          return { success: false, message: 'Настройки не загружены' };
         }
-      }
 
-      set(optimisticUpdate);
+        try {
+          set({ isApplying: true });
 
-      await mainApi.userSettings.patchUserSettings(
-        userId,
-        settingsPayload as UserSettingsPost,
-      );
+          const settingsPayload: Partial<Record<keyof UserSettingsPost, any>> =
+            {};
+          let toastMessage = '';
+          const optimisticUpdate: Partial<HelpersStoreState> = {};
 
-      if (toastMessage) {
-        toast.success(toastMessage);
-      }
+          switch (helperId) {
+            case 'mkb': {
+              const newValue = !mkbEnabled;
+              settingsPayload.mkb_code = newValue;
+              optimisticUpdate.mkbEnabled = newValue;
+              toastMessage = newValue
+                ? 'Помощник активирован'
+                : 'Помощник выключен';
+              break;
+            }
+            case 'autocomplete': {
+              const currentProvider =
+                params?.autocompleteProvider ?? autocompleteProvider;
+              const wasActive = userSettings.autocomplete !== 'off';
 
-      set((state) => {
-        if (!state.userSettings) return state;
-        const updated: UserSettings = { ...state.userSettings };
+              const initialProvider = userSettings.autocomplete;
+              const isTypeChanged =
+                wasActive && initialProvider !== currentProvider;
 
-        if (helperId === 'mkb' && settingsPayload.mkb_code !== undefined) {
-          updated.mkb_code = settingsPayload.mkb_code;
+              if (!wasActive) {
+                settingsPayload.autocomplete = currentProvider;
+                toastMessage = 'Помощник активирован';
+              } else if (isTypeChanged) {
+                settingsPayload.autocomplete = currentProvider;
+                toastMessage = 'Тип помощника успешно изменён';
+              } else {
+                settingsPayload.autocomplete = 'off';
+                toastMessage = 'Помощник выключен';
+              }
+
+              optimisticUpdate.autocompleteProvider =
+                settingsPayload.autocomplete as AutocompleteProvider;
+              break;
+            }
+            case 'fullness': {
+              const newValue = !fullnessEnabled;
+              settingsPayload.fullness_complaints = newValue;
+              optimisticUpdate.fullnessEnabled = newValue;
+              toastMessage = newValue
+                ? 'Помощник активирован'
+                : 'Помощник выключен';
+              break;
+            }
+            case 'voice': {
+              // Сервер про этот помощник не знает: поля в `user_settings` нет.
+              // Меняем только локальное состояние, запроса не будет.
+              const newValue = !voiceEnabled;
+              optimisticUpdate.voiceEnabled = newValue;
+              toastMessage = newValue
+                ? 'Помощник активирован'
+                : 'Помощник выключен';
+              break;
+            }
+          }
+
+          set(optimisticUpdate);
+
+          // Помощника, которого нет в схеме `user_settings`, сохранять
+          // серверу нечем: запрос с пустым телом только зря переписал бы
+          // `updated_at`.
+          if (SERVER_BACKED_HELPERS.includes(helperId)) {
+            await mainApi.userSettings.patchUserSettings(
+              userId,
+              settingsPayload as UserSettingsPost,
+            );
+          }
+
+          if (toastMessage) {
+            toast.success(toastMessage);
+          }
+
+          set((state) => {
+            if (!state.userSettings) return state;
+            const updated: UserSettings = { ...state.userSettings };
+
+            if (helperId === 'mkb' && settingsPayload.mkb_code !== undefined) {
+              updated.mkb_code = settingsPayload.mkb_code;
+            }
+            if (helperId === 'autocomplete' && settingsPayload.autocomplete) {
+              updated.autocomplete = settingsPayload.autocomplete;
+            }
+            if (
+              helperId === 'fullness' &&
+              settingsPayload.fullness_complaints !== undefined
+            ) {
+              updated.fullness_complaints = settingsPayload.fullness_complaints;
+            }
+            updated.updated_at = new Date().toISOString();
+
+            return { userSettings: updated };
+          });
+
+          return { success: true, message: toastMessage };
+        } catch (error) {
+          logError('Failed to update helper setting:', error);
+          toast.error('Не удалось применить настройки');
+
+          await get().fetchUserSettings(userId);
+
+          return { success: false, message: 'Ошибка при обновлении' };
+        } finally {
+          set({ isApplying: false });
         }
-        if (helperId === 'autocomplete' && settingsPayload.autocomplete) {
-          updated.autocomplete = settingsPayload.autocomplete;
+      },
+
+      isHelperActive: (helperId: HelperId) => {
+        const {
+          userSettings,
+          mkbEnabled,
+          fullnessEnabled,
+          voiceEnabled,
+          autocompleteProvider,
+        } = get();
+
+        switch (helperId) {
+          case 'mkb':
+            return mkbEnabled ?? userSettings?.mkb_code === true;
+          case 'autocomplete':
+            return autocompleteProvider !== 'off';
+          case 'fullness':
+            return (
+              fullnessEnabled ?? userSettings?.fullness_complaints === true
+            );
+          case 'voice':
+            return voiceEnabled;
+          default:
+            return false;
         }
-        if (
-          helperId === 'fullness' &&
-          settingsPayload.fullness_complaints !== undefined
-        ) {
-          updated.fullness_complaints = settingsPayload.fullness_complaints;
-        }
-        updated.updated_at = new Date().toISOString();
+      },
 
-        return { userSettings: updated };
-      });
-
-      return { success: true, message: toastMessage };
-    } catch (error) {
-      console.error('Failed to update helper setting:', error);
-      toast.error('Не удалось применить настройки');
-
-      await get().fetchUserSettings(userId);
-
-      return { success: false, message: 'Ошибка при обновлении' };
-    } finally {
-      set({ isApplying: false });
-    }
-  },
-
-  isHelperActive: (helperId: HelperId) => {
-    const { userSettings, mkbEnabled, fullnessEnabled, autocompleteProvider } =
-      get();
-
-    switch (helperId) {
-      case 'mkb':
-        return mkbEnabled ?? userSettings?.mkb_code === true;
-      case 'autocomplete':
-        return autocompleteProvider !== 'off';
-      case 'fullness':
-        return fullnessEnabled ?? userSettings?.fullness_complaints === true;
-      default:
-        return false;
-    }
-  },
-
-  getHelperMeta: (helperId: HelperId) => HELPERS_META[helperId],
-}));
+      getHelperMeta: (helperId: HelperId) => HELPERS_META[helperId],
+    }),
+    {
+      // Сохраняется только флаг записи приёма: у остальных помощников
+      // источник истины — `user_settings` на сервере, и дублировать их
+      // локально нельзя, иначе состояния разойдутся.
+      name: 'helpers-storage',
+      storage: createJSONStorage(() => localStorage),
+      partialize: (state) => ({ voiceEnabled: state.voiceEnabled }),
+    },
+  ),
+);

@@ -15,6 +15,7 @@ import { toast } from 'react-toastify';
 import { CreateGroupPopup } from '../groups/CreateGroupPopup';
 import { CustomDropdown, type DropdownOption } from '../CustomDropdown';
 import { useProtocolStructuresStore } from '@/store/protocolStructuresStore';
+import { logError } from '@/lib/logger';
 
 export interface TemplateUI extends Omit<TemplatesResponse, 'fields'> {
   name: string;
@@ -72,7 +73,7 @@ export const CreateTemplatePopup: React.FC<CreateTemplatePopupProps> = ({
   const [currentStructureFields, setCurrentStructureFields] = useState<
     StructureProtocolsFields[]
   >([]);
-  const [loadingStructureFields, setLoadingStructureFields] = useState(false);
+  const [_loadingStructureFields, setLoadingStructureFields] = useState(false);
 
   const [templateContent, setTemplateContent] = useState<
     Record<string, string>
@@ -99,7 +100,7 @@ export const CreateTemplatePopup: React.FC<CreateTemplatePopupProps> = ({
       const response = await mainApi.templateGroups.getGroups();
       setGroups((response || []).map((g) => ({ ...g, name: g.group_name })));
     } catch (error) {
-      console.error('Ошибка загрузки групп:', error);
+      logError('Ошибка загрузки групп:', error);
       toast.error('Не удалось загрузить группы');
     } finally {
       setLoading(false);
@@ -133,7 +134,7 @@ export const CreateTemplatePopup: React.FC<CreateTemplatePopupProps> = ({
           setTemplateContent(defaultContent);
         }
       } catch (error) {
-        console.error('Ошибка загрузки полей структуры:', error);
+        logError('Ошибка загрузки полей структуры:', error);
         toast.error('Не удалось загрузить поля структуры');
         setCurrentStructureFields([]);
       } finally {
@@ -256,7 +257,7 @@ export const CreateTemplatePopup: React.FC<CreateTemplatePopupProps> = ({
       onSuccess(newTemplate);
       handleClose();
     } catch (error) {
-      console.error('Ошибка создания шаблона:', error);
+      logError('Ошибка создания шаблона:', error);
       toast.error('Не удалось создать шаблон');
     } finally {
       setSaving(false);
@@ -308,6 +309,7 @@ export const CreateTemplatePopup: React.FC<CreateTemplatePopupProps> = ({
         >
           <div className="flex justify-end">
             <button
+              type="button"
               onClick={step === 1 ? handleClose : () => setStep(1)}
               className="cursor-pointer"
             >
@@ -436,6 +438,7 @@ export const CreateTemplatePopup: React.FC<CreateTemplatePopupProps> = ({
                 </div>
                 <div className="flex">
                   <button
+                    type="button"
                     onClick={() => setShowCreateGroupPopup(true)}
                     className="mt-3 mx-auto text-[16px] text-[#5D8CF1] cursor-pointer text-center hover:text-[#769CEF] transition-colors"
                   >
@@ -446,6 +449,7 @@ export const CreateTemplatePopup: React.FC<CreateTemplatePopupProps> = ({
 
               <div className="flex flex-col gap-3 px-5 pb-5">
                 <button
+                  type="button"
                   onClick={handleNext}
                   disabled={isFromPage ? saving : loading}
                   className="h-12 bg-[#5D8CF1] text-white cursor-pointer rounded-[15px] hover:bg-[#769CEF] transition-colors disabled:opacity-50"
@@ -453,6 +457,7 @@ export const CreateTemplatePopup: React.FC<CreateTemplatePopupProps> = ({
                   {isFromPage ? 'Сохранить' : 'Далее'}
                 </button>
                 <button
+                  type="button"
                   onClick={handleClose}
                   disabled={loading}
                   className="h-12 rounded-[15px] hover:bg-[#F0F5FF] text-[#202020] cursor-pointer bg-[#DCE7FF] transition-colors disabled:opacity-50"
@@ -476,7 +481,7 @@ export const CreateTemplatePopup: React.FC<CreateTemplatePopupProps> = ({
                   }}
                   placeholder="Выберите структуру"
                   disabled={structuresLoading || structureOptions.length === 0}
-                  renderOption={(option, isSelected) => (
+                  renderOption={(option, _isSelected) => (
                     <>
                       <span className="text-sm text-[#202020] flex-1">
                         {option.label}
@@ -534,6 +539,7 @@ export const CreateTemplatePopup: React.FC<CreateTemplatePopupProps> = ({
               {currentProtocolStructure && (
                 <div className="flex flex-col gap-3 sticky -bottom-10 bg-white pt-4">
                   <button
+                    type="button"
                     onClick={handleSave}
                     disabled={
                       saving ||
@@ -545,6 +551,7 @@ export const CreateTemplatePopup: React.FC<CreateTemplatePopupProps> = ({
                     {saving ? 'Сохранение...' : 'Сохранить'}
                   </button>
                   <button
+                    type="button"
                     onClick={() => setStep(1)}
                     disabled={saving}
                     className="h-12 rounded-[15px] hover:bg-[#F0F5FF] text-[#202020] cursor-pointer bg-[#DCE7FF] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"

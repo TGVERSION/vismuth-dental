@@ -208,3 +208,32 @@ div[contenteditable][data-placeholder]:empty:before {
   filter: invert(53%) sepia(19%) saturate(2179%) hue-rotate(189deg)
     brightness(99%) contrast(91%);
 }
+
+/* Печать протокола: на бумагу уходит только сам протокол.
+   Боковая панель со списком, тулбар и панель клинреков скрываются. */
+@media print {
+  body {
+    overflow: visible !important;
+    background: #fff !important;
+  }
+
+  header,
+  [data-print-hide] {
+    display: none !important;
+  }
+
+  [data-print-area] {
+    position: static !important;
+    margin: 0 !important;
+    height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
+    box-shadow: none !important;
+    border-radius: 0 !important;
+  }
+
+  [data-print-area] * {
+    overflow: visible !important;
+    max-height: none !important;
+  }
+}

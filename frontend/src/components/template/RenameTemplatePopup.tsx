@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { toast } from 'react-toastify';
 import Image from 'next/image';
+import { logError } from '@/lib/logger';
 
 interface RenameTemplateProps {
   isOpen: boolean;
@@ -39,7 +40,7 @@ export const RenameTemplate: React.FC<RenameTemplateProps> = ({
       });
       onClose();
     } catch (error) {
-      console.error('Ошибка переименования шаблона:', error);
+      logError('Ошибка переименования шаблона:', error);
       toast.error('Не удалось переименовать шаблон', {
         position: 'top-right',
         autoClose: 4000,
@@ -65,7 +66,11 @@ export const RenameTemplate: React.FC<RenameTemplateProps> = ({
       >
         {/* Кнопка закрытия */}
         <div className="flex justify-end">
-          <button onClick={handleClose} className="cursor-pointer">
+          <button
+            type="button"
+            onClick={handleClose}
+            className="cursor-pointer"
+          >
             <Image alt="close" src="/close.svg" width={25} height={25} />
           </button>
         </div>
@@ -89,12 +94,14 @@ export const RenameTemplate: React.FC<RenameTemplateProps> = ({
 
         <div className="flex flex-col gap-3 px-5 pb-5 mt-7.5">
           <button
+            type="button"
             onClick={handleRename}
             className="cursor-pointer h-12 w-full py-3 bg-[#5D8CF1] hover:bg-[#769CEF] text-white rounded-xl transition-colors"
           >
             Сохранить
           </button>
           <button
+            type="button"
             onClick={handleClose}
             className="cursor-pointer h-12 w-full py-3 bg-[#DCE7FF] hover:bg-[#F0F5FF] rounded-xl transition-colors"
           >

@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
-import { CompletePayload, mainApi, mlApi } from '@/api';
+import { CompletePayload, mainApi } from '@/api';
+import { isAbortError } from '@/api/base-client';
 
 interface UseAutocompleteOptions {
   sectionKey: string;
@@ -27,6 +28,9 @@ export const useAutocomplete = (
 
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
+  // Номер запроса: ответ применяется, только если он относится к последнему
+  // отправленному. Одной отмены мало — ответ мог уже быть в пути.
+  const requestIdRef = useRef(0);
 
   useEffect(() => {
     if (debounceTimerRef.current) {
@@ -35,6 +39,7 @@ export const useAutocomplete = (
 
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
+      abortControllerRef.current = null;
     }
 
     if (!enabled || !query.trim()) {
@@ -44,7 +49,9 @@ export const useAutocomplete = (
     }
 
     debounceTimerRef.current = setTimeout(async () => {
-      abortControllerRef.current = new AbortController();
+      const controller = new AbortController();
+      abortControllerRef.current = controller;
+      const requestId = ++requestIdRef.current;
 
       try {
         setLoading(true);
@@ -58,14 +65,24 @@ export const useAutocomplete = (
             autocompleteType !== 'off' ? autocompleteType : undefined,
         };
 
-        const response = await mainApi.ml_handlers.mlAutocomplete(payload);
+        const response = await mainApi.ml_handlers.mlAutocomplete(payload, {
+          signal: controller.signal,
+        });
+
+        if (requestId !== requestIdRef.current) return;
         setSuggestions(response.suggestions || []);
       } catch (err: unknown) {
+        // Отмена — штатное завершение: врач продолжил печатать.
+        if (isAbortError(err)) return;
+        if (requestId !== requestIdRef.current) return;
+
         const errorMessage = err instanceof Error ? err.message : 'API Error';
         setError(errorMessage);
         setSuggestions([]);
       } finally {
-        setLoading(false);
+        if (requestId === requestIdRef.current) {
+          setLoading(false);
+        }
       }
     }, debounceMs);
 
@@ -77,9 +94,16 @@ export const useAutocomplete = (
         abortControllerRef.current.abort();
       }
     };
-  }, [query, sectionKey, debounceMs, maxSuggestions, enabled]);
+  }, [
+    query,
+    sectionKey,
+    debounceMs,
+    maxSuggestions,
+    enabled,
+    autocompleteType,
+  ]);
 
-  const handleSelect = useCallback((suggestion: string) => {
+  const handleSelect = useCallback((_suggestion: string) => {
     setIsOpen(false);
     setHighlightedIndex(-1);
   }, []);

@@ -93,6 +93,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                     )}
 
                     <button
+                      type="button"
                       onClick={handleLogout}
                       className="w-full cursor-pointer py-2.5 px-4 bg-[#FED7D7] hover:bg-[#FECACA] text-[#E53E3E] rounded-lg font-medium transition-colors text-sm"
                     >

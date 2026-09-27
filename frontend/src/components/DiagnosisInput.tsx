@@ -7,6 +7,8 @@ import { useMkb10Diagnoses } from '@/hooks/useMkb10Diagnoses';
 import { CandidatesItem, mainApi, Mkb10Item } from '@/api';
 import type { MkbEventType } from '@/api';
 import { useHelpersStore } from '@/store/helpersStore';
+import { ML_MAIN_DIAGNOSIS_FIELD_NAME } from '@/lib/protocol-fields';
+import { logError } from '@/lib/logger';
 
 interface DiagnosisInputProps {
   id: number;
@@ -25,21 +27,6 @@ const useDebounce = <T,>(value: T, delay: number): T => {
   }, [value, delay]);
 
   return debouncedValue;
-};
-
-const getPlainTextFromHTML = (html: string): string => {
-  const div = document.createElement('div');
-  div.innerHTML = html;
-  return div.textContent || div.innerText || '';
-};
-
-const setCursorToEnd = (element: HTMLElement) => {
-  const range = document.createRange();
-  const selection = window.getSelection();
-  range.selectNodeContents(element);
-  range.collapse(false);
-  selection?.removeAllRanges();
-  selection?.addRange(range);
 };
 
 export const DiagnosisInput: React.FC<DiagnosisInputProps> = ({
@@ -62,20 +49,31 @@ export const DiagnosisInput: React.FC<DiagnosisInputProps> = ({
   const containerRef = useRef<HTMLDivElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const resizeObserverRef = useRef<ResizeObserver | null>(null);
+  const blurTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Отложенный обработчик blur читает значение через ref: к моменту его
+  // срабатывания клик по варианту списка уже мог обновить value, а замыкание
+  // держало бы прежнее и откатывало только что выбранный диагноз.
+  const valueRef = useRef(value);
+
+  useEffect(() => {
+    valueRef.current = value;
+  }, [value]);
+
+  useEffect(
+    () => () => {
+      if (blurTimerRef.current) clearTimeout(blurTimerRef.current);
+    },
+    [],
+  );
 
   const [dropdownPos, setDropdownPos] = useState<{
     top: number;
     left: number;
   } | null>(null);
 
-  const isValidDiagnosisFormat = (text: string): boolean => {
-    if (!text) return false;
-    return /^[A-Z0-9]+\.?\d*\s*–\s+.+/.test(text.trim());
-  };
-
   useEffect(() => {
     if (!editableRef.current) return;
-    const currentText = getPlainTextFromHTML(editableRef.current.innerHTML);
+    const currentText = editableRef.current.textContent ?? '';
     if (currentText !== value) {
       editableRef.current.textContent = value;
     }
@@ -189,7 +187,7 @@ export const DiagnosisInput: React.FC<DiagnosisInputProps> = ({
 
       mainApi.ml_handlers
         .mlAutocompleteStatus({
-          field_name: 'main_diagnosis',
+          field_name: ML_MAIN_DIAGNOSIS_FIELD_NAME,
           description: value.length === 0 ? ' ' : value,
           selected_text: selectedText,
           n_candidates: countSugest,
@@ -197,9 +195,9 @@ export const DiagnosisInput: React.FC<DiagnosisInputProps> = ({
           type_autocomplete:
             autocompleteProvider !== 'off' ? autocompleteProvider : undefined,
         })
-        .catch((error) => console.error('Failed to send ML status:', error));
+        .catch((error) => logError('Failed to send ML status:', error));
     },
-    [value, isMkbHelperEnabled],
+    [value, isMkbHelperEnabled, autocompleteProvider],
   );
 
   const fetchAiCandidates = useCallback(
@@ -217,14 +215,14 @@ export const DiagnosisInput: React.FC<DiagnosisInputProps> = ({
       setAiLoading(true);
       try {
         const res = await mainApi.ml_handlers.mlMkbCode({
-          field_name: 'main_diagnosis',
+          field_name: ML_MAIN_DIAGNOSIS_FIELD_NAME,
           description: text,
           n_candidates: 3,
           use_llm: true,
         });
         setAiCandidates((res.candidates as unknown as CandidatesItem[]) || []);
       } catch (error) {
-        console.error('Failed to fetch AI candidates:', error);
+        logError('Failed to fetch AI candidates:', error);
         setAiCandidates([]);
       } finally {
         setAiLoading(false);
@@ -259,7 +257,7 @@ export const DiagnosisInput: React.FC<DiagnosisInputProps> = ({
   const handleInput = () => {
     if (!editableRef.current) return;
 
-    const plainText = getPlainTextFromHTML(editableRef.current.innerHTML);
+    const plainText = editableRef.current.textContent ?? '';
     setSearchValue(plainText);
 
     if (!isOpen) setIsOpen(true);
@@ -271,15 +269,37 @@ export const DiagnosisInput: React.FC<DiagnosisInputProps> = ({
     sendMlStatus('form_click');
   };
 
+  // Диагноз задаётся только выбором из справочника МКБ-10: набранный текст —
+  // это поисковый запрос, а не значение поля. Поэтому при уходе из поля текст,
+  // не соответствующий выбранному диагнозу, откатывается. Иначе врач видел бы
+  // на экране свой текст и надпись «Все изменения сохранены», хотя в протокол
+  // не попало ничего.
+  //
+  // Задержка нужна, чтобы клик по варианту в выпадающем списке успел
+  // отработать: к моменту таймера handleSelect уже проставил value.
   const handleBlur = () => {
-    setTimeout(() => setIsOpen(false), 200);
+    if (blurTimerRef.current) clearTimeout(blurTimerRef.current);
 
-    if (!editableRef.current) return;
-    const plainText = getPlainTextFromHTML(editableRef.current.innerHTML);
+    blurTimerRef.current = setTimeout(() => {
+      setIsOpen(false);
 
-    if (plainText.trim() === '') {
-      onValueChange(id, '');
-    }
+      const editable = editableRef.current;
+      if (!editable) return;
+
+      const current = valueRef.current;
+      const typed = (editable.textContent ?? '').trim();
+
+      if (typed === '') {
+        if (current !== '') onValueChange(id, '');
+        setSearchValue('');
+        return;
+      }
+
+      if (typed !== current.trim()) {
+        editable.textContent = current;
+        setSearchValue('');
+      }
+    }, 200);
   };
 
   useEffect(() => {
@@ -304,6 +324,10 @@ export const DiagnosisInput: React.FC<DiagnosisInputProps> = ({
     }
     setIsOpen(true);
   };
+
+  // Набран текст, но диагноз из справочника ещё не выбран.
+  const hasUnselectedText =
+    isOpen && searchValue.trim() !== '' && searchValue.trim() !== value.trim();
 
   const dropdownContent = (
     <div
@@ -432,6 +456,12 @@ export const DiagnosisInput: React.FC<DiagnosisInputProps> = ({
             role="textbox"
             aria-multiline="true"
           />
+
+          {hasUnselectedText && (
+            <p className="ml-7 mt-0.5 text-[13px] text-[#F29100]">
+              Диагноз не выбран — выберите вариант из списка
+            </p>
+          )}
 
           {isOpen &&
             dropdownPos &&

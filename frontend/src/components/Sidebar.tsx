@@ -19,12 +19,15 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onSectionClick,
   sectionStatus,
 }) => {
+  // Активный раздел проверяется первым: раньше обе последние ветки возвращали
+  // одинаковый класс, поэтому активный раздел ничем не отличался от прочих —
+  // подсветки в навигации не было вовсе.
   const getSectionColor = (section: Section) => {
+    if (section.id === activeSection) {
+      return 'text-[#5D8CF1] font-medium hover:text-[#769CEF]';
+    }
     if (section.hasContent) {
       return 'text-[#202020] hover:text-[#5D8CF1]';
-    }
-    if (section.id === activeSection) {
-      return 'text-[#909090] hover:text-[#5D8CF1]';
     }
 
     return 'text-[#909090] hover:text-[#5D8CF1]';
@@ -39,6 +42,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             return (
               <li key={section.id}>
                 <button
+                  type="button"
                   onClick={() => onSectionClick(section.id)}
                   className={`text-[15px] transition-colors flex items-center duration-200 text-left cursor-pointer ${getSectionColor(
                     section,

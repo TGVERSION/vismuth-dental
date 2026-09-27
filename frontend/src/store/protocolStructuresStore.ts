@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { mainApi } from '@/api';
 import type { ProtocolStructures, ProtocolStructuresFields } from '@/api';
+import { logError } from '@/lib/logger';
 
 interface ProtocolStructuresState {
   structures: ProtocolStructures[];
@@ -34,7 +35,7 @@ export const useProtocolStructuresStore = create<ProtocolStructuresState>(
         });
       } catch (e) {
         set({ error: 'Не удалось загрузить структуры', isLoading: false });
-        console.error('Fetch structures error:', e);
+        logError('Fetch structures error:', e);
       }
     },
 
@@ -61,7 +62,7 @@ export const useProtocolStructuresStore = create<ProtocolStructuresState>(
 
         return structure;
       } catch (e) {
-        console.error('Fetch structure by id error:', e);
+        logError('Fetch structure by id error:', e);
         set({ error: 'Не удалось загрузить структуру' });
         return null;
       }

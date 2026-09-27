@@ -6,6 +6,7 @@ import type { ListsGroupsResponse, TemplatesResponse } from '@/api';
 import Image from 'next/image';
 import { toast } from 'react-toastify';
 import { CreateGroupPopup } from '../groups/CreateGroupPopup';
+import { logError } from '@/lib/logger';
 
 interface MoveTemplatePopupProps {
   isOpen: boolean;
@@ -36,6 +37,9 @@ export const MoveTemplatePopup: React.FC<MoveTemplatePopupProps> = ({
       setTemplate(null);
       setGroups([]);
     }
+    // loadData объявлена ниже и пересоздаётся каждый рендер; вынос в
+    // useCallback — задача F-3.3 (декомпозиция попапов).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, templateId]);
 
   const loadData = async () => {
@@ -53,7 +57,7 @@ export const MoveTemplatePopup: React.FC<MoveTemplatePopupProps> = ({
         setSelectedGroupId(templateRes.group_id || '');
       }
     } catch (error) {
-      console.error('Ошибка загрузки данных:', error);
+      logError('Ошибка загрузки данных:', error);
       toast.error('Не удалось загрузить данные', {
         position: 'top-right',
         autoClose: 3000,
@@ -86,7 +90,7 @@ export const MoveTemplatePopup: React.FC<MoveTemplatePopupProps> = ({
       onSuccess();
       onClose();
     } catch (error) {
-      console.error('Ошибка перемещения шаблона:', error);
+      logError('Ошибка перемещения шаблона:', error);
       toast.error('Не удалось переместить шаблон', {
         position: 'top-right',
         autoClose: 4000,
@@ -107,7 +111,7 @@ export const MoveTemplatePopup: React.FC<MoveTemplatePopupProps> = ({
       const res = await mainApi.templateGroups.getGroups();
       setGroups(res || []);
     } catch (err) {
-      console.error('Ошибка обновления списка групп:', err);
+      logError('Ошибка обновления списка групп:', err);
     }
     setShowCreateGroupPopup(false);
   };
@@ -129,7 +133,11 @@ export const MoveTemplatePopup: React.FC<MoveTemplatePopupProps> = ({
           onClick={(e) => e.stopPropagation()}
         >
           <div className="flex justify-end">
-            <button onClick={handleClose} className="cursor-pointer">
+            <button
+              type="button"
+              onClick={handleClose}
+              className="cursor-pointer"
+            >
               <Image alt="close" src="/close.svg" width={25} height={25} />
             </button>
           </div>
@@ -214,6 +222,7 @@ export const MoveTemplatePopup: React.FC<MoveTemplatePopupProps> = ({
                 </div>
                 <div className="flex">
                   <button
+                    type="button"
                     onClick={() => setShowCreateGroupPopup(true)}
                     className="mt-3 mx-auto text-[16px] text-[#5D8CF1] cursor-pointer text-center hover:text-[#769CEF] transition-colors"
                   >
@@ -224,6 +233,7 @@ export const MoveTemplatePopup: React.FC<MoveTemplatePopupProps> = ({
 
               <div className="flex flex-col gap-3 px-5 pb-5">
                 <button
+                  type="button"
                   onClick={handleSave}
                   disabled={saving}
                   className="h-12 bg-[#5D8CF1] text-white cursor-pointer rounded-[15px] hover:bg-[#769CEF] transition-colors disabled:opacity-50"
@@ -231,6 +241,7 @@ export const MoveTemplatePopup: React.FC<MoveTemplatePopupProps> = ({
                   {saving ? 'Сохранение...' : 'Сохранить'}
                 </button>
                 <button
+                  type="button"
                   onClick={handleClose}
                   disabled={saving}
                   className="h-12 rounded-[15px] hover:bg-[#F0F5FF] text-[#202020] cursor-pointer bg-[#DCE7FF] transition-colors disabled:opacity-50"

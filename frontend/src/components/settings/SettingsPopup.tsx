@@ -3,13 +3,24 @@
 import { useState, useRef, useEffect } from 'react';
 import Image from 'next/image';
 import { toast } from 'react-toastify';
-import { CustomDropdown, DropdownOption } from '../CustomDropdown';
+import { CustomDropdown } from '../CustomDropdown';
 import { ProtocolStructuresSection } from './ProtocolStructuresSection';
 import { DirectoriesSection } from './DirectoriesSection';
 import { mainApi } from '@/api';
-import type { ServiceUserIdRead } from '@/api';
-
-type SettingsSection = 'users' | 'protocols' | 'directories';
+import type { RoleRead, ServiceUserIdRead } from '@/api';
+import { useAuthStore } from '@/store/authStore';
+import {
+  buildRoleOptions,
+  canDeleteUser,
+  canEditUserRole,
+  isPrivilegedRole,
+} from '@/lib/roles';
+import {
+  getSettingsSectionLabel,
+  getSettingsSections,
+  resolveSettingsSection,
+  type SettingsSection,
+} from '@/lib/settings-sections';
 
 interface SettingsPopupProps {
   isOpen: boolean;
@@ -20,50 +31,90 @@ export const SettingsPopup: React.FC<SettingsPopupProps> = ({
   isOpen,
   onClose,
 }) => {
-  const [activeSection, setActiveSection] = useState<SettingsSection>('users');
+  // null — раздел ещё не выбран: какой открыть, решает роль.
+  const [selectedSection, setSelectedSection] =
+    useState<SettingsSection | null>(null);
   const [users, setUsers] = useState<ServiceUserIdRead[]>([]);
   const [usersLoading, setUsersLoading] = useState(false);
+  const [roles, setRoles] = useState<RoleRead[]>([]);
+  const [rolesFailed, setRolesFailed] = useState(false);
+  const [pendingUserId, setPendingUserId] = useState<string | null>(null);
   const [deleteConfirmUserId, setDeleteConfirmUserId] = useState<string | null>(
     null,
   );
 
-  const roleOptions: DropdownOption<string>[] = [
-    { value: 'administrator', label: 'Админ' },
-    { value: 'head_of_department', label: 'Зав.отделением' },
-    { value: 'doctor', label: 'Врач' },
-  ];
-
-  const menuItems: { id: SettingsSection; label: string }[] = [
-    { id: 'users', label: 'Пользователи' },
-    { id: 'protocols', label: 'Структуры протоколов' },
-    { id: 'directories', label: 'Справочники' },
-  ];
+  const currentUser = useAuthStore((state) => state.user);
+  const canManageUsers = isPrivilegedRole(currentUser?.role);
+  // Окно смонтировано в layout заранее, а роль освежается с сервера уже
+  // после монтирования, поэтому раздел вычисляется при каждом рендере.
+  const activeSection = resolveSettingsSection(selectedSection, canManageUsers);
+  const menuItems = getSettingsSections(canManageUsers);
 
   useEffect(() => {
     if (!isOpen || activeSection !== 'users') return;
+
+    let cancelled = false;
+
     const load = async () => {
       setUsersLoading(true);
-      try {
-        const data = await mainApi.serviceUsers.listServiceUserIds();
-        setUsers(data);
-      } catch {
+      const [usersResult, rolesResult] = await Promise.allSettled([
+        mainApi.serviceUsers.listServiceUserIds(),
+        mainApi.roles.list(),
+      ]);
+      if (cancelled) return;
+
+      if (usersResult.status === 'fulfilled') {
+        setUsers(usersResult.value);
+      } else {
         toast.error('Не удалось загрузить пользователей');
-      } finally {
-        setUsersLoading(false);
       }
+
+      // Без справочника список пользователей всё равно показываем:
+      // роли подписаны из role_name_ru, но сменить их нельзя.
+      if (rolesResult.status === 'fulfilled') {
+        setRoles(rolesResult.value);
+        setRolesFailed(false);
+      } else {
+        setRoles([]);
+        setRolesFailed(true);
+        toast.error('Не удалось загрузить список ролей');
+      }
+
+      setUsersLoading(false);
     };
     load();
+
+    return () => {
+      cancelled = true;
+    };
   }, [isOpen, activeSection]);
 
-  const handleRoleChange = async (userId: string, newRole: string) => {
+  const handleRoleChange = async (userId: string, value: string) => {
+    if (pendingUserId) return;
+
+    // Код роли берём из справочника: в список может попасть запасная опция
+    // с устаревшим кодом, отправлять её на сервер нельзя.
+    const role = roles.find((item) => item.name === value);
+    const target = users.find((item) => item.id === userId);
+    if (!role || !target || target.role === role.name) return;
+
+    setPendingUserId(userId);
     try {
-      await mainApi.serviceUsers.patchServiceUser(userId, { role: newRole });
+      const updated = await mainApi.serviceUsers.patchServiceUser(userId, {
+        role: role.name,
+      });
       setUsers((prev) =>
-        prev.map((u) => (u.id === userId ? { ...u, role: newRole } : u)),
+        prev.map((u) =>
+          u.id === userId
+            ? { ...u, role: updated.role, role_name_ru: updated.role_name_ru }
+            : u,
+        ),
       );
       toast.success('Роль пользователя обновлена');
     } catch {
       toast.error('Не удалось обновить роль');
+    } finally {
+      setPendingUserId(null);
     }
   };
 
@@ -89,7 +140,7 @@ export const SettingsPopup: React.FC<SettingsPopupProps> = ({
   };
 
   const handleSectionChange = (section: SettingsSection) => {
-    setActiveSection(section);
+    setSelectedSection(section);
   };
 
   if (!isOpen) return null;
@@ -105,45 +156,65 @@ export const SettingsPopup: React.FC<SettingsPopupProps> = ({
                   <div className="animate-spin mx-auto my-40 rounded-full h-10 w-10 border-b-2 border-[#5D8CF1]"></div>
                 ) : (
                   <>
-                    {users.map((user) => (
-                      <div
-                        key={user.id}
-                        className={`flex justify-between items-center px-3.75 py-3 rounded-xl cursor-pointer transition-all shadow-custom-hover`}
-                      >
-                        <span className="text-sm text-[#202020]">
-                          {user.login}
-                        </span>
+                    {users.map((user) => {
+                      const actionParams = {
+                        actorId: currentUser?.id,
+                        actorRole: currentUser?.role,
+                        targetId: user.id,
+                      };
+                      const canEdit = canEditUserRole(actionParams);
 
-                        <div className="flex flex-row items-center gap-12.5">
-                          <div className="w-41.25">
-                            <CustomDropdown
-                              options={roleOptions}
-                              value={user.role}
-                              onChange={(newRole) =>
-                                handleRoleChange(user.id, newRole)
-                              }
-                              showCheckIcon={false}
-                              className="w-48"
-                            />
+                      return (
+                        <div
+                          key={user.id}
+                          className={`flex justify-between items-center px-3.75 py-3 rounded-xl cursor-pointer transition-all shadow-custom-hover`}
+                        >
+                          <span className="text-sm text-[#202020]">
+                            {user.login}
+                          </span>
+
+                          <div className="flex flex-row items-center gap-12.5">
+                            <div className="w-41.25">
+                              <CustomDropdown
+                                options={buildRoleOptions(roles, user)}
+                                value={user.role}
+                                onChange={(value) =>
+                                  handleRoleChange(user.id, value)
+                                }
+                                disabled={
+                                  !canEdit ||
+                                  rolesFailed ||
+                                  pendingUserId === user.id
+                                }
+                                aria-label={`Роль пользователя ${user.login}`}
+                                showCheckIcon={false}
+                                className="w-48"
+                              />
+                            </div>
+
+                            {canDeleteUser(actionParams) ? (
+                              <button
+                                type="button"
+                                onClick={() => setDeleteConfirmUserId(user.id)}
+                                className="cursor-pointer"
+                                aria-label="Удалить пользователя"
+                              >
+                                <Image
+                                  src="/delete-gray.svg"
+                                  alt="delete"
+                                  width={18}
+                                  height={18}
+                                  className="icon-gray"
+                                />
+                              </button>
+                            ) : (
+                              // Держит место кнопки, чтобы строки не съезжали.
+                              <span aria-hidden="true" className="w-4.5" />
+                            )}
                           </div>
-
-                          <button
-                            type="button"
-                            onClick={() => setDeleteConfirmUserId(user.id)}
-                            className="cursor-pointer"
-                            aria-label="Удалить пользователя"
-                          >
-                            <Image
-                              src="/delete-gray.svg"
-                              alt="delete"
-                              width={18}
-                              height={18}
-                              className="icon-gray"
-                            />
-                          </button>
                         </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </>
                 )}
               </div>
@@ -167,14 +238,7 @@ export const SettingsPopup: React.FC<SettingsPopupProps> = ({
     }
   };
 
-  const getSectionTitle = () => {
-    const titles: Record<SettingsSection, string> = {
-      users: 'Пользователи',
-      protocols: 'Структуры протоколов',
-      directories: 'Справочники',
-    };
-    return titles[activeSection];
-  };
+  const getSectionTitle = () => getSettingsSectionLabel(activeSection);
 
   return (
     <>

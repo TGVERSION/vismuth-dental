@@ -33,6 +33,7 @@ import type {
   ServiceUserIdRead,
   ServiceUserUpdate,
   ServiceUserPatch,
+  RoleRead,
   ProtocolStructures,
   ProtocolStructuresFields,
   ProtocolStructuresPost,
@@ -166,6 +167,10 @@ export const mainApi = {
 
     deleteServiceUser: (user_id: string) =>
       apiClient.delete<void>(`/service_user/${user_id}`),
+  },
+
+  roles: {
+    list: () => apiClient.get<RoleRead[]>('/roles'),
   },
 
   consultations: {

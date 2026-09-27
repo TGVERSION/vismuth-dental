@@ -95,10 +95,18 @@ export interface RegisterConfirmRequest {
   code: string;
 }
 
+export type RoleName = 'super_admin' | 'admin' | 'doctor' | 'patient';
+
+export interface RoleRead {
+  name: RoleName;
+  name_ru: string;
+}
+
 export interface UserPublic {
   id: string;
   login: string;
-  role: string;
+  role: RoleName;
+  role_name_ru: string;
 }
 
 export interface TokenResponse {
@@ -112,7 +120,8 @@ export interface ServiceUserData {
   login: string;
   first_name: string | null;
   last_name: string | null;
-  role: string;
+  role: RoleName;
+  role_name_ru: string;
   is_active: boolean;
   created_at: string;
   updated_at: string | null;
@@ -124,7 +133,8 @@ export interface ServiceUserRead {
   login: string;
   first_name: string | null;
   last_name: string | null;
-  role: string;
+  role: RoleName;
+  role_name_ru: string;
   is_active: boolean;
   created_at: string;
   updated_at: string | null;
@@ -134,14 +144,15 @@ export interface ServiceUserRead {
 export interface ServiceUserIdRead {
   id: string;
   login: string;
-  role: string;
+  role: RoleName;
+  role_name_ru: string;
 }
 
 export interface ServiceUserUpdate {
   login: string;
   first_name?: string | null;
   last_name?: string | null;
-  role: string;
+  role: RoleName;
   is_active: boolean;
   password?: string | null;
 }
@@ -150,7 +161,7 @@ export interface ServiceUserPatch {
   login?: string | null;
   first_name?: string | null;
   last_name?: string | null;
-  role?: string | null;
+  role?: RoleName | null;
   is_active?: boolean | null;
   password?: string | null;
 }

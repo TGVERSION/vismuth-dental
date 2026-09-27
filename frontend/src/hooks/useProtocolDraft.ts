@@ -4,11 +4,13 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'react-toastify';
 import { mainApi, type ProtocolsPatch } from '@/api';
 import { logError } from '@/lib/logger';
+import { useAuthStore } from '@/store/authStore';
 import {
   buildFieldValues,
   computeChangedValues,
   isFieldMappingBroken,
   serializeDraft,
+  shouldFlushOnLeave,
   type DraftSection,
 } from '@/lib/protocol-draft';
 
@@ -57,10 +59,17 @@ export const useProtocolDraft = ({
   const lastSavedValuesRef = useRef<Record<string, string>>({});
   const lastSavedTitleRef = useRef('');
   const saveTimerRef = useRef<NodeJS.Timeout | null>(null);
+  // Нужен досохранению при уходе с экрана: очистка при размонтировании видит
+  // значения первого рендера, поэтому признак загрузки читается через ref.
+  const isLoadingRef = useRef(isLoading);
 
   useEffect(() => {
     draftRef.current = { title, sections };
   }, [title, sections]);
+
+  useEffect(() => {
+    isLoadingRef.current = isLoading;
+  }, [isLoading]);
 
   useEffect(() => {
     protocolIdRef.current = protocolId;
@@ -244,11 +253,39 @@ export const useProtocolDraft = ({
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
   }, [hasUnsavedChanges]);
 
+  // Уход с экрана протокола: досохраняем то, что ещё не ушло на сервер.
+  //
+  // Без этого таймер отложенного сохранения сбрасывался бы вместе с экраном,
+  // и правки пропадали бы молча: `beforeunload` защищает только от закрытия
+  // вкладки, клиентский переход по ссылке его не вызывает. Решение
+  // «досохранять ли» принимает протестированная функция `shouldFlushOnLeave`.
+  //
+  // Всё читается через ref: очистка видит значения первого рендера.
+  // Запрос доживает после размонтирования — у сохранения нет AbortSignal.
+  // Если сохранение уже идёт, `saveNow` не запускает второй цикл, а
+  // доотправляет правки в текущем.
+  //
+  // Зависимость — только `saveNow`, и он стабилен (useCallback от стабильного
+  // `sendDraft`), поэтому очистка срабатывает лишь при размонтировании.
+  // Если `saveNow` когда-нибудь станет нестабильным, очистка начнёт
+  // срабатывать при каждом его изменении и отправлять лишние сохранения.
   useEffect(
     () => () => {
       if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+
+      const { title: draftTitle, sections: draftSections } = draftRef.current;
+      const leaveWithUnsaved = shouldFlushOnLeave({
+        protocolId: protocolIdRef.current,
+        isLoading: isLoadingRef.current,
+        // Токен — на момент ухода: при выходе из аккаунта он уже обнулён.
+        hasToken: Boolean(useAuthStore.getState().accessToken),
+        snapshot: serializeDraft(draftTitle, draftSections),
+        lastSaved: lastSavedRef.current,
+      });
+
+      if (leaveWithUnsaved) void saveNow();
     },
-    [],
+    [saveNow],
   );
 
   return {

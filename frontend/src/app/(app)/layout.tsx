@@ -6,6 +6,7 @@ import { usePathname } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import { DoctorsHelpers } from '@/components/DoctorsHelpers';
 import { SettingsPopup } from '@/components/settings/SettingsPopup';
+import { AppNav } from '@/components/AppNav';
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -54,6 +55,14 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               width={206}
               height={26}
             />
+            {/* Абсолютно по центру шапки, а не третьим флекс-элементом: при
+                justify-between он встал бы между блоками разной ширины, а не
+                по центру страницы. Шапка — position: fixed на всю ширину
+                (.header в globals.css вне @layer перебивает утилиту relative),
+                поэтому центровка идёт по всей странице. */}
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">
+              <AppNav />
+            </div>
             <div className="flex items-center gap-9">
               <div
                 className="hover:text-[#769CEF] cursor-pointer text-[#5D8CF1]"

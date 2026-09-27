@@ -6,6 +6,7 @@ import {
   hasMorePages,
   isFieldMappingBroken,
   serializeDraft,
+  shouldFlushOnLeave,
   type DraftSection,
 } from './protocol-draft';
 import type { ProtocolStructuresFields, StructureProtocolsFields } from '@/api';
@@ -180,5 +181,37 @@ describe('hasMorePages', () => {
 
   it('пустой справочник не просит следующую страницу', () => {
     expect(hasMorePages(1, 20, 0)).toBe(false);
+  });
+});
+
+describe('shouldFlushOnLeave', () => {
+  const ready = {
+    protocolId: 'protocol-1',
+    isLoading: false,
+    hasToken: true,
+    snapshot: 'изменено',
+    lastSaved: 'сохранено',
+  };
+
+  it('досохраняет, когда все условия выполнены', () => {
+    expect(shouldFlushOnLeave(ready)).toBe(true);
+  });
+
+  it('не досохраняет без открытого протокола', () => {
+    expect(shouldFlushOnLeave({ ...ready, protocolId: null })).toBe(false);
+  });
+
+  it('не досохраняет во время загрузки протокола', () => {
+    expect(shouldFlushOnLeave({ ...ready, isLoading: true })).toBe(false);
+  });
+
+  it('не досохраняет без токена — выход из аккаунта ведёт себя как раньше', () => {
+    expect(shouldFlushOnLeave({ ...ready, hasToken: false })).toBe(false);
+  });
+
+  it('не досохраняет, когда изменений нет', () => {
+    expect(
+      shouldFlushOnLeave({ ...ready, snapshot: 'same', lastSaved: 'same' }),
+    ).toBe(false);
   });
 });

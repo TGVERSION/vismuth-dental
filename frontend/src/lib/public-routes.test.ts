@@ -23,6 +23,14 @@ describe('isPublicPath', () => {
     expect(isPublicPath('/qq/abc')).toBe(false);
   });
 
+  it('не открывает страницу анкет врача', () => {
+    // Путь совпадает с публичным префиксом анкеты пациента `/q` по буквам.
+    // Наружу его не пускает только сравнение по сегменту — а на этой
+    // странице имена пациентов.
+    expect(isPublicPath('/questionnaires')).toBe(false);
+    expect(isPublicPath('/questionnaires/abc')).toBe(false);
+  });
+
   it('не открывает защищённую зону', () => {
     expect(isPublicPath('/')).toBe(false);
     expect(isPublicPath('/protocol')).toBe(false);

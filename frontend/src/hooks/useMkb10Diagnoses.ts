@@ -2,12 +2,17 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { mainApi } from '@/api';
+import { isAbortError } from '@/api/base-client';
 import { Mkb10Item } from '@/api';
+import { logError } from '@/lib/logger';
+import { hasMorePages } from '@/lib/protocol-draft';
 
 interface UseMkb10DiagnosesProps {
   searchValue: string;
   isOpen: boolean;
 }
+
+const PAGE_SIZE = 20;
 
 export const useMkb10Diagnoses = ({
   searchValue,
@@ -21,7 +26,10 @@ export const useMkb10Diagnoses = ({
 
   const sentinelRef = useRef<HTMLDivElement | null>(null);
   const observerRef = useRef<IntersectionObserver | null>(null);
-  const PAGE_SIZE = 20;
+  const abortControllerRef = useRef<AbortController | null>(null);
+  // Ответы по устаревшей строке поиска не должны подмешиваться в список,
+  // который уже относится к новому запросу.
+  const requestIdRef = useRef(0);
 
   useEffect(() => {
     setDiagnoses([]);
@@ -33,13 +41,25 @@ export const useMkb10Diagnoses = ({
     async (pageNum: number) => {
       if (!isOpen) return;
 
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+      const controller = new AbortController();
+      abortControllerRef.current = controller;
+      const requestId = ++requestIdRef.current;
+
       setLoading(true);
       try {
-        const response = await mainApi.mkb10.diagnisisList({
-          page: pageNum,
-          size: PAGE_SIZE,
-          searchValue: searchValue.trim() || undefined,
-        });
+        const response = await mainApi.mkb10.diagnisisList(
+          {
+            page: pageNum,
+            size: PAGE_SIZE,
+            searchValue: searchValue.trim() || undefined,
+          },
+          { signal: controller.signal },
+        );
+
+        if (requestId !== requestIdRef.current) return;
 
         setDiagnoses((prev) => {
           const existingCodes = new Set(prev.map((d) => d.code));
@@ -50,11 +70,15 @@ export const useMkb10Diagnoses = ({
         });
 
         setTotalCount(response.totalCount);
-        setHasMore((pageNum + 1) * PAGE_SIZE < response.totalCount);
+        setHasMore(hasMorePages(pageNum, PAGE_SIZE, response.totalCount));
       } catch (error) {
-        console.error('Ошибка загрузки диагнозов:', error);
+        if (isAbortError(error)) return;
+        if (requestId !== requestIdRef.current) return;
+        logError('Ошибка загрузки диагнозов:', error);
       } finally {
-        setLoading(false);
+        if (requestId === requestIdRef.current) {
+          setLoading(false);
+        }
       }
     },
     [isOpen, searchValue],
@@ -65,6 +89,13 @@ export const useMkb10Diagnoses = ({
       loadDiagnoses(page);
     }
   }, [page, isOpen, loadDiagnoses]);
+
+  useEffect(
+    () => () => {
+      abortControllerRef.current?.abort();
+    },
+    [],
+  );
 
   useEffect(() => {
     if (observerRef.current) {

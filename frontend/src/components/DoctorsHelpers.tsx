@@ -13,6 +13,9 @@ import {
   AutocompleteProvider,
 } from '@/store/helpersStore';
 
+/** Порядок карточек в списке помощников. */
+const HELPER_ORDER: HelperId[] = ['mkb', 'autocomplete', 'fullness', 'voice'];
+
 interface DoctorsHelpersProps {
   isOpen: boolean;
   onClose: () => void;
@@ -31,6 +34,7 @@ export const DoctorsHelpers: React.FC<DoctorsHelpersProps> = ({
     selectedHelper,
     mkbEnabled,
     fullnessEnabled,
+    voiceEnabled,
     autocompleteProvider,
     setSelectedHelper,
     setAutocompleteProvider,
@@ -49,6 +53,8 @@ export const DoctorsHelpers: React.FC<DoctorsHelpersProps> = ({
       isActive = mkbEnabled;
     } else if (selectedHelper === 'fullness') {
       isActive = fullnessEnabled;
+    } else if (selectedHelper === 'voice') {
+      isActive = voiceEnabled;
     } else if (selectedHelper === 'autocomplete') {
       isActive =
         autocompleteProvider !== 'off' &&
@@ -74,6 +80,7 @@ export const DoctorsHelpers: React.FC<DoctorsHelpersProps> = ({
     selectedHelper,
     mkbEnabled,
     fullnessEnabled,
+    voiceEnabled,
     autocompleteProvider,
     userSettings?.autocomplete,
   ]);
@@ -140,48 +147,47 @@ export const DoctorsHelpers: React.FC<DoctorsHelpersProps> = ({
                 Помощники
               </h2>
               <div className="space-y-2">
-                {(['mkb', 'autocomplete', 'fullness'] as HelperId[]).map(
-                  (helperId) => {
-                    const meta = getHelperMeta(helperId);
-                    if (!meta) return null;
+                {HELPER_ORDER.map((helperId) => {
+                  const meta = getHelperMeta(helperId);
+                  if (!meta) return null;
 
-                    return (
-                      <div
-                        key={helperId}
-                        className={`px-3.75 py-3 rounded-lg cursor-pointer transition-all hover:bg-white shadow-custom-hover ${
-                          helperId === selectedHelper
-                            ? 'bg-white shadow-custom'
-                            : ''
-                        }`}
-                        onClick={() => setSelectedHelper(helperId)}
-                      >
-                        <div className="flex items-center gap-3.75">
-                          <Image
-                            alt={helperId}
-                            src={meta.icon}
-                            width={46}
-                            height={46}
-                          />
-                          <div className="flex flex-col gap-1">
-                            <div className="flex items-center gap-2">
-                              <span className="text-md text-[#202020]">
-                                {meta.name}
-                              </span>
-                            </div>
-                            <span className="text-sm text-[#6C757D]">
-                              {meta.provider}
+                  return (
+                    <div
+                      key={helperId}
+                      className={`px-3.75 py-3 rounded-lg cursor-pointer transition-all hover:bg-white shadow-custom-hover ${
+                        helperId === selectedHelper
+                          ? 'bg-white shadow-custom'
+                          : ''
+                      }`}
+                      onClick={() => setSelectedHelper(helperId)}
+                    >
+                      <div className="flex items-center gap-3.75">
+                        <Image
+                          alt={helperId}
+                          src={meta.icon}
+                          width={46}
+                          height={46}
+                        />
+                        <div className="flex flex-col gap-1">
+                          <div className="flex items-center gap-2">
+                            <span className="text-md text-[#202020]">
+                              {meta.name}
                             </span>
                           </div>
+                          <span className="text-sm text-[#6C757D]">
+                            {meta.provider}
+                          </span>
                         </div>
                       </div>
-                    );
-                  },
-                )}
+                    </div>
+                  );
+                })}
               </div>
             </div>
             <div className="flex-1">
               <div className="flex justify-end">
                 <button
+                  type="button"
                   onClick={closeModal}
                   className="mt-2.5 mr-2.5 cursor-pointer transition-colors"
                 >
@@ -245,6 +251,7 @@ export const DoctorsHelpers: React.FC<DoctorsHelpersProps> = ({
                       </div>
                     )}
                     <button
+                      type="button"
                       onClick={handleApply}
                       disabled={
                         isApplying ||

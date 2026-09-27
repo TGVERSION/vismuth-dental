@@ -6,7 +6,8 @@ import { useHelpersStore } from '@/store/helpersStore';
 
 export const useAuth = () => {
   const router = useRouter();
-  const { user, accessToken, isAuthenticated, login, logout } = useAuthStore();
+  const { user, accessToken, isAuthenticated, login, logout, setAccessToken } =
+    useAuthStore();
   const { fetchUserSettings } = useHelpersStore();
 
   const handleLogin = async (credentials: {
@@ -16,7 +17,8 @@ export const useAuth = () => {
     try {
       const response = await mainApi.serviceUsers.login(credentials);
 
-      localStorage.setItem('access_token', response.access_token);
+      // Токен кладём в стор до запроса профиля — интерцептор берёт его оттуда.
+      setAccessToken(response.access_token);
       const user = await mainApi.serviceUsers.serviceUser();
       const saveUser = {
         ...user,
@@ -31,7 +33,6 @@ export const useAuth = () => {
       return { success: true };
     } catch (error) {
       toast.error('Ошибка входа: ' + error);
-      console.log(error);
       return { success: false, error };
     }
   };
@@ -46,7 +47,6 @@ export const useAuth = () => {
       return { success: true };
     } catch (error) {
       toast.error('Ошибка регистрации: ' + error);
-      console.log(error);
       return { success: false, error };
     }
   };
@@ -57,7 +57,7 @@ export const useAuth = () => {
         code,
       });
 
-      localStorage.setItem('access_token', response.access_token);
+      setAccessToken(response.access_token);
       const user = await mainApi.serviceUsers.serviceUser();
       const saveUser = {
         ...user,
@@ -69,7 +69,6 @@ export const useAuth = () => {
       return { success: true };
     } catch (error) {
       toast.error('Неверный код подтверждения: ' + error);
-      console.log(error);
       return { success: false, error };
     }
   };
@@ -78,13 +77,11 @@ export const useAuth = () => {
     try {
       await mainApi.serviceUsers.logout();
       logout();
-      localStorage.removeItem('access_token');
       router.push('/login');
 
       return { success: true };
     } catch (error) {
       toast.error('Не удалось выйти из профиля: ' + error);
-      console.log(error);
       return { success: false, error };
     }
   };

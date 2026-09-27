@@ -20,7 +20,6 @@ export default function AuthForms() {
   const [code, setCode] = useState(['', '', '', '']);
   const [timer, setTimer] = useState(300);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const canResend = timer === 0;
 
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
@@ -168,16 +167,14 @@ export default function AuthForms() {
   const handleResendCode = async () => {
     if (!canResend) return;
     setLoading(true);
-    setError(null);
 
     try {
       await mainApi.serviceUsers.register(userData);
       toast.info('Код отправлен повторно');
       setTimer(300);
       setCode(['', '', '', '']);
-    } catch (err) {
+    } catch {
       toast.error('Ошибка отправки кода');
-      setError('Ошибка отправки кода');
     } finally {
       setLoading(false);
     }
@@ -186,7 +183,6 @@ export default function AuthForms() {
   const resetForm = () => {
     setUserData({ login: '', password: '' });
     setCode(['', '', '', '']);
-    setError(null);
     setTimer(300);
   };
 
@@ -198,10 +194,6 @@ export default function AuthForms() {
   const switchToRegister = () => {
     resetForm();
     setMode('register');
-  };
-
-  const switchToVerify = () => {
-    setMode('verify');
   };
 
   return (
@@ -292,6 +284,7 @@ export default function AuthForms() {
             </form>
             <div className="flex justify-center mt-7.5 text-sm">
               {/* <button
+        type="button"
                 onClick={() => console.log('Forgot password')}
                 disabled={loading}
                 className="text-[#5D8CF1] hover:text-[#769CEF] cursor-pointer transition-colors"
@@ -299,6 +292,7 @@ export default function AuthForms() {
                 Забыли пароль?
               </button> */}
               <button
+                type="button"
                 onClick={switchToRegister}
                 disabled={loading}
                 className="text-[#5D8CF1] hover:text-[#769CEF] cursor-pointer transition-colors"
@@ -384,6 +378,7 @@ export default function AuthForms() {
             </form>
             <div className="text-center mt-7.5">
               <button
+                type="button"
                 onClick={switchToLogin}
                 disabled={loading}
                 className="text-[#5D8CF1] hover:text-[#769CEF] cursor-pointer transition-colors text-sm"
@@ -397,6 +392,7 @@ export default function AuthForms() {
         {mode === 'verify' && (
           <>
             <button
+              type="button"
               onClick={switchToRegister}
               disabled={loading}
               className="relative cursor-pointer -top-22 -left-8 text-gray-600 hover:text-gray-800 transition-colors"
@@ -462,6 +458,7 @@ export default function AuthForms() {
             <div className="text-center mt-5">
               {canResend ? (
                 <button
+                  type="button"
                   onClick={handleResendCode}
                   disabled={loading}
                   className="text-sm text-gray-600 hover:text-gray-800 transition-colors"

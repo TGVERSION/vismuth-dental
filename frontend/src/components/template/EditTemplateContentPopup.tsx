@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, ChangeEvent, useRef, useCallback } from 'react';
+import { useState, useEffect, ChangeEvent, useRef } from 'react';
 import { mainApi } from '@/api';
 import type {
   TemplatesRequest,
@@ -12,6 +12,7 @@ import Image from 'next/image';
 import { toast } from 'react-toastify';
 import type { TemplateUI } from './TemplatePopup';
 import { useProtocolStructuresStore } from '@/store/protocolStructuresStore';
+import { logError } from '@/lib/logger';
 
 interface EditTemplateContentPopupProps {
   isOpen: boolean;
@@ -90,7 +91,7 @@ export const EditTemplateContentPopup: React.FC<
           setTemplateContent(template.content || {});
         }
       } catch (error) {
-        console.error('Ошибка загрузки структуры шаблона:', error);
+        logError('Ошибка загрузки структуры шаблона:', error);
         toast.error('Не удалось загрузить структуру шаблона');
         setCurrentStructureFields([]);
       } finally {
@@ -138,7 +139,7 @@ export const EditTemplateContentPopup: React.FC<
       onSuccess();
       onClose();
     } catch (error) {
-      console.error('Ошибка обновления шаблона:', error);
+      logError('Ошибка обновления шаблона:', error);
       toast.error('Не удалось сохранить изменения', {
         position: 'top-right',
         autoClose: 4000,
@@ -160,7 +161,7 @@ export const EditTemplateContentPopup: React.FC<
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex justify-end">
-          <button onClick={onClose} className="cursor-pointer">
+          <button type="button" onClick={onClose} className="cursor-pointer">
             <Image alt="close" src="/close.svg" width={25} height={25} />
           </button>
         </div>
@@ -245,6 +246,7 @@ export const EditTemplateContentPopup: React.FC<
 
         <div className="flex flex-col gap-3 sticky -bottom-10 bg-white pt-4 px-5 pb-5">
           <button
+            type="button"
             onClick={handleSave}
             disabled={
               saving || loadingStructure || currentStructureFields.length === 0
@@ -254,6 +256,7 @@ export const EditTemplateContentPopup: React.FC<
             {saving ? 'Сохранение...' : 'Сохранить'}
           </button>
           <button
+            type="button"
             onClick={onClose}
             disabled={saving}
             className="h-12 rounded-[15px] hover:bg-[#F0F5FF] text-[#202020] cursor-pointer bg-[#DCE7FF] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"

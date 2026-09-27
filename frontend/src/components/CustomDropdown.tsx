@@ -1,6 +1,13 @@
 'use client';
 
-import { useState, useRef, useEffect, ReactNode, KeyboardEvent } from 'react';
+import {
+  useState,
+  useRef,
+  useEffect,
+  useId,
+  ReactNode,
+  KeyboardEvent,
+} from 'react';
 import Image from 'next/image';
 import { createPortal } from 'react-dom';
 
@@ -65,6 +72,9 @@ export function CustomDropdown<T = string, M extends boolean = false>({
   isLoading = false,
 }: CustomDropdownProps<T, M>) {
   const [isOpen, setIsOpen] = useState(false);
+  // Уникальный id списка: на экране протокола таких дропдаунов много,
+  // общий литерал давал дубли id в DOM и ломал связь aria-controls.
+  const listboxId = useId();
   const [searchQuery, setSearchQuery] = useState('');
   const containerRef = useRef<HTMLDivElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
@@ -121,10 +131,6 @@ export function CustomDropdown<T = string, M extends boolean = false>({
     bottom?: number;
     maxHeight?: number;
   }>({ top: 0, left: 0, width: 0 });
-  const [actualPosition, setActualPosition] = useState<'top' | 'bottom'>(
-    position,
-  );
-
   useEffect(() => {
     if (!isOpen || !containerRef.current) return;
 
@@ -166,7 +172,6 @@ export function CustomDropdown<T = string, M extends boolean = false>({
         bottom = undefined;
       }
 
-      setActualPosition(preferred);
       setCoords({
         top: top ?? 0,
         left: rect.left,
@@ -268,7 +273,7 @@ export function CustomDropdown<T = string, M extends boolean = false>({
         maxHeight: coords.maxHeight ?? 240,
         zIndex: 9999,
       }}
-      id="dropdown-list"
+      id={listboxId}
       className={`bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden animate-fade-in flex flex-col ${dropdownClassName}`}
     >
       {onSearch && (
@@ -324,7 +329,9 @@ export function CustomDropdown<T = string, M extends boolean = false>({
                         className="shrink-0"
                       />
                     )}
-                    <span className="text-sm text-[#202020]">{option.label}</span>
+                    <span className="text-sm text-[#202020]">
+                      {option.label}
+                    </span>
                     {option.badgeClass && (
                       <span
                         className={`text-xs px-2 py-0.5 rounded-full ${option.badgeClass}`}
@@ -369,6 +376,7 @@ export function CustomDropdown<T = string, M extends boolean = false>({
       onKeyDown={handleKeyDown}
       tabIndex={disabled ? -1 : 0}
       role="combobox"
+      aria-controls={listboxId}
       aria-expanded={isOpen}
       aria-haspopup="listbox"
       aria-label={ariaLabel}
@@ -381,7 +389,7 @@ export function CustomDropdown<T = string, M extends boolean = false>({
         className={`w-full min-h-10 px-3 py-2 bg-gray-50 border-0 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#5D8CF1] text-left flex items-center justify-between cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed transition-shadow ${
           isOpen ? 'ring-2 ring-[#5D8CF1]' : ''
         }`}
-        aria-controls="dropdown-list"
+        aria-controls={listboxId}
       >
         {renderTrigger && selectedOptions.length > 0 ? (
           renderTrigger(multiple ? selectedOptions : selectedOptions[0])

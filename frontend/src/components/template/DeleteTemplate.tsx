@@ -2,6 +2,7 @@
 
 import { toast } from 'react-toastify';
 import Image from 'next/image';
+import { logError } from '@/lib/logger';
 
 interface DeleteTemplateProps {
   isOpen: boolean;
@@ -14,7 +15,6 @@ export const DeleteTemplate: React.FC<DeleteTemplateProps> = ({
   onClose,
   onDelete,
 }) => {
-
   const handleDelete = async () => {
     try {
       await onDelete();
@@ -24,7 +24,7 @@ export const DeleteTemplate: React.FC<DeleteTemplateProps> = ({
       });
       onClose();
     } catch (error) {
-      console.error('Ошибка удаления шаблона:', error);
+      logError('Ошибка удаления шаблона:', error);
       toast.error('Не удалось удалить шаблон', {
         position: 'top-right',
         autoClose: 4000,
@@ -44,7 +44,7 @@ export const DeleteTemplate: React.FC<DeleteTemplateProps> = ({
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex justify-end">
-          <button onClick={onClose} className="cursor-pointer">
+          <button type="button" onClick={onClose} className="cursor-pointer">
             <Image alt="close" src="/close.svg" width={25} height={25} />
           </button>
         </div>
@@ -55,12 +55,14 @@ export const DeleteTemplate: React.FC<DeleteTemplateProps> = ({
 
         <div className="flex flex-col gap-3 px-5 pb-5">
           <button
+            type="button"
             onClick={handleDelete}
             className="cursor-pointer h-12 w-full py-3 bg-[#F15D5D] hover:bg-[#F26E6E] text-white rounded-xl transition-colors"
           >
             Удалить
           </button>
           <button
+            type="button"
             onClick={onClose}
             className="cursor-pointer h-12 w-full py-3 bg-[#DCE7FF] hover:bg-[#F0F5FF] rounded-xl transition-colors"
           >

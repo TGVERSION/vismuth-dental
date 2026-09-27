@@ -9,6 +9,7 @@ import type {
 } from '@/api';
 import Image from 'next/image';
 import { toast } from 'react-toastify';
+import { logError } from '@/lib/logger';
 
 export interface TemplateUI extends ListsTemplatesResponse {
   name: string;
@@ -37,7 +38,7 @@ export const CreateGroupPopup: React.FC<CreateGroupPopupProps> = ({
     new Set(),
   );
   const [templates, setTemplates] = useState<TemplateUI[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [_loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
 
   const transformTemplate = (
@@ -53,25 +54,21 @@ export const CreateGroupPopup: React.FC<CreateGroupPopupProps> = ({
     if (isOpen) {
       loadTemplates();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen]);
 
   const loadTemplates = async () => {
     setLoading(true);
     try {
-      // Загружаем шаблоны и группы параллельно
-      const [groupsResponse, templatesResponse] = await Promise.all([
-        mainApi.templateGroups.getGroups(),
-        mainApi.templates.getTemplates(),
-      ]);
+      const templatesResponse = await mainApi.templates.getTemplates();
 
       const allTemplates = [
         ...(templatesResponse || []).map(transformTemplate),
-        ...(groupsResponse || []).flatMap((group) => []),
       ];
 
       setTemplates(allTemplates);
     } catch (error) {
-      console.error('Ошибка загрузки шаблонов:', error);
+      logError('Ошибка загрузки шаблонов:', error);
       toast.error('Не удалось загрузить шаблоны', {
         position: 'top-right',
         autoClose: 3000,
@@ -123,7 +120,7 @@ export const CreateGroupPopup: React.FC<CreateGroupPopupProps> = ({
       onSuccess(newGroup.id);
       handleClose();
     } catch (error) {
-      console.error('Ошибка создания группы:', error);
+      logError('Ошибка создания группы:', error);
       toast.error('Не удалось создать группу', {
         position: 'top-right',
         autoClose: 4000,
@@ -163,7 +160,11 @@ export const CreateGroupPopup: React.FC<CreateGroupPopupProps> = ({
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex justify-end">
-          <button onClick={handleClose} className="cursor-pointer">
+          <button
+            type="button"
+            onClick={handleClose}
+            className="cursor-pointer"
+          >
             <Image alt="close" src="/close.svg" width={25} height={25} />
           </button>
         </div>
@@ -222,6 +223,7 @@ export const CreateGroupPopup: React.FC<CreateGroupPopupProps> = ({
 
         <div className="flex flex-col gap-3 px-5 pb-5">
           <button
+            type="button"
             onClick={handleSave}
             disabled={saving}
             className="h-12 bg-[#5D8CF1] text-white rounded-[15px] cursor-pointer hover:bg-[#769CEF] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
@@ -229,6 +231,7 @@ export const CreateGroupPopup: React.FC<CreateGroupPopupProps> = ({
             {saving ? 'Сохранение...' : 'Сохранить'}
           </button>
           <button
+            type="button"
             onClick={handleClose}
             disabled={saving}
             className="h-12 hover:bg-[#F0F5FF] text-[#202020] cursor-pointer bg-[#DCE7FF] rounded-[15px] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"

@@ -6,14 +6,55 @@ import axios, {
   AxiosError,
 } from 'axios';
 import axiosRetry from 'axios-retry';
+import { logWarn } from '@/lib/logger';
 
 export type RequestMethod = 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH';
+
+/**
+ * Ошибка запроса с сохранённым HTTP-статусом. Без него вызывающий код не мог
+ * отличить «записи ещё нет» (404) от настоящего сбоя и показывал пользователю
+ * ошибку там, где её нет.
+ */
+export class ApiError extends Error {
+  readonly status?: number;
+
+  constructor(message: string, status?: number) {
+    super(message);
+    this.name = 'ApiError';
+    this.status = status;
+  }
+}
+
+/** Запрос отменён вызывающим кодом через AbortSignal. Не ошибка. */
+export class RequestAbortedError extends Error {
+  constructor() {
+    super('Запрос отменён');
+    this.name = 'RequestAbortedError';
+  }
+}
+
+export const isAbortError = (error: unknown): boolean =>
+  error instanceof RequestAbortedError;
+
+export interface RequestOptions {
+  signal?: AbortSignal;
+}
 
 export interface ApiClientConfig {
   baseUrl: string;
   timeout?: number;
   retries?: number;
   retryDelay?: number;
+  /**
+   * Участвует ли клиент в авторизации. По умолчанию `true` — поведение всех
+   * существующих клиентов не меняется.
+   *
+   * `false` нужен публичным эндпоинтам (анкета пациента): токен врача туда
+   * отправлять незачем, а сброс авторизации по 401 там вреден — врач,
+   * открывший ссылку анкеты в своём браузере, оказался бы разлогинен
+   * в Ассистенте.
+   */
+  auth?: boolean;
 }
 
 export class ApiClient {
@@ -25,6 +66,7 @@ export class ApiClient {
     timeout = 10000,
     retries = 3,
     retryDelay = 100,
+    auth = true,
   }: ApiClientConfig) {
     this.retries = retries;
 
@@ -40,6 +82,10 @@ export class ApiClient {
       retries,
       retryDelay: (attempt) => retryDelay * Math.pow(2, attempt - 1),
       retryCondition: (error) => {
+        // Отменённый запрос повторять незачем: вызывающий код уже не ждёт ответа.
+        if (axios.isCancel(error)) {
+          return false;
+        }
         if (
           error.response?.status &&
           error.response.status >= 400 &&
@@ -50,17 +96,25 @@ export class ApiClient {
         return axiosRetry.isNetworkOrIdempotentRequestError(error);
       },
       onRetry: (attempt, error, requestConfig) => {
-        console.warn(`Retry ${attempt}/${retries} for ${requestConfig.url}`, {
+        logWarn(`Retry ${attempt}/${retries} for ${requestConfig.url}`, {
           error: error.message,
         });
       },
     });
 
+    // Публичный клиент не участвует в авторизации вовсе: интерцепторы просто
+    // не регистрируются. Так исключён и лишний заголовок на публичном
+    // эндпоинте, и сброс чужой сессии по чужому 401.
+    if (!auth) {
+      return;
+    }
+
     this.client.interceptors.request.use(
       (config) => {
-        // Пример: получение токена из Zustand store
+        // Единственный источник токена — authStore (он же персистит его
+        // в localStorage через middleware persist).
         if (typeof window !== 'undefined') {
-          const token = localStorage.getItem('access_token');
+          const token = useAuthStore.getState().accessToken;
           if (token) {
             config.headers.Authorization = `Bearer ${token}`;
           }
@@ -74,11 +128,11 @@ export class ApiClient {
       (response) => response,
       (error: AxiosError) => {
         if (error.response?.status === 401) {
-          // Очищаем авторизацию и редиректим на логин
+          // Только сбрасываем авторизацию. Переход на /login выполнит
+          // ProtectedRoute средствами роутера — без жёсткой перезагрузки,
+          // которая теряет несохранённые правки протокола.
           if (typeof window !== 'undefined') {
-            localStorage.removeItem('access_token');
             useAuthStore.getState().clearAuth();
-            window.location.href = '/login';
           }
         }
         return Promise.reject(error);
@@ -92,6 +146,7 @@ export class ApiClient {
     body?: unknown,
     headers: Record<string, string> = {},
     params?: Record<string, string | number | boolean | undefined>,
+    options?: RequestOptions,
   ): Promise<T> {
     try {
       const config: AxiosRequestConfig = {
@@ -101,6 +156,7 @@ export class ApiClient {
           ...headers,
         },
         params,
+        signal: options?.signal,
       };
 
       if (body && ['POST', 'PUT', 'PATCH'].includes(method)) {
@@ -110,6 +166,10 @@ export class ApiClient {
       const response: AxiosResponse<T> = await this.client.request(config);
       return response.data;
     } catch (error) {
+      if (axios.isCancel(error)) {
+        throw new RequestAbortedError();
+      }
+
       if (axios.isAxiosError(error)) {
         const status = error.response?.status;
         const data = error.response?.data as {
@@ -123,20 +183,29 @@ export class ApiClient {
           error.message ||
           `HTTP ${status || 'Error'}`;
 
-        throw new Error(errorMessage);
+        throw new ApiError(errorMessage, status);
       }
 
       throw error;
     }
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  get<T>(endpoint: string, params?: Record<string, any>) {
-    return this.request<T>(endpoint, 'GET', undefined, {}, params);
+  get<T>(
+    endpoint: string,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    params?: Record<string, any>,
+    options?: RequestOptions,
+  ) {
+    return this.request<T>(endpoint, 'GET', undefined, {}, params, options);
   }
 
-  post<T>(endpoint: string, body?: unknown, headers?: Record<string, string>) {
-    return this.request<T>(endpoint, 'POST', body, headers);
+  post<T>(
+    endpoint: string,
+    body?: unknown,
+    headers?: Record<string, string>,
+    options?: RequestOptions,
+  ) {
+    return this.request<T>(endpoint, 'POST', body, headers, undefined, options);
   }
 
   put<T>(endpoint: string, body: unknown, headers?: Record<string, string>) {
@@ -149,8 +218,5 @@ export class ApiClient {
 
   patch<T>(endpoint: string, body: unknown, headers?: Record<string, string>) {
     return this.request<T>(endpoint, 'PATCH', body, headers);
-  }
-  getInstance(): AxiosInstance {
-    return this.client;
   }
 }

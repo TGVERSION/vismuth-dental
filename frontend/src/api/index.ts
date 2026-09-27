@@ -7,7 +7,10 @@ export interface ApiError {
 
 // Enums
 export type AutocompleteType = 'ml_autocomplete' | 'dict_autocomplete';
-export type MkbEventType = 'form_click' | 'autocomplete_shown' | 'suggestion_selected';
+export type MkbEventType =
+  | 'form_click'
+  | 'autocomplete_shown'
+  | 'suggestion_selected';
 export type ProtocolPrivacy = 'general' | 'personal';
 
 //ML
@@ -546,4 +549,169 @@ export interface RefSearchResponse {
   limit: number;
   offset: number;
   items: Record<string, unknown>[];
+}
+
+// Запись приёма и распознавание речи.
+//
+// Контракт согласуется со смежной командой: на момент написания эндпоинтов
+// `/speech/*` в backend нет. Описание — в docs/plans/voice-input-2026-08-29,
+// раздел «Внешние зависимости».
+
+export interface SpeechSessionCreate {
+  protocol_id: string;
+}
+
+export interface SpeechSession {
+  session_id: string;
+}
+
+/** Ответ на загрузку фрагмента. Тело не используется, важен сам код 202. */
+export interface SpeechChunkAccepted {
+  session_id: string;
+  seq: number;
+}
+
+export type SpeechSessionStatusValue =
+  | 'recording'
+  | 'processing'
+  | 'done'
+  | 'error';
+
+export interface SpeechSessionStatus {
+  session_id: string;
+  protocol_id: string;
+  status: SpeechSessionStatusValue;
+  /**
+   * Начало записи, ISO 8601. Нужно, чтобы различать записи одного протокола:
+   * приём могли записать несколько раз.
+   */
+  created_at: string | null;
+  /** Доля выполненной обработки от 0 до 1, если сервер её сообщает. */
+  progress: number | null;
+  /** Полная расшифровка приёма. */
+  transcript: string | null;
+  /**
+   * Распределение текста по полям: ключ — UUID поля структуры протокола,
+   * тот же, которым фронтенд оперирует в `field_values`.
+   */
+  field_values: Record<string, string> | null;
+  error: string | null;
+}
+
+// Анкета пациента до приёма.
+//
+// Контракт согласуется со смежной командой: на момент написания эндпоинтов
+// `/questionnaire/*` в backend нет. Описание — в
+// docs/plans/patient-questionnaire-2026-09-21, раздел «Внешние зависимости».
+//
+// Полей `quick_replies`, `step`, `input`, `ai_unavailable` и `consent_required`
+// в ТЗ нет: они добавлены постановкой пользователя (решения 2, 4, 6). Без
+// `quick_replies` не делаются быстрые ответы, без `step` не собирается разрез
+// статистики «брошено по шагу» — весь опрос идёт одним чатом, и других
+// источников шага у фронтенда не остаётся.
+
+export type QuestionnaireLinkTarget = 'clinic' | 'doctor';
+
+/**
+ * Состояние ссылки. Приходит полем, а не только HTTP-кодом: по одному 403
+ * нельзя отличить «подписка кончилась» от «лимит с устройства», а тексты
+ * заглушек у них разные.
+ */
+export type QuestionnaireState =
+  | 'ok'
+  | 'subscription_ended'
+  | 'doctor_inactive'
+  | 'clinic_limit'
+  | 'device_limit'
+  | 'ip_limit';
+
+export interface QuestionnaireClinic {
+  name: string;
+  phone: string;
+  /** Относительный путь того же origin; абсолютные URL фронтенд отклоняет. */
+  logo_url: string | null;
+  /** Строго #RRGGBB. Значение недоверенное и валидируется до попадания в CSS. */
+  brand_color: string | null;
+}
+
+export interface QuestionnaireDoctor {
+  id: string;
+  full_name: string;
+  photo_url: string | null;
+  specializations: string[];
+}
+
+export interface QuestionnaireLink {
+  clinic: QuestionnaireClinic;
+  target: QuestionnaireLinkTarget;
+  /** Заполнен только для ссылки врача. */
+  doctor: QuestionnaireDoctor | null;
+  consent_required: boolean;
+  state: QuestionnaireState;
+}
+
+export interface QuestionnaireDoctorsResponse {
+  doctors: QuestionnaireDoctor[];
+  specializations: string[];
+}
+
+/**
+ * Ожидаемый вид ответа на сообщение ассистента.
+ *
+ * Поле ввода фронтенд показывает **всегда**, в том числе при `choice`:
+ * быстрые ответы — подсказка, а не ограничение, и пациент может ответить
+ * своими словами на любой вопрос. Значение остаётся в контракте как
+ * намерение сервера и может пригодиться в статистике.
+ */
+export type QuestionnaireMessageInput = 'text' | 'choice' | 'none';
+
+export interface QuestionnaireMessage {
+  id: string;
+  text: string;
+  /** Быстрые ответы над полем ввода. */
+  quick_replies: string[] | null;
+  input: QuestionnaireMessageInput;
+  /** Код шага для статистики «брошено». */
+  step: string;
+  /**
+   * Доля пройденного от 0 до 1 для индикатора в чате.
+   *
+   * Считает сервер: только он знает сценарий и остаток бюджета уточняющих
+   * вопросов, а число вопросов ИИ заранее не известно. Если поле не пришло,
+   * фронтенд показывает оценку по количеству отвеченных вопросов.
+   */
+  progress: number | null;
+  /** Вопросы закончились, дальше экран данных приёма. */
+  finished: boolean;
+  /** ИИ не ответил: уточняющие вопросы не задавались, врач увидит пометку. */
+  ai_unavailable: boolean;
+}
+
+export interface QuestionnaireSessionCreate {
+  link_code: string;
+  doctor_id: string;
+}
+
+export interface QuestionnaireSession {
+  session_id: string;
+  message: QuestionnaireMessage;
+}
+
+/** Ответ пациента. Пропуск вопроса исключён из ТЗ 22.09.2026. */
+export interface QuestionnaireAnswer {
+  text: string;
+}
+
+export interface QuestionnaireCompleteRequest {
+  first_name: string;
+  middle_name: string;
+  /** YYYY-MM-DD, от сегодня до +30 дней. */
+  appointment_date: string;
+  /** HH:MM. */
+  appointment_time: string;
+}
+
+export interface QuestionnaireCompleteResponse {
+  /** Четыре цифры, которые пациент называет врачу. */
+  code: string;
 }

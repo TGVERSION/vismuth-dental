@@ -13,16 +13,21 @@ export const AutocompleteSuggestions: React.FC<
 > = ({ suggestions, highlightedIndex, onSelect, isOpen, loading = false }) => {
   if (!isOpen) return null;
 
-  if (loading) {
-    return null;
-  }
-
+  // Пока летит запрос, показываем прежние подсказки. Раньше список на это
+  // время размонтировался, и при непрерывном наборе панель мигала на каждой
+  // букве. Новые подсказки просто заменяют старые, когда приходит ответ.
   if (suggestions.length === 0) return null;
 
   return (
-    <ul className="absolute z-50 w-full -mt-1 bg-[#F2F4F7] border-0 rounded-lg max-h-60 overflow-auto">
+    <ul
+      aria-busy={loading}
+      className="absolute z-50 w-full -mt-1 bg-[#F2F4F7] border-0 rounded-lg max-h-60 overflow-auto"
+    >
       {suggestions.map((suggestion, index) => (
         <li
+          // Ключ по индексу намеренно: список заменяется целиком, и при
+          // одинаковом числе строк React обновит только текст, не пересоздавая
+          // узлы. Ключ по тексту заставлял бы их размонтироваться.
           key={index}
           onMouseDown={(e) => {
             e.preventDefault();

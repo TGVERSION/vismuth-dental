@@ -22,6 +22,96 @@ body {
   font-family: Onest;
 }
 
+/* Тема публичной анкеты пациента.
+   Объявляется на контейнере анкеты, а НЕ на :root: фирменные цвета клиники
+   не должны протекать на экраны Ассистента врача. Значения ниже —
+   нейтральные умолчания; --q-brand и --q-brand-contrast перекрываются
+   атрибутом style из brandStyle(), когда брендинг пришёл и прошёл проверку. */
+[data-questionnaire] {
+  --q-brand: #1b4b8f;
+  --q-brand-contrast: #ffffff;
+  --q-bg: #ffffff;
+  --q-surface: #f1f2f6;
+  --q-text: #202020;
+  --q-muted: #8b8b8b;
+  --q-bubble-in: #f1f2f6;
+  --q-bubble-out: var(--q-brand);
+
+  color: var(--q-text);
+}
+
+/* Фон и высота — только у самой страницы анкеты.
+   В блоке выше их быть не должно: тот же атрибут стоит на обёртке шторки,
+   которая рендерится порталом и растянута на весь экран, — она закрасила бы
+   содержимое страницы под собой.
+   dvh, а не vh: на мобильных браузерах 100vh больше видимой области. */
+.q-page {
+  background: var(--q-bg);
+  min-height: 100dvh;
+}
+
+/* Высота экрана анкеты. Отдельным классом, а не утилитой в разметке:
+   на десктопе она другая, и менять её в одном месте надёжнее, чем
+   расставлять адаптивные варианты по семи экранам. */
+.q-screen {
+  min-height: 100dvh;
+}
+
+/* Чат занимает высоту целиком: лента прокручивается внутри, а поле ввода
+   остаётся внизу. */
+.q-screen-fixed {
+  height: 100dvh;
+}
+
+/* Десктоп: анкета остаётся узкой колонкой по центру.
+   Мобильный вид не затрагивается — все правила ниже только от 768px. */
+@media (min-width: 768px) {
+  .q-page {
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    padding: 40px 16px;
+    /* Фон вокруг карточки, чтобы она читалась как отдельная поверхность. */
+    background: var(--q-surface);
+  }
+
+  .q-shell {
+    width: 100%;
+    max-width: 480px;
+    overflow: hidden;
+    border-radius: 24px;
+    background: var(--q-bg);
+    box-shadow: 0 0 55px 0 #00000014;
+  }
+
+  .q-screen,
+  .q-screen-fixed {
+    min-height: 640px;
+    height: auto;
+  }
+
+  /* Чату внутри карточки нужна фиксированная высота: иначе лента растёт
+     вниз бесконечно и поле ввода уезжает за пределы экрана. */
+  .q-screen-fixed {
+    height: 640px;
+    min-height: 0;
+  }
+}
+
+/* Появление шторки выбора снизу в анкете. */
+@keyframes slideUp {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+.animate-slide-up {
+  animation: slideUp 0.22s ease-out;
+}
+
 .header {
   position: fixed;
   top: 0;
@@ -207,4 +297,33 @@ div[contenteditable][data-placeholder]:empty:before {
 .icon-gray:hover {
   filter: invert(53%) sepia(19%) saturate(2179%) hue-rotate(189deg)
     brightness(99%) contrast(91%);
+}
+
+/* Печать протокола: на бумагу уходит только сам протокол.
+   Боковая панель со списком, тулбар и панель клинреков скрываются. */
+@media print {
+  body {
+    overflow: visible !important;
+    background: #fff !important;
+  }
+
+  header,
+  [data-print-hide] {
+    display: none !important;
+  }
+
+  [data-print-area] {
+    position: static !important;
+    margin: 0 !important;
+    height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
+    box-shadow: none !important;
+    border-radius: 0 !important;
+  }
+
+  [data-print-area] * {
+    overflow: visible !important;
+    max-height: none !important;
+  }
 }

@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
+import { useRefreshCurrentUser } from '@/hooks/useRefreshCurrentUser';
 import { DoctorsHelpers } from '@/components/DoctorsHelpers';
 import { SettingsPopup } from '@/components/settings/SettingsPopup';
 import { AppNav } from '@/components/AppNav';
@@ -14,6 +15,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const [isDictionaryOpen, setIsDictionaryOpen] = useState(false);
   const hideTimerRef = useRef<NodeJS.Timeout | null>(null);
   const { user, handleLogout } = useAuth();
+  useRefreshCurrentUser();
   const hideHeader = ['/login', '/register'].includes(pathname);
   const [showDoctorsHelpers, setShowDoctorsHelpers] = useState(false);
   const handleProfileEnter = () => {

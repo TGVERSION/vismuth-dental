@@ -3,12 +3,13 @@
 import { useEffect } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { useAuthStore } from '@/store/authStore';
+import { isPublicPath } from '@/lib/public-routes';
 
-// Маршруты, доступные без авторизации. Новый публичный маршрут нужно
-// добавлять сюда одновременно с созданием страницы в src/app/(public).
-export const PUBLIC_ROUTES = ['/login', '/register', '/verify'];
-
-const isPublicRoute = (pathname: string) => PUBLIC_ROUTES.includes(pathname);
+// Список публичных маршрутов и правило сравнения живут в
+// src/lib/public-routes.ts — там же лежат тесты на границы префиксов.
+// Новый публичный маршрут добавляется туда одновременно с созданием
+// страницы в src/app/(public).
+export { PUBLIC_ROUTES } from '@/lib/public-routes';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -27,7 +28,7 @@ export default function ProtectedRoute({ children }: ProtectedRouteProps) {
   const pathname = usePathname();
   const { isAuthenticated, isLoaded } = useAuthStore();
 
-  const isAuthPage = isPublicRoute(pathname);
+  const isAuthPage = isPublicPath(pathname);
 
   useEffect(() => {
     if (!isLoaded) return;

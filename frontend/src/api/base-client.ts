@@ -45,6 +45,16 @@ export interface ApiClientConfig {
   timeout?: number;
   retries?: number;
   retryDelay?: number;
+  /**
+   * Участвует ли клиент в авторизации. По умолчанию `true` — поведение всех
+   * существующих клиентов не меняется.
+   *
+   * `false` нужен публичным эндпоинтам (анкета пациента): токен врача туда
+   * отправлять незачем, а сброс авторизации по 401 там вреден — врач,
+   * открывший ссылку анкеты в своём браузере, оказался бы разлогинен
+   * в Ассистенте.
+   */
+  auth?: boolean;
 }
 
 export class ApiClient {
@@ -56,6 +66,7 @@ export class ApiClient {
     timeout = 10000,
     retries = 3,
     retryDelay = 100,
+    auth = true,
   }: ApiClientConfig) {
     this.retries = retries;
 
@@ -90,6 +101,13 @@ export class ApiClient {
         });
       },
     });
+
+    // Публичный клиент не участвует в авторизации вовсе: интерцепторы просто
+    // не регистрируются. Так исключён и лишний заголовок на публичном
+    // эндпоинте, и сброс чужой сессии по чужому 401.
+    if (!auth) {
+      return;
+    }
 
     this.client.interceptors.request.use(
       (config) => {

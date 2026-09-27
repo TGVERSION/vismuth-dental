@@ -69,6 +69,14 @@ const nextConfig: NextConfig = {
                 source: '/api/main/speech/:path*',
                 destination: '/api/speech-mock/:path*',
               },
+              // Заглушка публичной анкеты пациента: эндпоинтов
+              // /questionnaire/* в backend нет. Правило действует и для
+              // серверного рендера — страница анкеты ходит за брендингом на
+              // собственный origin, и её запрос проходит тот же путь.
+              {
+                source: '/api/main/questionnaire/:path*',
+                destination: '/api/questionnaire-mock/:path*',
+              },
             ],
       afterFiles: [
         {

@@ -58,6 +58,14 @@ import type {
   SpeechSessionCreate,
   SpeechSessionStatus,
   SpeechChunkAccepted,
+  QuestionnaireLink,
+  QuestionnaireDoctorsResponse,
+  QuestionnaireSession,
+  QuestionnaireSessionCreate,
+  QuestionnaireMessage,
+  QuestionnaireAnswer,
+  QuestionnaireCompleteRequest,
+  QuestionnaireCompleteResponse,
 } from './index';
 
 export const apiClient = new ApiClient({
@@ -76,6 +84,43 @@ const mlLongRunningApiClient = new ApiClient({
   baseUrl: '/api/main',
   timeout: ML_TIMEOUT_MS,
   retries: 0,
+});
+
+// Клиенты публичной анкеты пациента. Токена у пациента нет, а 401 от
+// публичного эндпоинта не должен сбрасывать сессию врача, открывшего ссылку
+// в своём браузере, — отсюда `auth: false`.
+
+/** Только идемпотентные GET: повтор при обрыве связи безопасен. */
+const publicApiClient = new ApiClient({
+  baseUrl: '/api/main',
+  timeout: 10000,
+  retries: 3,
+  auth: false,
+});
+
+/**
+ * Создание сессии и завершение анкеты. `retries: 0` обязателен: базовый
+ * `retryCondition` повторяет сетевые ошибки при любом методе, и обрыв связи
+ * на POST молча создал бы вторую анкету.
+ */
+const publicMutationApiClient = new ApiClient({
+  baseUrl: '/api/main',
+  timeout: 15000,
+  retries: 0,
+  auth: false,
+});
+
+// Ответ ассистента идёт через backend-прокси, который ждёт ml-service до 180 с.
+// Клиентский таймаут берём чуть больше, чтобы получить осмысленный 504, а не
+// обрыв: оборванный запрос сервер всё равно досчитает, и повтор создаст дубль
+// сообщения. Ожидание для пациента смягчается подписями в интерфейсе.
+const QUESTIONNAIRE_CHAT_TIMEOUT_MS = 200000;
+
+const publicChatApiClient = new ApiClient({
+  baseUrl: '/api/main',
+  timeout: QUESTIONNAIRE_CHAT_TIMEOUT_MS,
+  retries: 0,
+  auth: false,
 });
 
 // Клиент записи приёма. Ретраи отключены для всех неидемпотентных запросов
@@ -367,6 +412,51 @@ export const mainApi = {
 
     cancel: (session_id: string) =>
       apiClient.delete<void>(`/speech/sessions/${session_id}`),
+  },
+
+  /**
+   * Публичная анкета пациента. Все методы идут без авторизации: пациент
+   * открывает ссылку с телефона, аккаунта у него нет.
+   */
+  questionnaire: {
+    getLink: (code: string, options?: RequestOptions) =>
+      publicApiClient.get<QuestionnaireLink>(
+        `/questionnaire/link/${encodeURIComponent(code)}`,
+        undefined,
+        options,
+      ),
+
+    getDoctors: (code: string, options?: RequestOptions) =>
+      publicApiClient.get<QuestionnaireDoctorsResponse>(
+        `/questionnaire/link/${encodeURIComponent(code)}/doctors`,
+        undefined,
+        options,
+      ),
+
+    startSession: (data: QuestionnaireSessionCreate) =>
+      publicMutationApiClient.post<QuestionnaireSession>(
+        '/questionnaire/sessions',
+        data,
+      ),
+
+    /** Ответ пациента либо пропуск вопроса; ждёт следующий вопрос ассистента. */
+    sendAnswer: (
+      session_id: string,
+      data: QuestionnaireAnswer,
+      options?: RequestOptions,
+    ) =>
+      publicChatApiClient.post<QuestionnaireMessage>(
+        `/questionnaire/sessions/${encodeURIComponent(session_id)}/messages`,
+        data,
+        undefined,
+        options,
+      ),
+
+    complete: (session_id: string, data: QuestionnaireCompleteRequest) =>
+      publicMutationApiClient.post<QuestionnaireCompleteResponse>(
+        `/questionnaire/sessions/${encodeURIComponent(session_id)}/complete`,
+        data,
+      ),
   },
 
   dictionary: {

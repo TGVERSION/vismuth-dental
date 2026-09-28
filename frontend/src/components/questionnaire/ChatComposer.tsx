@@ -109,8 +109,10 @@ export const ChatComposer = ({
    * На телефоне — только после того, как пациент сам коснулся поля: иначе
    * клавиатура выехала бы при входе в чат.
    *
-   * Пока ответ не пришёл, поле отключено, и фокус всё равно не встал бы;
-   * эффект срабатывает ровно в момент, когда оно снова доступно.
+   * На телефоне это запасной путь: iOS не открывает клавиатуру по `focus()`
+   * без касания. Основное — не терять фокус вовсе: поле не отключается на
+   * время ожидания, а кнопки его не забирают (см. `keepInputFocus`). Эффект
+   * нужен, когда поле всё-таки было отключено — на вопросе с выбором.
    */
   useEffect(() => {
     if (isAwaiting) return;
@@ -118,6 +120,16 @@ export const ChatComposer = ({
 
     textareaRef.current?.focus();
   }, [isAwaiting, isDesktop]);
+
+  /**
+   * Нажатие на кнопку не уводит фокус из поля ввода. Иначе на телефоне
+   * клавиатура закрывалась бы после каждой отправки и после каждого быстрого
+   * ответа, а открыть её обратно программно iOS не даёт. Клик при этом
+   * срабатывает как обычно.
+   */
+  const keepInputFocus = (event: React.MouseEvent) => {
+    event.preventDefault();
+  };
 
   const handleChange = (raw: string) => {
     const { value: next, truncated: wasTruncated } = clampAnswer(raw);
@@ -165,6 +177,7 @@ export const ChatComposer = ({
             <button
               key={chipKey(chip)}
               type="button"
+              onMouseDown={keepInputFocus}
               onClick={() => handleChip(chip)}
               disabled={isAwaiting}
               className="min-h-[44px] rounded-xl bg-[var(--q-surface)] px-4 text-base disabled:opacity-60"
@@ -197,7 +210,11 @@ export const ChatComposer = ({
             }
           }}
           rows={1}
-          disabled={isAwaiting || isLocked}
+          // Пока ассистент отвечает, поле не отключается: отключённое поле
+          // теряет фокус, и клавиатура закрывалась бы между вопросами.
+          // Отправку на это время блокирует canSend, а пока ответа нет,
+          // пациент может начать печатать.
+          disabled={isLocked}
           placeholder="Сообщение"
           aria-label="Ваш ответ"
           aria-describedby={hint ? hintId : undefined}
@@ -208,6 +225,7 @@ export const ChatComposer = ({
 
         <button
           type="submit"
+          onMouseDown={keepInputFocus}
           disabled={!canSend}
           aria-label="Отправить"
           className="mb-1 flex h-11 w-11 shrink-0 items-center justify-center text-[var(--q-brand)] disabled:opacity-40"

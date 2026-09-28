@@ -3,6 +3,7 @@
 import Image from 'next/image';
 import { useId } from 'react';
 import { toast } from 'react-toastify';
+import { copyText } from '@/lib/clipboard';
 import type { QuestionnaireSectionView } from '@/lib/doctor-questionnaires';
 import { logWarn } from '@/lib/logger';
 
@@ -22,11 +23,11 @@ export const QuestionnaireSection = ({
 
   const handleCopy = async () => {
     try {
-      await navigator.clipboard.writeText(section.text);
+      await copyText(section.text);
       toast.success('Скопировано');
     } catch (error) {
-      // Буфер обмена недоступен: нет разрешения или страница открыта не по
-      // HTTPS. Текст раздела на экране, его можно выделить вручную.
+      // Браузер не дал скопировать ни одним способом. Текст раздела на
+      // экране, его можно выделить вручную.
       logWarn('Анкеты: копирование раздела недоступно', error);
       toast.error('Не удалось скопировать');
     }

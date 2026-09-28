@@ -1,7 +1,8 @@
-// Браузерные действия с QR-кодом: PNG, скачивание, буфер обмена.
+// Браузерные действия с QR-кодом: PNG, скачивание, картинка в буфер обмена.
 //
 // Только для обработчиков клиентских компонентов: здесь `document`, canvas
-// и `navigator.clipboard`. Сама матрица строится в чистом `qr.ts`.
+// и `navigator.clipboard`. Сама матрица строится в чистом `qr.ts`, текст
+// копирует `clipboard.ts`.
 
 import { QR_QUIET_ZONE, type QrMatrix } from './qr';
 
@@ -93,9 +94,4 @@ export const canCopyImage = (): boolean => {
  */
 export const copyImage = async (png: Promise<Blob>): Promise<void> => {
   await navigator.clipboard.write([new ClipboardItem({ 'image/png': png })]);
-};
-
-/** Текст в буфер обмена. Нет буфера или отказ — отклонённый промис. */
-export const copyText = async (text: string): Promise<void> => {
-  await navigator.clipboard.writeText(text);
 };

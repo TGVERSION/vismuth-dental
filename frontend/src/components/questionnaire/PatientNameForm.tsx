@@ -1,7 +1,10 @@
 'use client';
 
 import { useState } from 'react';
-import { isValidPatientName } from '@/lib/questionnaire';
+import {
+  PATIENT_NAME_MAX_LENGTH,
+  isValidPatientName,
+} from '@/lib/questionnaire';
 import { FIELD_CLASS } from './field-styles';
 
 interface PatientNameFormProps {
@@ -41,13 +44,14 @@ export const PatientNameForm = ({
       }}
       className="q-screen flex flex-col px-4 pt-[calc(env(safe-area-inset-top)+24px)]"
     >
-      <h1 className="text-2xl font-semibold">Как вас зовут?</h1>
+      <h1 className="text-[24px] font-bold">Как вас зовут?</h1>
 
       <input
         type="text"
         value={firstName}
         onChange={(event) => setFirstName(event.target.value)}
         autoComplete="given-name"
+        maxLength={PATIENT_NAME_MAX_LENGTH}
         placeholder="Имя*"
         aria-label="Имя"
         aria-required="true"
@@ -64,6 +68,7 @@ export const PatientNameForm = ({
         value={middleName}
         onChange={(event) => setMiddleName(event.target.value)}
         autoComplete="additional-name"
+        maxLength={PATIENT_NAME_MAX_LENGTH}
         placeholder="Отчество"
         aria-label="Отчество"
         className={`${FIELD_CLASS} mt-3 min-h-[52px] w-full`}

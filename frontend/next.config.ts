@@ -68,12 +68,15 @@ const MOCK_REWRITES: Record<
       destination: '/api/speech-mock/:path*',
     },
   ],
-  // Публичная анкета пациента: эндпоинтов /questionnaire/* в backend нет.
-  // Серверный рендер страницы анкеты идёт за брендингом через собственный
-  // сервер (src/api/server-api.ts) и попадает под то же правило.
+  // Публичная анкета пациента (`/public/*` backend) — для dev и демо-контура
+  // без базы и ML. Серверный рендер страницы анкеты идёт за брендингом через
+  // собственный сервер (src/api/server-api.ts) и попадает под то же правило.
+  // Правило перехватывает ВЕСЬ `/public/*`: в backend это сейчас только
+  // роутер анкеты (routers/public_questionnaire.py). Появится другой
+  // публичный роутер — правило нужно сузить.
   questionnaire: [
     {
-      source: '/api/main/questionnaire/:path*',
+      source: '/api/main/public/:path*',
       destination: '/api/questionnaire-mock/:path*',
     },
   ],

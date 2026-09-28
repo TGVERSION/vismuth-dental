@@ -1,10 +1,10 @@
 'use client';
 
 import { useState } from 'react';
-import type { QuestionnaireClinic } from '@/api';
+import type { ClinicBranding } from '@/lib/questionnaire';
 
 interface ConsentScreenProps {
-  clinic: QuestionnaireClinic;
+  clinic: ClinicBranding;
   onAccept: () => void;
 }
 

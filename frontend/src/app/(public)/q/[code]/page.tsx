@@ -19,12 +19,12 @@ export async function generateMetadata({
   // поэтому запрос к backend уходит один на показ страницы, а не два.
   const link = await getQuestionnaireLink(code);
 
-  return { title: link?.clinic.name ?? 'Анкета перед приёмом' };
+  return { title: link?.clinic_name ?? 'Анкета перед приёмом' };
 }
 
 export default async function QuestionnairePage({ params }: PageProps) {
   const { code } = await params;
   const link = await getQuestionnaireLink(code);
 
-  return <QuestionnaireApp linkCode={code} link={link} />;
+  return <QuestionnaireApp slug={code} link={link} />;
 }

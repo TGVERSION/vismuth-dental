@@ -2,9 +2,15 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useIsDesktop } from '@/hooks/useIsDesktop';
+import { slotHours, slotMinutes } from '@/lib/questionnaire';
 import { PickerShell } from './PickerShell';
 
 interface TimeSheetProps {
+  /**
+   * Разрешённое время `HH:MM` из шага сервера. Колёса предлагают только его:
+   * любое другое время backend отклонит.
+   */
+  slots: string[];
   /** `HH:MM` либо пустая строка. */
   value: string;
   onClose: () => void;
@@ -18,19 +24,21 @@ interface TimeSheetProps {
   onChange: (value: string) => void;
 }
 
-const pad = (value: number): string => String(value).padStart(2, '0');
+interface TimeDraft {
+  hour: string;
+  minute: string;
+}
 
-const HOURS = Array.from({ length: 24 }, (_, index) => pad(index));
-const MINUTES = Array.from({ length: 60 }, (_, index) => pad(index));
+/**
+ * Начальное значение: выбранное время, если оно среди слотов, иначе первый
+ * слот — полдень мог бы и не входить в расписание клиники.
+ */
+const initialDraft = (slots: string[], value: string): TimeDraft => {
+  const [hour = '', minute = ''] = value.split(':');
+  if (slotMinutes(slots, hour).includes(minute)) return { hour, minute };
 
-/** Разбор `HH:MM`. Для пустого значения — полдень, середина рабочего дня. */
-const splitTime = (value: string): { hour: string; minute: string } => {
-  const [hour, minute] = value.split(':');
-
-  return {
-    hour: HOURS.includes(hour) ? hour : '12',
-    minute: MINUTES.includes(minute) ? minute : '00',
-  };
+  const firstHour = slotHours(slots)[0] ?? '';
+  return { hour: firstHour, minute: slotMinutes(slots, firstHour)[0] ?? '' };
 };
 
 interface WheelProps {
@@ -46,7 +54,7 @@ const Wheel = ({ label, items, value, compact, onChange }: WheelProps) => {
   const selectedRef = useRef<HTMLButtonElement>(null);
 
   // При открытии выбранное значение должно быть видно, а не где-то
-  // в глубине списка из шестидесяти позиций.
+  // в глубине списка.
   useEffect(() => {
     const list = listRef.current;
     const selected = selectedRef.current;
@@ -108,17 +116,33 @@ const Wheel = ({ label, items, value, compact, onChange }: WheelProps) => {
 };
 
 export const TimeSheet = ({
+  slots,
   value,
   onClose,
   onApply,
   onChange,
 }: TimeSheetProps) => {
   const isDesktop = useIsDesktop();
-  const [draft, setDraft] = useState(() => splitTime(value));
+  const [draft, setDraft] = useState(() => initialDraft(slots, value));
 
-  const update = (next: { hour: string; minute: string }) => {
+  const hours = slotHours(slots);
+  const minutes = slotMinutes(slots, draft.hour);
+
+  const update = (next: TimeDraft) => {
     setDraft(next);
     if (isDesktop) onChange(`${next.hour}:${next.minute}`);
+  };
+
+  // При смене часа минута остаётся, если она есть в новом часе, иначе
+  // подбирается первая доступная: 18:30 в расписании может не быть.
+  const changeHour = (hour: string) => {
+    const available = slotMinutes(slots, hour);
+    update({
+      hour,
+      minute: available.includes(draft.minute)
+        ? draft.minute
+        : (available[0] ?? ''),
+    });
   };
 
   return (
@@ -141,14 +165,14 @@ export const TimeSheet = ({
       <div className={`flex gap-3 pb-2 ${isDesktop ? 'px-3' : 'px-4'}`}>
         <Wheel
           label="Часы"
-          items={HOURS}
+          items={hours}
           value={draft.hour}
           compact={isDesktop}
-          onChange={(hour) => update({ ...draft, hour })}
+          onChange={changeHour}
         />
         <Wheel
           label="Минуты"
-          items={MINUTES}
+          items={minutes}
           value={draft.minute}
           compact={isDesktop}
           onChange={(minute) => update({ ...draft, minute })}

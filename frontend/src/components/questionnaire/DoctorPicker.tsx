@@ -1,8 +1,8 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import type { QuestionnaireDoctor } from '@/api';
-import { filterDoctors } from '@/lib/questionnaire';
+import type { PublicLinkDoctor } from '@/api';
+import { collectSpecializations, filterDoctors } from '@/lib/questionnaire';
 import { DoctorList } from './DoctorList';
 import { FIELD_CLASS } from './field-styles';
 import { SheetField } from './SheetField';
@@ -10,14 +10,15 @@ import { SelectSheet } from './SelectSheet';
 import { SearchIcon } from './icons';
 
 interface DoctorPickerProps {
-  doctors: QuestionnaireDoctor[];
-  specializations: string[];
-  isLoading: boolean;
+  doctors: PublicLinkDoctor[];
+  /** Идёт отправка выбора: список заблокирован. */
+  isSelecting: boolean;
+  /** Чей выбор отправляется — на его карточке спиннер. */
+  pendingId: string | null;
   error: string | null;
-  isStarting: boolean;
-  startError: string | null;
-  onReload: () => void;
-  onSelect: (doctor: QuestionnaireDoctor) => void;
+  /** Повторить последний выбор после ошибки. */
+  onRetry?: () => void;
+  onSelect: (doctor: PublicLinkDoctor) => void;
 }
 
 /** Маркер «без фильтра»: в списке это отдельный вариант «Все специализации». */
@@ -25,12 +26,10 @@ const ALL_SPECIALIZATIONS = 'all';
 
 export const DoctorPicker = ({
   doctors,
-  specializations,
-  isLoading,
+  isSelecting,
+  pendingId,
   error,
-  isStarting,
-  startError,
-  onReload,
+  onRetry,
   onSelect,
 }: DoctorPickerProps) => {
   const [query, setQuery] = useState('');
@@ -49,12 +48,17 @@ export const DoctorPicker = ({
     [doctors, query, specialization],
   );
 
+  // Фильтр — по названиям специализаций из карточек: отдельного
+  // справочника у публичного контракта нет.
   const options = useMemo(
     () => [
       { value: ALL_SPECIALIZATIONS, label: 'Все специализации' },
-      ...specializations.map((item) => ({ value: item, label: item })),
+      ...collectSpecializations(doctors).map((item) => ({
+        value: item,
+        label: item,
+      })),
     ],
-    [specializations],
+    [doctors],
   );
 
   const hasFilters = query !== '' || specialization !== ALL_SPECIALIZATIONS;
@@ -66,7 +70,7 @@ export const DoctorPicker = ({
 
   return (
     <div className="q-screen flex flex-col px-4 pt-8">
-      <h1 className="text-2xl font-semibold">Выберите врача</h1>
+      <h1 className="text-[24px] font-bold">Выберите врача</h1>
 
       <div className="mt-6 flex gap-2">
         <div
@@ -114,19 +118,26 @@ export const DoctorPicker = ({
       <div className="mt-6 flex flex-1 flex-col gap-3 pb-[calc(env(safe-area-inset-bottom)+16px)]">
         <DoctorList
           doctors={visible}
-          isLoading={isLoading}
-          error={error}
-          isStarting={isStarting}
-          onReload={onReload}
+          isSelecting={isSelecting}
+          pendingId={pendingId}
           onSelect={onSelect}
           emptyActionLabel={hasFilters ? 'Сбросить фильтры' : undefined}
           onEmptyAction={hasFilters ? resetFilters : undefined}
         />
 
-        {startError ? (
-          <p role="alert" className="text-sm text-[#C2334D]">
-            {startError}
-          </p>
+        {error && !isSelecting ? (
+          <div role="alert" className="rounded-2xl bg-[var(--q-surface)] p-4">
+            <p className="text-sm text-[#C2334D]">{error}</p>
+            {onRetry ? (
+              <button
+                type="button"
+                onClick={onRetry}
+                className="mt-3 min-h-[44px] rounded-xl bg-[var(--q-brand)] px-4 font-medium text-[var(--q-brand-contrast)]"
+              >
+                Повторить
+              </button>
+            ) : null}
+          </div>
         ) : null}
       </div>
     </div>

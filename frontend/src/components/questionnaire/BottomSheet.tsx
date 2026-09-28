@@ -3,6 +3,7 @@
 import { useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import Image from 'next/image';
+import { useQuestionnaireTheme } from './QuestionnaireTheme';
 
 interface BottomSheetProps {
   title: string;
@@ -22,9 +23,9 @@ interface BottomSheetProps {
  * дочерние шторки получают чистое состояние при каждом открытии — без
  * синхронизации через эффекты.
  *
- * Содержимое уходит порталом в `document.body`, поэтому на обёртке стоит
- * `data-questionnaire`: иначе токены темы клиники, объявленные на контейнере
- * анкеты, до шторки не дошли бы и она осталась бы нефирменной.
+ * Содержимое уходит порталом в `document.body`, из-под контейнера анкеты,
+ * поэтому тема ставится на обёртку заново: `data-questionnaire` даёт
+ * нейтральные токены, а цвета клиники приходят из `useQuestionnaireTheme`.
  */
 export const BottomSheet = ({
   title,
@@ -32,6 +33,8 @@ export const BottomSheet = ({
   children,
   footer,
 }: BottomSheetProps) => {
+  const theme = useQuestionnaireTheme();
+
   // Закрытие по Escape и блокировка прокрутки страницы под шторкой.
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -56,6 +59,7 @@ export const BottomSheet = ({
     <div
       data-questionnaire
       className="fixed inset-0 z-[1100] flex flex-col justify-end"
+      style={theme}
     >
       <button
         type="button"

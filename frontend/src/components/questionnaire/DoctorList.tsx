@@ -1,63 +1,34 @@
 'use client';
 
-import type { QuestionnaireDoctor } from '@/api';
+import type { PublicLinkDoctor } from '@/api';
 import { DoctorCard } from './DoctorCard';
 
 interface DoctorListProps {
-  doctors: QuestionnaireDoctor[];
-  isLoading: boolean;
-  error: string | null;
-  isStarting: boolean;
-  onReload: () => void;
-  onSelect: (doctor: QuestionnaireDoctor) => void;
+  doctors: PublicLinkDoctor[];
+  /** Идёт отправка выбора: список заблокирован. */
+  isSelecting: boolean;
+  /** Чей выбор отправляется — на его карточке спиннер. */
+  pendingId?: string | null;
+  onSelect: (doctor: PublicLinkDoctor) => void;
   /** Действие на пустой выдаче — например сброс фильтров на экране выбора. */
   emptyActionLabel?: string;
   onEmptyAction?: () => void;
 }
 
-const SkeletonRow = () => (
-  <div className="h-20 w-full animate-pulse rounded-2xl bg-[var(--q-surface)]" />
-);
-
 /**
- * Список врачей со всеми состояниями. Общий для экрана выбора и для заглушки
- * деактивированного врача, где ТЗ тоже требует показать список.
+ * Список врачей. Общий для экрана выбора и для заглушки деактивированного
+ * врача, где ТЗ тоже требует показать список.
+ *
+ * Отдельной загрузки нет: врачи приходят в ссылке и в шаге `choose_doctor`.
  */
 export const DoctorList = ({
   doctors,
-  isLoading,
-  error,
-  isStarting,
-  onReload,
+  isSelecting,
+  pendingId = null,
   onSelect,
   emptyActionLabel,
   onEmptyAction,
 }: DoctorListProps) => {
-  if (isLoading) {
-    return (
-      <div className="flex flex-col gap-3">
-        <SkeletonRow />
-        <SkeletonRow />
-        <SkeletonRow />
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div role="alert" className="rounded-2xl bg-[var(--q-surface)] p-4">
-        <p>{error}</p>
-        <button
-          type="button"
-          onClick={onReload}
-          className="mt-3 min-h-[44px] rounded-xl bg-[var(--q-brand)] px-4 font-medium text-[var(--q-brand-contrast)]"
-        >
-          Повторить
-        </button>
-      </div>
-    );
-  }
-
   if (doctors.length === 0) {
     return (
       <div className="rounded-2xl bg-[var(--q-surface)] p-4">
@@ -79,10 +50,11 @@ export const DoctorList = ({
     <div className="flex flex-col gap-3">
       {doctors.map((doctor) => (
         <DoctorCard
-          key={doctor.id}
+          key={doctor.membership_id}
           doctor={doctor}
           onSelect={onSelect}
-          disabled={isStarting}
+          disabled={isSelecting}
+          isPending={isSelecting && pendingId === doctor.membership_id}
         />
       ))}
     </div>

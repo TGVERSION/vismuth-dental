@@ -1,38 +1,27 @@
-// Хранилище сессий анкеты — только для локальной разработки.
+// Хранилище анкет заглушки — только для разработки и демо-контура.
 //
 // Хранилище — временный файл, а не переменная в памяти: в dev каждый маршрут
-// исполняется изолированно, и сессия, созданная в `POST /sessions`, не видна
-// ни в `/messages`, ни в `/complete` — ни через модульную переменную, ни через
+// исполняется изолированно, и анкета, созданная в `POST /questionnaires`, не
+// видна ни в `/step`, ни в `/answer` — ни через модульную переменную, ни через
 // globalThis. Это уже проверено в заглушке распознавания речи
-// (`speech-mock/_mock/store.ts`), поэтому здесь повторяем тот же приём сразу.
+// (`speech-mock/_mock/store.ts`), поэтому здесь тот же приём.
 
+import { randomBytes, randomUUID } from 'node:crypto';
 import { readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { currentMockMode, type MockMode } from './mode';
-import type { VisitType } from './script';
+import { newQuestionnaire, type MockQuestionnaire } from './flow';
+import type { MockMode } from './mode';
 
-const STORE_FILE = join(tmpdir(), 'vismuth-questionnaire-mock.json');
+const STORE_FILE = join(tmpdir(), 'vismuth-questionnaire-public-mock.json');
 
-export interface MockQuestionnaireSession {
-  sessionId: string;
-  linkCode: string;
-  doctorId: string;
-  createdAt: number;
-  /** Режим, зафиксированный при создании сессии. */
+export interface StoredMockQuestionnaire extends MockQuestionnaire {
+  /** Режим, зафиксированный при старте: `ai_down` и `slow` действуют на всю анкету. */
   mode: MockMode;
-  visitType: VisitType | null;
-  /** Индекс текущего шага в списке для выбранной ветки. */
-  stepIndex: number;
-  /** Сколько уточняющих уже задано после текущего шага. */
-  clarificationsAsked: number;
-  /** Ответы пациента — только для счётчика, содержимое заглушке не нужно. */
-  answers: number;
-  finished: boolean;
-  code: string | null;
+  createdAt: number;
 }
 
-type Store = Record<string, MockQuestionnaireSession>;
+type Store = Record<string, StoredMockQuestionnaire>;
 
 const readStore = (): Store => {
   try {
@@ -51,48 +40,30 @@ const writeStore = (store: Store): void => {
   }
 };
 
-export const createSession = (
-  linkCode: string,
-  doctorId: string,
-): MockQuestionnaireSession => {
-  const store = readStore();
-  const session: MockQuestionnaireSession = {
-    sessionId: `mock-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-    linkCode,
-    doctorId,
-    createdAt: Date.now(),
-    mode: currentMockMode(),
-    visitType: null,
-    stepIndex: 0,
-    clarificationsAsked: 0,
-    answers: 0,
-    finished: false,
-    code: null,
-  };
-  store[session.sessionId] = session;
-  writeStore(store);
-  return session;
-};
+/** Новая анкета с идентификатором и токеном — как у backend. */
+export const createQuestionnaire = (
+  mode: MockMode,
+): StoredMockQuestionnaire => ({
+  ...newQuestionnaire(randomUUID(), randomBytes(32).toString('base64url')),
+  mode,
+  createdAt: Date.now(),
+});
 
-export const getSession = (
-  sessionId: string,
-): MockQuestionnaireSession | undefined => readStore()[sessionId];
+export const getQuestionnaire = (
+  id: string,
+): StoredMockQuestionnaire | undefined => readStore()[id];
 
-export const saveSession = (session: MockQuestionnaireSession): void => {
+export const saveQuestionnaire = (
+  questionnaire: StoredMockQuestionnaire,
+): void => {
   const store = readStore();
-  store[session.sessionId] = session;
+  store[questionnaire.id] = questionnaire;
   writeStore(store);
 };
 
 /**
- * Код из 4 цифр. Настоящий сервер обязан следить за уникальностью в клинике
- * за 30 дней; заглушке достаточно случайного — это видно из комментария,
- * чтобы требование не потерялось при переходе на реальный backend.
+ * Код из 4 цифр. Настоящий сервер следит за уникальностью в клинике за 30
+ * дней (`allocate_code`); заглушке достаточно случайного.
  */
-export const issueCode = (session: MockQuestionnaireSession): string => {
-  if (session.code) return session.code;
-  const code = String(Math.floor(1000 + Math.random() * 9000));
-  session.code = code;
-  saveSession(session);
-  return code;
-};
+export const issueCode = (): string =>
+  String(Math.floor(1000 + Math.random() * 9000));

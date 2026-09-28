@@ -7,6 +7,7 @@ import axios, {
 } from 'axios';
 import axiosRetry from 'axios-retry';
 import { logWarn } from '@/lib/logger';
+import { parseErrorBody } from '@/lib/api-error';
 
 export type RequestMethod = 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH';
 
@@ -14,14 +15,19 @@ export type RequestMethod = 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH';
  * Ошибка запроса с сохранённым HTTP-статусом. Без него вызывающий код не мог
  * отличить «записи ещё нет» (404) от настоящего сбоя и показывал пользователю
  * ошибку там, где её нет.
+ *
+ * `code` — машинный код отказа из `detail: { code, message }`: лимиты анкеты
+ * пациента различаются только им, статус у них общий.
  */
 export class ApiError extends Error {
   readonly status?: number;
+  readonly code?: string;
 
-  constructor(message: string, status?: number) {
+  constructor(message: string, status?: number, code?: string) {
     super(message);
     this.name = 'ApiError';
     this.status = status;
+    this.code = code;
   }
 }
 
@@ -38,6 +44,12 @@ export const isAbortError = (error: unknown): boolean =>
 
 export interface RequestOptions {
   signal?: AbortSignal;
+  /**
+   * Заголовки запроса. Нужны там, где у метода нет аргумента заголовков,
+   * — в `get` (например, токен анкеты пациента). При совпадении имён важнее
+   * аргумента `headers`.
+   */
+  headers?: Record<string, string>;
 }
 
 export interface ApiClientConfig {
@@ -157,6 +169,7 @@ export class ApiClient {
         url: endpoint,
         headers: {
           ...headers,
+          ...options?.headers,
         },
         params,
         signal: options?.signal,
@@ -175,18 +188,12 @@ export class ApiClient {
 
       if (axios.isAxiosError(error)) {
         const status = error.response?.status;
-        const data = error.response?.data as {
-          message?: string;
-          detail?: string;
-        };
+        const parsed = parseErrorBody(error.response?.data);
 
         const errorMessage =
-          data?.message ||
-          data?.detail ||
-          error.message ||
-          `HTTP ${status || 'Error'}`;
+          parsed.message || error.message || `HTTP ${status || 'Error'}`;
 
-        throw new ApiError(errorMessage, status);
+        throw new ApiError(errorMessage, status, parsed.code ?? undefined);
       }
 
       throw error;

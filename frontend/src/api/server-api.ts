@@ -15,7 +15,7 @@ import { cache } from 'react';
 import { headers } from 'next/headers';
 import { logError } from '@/lib/logger';
 import { isBuiltWithMock } from '@/lib/mocks';
-import type { QuestionnaireLink } from './index';
+import type { PublicLink } from './index';
 
 /**
  * Бюджет ожидания. Запрос блокирует первый байт HTML: лучше отдать анкету
@@ -52,7 +52,8 @@ const resolveBaseUrl = async (): Promise<string> => {
 };
 
 /**
- * Данные ссылки анкеты: брендинг клиники, на кого ведёт ссылка, состояние.
+ * Данные ссылки анкеты (`GET /public/links/{slug}`): брендинг клиники, на
+ * кого ведёт ссылка, врачи клиники и блокировка.
  *
  * Обёрнуто в `cache`: `generateMetadata` и сам компонент страницы — две
  * разные функции, и без обёртки на каждый показ анкеты уходило бы два
@@ -62,11 +63,11 @@ const resolveBaseUrl = async (): Promise<string> => {
  * и в лог попадает только меткой: в ответе могут быть служебные данные.
  */
 export const getQuestionnaireLink = cache(
-  async (code: string): Promise<QuestionnaireLink | null> => {
+  async (slug: string): Promise<PublicLink | null> => {
     try {
       const baseUrl = await resolveBaseUrl();
       const response = await fetch(
-        `${baseUrl}/questionnaire/link/${encodeURIComponent(code)}`,
+        `${baseUrl}/public/links/${encodeURIComponent(slug)}`,
         {
           // Страница публичная и разная для каждой клиники: кэш здесь
           // означал бы показать пациенту брендинг чужой клиники.
@@ -80,7 +81,7 @@ export const getQuestionnaireLink = cache(
         return null;
       }
 
-      return (await response.json()) as QuestionnaireLink;
+      return (await response.json()) as PublicLink;
     } catch (error) {
       logError('Анкета: ошибка загрузки ссылки', error);
       return null;

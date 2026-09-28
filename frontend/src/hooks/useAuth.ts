@@ -1,8 +1,13 @@
 import { useAuthStore } from '@/store/authStore';
-import { mainApi } from '@/api';
+import { mainApi, type InvitationAcceptRequest } from '@/api';
+import { ApiError } from '@/api/base-client';
 import { useRouter } from 'next/navigation';
 import { toast } from 'react-toastify';
 import { useHelpersStore } from '@/store/helpersStore';
+
+export type AcceptInvitationResult =
+  | { success: true }
+  | { success: false; accepted: boolean; status?: number };
 
 export const useAuth = () => {
   const router = useRouter();
@@ -73,6 +78,41 @@ export const useAuth = () => {
     }
   };
 
+  /**
+   * Принять приглашение в клинику и войти. Ошибку не показывает сама —
+   * странице нужны разные тексты для 404, 410 и 409, поэтому возвращается
+   * статус. Порядок входа — как после подтверждения регистрации.
+   */
+  const handleAcceptInvitation = async (
+    data: InvitationAcceptRequest,
+  ): Promise<AcceptInvitationResult> => {
+    let accepted = false;
+    try {
+      const response = await mainApi.invitations.accept(data);
+      accepted = true;
+
+      setAccessToken(response.access_token);
+      const me = await mainApi.serviceUsers.serviceUser();
+      login({ ...me, id: response.user.id }, response.access_token);
+
+      fetchUserSettings(response.user.id).catch(() => {});
+      // replace: токен приглашения не должен остаться в истории браузера.
+      router.replace('/');
+
+      return { success: true };
+    } catch (error) {
+      // Приглашение уже использовано, но профиль не загрузился. Сбрасываем
+      // авторизацию целиком: иначе при открытой сессии другого пользователя
+      // в сторе остался бы его профиль без токена. Войдёт обычным способом.
+      if (accepted) logout();
+      return {
+        success: false,
+        accepted,
+        status: error instanceof ApiError ? error.status : undefined,
+      };
+    }
+  };
+
   const handleLogout = async () => {
     try {
       await mainApi.serviceUsers.logout();
@@ -101,6 +141,7 @@ export const useAuth = () => {
     handleLogin,
     handleRegister,
     handleConfirmRegistration,
+    handleAcceptInvitation,
     handleLogout,
     checkAuth,
     getAuthHeader,

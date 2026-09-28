@@ -5,6 +5,7 @@ import {
   brandStyle,
   pickContrastColor,
   sanitizeBrandColor,
+  isExternalImageUrl,
   sanitizeImageUrl,
 } from './branding';
 
@@ -39,10 +40,22 @@ describe('sanitizeImageUrl', () => {
     );
   });
 
-  it('отклоняет абсолютные и протокол-относительные адреса', () => {
-    expect(sanitizeImageUrl('https://example.com/a.png')).toBeNull();
+  it('пропускает внешний адрес по https', () => {
+    expect(sanitizeImageUrl(' https://cdn.example.com/a.png ')).toBe(
+      'https://cdn.example.com/a.png',
+    );
+  });
+
+  it('отклоняет http, протокол-относительные адреса и голое имя файла', () => {
+    expect(sanitizeImageUrl('http://example.com/a.png')).toBeNull();
     expect(sanitizeImageUrl('//example.com/a.png')).toBeNull();
+    expect(sanitizeImageUrl('/\\example.com/a.png')).toBeNull();
     expect(sanitizeImageUrl('logo.svg')).toBeNull();
+  });
+
+  it('отклоняет логин и пароль в адресе', () => {
+    expect(sanitizeImageUrl('https://user:pass@example.com/a.png')).toBeNull();
+    expect(sanitizeImageUrl('https://user@example.com/a.png')).toBeNull();
   });
 
   it('отклоняет опасные схемы', () => {
@@ -94,5 +107,12 @@ describe('brandStyle', () => {
     }) as Record<string, string>;
 
     expect(broken['--q-brand']).toBe(NEUTRAL_BRAND_COLOR);
+  });
+});
+
+describe('isExternalImageUrl', () => {
+  it('отличает внешний адрес от пути того же origin', () => {
+    expect(isExternalImageUrl('https://cdn.example.com/a.png')).toBe(true);
+    expect(isExternalImageUrl('/logo.svg')).toBe(false);
   });
 });

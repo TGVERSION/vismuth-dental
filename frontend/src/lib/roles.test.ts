@@ -5,6 +5,7 @@ import {
   canDeleteUser,
   canEditUserRole,
   isPrivilegedRole,
+  isSuperAdmin,
 } from './roles';
 
 const roles: RoleRead[] = [
@@ -100,5 +101,14 @@ describe('canEditUserRole / canDeleteUser', () => {
     expect(canEditUserRole({ ...base, actorRole: 'administrator' })).toBe(
       false,
     );
+  });
+});
+
+describe('isSuperAdmin', () => {
+  it('признаёт только super_admin', () => {
+    expect(isSuperAdmin('super_admin')).toBe(true);
+    expect(isSuperAdmin('admin')).toBe(false);
+    expect(isSuperAdmin('doctor')).toBe(false);
+    expect(isSuperAdmin(undefined)).toBe(false);
   });
 });

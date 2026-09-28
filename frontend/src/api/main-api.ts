@@ -67,6 +67,16 @@ import type {
   QuestionnaireAnswer,
   QuestionnaireCompleteRequest,
   QuestionnaireCompleteResponse,
+  ClinicRead,
+  ClinicCreate,
+  ClinicPatch,
+  ClinicMemberRead,
+  ClinicMemberPatch,
+  ClinicMemberInviteCreate,
+  ClinicInvitationCreated,
+  SpecializationRead,
+  InvitationPreview,
+  InvitationAcceptRequest,
 } from './index';
 
 export const apiClient = new ApiClient({
@@ -131,6 +141,16 @@ const publicChatApiClient = new ApiClient({
 // кусок речи в расшифровке. Повторами управляет вызывающий код: он шлёт тот
 // же `seq`, а сервер обязан обработать его идемпотентно.
 const SPEECH_TIMEOUT_MS = 60000;
+
+// Неидемпотентные запросы с авторизацией: создание клиники, приглашения,
+// отключение сотрудника. Без повторов: `retryCondition` повторяет сетевые
+// ошибки при любом методе, и обрыв связи создал бы вторую клинику или
+// отправил второе письмо.
+const mutationApiClient = new ApiClient({
+  baseUrl: '/api/main',
+  timeout: 15000,
+  retries: 0,
+});
 
 const speechApiClient = new ApiClient({
   baseUrl: '/api/main',
@@ -460,6 +480,76 @@ export const mainApi = {
     complete: (session_id: string, data: QuestionnaireCompleteRequest) =>
       publicMutationApiClient.post<QuestionnaireCompleteResponse>(
         `/questionnaire/sessions/${encodeURIComponent(session_id)}/complete`,
+        data,
+      ),
+  },
+
+  /** Клиники. Только для super_admin. */
+  clinics: {
+    list: () => apiClient.get<ClinicRead[]>('/super-admin/clinics'),
+
+    get: (clinicId: string) =>
+      apiClient.get<ClinicRead>(
+        `/super-admin/clinics/${encodeURIComponent(clinicId)}`,
+      ),
+
+    create: (data: ClinicCreate) =>
+      mutationApiClient.post<ClinicRead>('/super-admin/clinics', data),
+
+    patch: (clinicId: string, data: ClinicPatch) =>
+      apiClient.patch<ClinicRead>(
+        `/super-admin/clinics/${encodeURIComponent(clinicId)}`,
+        data,
+      ),
+  },
+
+  /** Сотрудники клиники: super_admin или администратор клиники. */
+  clinicMembers: {
+    list: (clinicId: string) =>
+      apiClient.get<ClinicMemberRead[]>(
+        `/clinics/${encodeURIComponent(clinicId)}/members`,
+      ),
+
+    patch: (clinicId: string, memberId: string, data: ClinicMemberPatch) =>
+      apiClient.patch<ClinicMemberRead>(
+        `/clinics/${encodeURIComponent(clinicId)}/members/${encodeURIComponent(memberId)}`,
+        data,
+      ),
+
+    deactivate: (clinicId: string, memberId: string) =>
+      mutationApiClient.post<ClinicMemberRead>(
+        `/clinics/${encodeURIComponent(clinicId)}/members/${encodeURIComponent(memberId)}/deactivate`,
+      ),
+
+    invite: (clinicId: string, data: ClinicMemberInviteCreate) =>
+      mutationApiClient.post<ClinicInvitationCreated>(
+        `/clinics/${encodeURIComponent(clinicId)}/invitations`,
+        data,
+      ),
+
+    resendInvitation: (clinicId: string, invitationId: string) =>
+      mutationApiClient.post<ClinicInvitationCreated>(
+        `/clinics/${encodeURIComponent(clinicId)}/invitations/${encodeURIComponent(invitationId)}/resend`,
+      ),
+  },
+
+  specializations: {
+    list: () => apiClient.get<SpecializationRead[]>('/specializations'),
+  },
+
+  /**
+   * Принятие приглашения сотрудником. Без авторизации: у приглашённого ещё
+   * нет аккаунта, а чужой 401 не должен сбрасывать сессию в этом браузере.
+   */
+  invitations: {
+    preview: (token: string) =>
+      publicApiClient.get<InvitationPreview>(
+        `/auth/invitations/${encodeURIComponent(token)}`,
+      ),
+
+    accept: (data: InvitationAcceptRequest) =>
+      publicMutationApiClient.post<TokenResponse>(
+        '/auth/invitations/accept',
         data,
       ),
   },

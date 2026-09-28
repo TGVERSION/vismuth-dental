@@ -35,6 +35,8 @@ export interface CustomDropdownProps<T = string, M extends boolean = false> {
   placeholder?: string;
   disabled?: boolean;
   className?: string;
+  /** Фон кнопки вместо `bg-gray-50` по умолчанию. */
+  triggerClassName?: string;
   dropdownClassName?: string;
   optionClassName?: string;
   renderTrigger?: (
@@ -58,6 +60,7 @@ export function CustomDropdown<T = string, M extends boolean = false>({
   placeholder = 'Выберите...',
   disabled = false,
   className = '',
+  triggerClassName = 'bg-gray-50',
   dropdownClassName = '',
   optionClassName = '',
   renderTrigger,
@@ -386,7 +389,7 @@ export function CustomDropdown<T = string, M extends boolean = false>({
         type="button"
         onClick={() => !disabled && setIsOpen((prev) => !prev)}
         disabled={disabled}
-        className={`w-full min-h-10 px-3 py-2 bg-gray-50 border-0 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#5D8CF1] text-left flex items-center justify-between cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed transition-shadow ${
+        className={`w-full min-h-10 px-3 py-2 ${triggerClassName} border-0 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#5D8CF1] text-left flex items-center justify-between cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed transition-shadow ${
           isOpen ? 'ring-2 ring-[#5D8CF1]' : ''
         }`}
         aria-controls={listboxId}

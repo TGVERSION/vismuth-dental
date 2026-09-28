@@ -1,4 +1,3 @@
-
 import type { RoleName, RoleRead } from '@/api';
 
 /**
@@ -23,6 +22,10 @@ const HIDDEN_ROLE_OPTIONS: readonly RoleName[] = ['patient'];
  */
 export const isPrivilegedRole = (role: string | null | undefined): boolean =>
   !!role && (PRIVILEGED_ROLES as readonly string[]).includes(role);
+
+/** Супер-админ: платформенная роль, единственная с доступом к клиникам. */
+export const isSuperAdmin = (role: string | null | undefined): boolean =>
+  role === 'super_admin';
 
 /** Опция выпадающего списка. Совместима с `DropdownOption<string>`. */
 export interface RoleOption {

@@ -26,11 +26,14 @@ export const sanitizeBrandColor = (
 /**
  * URL картинки или null.
  *
- * В первом релизе пропускаем только относительные пути того же origin: так
- * не нужен список доменов в `images.remotePatterns`, наружу не утекает
- * referer, и заведомо отсекаются схемы `javascript:` и `data:`.
- * Протокол-относительный `//example.com/a.png` ведёт на чужой хост и тоже
- * отклоняется.
+ * Пропускаются относительные пути того же origin и абсолютные `https://`.
+ * Внешние картинки рисуются через `<img referrerPolicy="no-referrer">`
+ * (см. `SafeImage`): адрес анкеты содержит код пациента и не должен уходить
+ * на чужой хост в заголовке Referer.
+ *
+ * Отклоняются `http:`, протокол-относительные `//host` и `/\host` (браузер
+ * считает их адресом чужого хоста), логин и пароль в адресе, а также схемы
+ * `javascript:` и `data:`.
  */
 export const sanitizeImageUrl = (
   raw: string | null | undefined,
@@ -38,10 +41,24 @@ export const sanitizeImageUrl = (
   if (typeof raw !== 'string') return null;
 
   const value = raw.trim();
-  if (!value.startsWith('/') || value.startsWith('//')) return null;
+  if (value.startsWith('/')) {
+    return value.startsWith('//') || value.startsWith('/\\') ? null : value;
+  }
 
-  return value;
+  let url: URL;
+  try {
+    url = new URL(value);
+  } catch {
+    return null;
+  }
+  if (url.protocol !== 'https:' || url.username || url.password) return null;
+
+  return url.href;
 };
+
+/** Внешний ли адрес (после `sanitizeImageUrl`). */
+export const isExternalImageUrl = (url: string): boolean =>
+  url.startsWith('https://');
 
 const channelToLinear = (channel: number): number => {
   const c = channel / 255;

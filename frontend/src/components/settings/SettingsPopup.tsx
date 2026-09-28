@@ -14,13 +14,16 @@ import {
   canDeleteUser,
   canEditUserRole,
   isPrivilegedRole,
+  isSuperAdmin,
 } from '@/lib/roles';
 import {
   getSettingsSectionLabel,
   getSettingsSections,
   resolveSettingsSection,
+  type SettingsAccess,
   type SettingsSection,
 } from '@/lib/settings-sections';
+import { ClinicsSection } from './clinics/ClinicsSection';
 
 interface SettingsPopupProps {
   isOpen: boolean;
@@ -44,11 +47,16 @@ export const SettingsPopup: React.FC<SettingsPopupProps> = ({
   );
 
   const currentUser = useAuthStore((state) => state.user);
-  const canManageUsers = isPrivilegedRole(currentUser?.role);
+  const access: SettingsAccess = {
+    canManageClinics: isSuperAdmin(currentUser?.role),
+    canManageUsers: isPrivilegedRole(currentUser?.role),
+  };
   // Окно смонтировано в layout заранее, а роль освежается с сервера уже
   // после монтирования, поэтому раздел вычисляется при каждом рендере.
-  const activeSection = resolveSettingsSection(selectedSection, canManageUsers);
-  const menuItems = getSettingsSections(canManageUsers);
+  const activeSection = resolveSettingsSection(selectedSection, access);
+  const menuItems = getSettingsSections(access);
+  // Повторный клик по «Клиникам» возвращает раздел к списку клиник.
+  const [clinicsResetKey, setClinicsResetKey] = useState(0);
 
   useEffect(() => {
     if (!isOpen || activeSection !== 'users') return;
@@ -140,6 +148,9 @@ export const SettingsPopup: React.FC<SettingsPopupProps> = ({
   };
 
   const handleSectionChange = (section: SettingsSection) => {
+    if (section === 'clinics' && activeSection === 'clinics') {
+      setClinicsResetKey((key) => key + 1);
+    }
     setSelectedSection(section);
   };
 
@@ -147,6 +158,9 @@ export const SettingsPopup: React.FC<SettingsPopupProps> = ({
 
   const renderSectionContent = () => {
     switch (activeSection) {
+      case 'clinics':
+        return <ClinicsSection resetKey={clinicsResetKey} />;
+
       case 'users':
         return (
           <div className="py-5.25 pl-14 h-full pr-8 flex flex-col gap-9">
@@ -244,6 +258,8 @@ export const SettingsPopup: React.FC<SettingsPopupProps> = ({
     <>
       <div
         className="modal-overlay fixed inset-0 flex items-start justify-center z-50 pt-10 pb-10 overflow-y-auto"
+        // Модалки поверх настроек блокируют эту прокрутку (ModalShell).
+        data-modal-scroll-lock
         onClick={closeModal}
       >
         <div
@@ -292,16 +308,15 @@ export const SettingsPopup: React.FC<SettingsPopupProps> = ({
               </div>
 
               <div>
-                {activeSection !== 'protocols' &&
-                  activeSection !== 'directories' && (
-                    <div className="flex items-center justify-between pb-6 border-b px-8 border-gray-200">
-                      <div className="flex items-center gap-3">
-                        <h3 className="text-3xl font-medium text-[#202020]">
-                          {getSectionTitle()}
-                        </h3>
-                      </div>
+                {activeSection === 'users' && (
+                  <div className="flex items-center justify-between pb-6 border-b px-8 border-gray-200">
+                    <div className="flex items-center gap-3">
+                      <h3 className="text-3xl font-medium text-[#202020]">
+                        {getSectionTitle()}
+                      </h3>
                     </div>
-                  )}
+                  </div>
+                )}
 
                 {renderSectionContent()}
               </div>

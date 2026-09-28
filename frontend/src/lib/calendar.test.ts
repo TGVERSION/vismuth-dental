@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { buildCalendarMonths, formatDateLabel } from './calendar';
+import {
+  buildCalendarMonths,
+  formatDateLabel,
+  formatDayMonth,
+} from './calendar';
 
 describe('buildCalendarMonths', () => {
   it('покрывает все месяцы диапазона', () => {
@@ -53,5 +57,23 @@ describe('formatDateLabel', () => {
   it('на пустом и битом значении возвращает пустую строку', () => {
     expect(formatDateLabel('')).toBe('');
     expect(formatDateLabel('не дата')).toBe('');
+  });
+});
+
+describe('formatDayMonth', () => {
+  const today = new Date(2026, 8, 27);
+
+  it('опускает текущий год', () => {
+    expect(formatDayMonth('2026-10-05', today)).toBe('5 октября');
+  });
+
+  it('добавляет год, если он не текущий', () => {
+    expect(formatDayMonth('2027-01-01', today)).toBe('1 января 2027');
+    expect(formatDayMonth('2025-12-31', today)).toBe('31 декабря 2025');
+  });
+
+  it('на пустом и битом значении возвращает пустую строку', () => {
+    expect(formatDayMonth('', today)).toBe('');
+    expect(formatDayMonth('не дата', today)).toBe('');
   });
 });

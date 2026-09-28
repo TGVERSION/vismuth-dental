@@ -1,7 +1,6 @@
 'use client';
 
-import Image from 'next/image';
-import { sanitizeImageUrl } from '@/lib/branding';
+import { SafeImage } from '@/components/SafeImage';
 
 interface ClinicLogoProps {
   url: string | null | undefined;
@@ -9,29 +8,22 @@ interface ClinicLogoProps {
 }
 
 /**
- * Логотип клиники. URL приходит с сервера, поэтому проходит проверку:
- * абсолютные адреса и опасные схемы отклоняются, и вместо картинки
+ * Логотип клиники. URL приходит с сервера и проверяется в `SafeImage`:
+ * опасные схемы и чужие хосты без https отклоняются, и вместо картинки
  * показывается название клиники.
  */
-export const ClinicLogo = ({ url, clinicName }: ClinicLogoProps) => {
-  const safeUrl = sanitizeImageUrl(url);
-
-  if (!safeUrl) {
-    return (
+export const ClinicLogo = ({ url, clinicName }: ClinicLogoProps) => (
+  <SafeImage
+    src={url}
+    alt={clinicName}
+    width={160}
+    height={40}
+    className="h-10 w-auto object-contain"
+    priority
+    fallback={
       <span className="text-lg font-semibold text-[var(--q-brand)]">
         {clinicName}
       </span>
-    );
-  }
-
-  return (
-    <Image
-      src={safeUrl}
-      alt={clinicName}
-      width={160}
-      height={40}
-      className="h-10 w-auto object-contain"
-      priority
-    />
-  );
-};
+    }
+  />
+);

@@ -726,3 +726,123 @@ export interface QuestionnaireCompleteResponse {
   /** Четыре цифры, которые пациент называет врачу. */
   code: string;
 }
+
+// ---------------------------------------------------------------------------
+// Клиники (super_admin), сотрудники клиники и приглашения — backend
+// schemas/clinic.py, schemas/clinic_admin.py, schemas/invitation.py.
+
+export type ClinicAccessType = 'trial' | 'paid';
+
+/** Статус доступа, который backend вычисляет по типу и дате. */
+export type ClinicAccessStatus = 'trial' | 'paid' | 'expired';
+
+export interface ClinicRead {
+  id: string;
+  name: string;
+  phone: string | null;
+  email: string | null;
+  logo_url: string | null;
+  brand_color: string | null;
+  doctors_limit: number;
+  /** `YYYY-MM-DD`. */
+  access_until: string;
+  access_type: ClinicAccessType;
+  public_slug: string;
+  access_status_code: ClinicAccessStatus;
+  access_status_label: string;
+  doctors_count: number;
+  created_at: string;
+  updated_at: string | null;
+  deleted_at: string | null;
+}
+
+export interface ClinicCreate {
+  name: string;
+  phone?: string | null;
+  logo_url?: string | null;
+  brand_color?: string | null;
+  doctors_limit?: number;
+  access_until: string;
+  access_type: ClinicAccessType;
+}
+
+export type ClinicPatch = Partial<ClinicCreate>;
+
+export interface SpecializationRead {
+  id: number;
+  code: string | null;
+  name: string;
+}
+
+export type ClinicMemberStatus = 'invited' | 'active' | 'deactivated';
+
+/** Сотрудник клиники или ещё не принятое приглашение. */
+export interface ClinicMemberRead {
+  id: string;
+  kind: 'membership' | 'invitation';
+  status: ClinicMemberStatus;
+  email: string | null;
+  first_name: string | null;
+  last_name: string | null;
+  middle_name: string | null;
+  photo_url: string | null;
+  is_clinic_admin: boolean;
+  is_doctor: boolean;
+  specializations: SpecializationRead[];
+  public_slug: string | null;
+  public_url: string | null;
+  expires_at: string | null;
+  user_id: string | null;
+}
+
+export interface ClinicMemberPatch {
+  first_name?: string | null;
+  last_name?: string | null;
+  middle_name?: string | null;
+  photo_url?: string | null;
+  is_clinic_admin?: boolean;
+  is_doctor?: boolean;
+  specialization_ids?: number[];
+}
+
+export interface ClinicMemberInviteCreate {
+  email: string;
+  is_clinic_admin: boolean;
+  is_doctor: boolean;
+  specialization_ids: number[];
+}
+
+/**
+ * Созданное или повторно отправленное приглашение. `invite_url` содержит
+ * одноразовый токен: его не логируют и не сохраняют.
+ */
+export interface ClinicInvitationCreated {
+  id: string;
+  clinic_id: string;
+  email: string;
+  is_clinic_admin: boolean;
+  is_doctor: boolean;
+  expires_at: string;
+  invite_url: string;
+  email_sent: boolean;
+  email_error: string | null;
+}
+
+/** Превью приглашения по токену из ссылки (без авторизации). */
+export interface InvitationPreview {
+  email: string;
+  clinic_name: string;
+  clinic_id: string;
+  first_name: string | null;
+  last_name: string | null;
+  is_clinic_admin: boolean;
+  is_doctor: boolean;
+  expires_at: string;
+}
+
+export interface InvitationAcceptRequest {
+  token: string;
+  password: string;
+  first_name?: string | null;
+  last_name?: string | null;
+}

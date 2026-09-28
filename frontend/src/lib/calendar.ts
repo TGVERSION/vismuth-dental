@@ -128,3 +128,20 @@ export const formatDateLabel = (value: string): string => {
 
   return `${day} ${MONTH_GENITIVE[month - 1]} ${year}`;
 };
+
+/**
+ * Дата без года, если он совпадает с текущим: «5 октября», иначе
+ * «5 октября 2027». Пустое или битое значение — пустая строка.
+ */
+export const formatDayMonth = (
+  value: string,
+  today: Date = new Date(),
+): string => {
+  if (!value) return '';
+
+  const [year, month, day] = value.split('-').map(Number);
+  if (!year || !month || !day) return '';
+
+  const dayMonth = `${day} ${MONTH_GENITIVE[month - 1]}`;
+  return year === today.getFullYear() ? dayMonth : `${dayMonth} ${year}`;
+};

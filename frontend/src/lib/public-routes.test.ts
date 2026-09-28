@@ -31,6 +31,16 @@ describe('isPublicPath', () => {
     expect(isPublicPath('/questionnaires/abc')).toBe(false);
   });
 
+  it('пропускает страницу принятия приглашения', () => {
+    expect(isPublicPath('/invite/accept')).toBe(true);
+    expect(isPublicPath('/invite')).toBe(true);
+  });
+
+  it('не открывает пути, совпадающие с /invite только по буквам', () => {
+    expect(isPublicPath('/invites')).toBe(false);
+    expect(isPublicPath('/invitex/accept')).toBe(false);
+  });
+
   it('не открывает защищённую зону', () => {
     expect(isPublicPath('/')).toBe(false);
     expect(isPublicPath('/protocol')).toBe(false);

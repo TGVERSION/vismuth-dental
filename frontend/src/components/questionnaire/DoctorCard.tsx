@@ -1,8 +1,7 @@
 'use client';
 
-import Image from 'next/image';
 import type { QuestionnaireDoctor } from '@/api';
-import { sanitizeImageUrl } from '@/lib/branding';
+import { SafeImage } from '@/components/SafeImage';
 
 interface DoctorCardProps {
   doctor: QuestionnaireDoctor;
@@ -23,10 +22,6 @@ export const DoctorCard = ({
   onSelect,
   disabled = false,
 }: DoctorCardProps) => {
-  // Фото приходит с сервера. Абсолютные адреса пока отклоняем: иначе
-  // понадобился бы список доменов в images.remotePatterns (ВЗ-7).
-  const photo = sanitizeImageUrl(doctor.photo_url);
-
   return (
     <button
       type="button"
@@ -34,22 +29,21 @@ export const DoctorCard = ({
       disabled={disabled}
       className="flex w-full items-center gap-3 rounded-2xl bg-[var(--q-surface)] p-3 text-left disabled:opacity-60"
     >
-      {photo ? (
-        <Image
-          src={photo}
-          alt=""
-          width={56}
-          height={56}
-          className="h-14 w-14 shrink-0 rounded-xl object-cover"
-        />
-      ) : (
-        <span
-          aria-hidden="true"
-          className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-[var(--q-brand)] text-base font-medium text-[var(--q-brand-contrast)]"
-        >
-          {initials(doctor.full_name)}
-        </span>
-      )}
+      <SafeImage
+        src={doctor.photo_url}
+        alt=""
+        width={56}
+        height={56}
+        className="h-14 w-14 shrink-0 rounded-xl object-cover"
+        fallback={
+          <span
+            aria-hidden="true"
+            className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-[var(--q-brand)] text-base font-medium text-[var(--q-brand-contrast)]"
+          >
+            {initials(doctor.full_name)}
+          </span>
+        }
+      />
 
       <span className="min-w-0">
         <span className="block font-medium">{doctor.full_name}</span>

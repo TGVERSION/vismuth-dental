@@ -96,9 +96,12 @@ export class ApiClient {
         return axiosRetry.isNetworkOrIdempotentRequestError(error);
       },
       onRetry: (attempt, error, requestConfig) => {
-        logWarn(`Retry ${attempt}/${retries} for ${requestConfig.url}`, {
-          error: error.message,
-        });
+        // URL — только в подробностях (они выводятся лишь в dev): в пути
+        // бывают секреты — токен приглашения, код анкеты пациента.
+        logWarn(
+          `Retry ${attempt}/${retries} ${requestConfig.method?.toUpperCase() ?? ''}`,
+          { url: requestConfig.url, error: error.message },
+        );
       },
     });
 

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   buildCalendarMonths,
   formatDateLabel,
+  formatDateNumeric,
   formatDayMonth,
 } from './calendar';
 
@@ -75,5 +76,17 @@ describe('formatDayMonth', () => {
   it('на пустом и битом значении возвращает пустую строку', () => {
     expect(formatDayMonth('', today)).toBe('');
     expect(formatDayMonth('не дата', today)).toBe('');
+  });
+});
+
+describe('formatDateNumeric', () => {
+  it('выводит дату цифрами с ведущими нулями', () => {
+    expect(formatDateNumeric('2026-07-06')).toBe('06.07.2026');
+    expect(formatDateNumeric('2026-12-31')).toBe('31.12.2026');
+  });
+
+  it('на пустом и битом значении возвращает пустую строку', () => {
+    expect(formatDateNumeric('')).toBe('');
+    expect(formatDateNumeric('не дата')).toBe('');
   });
 });

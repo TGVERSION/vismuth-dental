@@ -51,7 +51,7 @@ export const ClinicMembers = ({
       <div className="flex items-center justify-between">
         <h4
           id="clinic-members-title"
-          className="text-[34px] font-medium text-[#202020]"
+          className="text-[30px] font-medium text-[#202020]"
         >
           Сотрудники
         </h4>

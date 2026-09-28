@@ -82,7 +82,7 @@ export const ClinicCard = ({ clinicId }: ClinicCardProps) => {
       <section className="px-8 pb-8" aria-labelledby={`${baseId}-clinic`}>
         <h4
           id={`${baseId}-clinic`}
-          className="mb-3 text-[34px] font-medium text-[#202020]"
+          className="mb-3 text-[30px] font-medium text-[#202020]"
         >
           Клиника
         </h4>
@@ -224,7 +224,9 @@ export const ClinicCard = ({ clinicId }: ClinicCardProps) => {
               }
               onBlur={() => card.commitField('brand_color')}
               aria-label="Выбрать цвет"
-              className="h-6 w-6 shrink-0 cursor-pointer rounded border-0 bg-transparent p-0"
+              // Образец цвета 16×16 без рамки: у нативного поля цвета вокруг
+              // заливки есть отступ и серая обводка — снимаем их.
+              className="h-4 w-4 shrink-0 cursor-pointer rounded border-0 bg-transparent p-0 [&::-moz-color-swatch]:rounded [&::-moz-color-swatch]:border-0 [&::-webkit-color-swatch]:rounded [&::-webkit-color-swatch]:border-0 [&::-webkit-color-swatch-wrapper]:p-0"
             />
             <input
               id={`${baseId}-color`}

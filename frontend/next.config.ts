@@ -9,10 +9,23 @@ const API_ML_URL = process.env.API_ML_URL || 'http://localhost:8001';
 // тогда задаётся ровно один origin, звёздочка недопустима.
 const ALLOWED_ORIGIN = process.env.ALLOWED_ORIGIN?.trim();
 
+// Временная заглушка врачебных эндпоинтов анкет (PL-253): только в
+// разработке, отключается DOCTOR_QUESTIONNAIRES_MOCK=off. Когда её удалять —
+// в src/app/api/doctor-questionnaires-mock/_mock/guard.ts.
+const DOCTOR_QUESTIONNAIRES_MOCK =
+  process.env.NODE_ENV !== 'production' &&
+  process.env.DOCTOR_QUESTIONNAIRES_MOCK?.trim() !== 'off';
+
 if (process.env.NODE_ENV !== 'production') {
   console.log('API_MAIN_URL:', API_MAIN_URL);
   console.log('API_ML_URL:', API_ML_URL);
   console.log('ALLOWED_ORIGIN:', ALLOWED_ORIGIN || '(не задан, CORS выключен)');
+  console.log(
+    'DOCTOR_QUESTIONNAIRES_MOCK:',
+    DOCTOR_QUESTIONNAIRES_MOCK
+      ? 'включена — /questionnaires* не доходит до backend'
+      : 'выключена',
+  );
 }
 
 if (ALLOWED_ORIGIN === '*') {
@@ -77,6 +90,21 @@ const nextConfig: NextConfig = {
                 source: '/api/main/questionnaire/:path*',
                 destination: '/api/questionnaire-mock/:path*',
               },
+              // Заглушка анкет у врача. ПЕРЕКРЫВАЕТ настоящий backend: в
+              // dev-базе нет обработанных анкет. Отдельное правило для пути
+              // без хвоста — список живёт ровно на /questionnaires.
+              ...(DOCTOR_QUESTIONNAIRES_MOCK
+                ? [
+                    {
+                      source: '/api/main/questionnaires',
+                      destination: '/api/doctor-questionnaires-mock',
+                    },
+                    {
+                      source: '/api/main/questionnaires/:path*',
+                      destination: '/api/doctor-questionnaires-mock/:path*',
+                    },
+                  ]
+                : []),
             ],
       afterFiles: [
         {

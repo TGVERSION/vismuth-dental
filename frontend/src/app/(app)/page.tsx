@@ -2,7 +2,6 @@
 
 import {
   mainApi,
-  ListConsultationsResponse,
   ListsTemplatesResponse,
   ProtocolStructuresFields,
   Protocols,
@@ -738,6 +737,11 @@ export default function Home() {
     hasContent: section.value.trim().length > 0,
   }));
 
+  // Протокол, созданный из анкеты, до первого сохранения приходит без
+  // `updated_at` — тогда в списке показываем дату создания.
+  const protocolDate = (protocol: Protocols) =>
+    protocol.updated_at ?? protocol.created_at;
+
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     return date.toLocaleDateString('ru-RU', {
@@ -877,13 +881,13 @@ export default function Home() {
                   consultations.reduce(
                     (acc, consultation) => {
                       const year = new Date(
-                        consultation.updated_at || '',
+                        protocolDate(consultation),
                       ).getFullYear();
                       if (!acc[year]) acc[year] = [];
                       acc[year].push(consultation);
                       return acc;
                     },
-                    {} as Record<string, ListConsultationsResponse[]>,
+                    {} as Record<string, Protocols[]>,
                   ),
                 ).map(([year, yearConsultations]) => (
                   <div key={year} className="flex flex-col gap-1.25">
@@ -894,13 +898,13 @@ export default function Home() {
                       yearConsultations.reduce(
                         (acc, consultation) => {
                           const month = new Date(
-                            consultation.updated_at || '',
+                            protocolDate(consultation),
                           ).toLocaleDateString('ru-RU', { month: 'long' });
                           if (!acc[month]) acc[month] = [];
                           acc[month].push(consultation);
                           return acc;
                         },
-                        {} as Record<string, ListConsultationsResponse[]>,
+                        {} as Record<string, Protocols[]>,
                       ),
                     ).map(([month, monthConsultations]) => (
                       <div key={month} className="flex flex-col gap-1.25">
@@ -925,7 +929,7 @@ export default function Home() {
                                 `Протокол №${consultation.id.slice(-12)}`}
                             </p>
                             <span className="text-[14px] text-[#6C757D]">
-                              {formatDate(consultation.updated_at || '')}
+                              {formatDate(protocolDate(consultation))}
                             </span>
                           </div>
                         ))}

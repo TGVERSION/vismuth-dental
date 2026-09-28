@@ -14,6 +14,7 @@
 import { cache } from 'react';
 import { headers } from 'next/headers';
 import { logError } from '@/lib/logger';
+import { isBuiltWithMock } from '@/lib/mocks';
 import type { QuestionnaireLink } from './index';
 
 /**
@@ -32,9 +33,17 @@ const SERVER_FETCH_TIMEOUT_MS = 1500;
  * `next dev` эту переменную не выставляет, и на нестандартном порту
  * (`next dev -p 3001`) запрос ушёл бы в никуда, а брендинг молча
  * деградировал бы в нейтральную тему — отладка пошла бы по ложному следу.
+ *
+ * Сборка демо-контура с заглушкой анкеты (MOCKS) идёт в собственный сервер
+ * по внутреннему адресу. Хост из заголовка там не годится: за прокси это
+ * публичный адрес сайта, и из контейнера он может быть недоступен. `PORT`
+ * standalone-сервер получает из Dockerfile.
  */
 const resolveBaseUrl = async (): Promise<string> => {
   if (process.env.NODE_ENV === 'production') {
+    if (isBuiltWithMock('questionnaire')) {
+      return `http://127.0.0.1:${process.env.PORT || 3000}/api/main`;
+    }
     return process.env.API_MAIN_URL || 'http://localhost:8000';
   }
 

@@ -1,4 +1,5 @@
 import type { NextConfig } from 'next';
+import { MOCK_NAMES, parseMocks, type MockName } from './src/lib/mocks';
 
 const API_MAIN_URL = process.env.API_MAIN_URL || 'http://localhost:8000';
 const API_ML_URL = process.env.API_ML_URL || 'http://localhost:8001';
@@ -9,24 +10,88 @@ const API_ML_URL = process.env.API_ML_URL || 'http://localhost:8001';
 // тогда задаётся ровно один origin, звёздочка недопустима.
 const ALLOWED_ORIGIN = process.env.ALLOWED_ORIGIN?.trim();
 
-// Временная заглушка врачебных эндпоинтов анкет (PL-253): только в
-// разработке, отключается DOCTOR_QUESTIONNAIRES_MOCK=off. Когда её удалять —
-// в src/app/api/doctor-questionnaires-mock/_mock/guard.ts.
-const DOCTOR_QUESTIONNAIRES_MOCK =
-  process.env.NODE_ENV !== 'production' &&
-  process.env.DOCTOR_QUESTIONNAIRES_MOCK?.trim() !== 'off';
+const isDev = process.env.NODE_ENV !== 'production';
 
-if (process.env.NODE_ENV !== 'production') {
+// Заглушки backend (src/lib/mocks.ts). MOCKS — имена через запятую или `all`;
+// в production-сборке заглушки включаются только так и только для
+// демо-контура. Без MOCKS в разработке включены все, кроме анкет у врача при
+// DOCTOR_QUESTIONNAIRES_MOCK=off; в production — ни одной. Значение
+// вшивается в сборку: поменять набор можно только пересборкой образа.
+const resolveMocks = (): MockName[] => {
+  const raw = process.env.MOCKS?.trim();
+  if (raw) {
+    const { enabled, unknown } = parseMocks(raw);
+    if (unknown.length) {
+      console.warn(
+        `MOCKS: неизвестные заглушки «${unknown.join(', ')}» пропущены. ` +
+          `Доступны: ${MOCK_NAMES.join(', ')}, all.`,
+      );
+    }
+    return enabled;
+  }
+
+  if (!isDev) return [];
+  return MOCK_NAMES.filter(
+    (name) =>
+      name !== 'doctor-questionnaires' ||
+      process.env.DOCTOR_QUESTIONNAIRES_MOCK?.trim() !== 'off',
+  );
+};
+
+const MOCKS = resolveMocks();
+
+if (isDev) {
   console.log('API_MAIN_URL:', API_MAIN_URL);
   console.log('API_ML_URL:', API_ML_URL);
   console.log('ALLOWED_ORIGIN:', ALLOWED_ORIGIN || '(не задан, CORS выключен)');
-  console.log(
-    'DOCTOR_QUESTIONNAIRES_MOCK:',
-    DOCTOR_QUESTIONNAIRES_MOCK
-      ? 'включена — /questionnaires* не доходит до backend'
-      : 'выключена',
+  console.log('MOCKS:', MOCKS.join(', ') || '(выключены)');
+} else if (MOCKS.length) {
+  console.warn(
+    `ВНИМАНИЕ: production-сборка с заглушками backend: ${MOCKS.join(', ')}. ` +
+      'Только для демо-контура — не для сервера с реальными пациентами.',
   );
 }
+
+// Куда заглушки перехватывают запросы к backend. Именно beforeFiles, а не
+// обработчик в app/api/main/: правила из afterFiles применяются раньше
+// динамических маршрутов, поэтому /speech/sessions/{id}/chunks успевал уехать
+// на backend, и заглушка получала управление только на статическом
+// /speech/sessions.
+const MOCK_REWRITES: Record<
+  MockName,
+  { source: string; destination: string }[]
+> = {
+  // Распознавание приёма: эндпоинтов /speech/* в backend нет.
+  speech: [
+    {
+      source: '/api/main/speech/:path*',
+      destination: '/api/speech-mock/:path*',
+    },
+  ],
+  // Публичная анкета пациента: эндпоинтов /questionnaire/* в backend нет.
+  // Серверный рендер страницы анкеты идёт за брендингом через собственный
+  // сервер (src/api/server-api.ts) и попадает под то же правило.
+  questionnaire: [
+    {
+      source: '/api/main/questionnaire/:path*',
+      destination: '/api/questionnaire-mock/:path*',
+    },
+  ],
+  // Анкеты у врача. ПЕРЕКРЫВАЕТ настоящий backend: в базе нет обработанных
+  // анкет. Отдельное правило для пути без хвоста — список живёт ровно на
+  // /questionnaires. Когда удалять — в
+  // src/app/api/doctor-questionnaires-mock/_mock/guard.ts.
+  'doctor-questionnaires': [
+    {
+      source: '/api/main/questionnaires',
+      destination: '/api/doctor-questionnaires-mock',
+    },
+    {
+      source: '/api/main/questionnaires/:path*',
+      destination: '/api/doctor-questionnaires-mock/:path*',
+    },
+  ],
+};
 
 if (ALLOWED_ORIGIN === '*') {
   throw new Error(
@@ -64,48 +129,16 @@ const corsHeaders = ALLOWED_ORIGIN
 
 const nextConfig: NextConfig = {
   output: 'standalone',
+  // Набор заглушек — в код маршрутов заглушек и серверных запросов
+  // (src/lib/mocks.ts). Вшивается при сборке, как и правила ниже.
+  env: {
+    VISMUTH_MOCKS: MOCKS.join(','),
+  },
   async rewrites() {
     return {
-      // Заглушка сервиса распознавания приёма на время, пока эндпоинтов
-      // /speech/* нет в backend. Только в разработке: в production запрос
-      // уходит на настоящий сервер обычным путём.
-      //
-      // Именно beforeFiles, а не обработчик в app/api/main/: правила из
-      // afterFiles применяются раньше динамических маршрутов, поэтому
-      // /speech/sessions/{id}/chunks успевал уехать на backend, и заглушка
-      // получала управление только на статическом /speech/sessions.
-      beforeFiles:
-        process.env.NODE_ENV === 'production'
-          ? []
-          : [
-              {
-                source: '/api/main/speech/:path*',
-                destination: '/api/speech-mock/:path*',
-              },
-              // Заглушка публичной анкеты пациента: эндпоинтов
-              // /questionnaire/* в backend нет. Правило действует и для
-              // серверного рендера — страница анкеты ходит за брендингом на
-              // собственный origin, и её запрос проходит тот же путь.
-              {
-                source: '/api/main/questionnaire/:path*',
-                destination: '/api/questionnaire-mock/:path*',
-              },
-              // Заглушка анкет у врача. ПЕРЕКРЫВАЕТ настоящий backend: в
-              // dev-базе нет обработанных анкет. Отдельное правило для пути
-              // без хвоста — список живёт ровно на /questionnaires.
-              ...(DOCTOR_QUESTIONNAIRES_MOCK
-                ? [
-                    {
-                      source: '/api/main/questionnaires',
-                      destination: '/api/doctor-questionnaires-mock',
-                    },
-                    {
-                      source: '/api/main/questionnaires/:path*',
-                      destination: '/api/doctor-questionnaires-mock/:path*',
-                    },
-                  ]
-                : []),
-            ],
+      // Запросы к backend, которые перехватывают включённые заглушки.
+      // Остальное уходит на настоящий сервер через afterFiles.
+      beforeFiles: MOCKS.flatMap((name) => MOCK_REWRITES[name]),
       afterFiles: [
         {
           source: '/api/main/:path*',

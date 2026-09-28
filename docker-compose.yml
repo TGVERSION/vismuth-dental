@@ -69,6 +69,9 @@ services:
       args:
         - API_MAIN_URL=${API_MAIN_URL}
         - API_ML_URL=${API_ML_URL}
+        # Заглушки backend для демо-контура (frontend/src/lib/mocks.ts):
+        # MOCKS=all или список через запятую. Нужна пересборка образа.
+        - MOCKS=${MOCKS:-}
     environment:
       - API_MAIN_URL=${API_MAIN_URL}
       - API_ML_URL=${API_ML_URL}

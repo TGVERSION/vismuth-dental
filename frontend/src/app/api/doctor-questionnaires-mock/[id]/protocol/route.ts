@@ -21,6 +21,11 @@ interface RouteContext {
   params: Promise<{ id: string }>;
 }
 
+// Прямо в backend, как у заглушки распознавания (speech-mock), а не через
+// собственный `/api/main/*`: в контейнере за прокси адрес из запроса —
+// публичный адрес сайта, и изнутри он может быть недоступен.
+const API_MAIN_URL = process.env.API_MAIN_URL || 'http://localhost:8000';
+
 /** Ошибку backend отдать клиенту как есть: код и тело. */
 const relayError = async (upstream: Response) => {
   const detail = await upstream
@@ -32,11 +37,11 @@ const relayError = async (upstream: Response) => {
 /**
  * Создать протокол из анкеты.
  *
- * Протокол создаётся НАСТОЯЩИЙ — запросами на собственный `/api/main/*`,
- * которые проксируются в backend с токеном врача. Иначе «Создать протокол»
- * вёл бы на несуществующий протокол: экран протокола ходит в настоящий
- * backend. Текст анкеты раскладывается по полям выбранной структуры так же,
- * как на сервере (`_mock/fields.ts`). В dev-базе остаются настоящие протоколы.
+ * Протокол создаётся НАСТОЯЩИЙ — запросами в backend с токеном врача. Иначе
+ * «Создать протокол» вёл бы на несуществующий протокол: экран протокола ходит
+ * в настоящий backend. Текст анкеты раскладывается по полям выбранной
+ * структуры так же, как на сервере (`_mock/fields.ts`). В базе остаются
+ * настоящие протоколы.
  */
 export async function POST(request: Request, { params }: RouteContext) {
   if (!isMockEnabled) return notFound();
@@ -72,15 +77,13 @@ export async function POST(request: Request, { params }: RouteContext) {
   // Несуществующая структура даёт 404 «Protocol structure not found», как у
   // настоящего эндпоинта.
   const readUpstream = (path: string) =>
-    fetch(new URL(path, request.url), {
+    fetch(`${API_MAIN_URL}${path}`, {
       headers: { Authorization: authorization },
       cache: 'no-store',
     });
   const [structureResponse, mainsResponse] = await Promise.all([
-    readUpstream(
-      `/api/main/protocol-structures/${encodeURIComponent(structureId)}`,
-    ),
-    readUpstream('/api/main/protocol-fields-main'),
+    readUpstream(`/protocol-structures/${encodeURIComponent(structureId)}`),
+    readUpstream('/protocol-fields-main'),
   ]);
   if (!structureResponse.ok) return relayError(structureResponse);
   if (!mainsResponse.ok) return relayError(mainsResponse);
@@ -89,7 +92,7 @@ export async function POST(request: Request, { params }: RouteContext) {
     (await structureResponse.json()) as ProtocolStructuresFields;
   const mains = (await mainsResponse.json()) as ProtocolFcieldsMain[];
 
-  const upstream = await fetch(new URL('/api/main/protocols', request.url), {
+  const upstream = await fetch(`${API_MAIN_URL}/protocols`, {
     method: 'POST',
     headers: {
       Authorization: authorization,

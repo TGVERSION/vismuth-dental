@@ -11,9 +11,14 @@ FROM node:20-alpine AS builder
 
 ARG API_MAIN_URL
 ARG API_ML_URL
+# Заглушки backend для демо-контура: имена через запятую или `all`
+# (src/lib/mocks.ts). Вшиваются при сборке. На сервере с реальными
+# пациентами не задавать.
+ARG MOCKS=
 
 ENV API_MAIN_URL=${API_MAIN_URL}
 ENV API_ML_URL=${API_ML_URL}
+ENV MOCKS=${MOCKS}
 
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules

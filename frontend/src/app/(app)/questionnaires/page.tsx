@@ -1,21 +1,20 @@
 import type { Metadata } from 'next';
+import { Suspense } from 'react';
+import { QuestionnairesScreen } from '@/components/doctor-questionnaires/QuestionnairesScreen';
 
 export const metadata: Metadata = {
   title: 'Анкеты',
 };
 
 /**
- * Заглушка раздела «Анкеты».
- *
- * Список анкет у врача отложен (задача doctor-questionnaires-2026-09-24), а
- * ссылка в шапке уже есть — ей нужно куда-то вести. При возобновлении задачи
- * файл заменяется целиком.
+ * Раздел «Анкеты» у врача. Серверная обёртка ради заголовка вкладки; экран —
+ * клиентский. `Suspense` обязателен: экран читает `?id=` через
+ * `useSearchParams`, и без границы сборка не сможет пререндерить страницу.
  */
 export default function QuestionnairesPage() {
   return (
-    <div className="mx-4 mt-4 w-full rounded-2xl bg-white p-8">
-      <h1 className="text-xl font-semibold">Анкеты</h1>
-      <p className="mt-3 text-[#8B8B8B]">Раздел в разработке.</p>
-    </div>
+    <Suspense fallback={null}>
+      <QuestionnairesScreen />
+    </Suspense>
   );
 }

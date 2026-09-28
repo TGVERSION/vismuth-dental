@@ -728,6 +728,84 @@ export interface QuestionnaireCompleteResponse {
 }
 
 // ---------------------------------------------------------------------------
+// Анкеты у врача — backend routers/questionnaires.py, схемы
+// schemas/questionnaire.py, описание — docs/contracts/questionnaires.md.
+//
+// Почти все поля в схеме backend необязательные, поэтому здесь `| null`:
+// фронтенд обязан переживать пустое значение в любом из них.
+
+export type QuestionnaireVisitType = 'primary' | 'repeat';
+
+export type QuestionnaireProcessingStatus = 'pending' | 'done' | 'failed';
+
+export interface DoctorQuestionnaireListItem {
+  id: string;
+  /** YYYY-MM-DD. */
+  appointment_date: string | null;
+  /** HH:MM — слот из настроек backend. */
+  appointment_time: string | null;
+  patient_first_name: string | null;
+  patient_middle_name: string | null;
+  /** В схеме backend — `Optional[str]`; сужается в `lib/doctor-questionnaires`. */
+  visit_type: string | null;
+  specialization_name: string | null;
+  code: string | null;
+  protocol_id: string | null;
+  /**
+   * В ответе списка backend этого поля пока нет (внешняя зависимость ВЗ-6
+   * задачи PL-253). `undefined` — сервер статус не сообщил.
+   */
+  processing_status?: QuestionnaireProcessingStatus | null;
+}
+
+export interface DoctorQuestionnaireQuery {
+  /** YYYY-MM-DD. Без даты backend берёт «сегодня» в поясе сервера. */
+  date?: string;
+  visit_type?: QuestionnaireVisitType;
+  /** Ровно четыре символа, иначе 422. */
+  code?: string;
+  /** Подстрока имени или отчества — по каждому полю отдельно. */
+  name?: string;
+}
+
+export interface DoctorQuestionnaireStructured {
+  complaints?: string | null;
+  medications?: string | null;
+  allergy_anamnesis?: string | null;
+  life_anamnesis?: string | null;
+}
+
+export interface DoctorQuestionnaireAnswer {
+  seq: number;
+  step_key: string;
+  kind: string;
+  question_text: string | null;
+  answer_text: string | null;
+  choice: string | null;
+}
+
+export interface DoctorQuestionnaireDetail extends Omit<
+  DoctorQuestionnaireListItem,
+  'processing_status'
+> {
+  ai_unavailable: boolean;
+  processing_status: QuestionnaireProcessingStatus | null;
+  /** Результат обработки ИИ; `null`, пока обработка не завершилась. */
+  structured: DoctorQuestionnaireStructured | null;
+  /**
+   * «Что доспросить». Формат элемента в контракте не описан (ВЗ-1),
+   * поэтому `unknown` — разбирается в `lib/doctor-questionnaires`.
+   */
+  gaps: unknown[] | null;
+  answers: DoctorQuestionnaireAnswer[];
+}
+
+export interface CreateProtocolFromQuestionnaireRequest {
+  protocol_structure_id: string;
+  protocol_name?: string | null;
+}
+
+// ---------------------------------------------------------------------------
 // Клиники (super_admin), сотрудники клиники и приглашения — backend
 // schemas/clinic.py, schemas/clinic_admin.py, schemas/invitation.py.
 

@@ -77,6 +77,10 @@ import type {
   SpecializationRead,
   InvitationPreview,
   InvitationAcceptRequest,
+  DoctorQuestionnaireListItem,
+  DoctorQuestionnaireQuery,
+  DoctorQuestionnaireDetail,
+  CreateProtocolFromQuestionnaireRequest,
 } from './index';
 
 export const apiClient = new ApiClient({
@@ -535,6 +539,40 @@ export const mainApi = {
 
   specializations: {
     list: () => apiClient.get<SpecializationRead[]>('/specializations'),
+  },
+
+  /**
+   * Анкеты пациентов у врача. Авторизованный клиент: эндпоинты требуют
+   * активного membership врача в клинике, и 403 для не-врача — штатный ответ.
+   */
+  doctorQuestionnaires: {
+    list: (query: DoctorQuestionnaireQuery, options?: RequestOptions) =>
+      apiClient.get<DoctorQuestionnaireListItem[]>(
+        '/questionnaires',
+        query,
+        options,
+      ),
+
+    get: (id: string, options?: RequestOptions) =>
+      apiClient.get<DoctorQuestionnaireDetail>(
+        `/questionnaires/${encodeURIComponent(id)}`,
+        undefined,
+        options,
+      ),
+
+    /**
+     * Создать протокол из анкеты. Сервер создаёт ровно один протокол и
+     * отвечает 409 на повтор, поэтому клиент без повторов: повтор после
+     * обрыва связи получил бы 409 вместо созданного протокола.
+     */
+    createProtocol: (
+      id: string,
+      data: CreateProtocolFromQuestionnaireRequest,
+    ) =>
+      mutationApiClient.post<ProtocolsFields>(
+        `/questionnaires/${encodeURIComponent(id)}/protocol`,
+        data,
+      ),
   },
 
   /**

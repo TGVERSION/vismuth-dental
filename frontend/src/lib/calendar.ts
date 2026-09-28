@@ -145,3 +145,16 @@ export const formatDayMonth = (
   const dayMonth = `${day} ${MONTH_GENITIVE[month - 1]}`;
   return year === today.getFullYear() ? dayMonth : `${dayMonth} ${year}`;
 };
+
+/**
+ * Дата цифрами для узкого поля: «06.07.2026». Пустое или битое значение —
+ * пустая строка.
+ */
+export const formatDateNumeric = (value: string): string => {
+  if (!value) return '';
+
+  const [year, month, day] = value.split('-').map(Number);
+  if (!year || !month || !day) return '';
+
+  return `${pad(day)}.${pad(month)}.${year}`;
+};

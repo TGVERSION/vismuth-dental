@@ -1,84 +1,89 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { mainApi } from '@/api';
-import type { QuestionnaireAnswer, QuestionnaireMessage } from '@/api';
-import { isAbortError } from '@/api/base-client';
-import { logError } from '@/lib/logger';
-import { estimateProgress } from '@/lib/questionnaire';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import type { QuestionnaireStep, QuestionnaireStepAnswer } from '@/api';
+import {
+  buildAnswer,
+  chatPrompt,
+  estimateProgress,
+  patientReplyText,
+  screenForStep,
+  type ChatAction,
+  type ChatPrompt,
+} from '@/lib/questionnaire';
 
 /** Через сколько подсказывать пациенту, что ассистент ещё думает. */
 const HINT_THINKING_MS = 15_000;
 const HINT_LONGER_MS = 45_000;
 
 export type ChatEntry =
-  | { kind: 'assistant'; id: string; message: QuestionnaireMessage }
+  | { kind: 'assistant'; id: string; text: string }
   | { kind: 'patient'; id: string; text: string };
+
+export interface UseQuestionnaireChatOptions {
+  /** Текущий шаг сервера — чатный. */
+  step: QuestionnaireStep;
+  submit: (
+    answer: QuestionnaireStepAnswer,
+  ) => Promise<QuestionnaireStep | null>;
+  isSubmitting: boolean;
+}
 
 export interface UseQuestionnaireChatResult {
   entries: ChatEntry[];
-  /** Последнее сообщение ассистента: по нему строятся чипы и поле ввода. */
-  current: QuestionnaireMessage | null;
+  /** Вопрос текущего шага: по нему строятся чипы и поле ввода. */
+  prompt: ChatPrompt;
   isAwaiting: boolean;
   waitHint: string | null;
-  error: string | null;
-  finished: boolean;
-  /** Хотя бы раз ассистент ответил без ИИ — врач увидит пометку. */
-  aiUnavailable: boolean;
   /** Доля пройденного от 0 до 1 для индикатора. */
   progress: number;
-  send: (text: string) => void;
+  send: (action: ChatAction) => void;
   retry: () => void;
 }
 
+const assistantEntry = (
+  step: QuestionnaireStep,
+  index: number,
+): ChatEntry[] => {
+  const { text } = chatPrompt(step);
+  return text
+    ? [{ kind: 'assistant', id: `assistant-${step.step_key}-${index}`, text }]
+    : [];
+};
+
 /**
- * Диалог пациента с ассистентом.
+ * Лента чата поверх шагов сервера.
  *
- * Ожидание ответа может дойти до трёх минут: backend ждёт ml-service до 180 с.
- * Запрос при этом не обрывается по своему таймеру — сервер всё равно его
- * досчитает, и повторная отправка создала бы дубль сообщения и лишний раз
- * израсходовала лимит уточняющих. Вместо этого пациенту показываются
- * подсказки об ожидании.
+ * Пузыри добавляются в обработчиках, а не эффектом «при смене шага»:
+ * синхронный setState в эффекте запрещён правилом линтера, а в StrictMode
+ * эффект сработал бы дважды и задвоил пузыри. Первый вопрос — из шага при
+ * монтировании; следующий — из шага, который вернул ответ.
+ *
+ * Ожидание ответа может дойти до полуминуты: backend ждёт ИИ. Повторной
+ * отправки по таймеру нет — пациенту показываются подсказки об ожидании.
  */
-export const useQuestionnaireChat = (
-  sessionId: string,
-  initialMessage: QuestionnaireMessage,
-): UseQuestionnaireChatResult => {
-  const [entries, setEntries] = useState<ChatEntry[]>(() => [
-    { kind: 'assistant', id: initialMessage.id, message: initialMessage },
-  ]);
-  const [current, setCurrent] = useState<QuestionnaireMessage | null>(
-    initialMessage,
+export const useQuestionnaireChat = ({
+  step,
+  submit,
+  isSubmitting,
+}: UseQuestionnaireChatOptions): UseQuestionnaireChatResult => {
+  const [entries, setEntries] = useState<ChatEntry[]>(() =>
+    assistantEntry(step, 0),
   );
-  const [isAwaiting, setIsAwaiting] = useState(false);
   const [waitHint, setWaitHint] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [finished, setFinished] = useState(initialMessage.finished);
-  const [aiUnavailable, setAiUnavailable] = useState(
-    initialMessage.ai_unavailable,
-  );
 
-  const abortRef = useRef<AbortController | null>(null);
-  // Последний отправленный ответ: нужен, чтобы «Повторить» не добавляло
-  // второй пузырь пациента в ленту.
-  const lastAnswerRef = useRef<QuestionnaireAnswer | null>(null);
-  const isAwaitingRef = useRef(false);
+  // Последний отправленный ответ: «Повторить» шлёт его без второго пузыря.
+  const lastAnswerRef = useRef<QuestionnaireStepAnswer | null>(null);
+  // Проверка до записи пузыря в ленту: isSubmitting обновляется асинхронно,
+  // и при двойном нажатии второй пузырь остался бы без запроса.
+  const isSendingRef = useRef(false);
 
-  // Незавершённый запрос отменяем при уходе с экрана, иначе состояние
-  // размонтированного компонента обновится из обработчика ответа.
-  useEffect(
-    () => () => {
-      abortRef.current?.abort();
-    },
-    [],
-  );
+  const prompt = useMemo(() => chatPrompt(step), [step]);
+  const answered = entries.filter((entry) => entry.kind === 'patient').length;
 
   // Подсказки об ожидании. Таймеры живут только пока идёт запрос.
   useEffect(() => {
-    if (!isAwaiting) {
-      setWaitHint(null);
-      return;
-    }
+    if (!isSubmitting) return;
 
     const thinking = setTimeout(
       () => setWaitHint('Ассистент думает…'),
@@ -92,95 +97,63 @@ export const useQuestionnaireChat = (
     return () => {
       clearTimeout(thinking);
       clearTimeout(longer);
+      setWaitHint(null);
     };
-  }, [isAwaiting]);
+  }, [isSubmitting]);
 
-  const ask = useCallback(
-    async (answer: QuestionnaireAnswer) => {
-      // Защита от повторного запуска: второй тап по «отправить» не должен
-      // уходить вторым запросом.
-      if (isAwaitingRef.current) return;
-
-      isAwaitingRef.current = true;
-      setIsAwaiting(true);
-      setError(null);
+  const deliver = useCallback(
+    async (answer: QuestionnaireStepAnswer) => {
+      isSendingRef.current = true;
       lastAnswerRef.current = answer;
 
-      const controller = new AbortController();
-      abortRef.current = controller;
-
       try {
-        const message = await mainApi.questionnaire.sendAnswer(
-          sessionId,
-          answer,
-          { signal: controller.signal },
-        );
+        const next = await submit(answer);
+        // Ошибка или ответ устаревшей анкеты — пузыря нет, ошибку и
+        // «Повторить» показывает экран по состоянию хука анкеты.
+        if (!next) return;
 
-        setEntries((prev) => [
-          ...prev,
-          { kind: 'assistant', id: message.id, message },
-        ]);
-        setCurrent(message);
-        setFinished(message.finished);
-        if (message.ai_unavailable) setAiUnavailable(true);
         lastAnswerRef.current = null;
-      } catch (caught) {
-        if (isAbortError(caught)) return;
+        if (screenForStep(next) !== 'chat') return;
 
-        // Наружу — только общее сообщение: в ответе сервера могут быть
-        // служебные подробности, пациенту они не нужны.
-        logError('Анкета: ошибка отправки ответа', caught);
-        setError('Не удалось отправить ответ. Попробуйте ещё раз.');
+        setEntries((prev) => [...prev, ...assistantEntry(next, prev.length)]);
       } finally {
-        isAwaitingRef.current = false;
-        setIsAwaiting(false);
-        abortRef.current = null;
+        isSendingRef.current = false;
       }
     },
-    [sessionId],
+    [submit],
   );
 
   const send = useCallback(
-    (text: string) => {
-      const value = text.trim();
-      if (!value) return;
-      // Проверка та же, что в `ask`, но выполняется до записи в ленту:
-      // иначе при двойном нажатии `ask` вышел бы по своему guard'у, а пузырь
-      // пациента уже остался бы в переписке — ответ, который никуда не ушёл.
-      // Блокировки кнопок недостаточно: isAwaiting обновляется асинхронно.
-      if (isAwaitingRef.current) return;
+    (action: ChatAction) => {
+      if (isSendingRef.current) return;
 
+      const text = patientReplyText(prompt, action);
       setEntries((prev) => [
         ...prev,
-        { kind: 'patient', id: `patient-${prev.length}`, text: value },
+        { kind: 'patient', id: `patient-${prev.length}`, text },
       ]);
-      void ask({ text: value });
+      void deliver(buildAnswer(step, action));
     },
-    [ask],
+    [deliver, prompt, step],
   );
 
   const retry = useCallback(() => {
     const answer = lastAnswerRef.current;
-    if (!answer) return;
+    if (!answer || isSendingRef.current) return;
 
-    // Пузырь пациента уже в ленте — повторяем только запрос.
-    void ask(answer);
-  }, [ask]);
-
-  // Прогресс считает сервер: только он знает остаток бюджета уточняющих.
-  // Своя оценка — запасной вариант, пока поля нет в ответе.
-  const answered = entries.filter((entry) => entry.kind === 'patient').length;
-  const progress = current?.progress ?? estimateProgress(answered, finished);
+    // Пузырь пациента уже в ленте — повторяем только запрос. Если сервер
+    // успел принять ответ, хук анкеты увидит это по сменившемуся шагу (или
+    // по 409) и продолжит со следующего вопроса без повторной отправки.
+    void deliver(answer);
+  }, [deliver]);
 
   return {
     entries,
-    current,
-    progress,
-    isAwaiting,
+    prompt,
+    isAwaiting: isSubmitting,
     waitHint,
-    error,
-    finished,
-    aiUnavailable,
+    // backend прогресс не отдаёт (ВЗ-3) — оценка по числу ответов.
+    progress: estimateProgress(answered, false),
     send,
     retry,
   };

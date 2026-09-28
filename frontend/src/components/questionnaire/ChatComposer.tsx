@@ -1,7 +1,15 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { ANSWER_MAX_LENGTH, clampAnswer } from '@/lib/questionnaire';
+import { useCallback, useEffect, useId, useRef, useState } from 'react';
+import {
+  ANSWER_MAX_LENGTH,
+  CHOOSE_OPTION_HINT,
+  COMMENT_WITH_CHOICE_HINT,
+  clampAnswer,
+  type ChatAction,
+  type ChatChip,
+  type ChatPrompt,
+} from '@/lib/questionnaire';
 import { useIsDesktop } from '@/hooks/useIsDesktop';
 import { SendIcon } from './icons';
 
@@ -9,35 +17,55 @@ import { SendIcon } from './icons';
 const MAX_INPUT_LINES = 6;
 
 interface ChatComposerProps {
-  quickReplies: string[] | null;
+  prompt: ChatPrompt;
   isAwaiting: boolean;
-  onSend: (text: string) => void;
+  onAction: (action: ChatAction) => void;
 }
+
+const chipKey = (chip: ChatChip): string =>
+  chip.kind === 'specialization'
+    ? `specialization-${chip.id}`
+    : chip.kind === 'none'
+      ? 'none'
+      : `${chip.kind}-${chip.value}`;
 
 /**
  * Нижняя панель чата: быстрые ответы и поле ввода.
  *
- * Поле ввода показывается всегда, даже когда сервер прислал варианты ответа
- * (`input: 'choice'`). Быстрые ответы — подсказка, а не ограничение: пациент
- * может ответить своими словами на любой вопрос. Заодно это снимает риск
- * запереть его без единого способа ответить, если отправка перестала
- * проходить.
+ * Быстрый ответ отправляется сразу по нажатию. Поле ввода видно всегда
+ * (решение 3). Где backend текст не принимает (шаги `choice`, ВЗ-6), оно
+ * заблокировано с подсказкой выбрать вариант; на «Что изменилось» текст из
+ * поля уходит необязательным комментарием вместе с нажатым вариантом.
+ *
+ * Компонент не перемонтируется при смене вопроса: иначе сбросился бы признак
+ * касания поля, и на телефоне после каждого ответа пропадала бы клавиатура.
  */
 export const ChatComposer = ({
-  quickReplies,
+  prompt,
   isAwaiting,
-  onSend,
+  onAction,
 }: ChatComposerProps) => {
   const [value, setValue] = useState('');
   const [truncated, setTruncated] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const hintId = useId();
   const isDesktop = useIsDesktop();
   // Касался ли пациент поля хоть раз. На телефоне это важно: автофокус до
   // первого касания выдвинул бы клавиатуру сразу при входе в чат и закрыл
   // собой вопрос ассистента.
   const hasTouchedInputRef = useRef(false);
 
-  const canSend = value.trim().length > 0 && !isAwaiting;
+  const isLocked = prompt.input === 'locked';
+  const withChoice = prompt.input === 'with_choice';
+  const hint = isLocked
+    ? CHOOSE_OPTION_HINT
+    : withChoice
+      ? COMMENT_WITH_CHOICE_HINT
+      : null;
+
+  // С комментарием к варианту отправляет сам вариант, кнопка — только текст.
+  const canSend =
+    !isAwaiting && prompt.input === 'text' && value.trim().length > 0;
 
   /**
    * Поле растёт по мере ввода и перестаёт на шести строках, дальше
@@ -97,29 +125,51 @@ export const ChatComposer = ({
     setTruncated(wasTruncated);
   };
 
+  const clearInput = () => {
+    setValue('');
+    setTruncated(false);
+  };
+
   const submit = () => {
     if (!canSend) return;
 
-    onSend(value);
-    setValue('');
-    setTruncated(false);
+    onAction({ type: 'text', text: value });
+    clearInput();
+  };
+
+  const handleChip = (chip: ChatChip) => {
+    switch (chip.kind) {
+      case 'choice':
+        onAction({ type: 'choice', value: chip.value });
+        return;
+      case 'none':
+        onAction({ type: 'none' });
+        return;
+      case 'specialization':
+        onAction({ type: 'specialization', id: chip.id });
+        return;
+      case 'select':
+        onAction({ type: 'choice_text', value: chip.value, text: value });
+        clearInput();
+        return;
+    }
   };
 
   return (
     <div className="bg-[var(--q-bg)] px-4 pb-[calc(env(safe-area-inset-bottom)+12px)]">
       {/* Быстрые ответы прижаты вправо, к стороне ответов пациента: так
           видно, что это его реплика, а не продолжение вопроса. */}
-      {quickReplies?.length ? (
+      {prompt.chips.length ? (
         <div className="mb-3 flex flex-wrap justify-end gap-2">
-          {quickReplies.map((reply) => (
+          {prompt.chips.map((chip) => (
             <button
-              key={reply}
+              key={chipKey(chip)}
               type="button"
-              onClick={() => onSend(reply)}
+              onClick={() => handleChip(chip)}
               disabled={isAwaiting}
               className="min-h-[44px] rounded-xl bg-[var(--q-surface)] px-4 text-base disabled:opacity-60"
             >
-              {reply}
+              {chip.label}
             </button>
           ))}
         </div>
@@ -147,9 +197,10 @@ export const ChatComposer = ({
             }
           }}
           rows={1}
-          disabled={isAwaiting}
+          disabled={isAwaiting || isLocked}
           placeholder="Сообщение"
           aria-label="Ваш ответ"
+          aria-describedby={hint ? hintId : undefined}
           // Высоту и прокрутку задаёт resize(): в классах их нет, иначе
           // они перебивались бы и предел в шесть строк не соблюдался.
           className="custom-scrollbar flex-1 resize-none bg-transparent py-3 text-base leading-6 outline-none disabled:opacity-60"
@@ -164,6 +215,12 @@ export const ChatComposer = ({
           <SendIcon className="h-6 w-6" />
         </button>
       </form>
+
+      {hint ? (
+        <p id={hintId} className="mt-2 text-xs text-[var(--q-muted)]">
+          {hint}
+        </p>
+      ) : null}
 
       {truncated ? (
         <p className="mt-2 text-xs text-[var(--q-muted)]">

@@ -15,8 +15,12 @@
 // алиасом `@/` и зависимостями Next.
 
 export const MOCK_NAMES = [
+  // Распознавание приёма: /api/main/speech/*.
   'speech',
+  // Публичная анкета пациента: /api/main/public/* (весь публичный роутер
+  // backend — сейчас это только анкета).
   'questionnaire',
+  // Анкеты у врача: /api/main/questionnaires*.
   'doctor-questionnaires',
 ] as const;
 

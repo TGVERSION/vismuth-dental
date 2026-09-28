@@ -1,11 +1,11 @@
 'use client';
 
-import type { QuestionnaireClinic } from '@/api';
+import type { ClinicBranding } from '@/lib/questionnaire';
 import { ClinicLogo } from './ClinicLogo';
 import { SpinnerButton } from '@/components/SpinnerButton';
 
 interface WelcomeScreenProps {
-  clinic: QuestionnaireClinic;
+  clinic: ClinicBranding;
   isStarting: boolean;
   error: string | null;
   onStart: () => void;

@@ -1,17 +1,17 @@
 'use client';
 
-import type { QuestionnaireClinic, QuestionnaireState } from '@/api';
+import type { ClinicBranding, QuestionnaireBlock } from '@/lib/questionnaire';
 
 interface QuestionnaireStubProps {
-  state: QuestionnaireState;
-  clinic: QuestionnaireClinic | null;
+  state: QuestionnaireBlock;
+  clinic: ClinicBranding | null;
   /** Список врачей показывается, когда по ссылке врач больше не ведёт приём. */
   children?: React.ReactNode;
 }
 
 /** Тексты заглушек заданы ТЗ — менять их произвольно нельзя. */
 const stubText = (
-  state: QuestionnaireState,
+  state: QuestionnaireBlock,
   phone: string | null,
 ): { title: string; description: string } => {
   switch (state) {
@@ -32,8 +32,8 @@ const stubText = (
       };
     // Завершённая подписка и суточный лимит клиники показывают
     // один и тот же текст — так задано в ТЗ.
-    case 'subscription_ended':
-    case 'clinic_limit':
+    case 'subscription_expired':
+    case 'clinic_daily_limit':
     default:
       return {
         title: 'Сервис временно недоступен',

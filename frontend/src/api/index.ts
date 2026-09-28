@@ -609,122 +609,122 @@ export interface SpeechSessionStatus {
   error: string | null;
 }
 
-// Анкета пациента до приёма.
+// Анкета пациента до приёма — публичные эндпоинты backend `/public/*`:
+// routers/public_questionnaire.py, services/questionnaire_flow.py, схемы
+// schemas/questionnaire.py, описание — docs/contracts/questionnaire-public.md
+// (неполное: форматы `options`, `choices` и коды ошибок сверены по коду).
 //
-// Контракт согласуется со смежной командой: на момент написания эндпоинтов
-// `/questionnaire/*` в backend нет. Описание — в
-// docs/plans/patient-questionnaire-2026-09-21, раздел «Внешние зависимости».
-//
-// Полей `quick_replies`, `step`, `input`, `ai_unavailable` и `consent_required`
-// в ТЗ нет: они добавлены постановкой пользователя (решения 2, 4, 6). Без
-// `quick_replies` не делаются быстрые ответы, без `step` не собирается разрез
-// статистики «брошено по шагу» — весь опрос идёт одним чатом, и других
-// источников шага у фронтенда не остаётся.
+// Сценарий ведёт сервер: он хранит текущий шаг, отдаёт его описание
+// (`QuestionnaireStep`) и в ответ на ответ пациента — следующий шаг.
+// Строковые `step_key`, `step_type`, `block_code` и разнородные `options`
+// сужаются в src/lib/questionnaire.ts, а не принимаются на веру.
 
-export type QuestionnaireLinkTarget = 'clinic' | 'doctor';
+export type PublicLinkType = 'clinic' | 'doctor';
 
-/**
- * Состояние ссылки. Приходит полем, а не только HTTP-кодом: по одному 403
- * нельзя отличить «подписка кончилась» от «лимит с устройства», а тексты
- * заглушек у них разные.
- */
-export type QuestionnaireState =
-  | 'ok'
-  | 'subscription_ended'
-  | 'doctor_inactive'
-  | 'clinic_limit'
-  | 'device_limit'
-  | 'ip_limit';
-
-export interface QuestionnaireClinic {
+export interface PublicSpecialization {
+  id: number;
+  code: string | null;
   name: string;
-  phone: string;
-  /** Относительный путь того же origin; абсолютные URL фронтенд отклоняет. */
-  logo_url: string | null;
-  /** Строго #RRGGBB. Значение недоверенное и валидируется до попадания в CSS. */
-  brand_color: string | null;
 }
 
-export interface QuestionnaireDoctor {
-  id: string;
-  full_name: string;
+export interface PublicLinkDoctor {
+  membership_id: string;
+  public_slug: string | null;
+  /** Недоверенный URL: перед отрисовкой проходит `sanitizeImageUrl`. */
   photo_url: string | null;
-  specializations: string[];
+  first_name: string | null;
+  last_name: string | null;
+  middle_name: string | null;
+  specializations: PublicSpecialization[];
 }
 
-export interface QuestionnaireLink {
-  clinic: QuestionnaireClinic;
-  target: QuestionnaireLinkTarget;
-  /** Заполнен только для ссылки врача. */
-  doctor: QuestionnaireDoctor | null;
-  consent_required: boolean;
-  state: QuestionnaireState;
+export interface PublicLink {
+  link_type: PublicLinkType;
+  clinic_id: string;
+  clinic_name: string;
+  phone: string | null;
+  /** Недоверенный URL: перед отрисовкой проходит `sanitizeImageUrl`. */
+  logo_url: string | null;
+  /** Недоверенное значение: валидируется до попадания в CSS. */
+  brand_color: string | null;
+  clinic_public_slug: string;
+  /** Заполнен только для ссылки активного врача. */
+  doctor: PublicLinkDoctor | null;
+  /** Активные врачи клиники — в том числе при `doctor_inactive`. */
+  doctors: PublicLinkDoctor[];
+  blocked: boolean;
+  /** subscription_expired | clinic_daily_limit | doctor_inactive; сужается в lib. */
+  block_code: string | null;
+  block_message: string | null;
+  /** ВЗ-7: backend пока не присылает. undefined — согласие не показывается. */
+  consent_required?: boolean;
 }
 
-export interface QuestionnaireDoctorsResponse {
-  doctors: QuestionnaireDoctor[];
-  specializations: string[];
+export interface QuestionnaireChoice {
+  value: string;
+  label: string;
 }
 
-/**
- * Ожидаемый вид ответа на сообщение ассистента.
- *
- * Поле ввода фронтенд показывает **всегда**, в том числе при `choice`:
- * быстрые ответы — подсказка, а не ограничение, и пациент может ответить
- * своими словами на любой вопрос. Значение остаётся в контракте как
- * намерение сервера и может пригодиться в статистике.
- */
-export type QuestionnaireMessageInput = 'text' | 'choice' | 'none';
-
-export interface QuestionnaireMessage {
-  id: string;
-  text: string;
-  /** Быстрые ответы над полем ввода. */
-  quick_replies: string[] | null;
-  input: QuestionnaireMessageInput;
-  /** Код шага для статистики «брошено». */
-  step: string;
+/** Дескриптор шага. step_key и step_type — строки backend, сужаются в lib. */
+export interface QuestionnaireStep {
+  step_key: string;
+  step_type: string;
+  title: string | null;
+  text: string | null;
+  required: boolean;
+  allow_skip: boolean;
+  allow_none: boolean;
+  choices: QuestionnaireChoice[];
   /**
-   * Доля пройденного от 0 до 1 для индикатора в чате.
-   *
-   * Считает сервер: только он знает сценарий и остаток бюджета уточняющих
-   * вопросов, а число вопросов ИИ заранее не известно. Если поле не пришло,
-   * фронтенд показывает оценку по количеству отвеченных вопросов.
+   * Врачи (`choose_doctor`) или специализации (`choose_specialization`).
+   * Форма зависит от шага, поэтому `unknown` с разбором в lib.
    */
-  progress: number | null;
-  /** Вопросы закончились, дальше экран данных приёма. */
-  finished: boolean;
-  /** ИИ не ответил: уточняющие вопросы не задавались, врач увидит пометку. */
+  options: unknown[];
+  /** YYYY-MM-DD по часам сервера. */
+  date_min: string | null;
+  date_max: string | null;
+  /** HH:MM — единственные значения времени, которые примет сервер. */
+  time_slots: string[];
+  /** Четыре цифры на шаге `code`. */
+  code: string | null;
+  completed: boolean;
+  /** Сервер обрезал ответ до своего предела. */
+  truncated: boolean;
+  /** ИИ не ответил: уточняющие не задаются, врач увидит пометку. */
   ai_unavailable: boolean;
 }
 
-export interface QuestionnaireSessionCreate {
-  link_code: string;
-  doctor_id: string;
+export interface QuestionnaireStartRequest {
+  slug: string;
+  doctor_membership_id?: string | null;
 }
 
-export interface QuestionnaireSession {
-  session_id: string;
-  message: QuestionnaireMessage;
+export interface QuestionnaireStartResponse {
+  id: string;
+  /** Токен анкеты для заголовка `X-Questionnaire-Token`. */
+  token: string;
+  step: QuestionnaireStep;
 }
 
-/** Ответ пациента. Пропуск вопроса исключён из ТЗ 22.09.2026. */
-export interface QuestionnaireAnswer {
-  text: string;
-}
-
-export interface QuestionnaireCompleteRequest {
-  first_name: string;
-  middle_name: string;
-  /** YYYY-MM-DD, от сегодня до +30 дней. */
-  appointment_date: string;
+/**
+ * Ответ на шаг. Заполняются только поля текущего шага.
+ *
+ * `skip` у backend есть, но в тип не внесён: пропуск вопроса исключён ТЗ
+ * 22.09.2026 (решение 4).
+ */
+export interface QuestionnaireStepAnswer {
+  step_key: string;
+  value?: string | null;
+  choice?: string | null;
+  none?: boolean;
+  doctor_membership_id?: string | null;
+  specialization_id?: number | null;
+  first_name?: string | null;
+  middle_name?: string | null;
+  /** YYYY-MM-DD. */
+  appointment_date?: string | null;
   /** HH:MM. */
-  appointment_time: string;
-}
-
-export interface QuestionnaireCompleteResponse {
-  /** Четыре цифры, которые пациент называет врачу. */
-  code: string;
+  appointment_time?: string | null;
 }
 
 // ---------------------------------------------------------------------------
@@ -850,6 +850,26 @@ export interface SpecializationRead {
   id: number;
   code: string | null;
   name: string;
+}
+
+/**
+ * Клиника текущего пользователя, его роли в ней и публичные ссылки анкеты
+ * пациента (`GET /me/clinic`, routers/clinic_admin.py). Нет активного
+ * членства в клинике — 404.
+ */
+export interface MyClinicRead {
+  clinic_id: string;
+  clinic_name: string;
+  clinic_public_slug: string;
+  /** `{FRONTEND_PUBLIC_URL}/q/{slug}` — адрес собирает backend. */
+  clinic_public_url: string;
+  membership_id: string;
+  is_clinic_admin: boolean;
+  is_doctor: boolean;
+  /** `null`, если пользователь не врач. */
+  doctor_public_slug: string | null;
+  doctor_public_url: string | null;
+  specializations: SpecializationRead[];
 }
 
 export type ClinicMemberStatus = 'invited' | 'active' | 'deactivated';

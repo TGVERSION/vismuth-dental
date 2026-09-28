@@ -76,6 +76,13 @@ describe('pickContrastColor', () => {
     expect(pickContrastColor('#FFE500')).toBe(DEFAULT_TEXT_COLOR);
   });
 
+  it('на средних синих и бирюзовых выбирает белый', () => {
+    // По формуле WCAG 2 здесь победил бы тёмный текст.
+    expect(pickContrastColor('#008FD5')).toBe('#FFFFFF');
+    expect(pickContrastColor('#4F8FCF')).toBe('#FFFFFF');
+    expect(pickContrastColor('#00A3A3')).toBe('#FFFFFF');
+  });
+
   it('на непрошедшем проверку цвете не падает', () => {
     expect(pickContrastColor('red')).toBe('#FFFFFF');
   });

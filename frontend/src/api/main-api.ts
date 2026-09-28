@@ -59,14 +59,10 @@ import type {
   SpeechSessionCreate,
   SpeechSessionStatus,
   SpeechChunkAccepted,
-  QuestionnaireLink,
-  QuestionnaireDoctorsResponse,
-  QuestionnaireSession,
-  QuestionnaireSessionCreate,
-  QuestionnaireMessage,
-  QuestionnaireAnswer,
-  QuestionnaireCompleteRequest,
-  QuestionnaireCompleteResponse,
+  QuestionnaireStartRequest,
+  QuestionnaireStartResponse,
+  QuestionnaireStep,
+  QuestionnaireStepAnswer,
   ClinicRead,
   ClinicCreate,
   ClinicPatch,
@@ -75,6 +71,7 @@ import type {
   ClinicMemberInviteCreate,
   ClinicInvitationCreated,
   SpecializationRead,
+  MyClinicRead,
   InvitationPreview,
   InvitationAcceptRequest,
   DoctorQuestionnaireListItem,
@@ -114,9 +111,9 @@ const publicApiClient = new ApiClient({
 });
 
 /**
- * Создание сессии и завершение анкеты. `retries: 0` обязателен: базовый
- * `retryCondition` повторяет сетевые ошибки при любом методе, и обрыв связи
- * на POST молча создал бы вторую анкету.
+ * Старт анкеты. `retries: 0` обязателен: базовый `retryCondition` повторяет
+ * сетевые ошибки при любом методе, и обрыв связи на POST молча создал бы
+ * вторую анкету. ИИ при старте не вызывается — хватает обычного таймаута.
  */
 const publicMutationApiClient = new ApiClient({
   baseUrl: '/api/main',
@@ -125,10 +122,14 @@ const publicMutationApiClient = new ApiClient({
   auth: false,
 });
 
-// Ответ ассистента идёт через backend-прокси, который ждёт ml-service до 180 с.
-// Клиентский таймаут берём чуть больше, чтобы получить осмысленный 504, а не
-// обрыв: оборванный запрос сервер всё равно досчитает, и повтор создаст дубль
-// сообщения. Ожидание для пациента смягчается подписями в интерфейсе.
+// Ответ на шаг анкеты. На шагах, после которых backend запрашивает уточняющий
+// вопрос ИИ, ответ ждёт ml-service до QUESTIONNAIRE_AI_TIMEOUT (20 с), а прокси
+// Next обрывает запрос к backend через 30 с. Клиентский таймаут заведомо
+// больше обоих, чтобы ошибку дал сервер или прокси, а не клиент. Повторов нет:
+// повтор ответа, который сервер уже принял, получит 409 «Expected step» — но
+// не на уточнениях ИИ, они идут одним шагом подряд. Поэтому ручной повтор
+// хук анкеты начинает с перечитывания шага. Ожидание смягчается подписями
+// в чате.
 const QUESTIONNAIRE_CHAT_TIMEOUT_MS = 200000;
 
 const publicChatApiClient = new ApiClient({
@@ -444,47 +445,43 @@ export const mainApi = {
   },
 
   /**
-   * Публичная анкета пациента. Все методы идут без авторизации: пациент
-   * открывает ссылку с телефона, аккаунта у него нет.
+   * Публичная анкета пациента (`/public/*`). Все методы идут без авторизации:
+   * пациент открывает ссылку с телефона, аккаунта у него нет. Данные ссылки
+   * загружает сервер Next (`server-api.ts`), список врачей приходит в ссылке
+   * и в шаге `choose_doctor` — отдельных методов для них нет.
    */
   questionnaire: {
-    getLink: (code: string, options?: RequestOptions) =>
-      publicApiClient.get<QuestionnaireLink>(
-        `/questionnaire/link/${encodeURIComponent(code)}`,
-        undefined,
-        options,
-      ),
-
-    getDoctors: (code: string, options?: RequestOptions) =>
-      publicApiClient.get<QuestionnaireDoctorsResponse>(
-        `/questionnaire/link/${encodeURIComponent(code)}/doctors`,
-        undefined,
-        options,
-      ),
-
-    startSession: (data: QuestionnaireSessionCreate) =>
-      publicMutationApiClient.post<QuestionnaireSession>(
-        '/questionnaire/sessions',
+    /**
+     * Создать анкету. `X-Device-Id` обязателен: по нему backend считает
+     * лимит анкет с устройства.
+     */
+    start: (data: QuestionnaireStartRequest, deviceId: string) =>
+      publicMutationApiClient.post<QuestionnaireStartResponse>(
+        '/public/questionnaires',
         data,
+        { 'X-Device-Id': deviceId },
       ),
 
-    /** Ответ пациента либо пропуск вопроса; ждёт следующий вопрос ассистента. */
-    sendAnswer: (
-      session_id: string,
-      data: QuestionnaireAnswer,
+    /** Текущий шаг — для продолжения после перезагрузки и после 409. */
+    getStep: (id: string, token: string, options?: RequestOptions) =>
+      publicApiClient.get<QuestionnaireStep>(
+        `/public/questionnaires/${encodeURIComponent(id)}/step`,
+        undefined,
+        { ...options, headers: { 'X-Questionnaire-Token': token } },
+      ),
+
+    /** Ответ на текущий шаг; возвращает следующий шаг. */
+    answer: (
+      id: string,
+      token: string,
+      data: QuestionnaireStepAnswer,
       options?: RequestOptions,
     ) =>
-      publicChatApiClient.post<QuestionnaireMessage>(
-        `/questionnaire/sessions/${encodeURIComponent(session_id)}/messages`,
+      publicChatApiClient.post<QuestionnaireStep>(
+        `/public/questionnaires/${encodeURIComponent(id)}/answer`,
         data,
-        undefined,
+        { 'X-Questionnaire-Token': token },
         options,
-      ),
-
-    complete: (session_id: string, data: QuestionnaireCompleteRequest) =>
-      publicMutationApiClient.post<QuestionnaireCompleteResponse>(
-        `/questionnaire/sessions/${encodeURIComponent(session_id)}/complete`,
-        data,
       ),
   },
 
@@ -539,6 +536,15 @@ export const mainApi = {
 
   specializations: {
     list: () => apiClient.get<SpecializationRead[]>('/specializations'),
+  },
+
+  /**
+   * Клиника текущего пользователя и публичные ссылки анкеты пациента.
+   * Пользователь без активного членства в клинике получает 404.
+   */
+  myClinic: {
+    get: (options?: RequestOptions) =>
+      apiClient.get<MyClinicRead>('/me/clinic', undefined, options),
   },
 
   /**

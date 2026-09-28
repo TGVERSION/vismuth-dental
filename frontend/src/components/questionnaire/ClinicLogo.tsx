@@ -18,7 +18,7 @@ export const ClinicLogo = ({ url, clinicName }: ClinicLogoProps) => (
     alt={clinicName}
     width={160}
     height={40}
-    className="h-10 w-auto object-contain"
+    className="h-13 w-auto object-contain"
     priority
     fallback={
       <span className="text-lg font-semibold text-[var(--q-brand)]">

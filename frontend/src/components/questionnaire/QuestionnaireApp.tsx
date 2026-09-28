@@ -1,10 +1,19 @@
 'use client';
 
-import { useCallback, useState } from 'react';
-import type { QuestionnaireDoctor, QuestionnaireLink } from '@/api';
+import { useState } from 'react';
+import type {
+  PublicLink,
+  PublicLinkDoctor,
+  QuestionnaireStep,
+  QuestionnaireStepAnswer,
+} from '@/api';
 import { brandStyle } from '@/lib/branding';
-import { isTerminalState, needsDoctorList } from '@/lib/questionnaire';
-import { useQuestionnaireSession } from '@/hooks/useQuestionnaireSession';
+import {
+  buildAnswer,
+  clinicBranding,
+  screenForStep,
+} from '@/lib/questionnaire';
+import { useQuestionnaireFlow } from '@/hooks/useQuestionnaireFlow';
 import { WelcomeScreen } from './WelcomeScreen';
 import { ConsentScreen } from './ConsentScreen';
 import { DoctorPicker } from './DoctorPicker';
@@ -14,215 +23,278 @@ import { PatientNameForm } from './PatientNameForm';
 import { AppointmentTimeForm } from './AppointmentTimeForm';
 import { CodeScreen } from './CodeScreen';
 import { QuestionnaireStub } from './QuestionnaireStub';
+import { QuestionnaireThemeProvider } from './QuestionnaireTheme';
 
 interface QuestionnaireAppProps {
-  linkCode: string;
+  /** Slug ссылки из адреса страницы. */
+  slug: string;
   /** Данные ссылки. `null` — серверный запрос не удался. */
-  link: QuestionnaireLink | null;
+  link: PublicLink | null;
 }
 
-type Step =
-  | 'welcome'
-  | 'consent'
-  | 'doctor'
-  | 'chat'
-  | 'name'
-  | 'appointment'
-  | 'code'
-  | 'stub';
+interface PatientInfoStepProps {
+  step: QuestionnaireStep;
+  submit: (
+    answer: QuestionnaireStepAnswer,
+  ) => Promise<QuestionnaireStep | null>;
+  isSubmitting: boolean;
+  submitError: string | null;
+}
+
+/**
+ * Шаг `patient_info`: имя на одном экране, дата и время — на следующем,
+ * а на сервер всё уходит одним ответом. Живёт отдельным компонентом с ключом
+ * анкеты, чтобы имя от прежней анкеты не попало в новую.
+ */
+const PatientInfoStep = ({
+  step,
+  submit,
+  isSubmitting,
+  submitError,
+}: PatientInfoStepProps) => {
+  const [stage, setStage] = useState<'name' | 'appointment'>('name');
+  const [name, setName] = useState({ firstName: '', middleName: '' });
+
+  if (stage === 'name') {
+    return (
+      <PatientNameForm
+        firstName={name.firstName}
+        middleName={name.middleName}
+        onSubmit={(data) => {
+          setName(data);
+          setStage('appointment');
+        }}
+      />
+    );
+  }
+
+  return (
+    <AppointmentTimeForm
+      dateMin={step.date_min}
+      dateMax={step.date_max}
+      timeSlots={step.time_slots}
+      isSubmitting={isSubmitting}
+      error={submitError}
+      onSubmit={({ date, time }) => {
+        void submit(
+          buildAnswer(step, {
+            type: 'patient_info',
+            firstName: name.firstName,
+            middleName: name.middleName,
+            date,
+            time,
+          }),
+        );
+      }}
+    />
+  );
+};
 
 /**
  * Публичная анкета пациента.
  *
- * Шаги — состояние одной страницы, а не отдельные адреса: ТЗ (допущение Д8)
- * разрешает потерять прогресс при закрытии браузера, но кнопка «назад» не
- * должна ронять уже начатый диалог с ассистентом.
+ * Экран выбирается по шагу сервера: сценарий ведёт backend. Порядок строгий —
+ * начатая анкета важнее заглушки: backend даёт закончить её и после
+ * блокировки ссылки, и после старта из заглушки неактивного врача.
  */
-export const QuestionnaireApp = ({ linkCode, link }: QuestionnaireAppProps) => {
-  const [step, setStep] = useState<Step>(() => {
-    if (!link) return 'welcome';
-    return isTerminalState(link.state) ? 'stub' : 'welcome';
-  });
-  const [doctor, setDoctor] = useState<QuestionnaireDoctor | null>(
-    link?.doctor ?? null,
-  );
-  const [aiUnavailable, setAiUnavailable] = useState(false);
-  // Имя собирается на одном шаге, дата и время — на следующем, поэтому
-  // держим его здесь до отправки обоих экранов одним запросом.
-  const [name, setName] = useState({ firstName: '', middleName: '' });
+export const QuestionnaireApp = ({ slug, link }: QuestionnaireAppProps) => {
+  const flow = useQuestionnaireFlow(slug, link);
+  const clinic = clinicBranding(link);
 
-  const doctorInactive = link?.state === 'doctor_inactive';
-  // Правило вынесено в src/lib и покрыто тестами: от него зависит, уйдёт ли
-  // лишний публичный запрос, расходующий лимиты обращений из ТЗ.
-  const session = useQuestionnaireSession(
-    linkCode,
-    needsDoctorList(link, step === 'doctor'),
-  );
+  const [consentOpen, setConsentOpen] = useState(false);
+  // Возврат из чата к выбору врача — экран поверх шага: прежняя анкета
+  // активна, пока не выбран другой врач.
+  const [pickingDoctor, setPickingDoctor] = useState(false);
+  const [pendingDoctorId, setPendingDoctorId] = useState<string | null>(null);
 
-  const startWithDoctor = useCallback(
-    async (selected: QuestionnaireDoctor) => {
-      setDoctor(selected);
-      const started = await session.start(selected.id);
-      if (started) setStep('chat');
-    },
-    [session],
-  );
+  // Куда возвращаться из чата: врачи шага `choose_doctor`, а после
+  // перезагрузки (шага выбора в этой вкладке не было) — врачи ссылки клиники.
+  const backDoctors =
+    flow.doctors.length > 0
+      ? flow.doctors
+      : link?.link_type === 'clinic'
+        ? link.doctors
+        : [];
+  // При заблокированной ссылке (подписка, суточный лимит) новая анкета не
+  // начнётся, а прежняя к тому моменту уже сброшена — возврат не предлагаем:
+  // начатую анкету backend даёт закончить. При активном шаге `flow.block` —
+  // это блокировка ссылки: блокировку старта сбрасывает успешный старт.
+  const canGoBack = backDoctors.length > 0 && flow.block === null;
 
-  const handleWelcomeNext = useCallback(() => {
+  const handleStart = () => {
+    // Согласие по ТЗ выключено (допущение Д1); включит его сервер (ВЗ-7).
     if (link?.consent_required) {
-      setStep('consent');
+      setConsentOpen(true);
       return;
     }
 
-    // По ссылке врача экран выбора пропускается — анкета начинается сразу.
-    if (doctor) {
-      void startWithDoctor(doctor);
-      return;
-    }
+    void flow.start();
+  };
 
-    setStep('doctor');
-  }, [link?.consent_required, doctor, startWithDoctor]);
+  const handleConsentAccepted = () => {
+    setConsentOpen(false);
+    void flow.start();
+  };
 
-  const handleConsentAccepted = useCallback(() => {
-    if (doctor) {
-      void startWithDoctor(doctor);
-      return;
-    }
+  const chooseDoctorOnStep = (
+    step: QuestionnaireStep,
+    membershipId: string,
+  ) => {
+    setPendingDoctorId(membershipId);
+    void flow.submit(buildAnswer(step, { type: 'doctor', membershipId }));
+  };
 
-    setStep('doctor');
-  }, [doctor, startWithDoctor]);
+  const restartWithDoctor = (membershipId: string) => {
+    setPendingDoctorId(membershipId);
+    void flow.restartWithDoctor(membershipId).then((outcome) => {
+      // Не удалось — остаёмся в списке с ошибкой и «Повторить». Заглушка
+      // (лимит и т. п.) показывается уже без списка.
+      if (outcome === 'started' || outcome === 'blocked') {
+        setPickingDoctor(false);
+      }
+    });
+  };
 
-  const handleChatFinished = useCallback((unavailable: boolean) => {
-    setAiUnavailable(unavailable);
-    setStep('name');
-  }, []);
-
-  const handleBackToDoctors = useCallback(() => {
-    setStep('doctor');
-  }, []);
+  const startWithDoctor = (membershipId: string) => {
+    setPendingDoctorId(membershipId);
+    void flow.start(membershipId);
+  };
 
   const content = () => {
-    if (step === 'stub' && link) {
+    if (pickingDoctor) {
       return (
-        <QuestionnaireStub state={link.state} clinic={link.clinic}>
+        <DoctorPicker
+          doctors={backDoctors}
+          isSelecting={flow.isStarting}
+          pendingId={pendingDoctorId}
+          error={flow.startError}
+          onRetry={
+            pendingDoctorId
+              ? () => restartWithDoctor(pendingDoctorId)
+              : undefined
+          }
+          onSelect={(doctor: PublicLinkDoctor) =>
+            restartWithDoctor(doctor.membership_id)
+          }
+        />
+      );
+    }
+
+    const { step } = flow;
+    if (step) {
+      switch (screenForStep(step)) {
+        case 'doctor':
+          return (
+            <DoctorPicker
+              doctors={flow.doctors}
+              isSelecting={flow.isSubmitting}
+              pendingId={pendingDoctorId}
+              error={flow.submitError}
+              // Отказ «врач недоступен» обновляет список с сервера: повтор
+              // имеет смысл, только если врач в нём остался.
+              onRetry={
+                pendingDoctorId &&
+                flow.doctors.some(
+                  (doctor) => doctor.membership_id === pendingDoctorId,
+                )
+                  ? () => chooseDoctorOnStep(step, pendingDoctorId)
+                  : undefined
+              }
+              onSelect={(doctor) =>
+                chooseDoctorOnStep(step, doctor.membership_id)
+              }
+            />
+          );
+
+        case 'chat':
+          return (
+            <ChatStep
+              // Новая анкета — новая лента.
+              key={flow.questionnaireId}
+              step={step}
+              submit={flow.submit}
+              isSubmitting={flow.isSubmitting}
+              submitError={flow.submitError}
+              // Возврат — только когда есть список, куда возвращаться. Выбор
+              // другого врача начнёт новую анкету, прежняя останется на
+              // сервере брошенной: вернуться на шаг назад backend не умеет.
+              onBack={canGoBack ? () => setPickingDoctor(true) : undefined}
+            />
+          );
+
+        case 'patient_info':
+          return (
+            <PatientInfoStep
+              key={flow.questionnaireId}
+              step={step}
+              submit={flow.submit}
+              isSubmitting={flow.isSubmitting}
+              submitError={flow.submitError}
+            />
+          );
+
+        case 'code':
+          return (
+            <CodeScreen
+              code={step.code ?? ''}
+              aiUnavailable={step.ai_unavailable}
+              onClose={flow.finish}
+            />
+          );
+      }
+    }
+
+    if (flow.block) {
+      const showDoctors = flow.block === 'doctor_inactive' && link !== null;
+
+      return (
+        <QuestionnaireStub state={flow.block} clinic={clinic}>
           {/* ТЗ: «Врач не ведёт приём, выберите другого» — и список врачей.
               Без него текст предлагает выбор, которого негде сделать. */}
-          {doctorInactive ? (
-            <DoctorList
-              doctors={session.doctors}
-              isLoading={session.isLoadingDoctors}
-              error={session.doctorsError}
-              isStarting={session.isStarting}
-              onReload={session.reloadDoctors}
-              onSelect={(selected) => void startWithDoctor(selected)}
-            />
+          {showDoctors ? (
+            <div className="flex flex-col gap-3">
+              <DoctorList
+                doctors={link.doctors}
+                isSelecting={flow.isStarting}
+                pendingId={pendingDoctorId}
+                onSelect={(doctor) => startWithDoctor(doctor.membership_id)}
+              />
+              {flow.startError && !flow.isStarting ? (
+                <p role="alert" className="text-sm text-[#C2334D]">
+                  {flow.startError}
+                </p>
+              ) : null}
+            </div>
           ) : null}
         </QuestionnaireStub>
       );
     }
 
-    // Брендинг не загрузился: анкета всё равно работает, просто в
-    // нейтральной теме и без названия клиники на приветствии.
-    const clinic = link?.clinic ?? {
-      name: 'Клиника',
-      phone: '',
-      logo_url: null,
-      brand_color: null,
-    };
-
-    switch (step) {
-      case 'welcome':
-        return (
-          <WelcomeScreen
-            clinic={clinic}
-            isStarting={session.isStarting}
-            error={session.startError}
-            onStart={handleWelcomeNext}
-          />
-        );
-
-      case 'consent':
-        return (
-          <ConsentScreen clinic={clinic} onAccept={handleConsentAccepted} />
-        );
-
-      case 'doctor':
-        return (
-          <DoctorPicker
-            doctors={session.doctors}
-            specializations={session.specializations}
-            isLoading={session.isLoadingDoctors}
-            error={session.doctorsError}
-            isStarting={session.isStarting}
-            startError={session.startError}
-            onReload={session.reloadDoctors}
-            onSelect={(selected) => void startWithDoctor(selected)}
-          />
-        );
-
-      case 'chat':
-        return session.session ? (
-          <ChatStep
-            sessionId={session.session.sessionId}
-            initialMessage={session.session.firstMessage}
-            onFinished={handleChatFinished}
-            // Возврат предлагается только там, где есть куда вернуться —
-            // по ссылке клиники. Выбор другого врача начнёт новый диалог,
-            // а прежняя сессия останется на сервере брошенной: это
-            // предусмотренное ТЗ состояние, а не потеря данных.
-            onBack={link?.target === 'clinic' ? handleBackToDoctors : undefined}
-          />
-        ) : null;
-
-      case 'name':
-        return (
-          <PatientNameForm
-            firstName={name.firstName}
-            middleName={name.middleName}
-            onSubmit={(data) => {
-              setName(data);
-              setStep('appointment');
-            }}
-          />
-        );
-
-      case 'appointment':
-        return (
-          <AppointmentTimeForm
-            isSubmitting={session.isCompleting}
-            error={session.completeError}
-            onSubmit={({ date, time }) => {
-              void session
-                .complete({
-                  first_name: name.firstName,
-                  middle_name: name.middleName,
-                  appointment_date: date,
-                  appointment_time: time,
-                })
-                .then((issued) => {
-                  if (issued) setStep('code');
-                });
-            }}
-          />
-        );
-
-      case 'code':
-        return session.code ? (
-          <CodeScreen code={session.code} aiUnavailable={aiUnavailable} />
-        ) : null;
-
-      default:
-        return null;
+    if (consentOpen) {
+      return <ConsentScreen clinic={clinic} onAccept={handleConsentAccepted} />;
     }
+
+    return (
+      <WelcomeScreen
+        clinic={clinic}
+        isStarting={flow.isStarting || flow.isResuming}
+        error={flow.startError}
+        onStart={handleStart}
+      />
+    );
   };
+
+  const theme = brandStyle(clinic);
 
   return (
     // Токены темы объявлены на этом контейнере, а не на :root: фирменные
     // цвета клиники не должны попадать на экраны Ассистента врача.
-    <div data-questionnaire className="q-page" style={brandStyle(link?.clinic)}>
-      {/* На телефоне обёртка ничего не меняет, на широком экране становится
-          карточкой по центру — правила только в медиазапросе от 768px. */}
-      <div className="q-shell">{content()}</div>
-    </div>
+    <QuestionnaireThemeProvider value={theme}>
+      <div data-questionnaire className="q-page" style={theme}>
+        {/* На телефоне обёртка ничего не меняет, на широком экране становится
+            карточкой по центру — правила только в медиазапросе от 768px. */}
+        <div className="q-shell">{content()}</div>
+      </div>
+    </QuestionnaireThemeProvider>
   );
 };

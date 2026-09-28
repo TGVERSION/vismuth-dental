@@ -7,6 +7,8 @@ interface CodeScreenProps {
   code: string;
   /** Уточняющие вопросы не задавались: ИИ был недоступен. */
   aiUnavailable: boolean;
+  /** «Закрыть»: анкета завершена, продолжать после перезагрузки нечего. */
+  onClose: () => void;
 }
 
 /**
@@ -15,7 +17,11 @@ interface CodeScreenProps {
  * Обратной связи с пациентом нет, поэтому код показывается один раз и
  * крупно. Если он потеряется, врач найдёт анкету по имени и дате.
  */
-export const CodeScreen = ({ code, aiUnavailable }: CodeScreenProps) => {
+export const CodeScreen = ({
+  code,
+  aiUnavailable,
+  onClose,
+}: CodeScreenProps) => {
   const [copied, setCopied] = useState(false);
   const [closed, setClosed] = useState(false);
 
@@ -38,6 +44,7 @@ export const CodeScreen = ({ code, aiUnavailable }: CodeScreenProps) => {
   };
 
   const handleClose = () => {
+    onClose();
     // Вкладку, открытую пациентом вручную, скрипт закрыть не может —
     // браузер это запрещает. Поэтому показываем прощальный экран, а не
     // делаем вид, что кнопка не сработала.
@@ -58,7 +65,7 @@ export const CodeScreen = ({ code, aiUnavailable }: CodeScreenProps) => {
 
   return (
     <div className="q-screen flex flex-col px-4 pt-[calc(env(safe-area-inset-top)+24px)]">
-      <h1 className="text-2xl font-semibold">Готово!</h1>
+      <h1 className="text-[24px] font-bold">Готово!</h1>
 
       <p className="mt-3 text-[var(--q-muted)]">
         Назовите этот код врачу в начале приёма — так он сразу найдёт ваши

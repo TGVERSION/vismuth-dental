@@ -327,3 +327,24 @@ div[contenteditable][data-placeholder]:empty:before {
     max-height: none !important;
   }
 }
+
+/* Печать QR из окна «Ссылки и QR-код»: на лист — только QR.
+   Всё под атрибутом data-print-mode="qr" на <html>: окно ставит его на время
+   печати и снимает после (afterprint) или при закрытии. Печать протокола
+   атрибута не ставит, и эти правила её не касаются. Лист — прямой потомок
+   body (портал), остальное содержимое body в режиме QR не печатается. */
+[data-print-qr-sheet] {
+  display: none;
+}
+
+@media print {
+  html[data-print-mode='qr'] body > :not([data-print-qr-sheet]) {
+    display: none !important;
+  }
+
+  html[data-print-mode='qr'] [data-print-qr-sheet] {
+    display: flex !important;
+    justify-content: center;
+    padding-top: 30mm;
+  }
+}

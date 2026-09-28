@@ -1,12 +1,12 @@
 'use client';
 
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
+import { copyText } from '@/lib/clipboard';
 import { logWarn } from '@/lib/logger';
 import { buildQrMatrix } from '@/lib/qr';
 import {
   canCopyImage,
   copyImage,
-  copyText,
   qrPngBlob,
   triggerDownload,
 } from '@/lib/qr-browser';

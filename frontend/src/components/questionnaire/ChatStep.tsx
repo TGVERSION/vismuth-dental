@@ -34,7 +34,11 @@ export const ChatStep = ({
   onBack,
 }: ChatStepProps) => {
   const chat = useQuestionnaireChat({ step, submit, isSubmitting });
-  const bottomRef = useRef<HTMLDivElement | null>(null);
+  const listRef = useRef<HTMLDivElement | null>(null);
+  // Сколько ленты осталось ниже видимой части. Запоминается при прокрутке,
+  // чтобы после изменения высоты ленты вернуть её в то же положение
+  // относительно низа.
+  const bottomGapRef = useRef(0);
   // Высота с учётом клавиатуры: на iOS `100dvh` на неё не реагирует, и поле
   // ввода оказалось бы под клавиатурой. Пока API недоступно — остаёмся
   // на высоте из класса.
@@ -46,9 +50,41 @@ export const ChatStep = ({
 
   // Лента всегда показывает последнее сообщение: на телефоне с открытой
   // клавиатурой иначе не видно, на что отвечать.
+  // Прокручивается сама лента, а не scrollIntoView: тот двигает и страницу,
+  // а на iOS при открытой клавиатуре это сдвигает весь экран чата.
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ block: 'end' });
+    const list = listRef.current;
+    if (!list) return;
+
+    list.scrollTop = list.scrollHeight;
   }, [chat.entries.length, chat.isAwaiting, submitError]);
+
+  // Лента привязана к низу, как в мессенджере. Когда выезжает клавиатура
+  // (или растёт поле ввода), лента становится ниже, а браузер сохраняет
+  // отступ от верха — и последний вопрос уходит под клавиатуру. Поэтому
+  // после каждого изменения высоты восстанавливаем отступ от низа: кто был
+  // в конце переписки, в конце и остаётся, а кто листал историю — видит то же
+  // место.
+  useEffect(() => {
+    const list = listRef.current;
+    if (!list) return;
+
+    const observer = new ResizeObserver(() => {
+      list.scrollTop =
+        list.scrollHeight - list.clientHeight - bottomGapRef.current;
+    });
+    observer.observe(list);
+
+    return () => observer.disconnect();
+  }, []);
+
+  const rememberBottomGap = () => {
+    const list = listRef.current;
+    if (!list) return;
+
+    bottomGapRef.current =
+      list.scrollHeight - list.scrollTop - list.clientHeight;
+  };
 
   return (
     <div
@@ -84,7 +120,11 @@ export const ChatStep = ({
           обращается в ноль и прокрутка работает обычным образом, тогда как
           `justify-end` в прокручиваемом контейнере делает начало ленты
           недостижимым. */}
-      <div className="flex flex-1 flex-col overflow-y-auto px-4 pb-4">
+      <div
+        ref={listRef}
+        onScroll={rememberBottomGap}
+        className="flex flex-1 flex-col overflow-y-auto px-4 pb-4"
+      >
         <div className="mt-auto space-y-3">
           {/* Служебная плашка, как в мессенджерах: стоит над первым вопросом
               и уезжает вверх вместе с перепиской, места не занимает. */}
@@ -112,8 +152,6 @@ export const ChatStep = ({
               </button>
             </div>
           ) : null}
-
-          <div ref={bottomRef} />
         </div>
       </div>
 

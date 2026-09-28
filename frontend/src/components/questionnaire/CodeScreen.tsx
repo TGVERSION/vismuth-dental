@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { copyText } from '@/lib/clipboard';
 import { logWarn } from '@/lib/logger';
 
 interface CodeScreenProps {
@@ -34,11 +35,11 @@ export const CodeScreen = ({
 
   const handleCopy = async () => {
     try {
-      await navigator.clipboard.writeText(code);
+      await copyText(code);
       setCopied(true);
     } catch (error) {
-      // Буфер обмена может быть недоступен: нет разрешения или страница
-      // открыта не по HTTPS. Код на экране виден — это не критично.
+      // Браузер не дал скопировать ни одним способом. Код на экране виден —
+      // это не критично.
       logWarn('Анкета: копирование кода недоступно', error);
     }
   };

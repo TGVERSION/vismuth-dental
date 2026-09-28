@@ -2,6 +2,7 @@
 
 import { useRef, useState } from 'react';
 import type { ClinicInvitationCreated } from '@/api';
+import { copyText } from '@/lib/clipboard';
 import { fieldFillClass } from '@/lib/field-fill';
 import { INPUT_CLASS, LINK_BUTTON_CLASS } from './fields';
 
@@ -30,7 +31,7 @@ export const InviteLinkResult = ({ invitation }: InviteLinkResultProps) => {
 
   const copy = async () => {
     try {
-      await navigator.clipboard.writeText(invitation.invite_url);
+      await copyText(invitation.invite_url);
       setCopyState('copied');
     } catch {
       inputRef.current?.select();

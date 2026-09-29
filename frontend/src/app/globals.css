@@ -14,6 +14,25 @@
   --breakpoint-lg: 64rem;
   --breakpoint-xl: 80rem;
   --breakpoint-2xl: 96rem;
+
+  --text-xs--line-height: 1.25;
+  --text-sm--line-height: 1.25;
+  --text-base--line-height: 1.25;
+  --text-lg--line-height: 1.25;
+  --text-xl--line-height: 1.25;
+  --text-2xl--line-height: 1.25;
+  --text-3xl--line-height: 1.25;
+  --text-4xl--line-height: 1.25;
+  --text-5xl--line-height: 1.25;
+  --text-6xl--line-height: 1.25;
+  --text-7xl--line-height: 1.25;
+  --text-8xl--line-height: 1.25;
+  --text-9xl--line-height: 1.25;
+}
+
+html,
+body {
+  line-height: 1.25;
 }
 
 body {

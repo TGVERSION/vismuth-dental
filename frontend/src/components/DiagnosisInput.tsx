@@ -433,7 +433,7 @@ export const DiagnosisInput: React.FC<DiagnosisInputProps> = ({
       <div className="flex-grow relative">
         <div className="flex items-center ml-7 gap-3">
           <div className="flex-shrink-0">
-            <div className="text-[30px] font-medium leading-[140%] bg-transparent border-0 focus:outline-none focus:ring-0 w-full">
+            <div className="text-[30px] font-medium bg-transparent border-0 focus:outline-none focus:ring-0 w-full">
               <p className={`${animate ? 'animate-scale-pulse' : ''}`}>
                 {label}
               </p>
@@ -451,7 +451,7 @@ export const DiagnosisInput: React.FC<DiagnosisInputProps> = ({
             onBlur={handleBlur}
             onClick={handleOpenWithReset}
             data-placeholder="Введите код или название диагноза..."
-            className="ml-7 text-[#202020] border-0 focus:border-0 focus:outline-none focus:ring-0 w-full bg-transparent placeholder-gray-400 leading-[140%] py-2 min-h-5.5 whitespace-pre-wrap break-words"
+            className="ml-7 text-[#202020] border-0 focus:border-0 focus:outline-none focus:ring-0 w-full bg-transparent placeholder-gray-400 py-2 min-h-5.5 whitespace-pre-wrap break-words"
             style={{ wordBreak: 'break-word' }}
             role="textbox"
             aria-multiline="true"

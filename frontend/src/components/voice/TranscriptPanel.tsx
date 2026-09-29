@@ -128,7 +128,7 @@ export const TranscriptPanel: React.FC<TranscriptPanelProps> = ({
                 </p>
               </div>
             ) : (
-              <p className="whitespace-pre-wrap text-md leading-[150%] text-[#202020]">
+              <p className="whitespace-pre-wrap text-md text-[#202020]">
                 {selected.transcript}
               </p>
             )}

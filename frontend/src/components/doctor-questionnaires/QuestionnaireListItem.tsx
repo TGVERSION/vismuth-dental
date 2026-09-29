@@ -36,10 +36,10 @@ export const QuestionnaireListItem = ({
         selected ? 'bg-white' : 'hover:bg-white'
       } ${isPast ? 'text-[#8B8B8B]' : 'text-[#202020]'}`}
     >
-      <span className="w-15 shrink-0 text-[22px] leading-none">
+      <span className="w-15 shrink-0 text-[22px]">
         {formatAppointmentTime(item.appointment_time)}
       </span>
-      <span className="min-w-0 text-[14px] leading-tight">
+      <span className="min-w-0 text-[14px]">
         <span className="block truncate">
           {item.code && <span className="font-semibold">{item.code}</span>}
           {item.code && name && ' · '}

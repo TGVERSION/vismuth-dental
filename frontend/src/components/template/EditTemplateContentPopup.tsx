@@ -237,7 +237,7 @@ export const EditTemplateContentPopup: React.FC<
                   }
                   placeholder={field.description || 'Введите текст...'}
                   rows={3}
-                  className="w-full px-4 py-3 bg-gray-50 border-0 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#5D8CF1] resize-none text-sm leading-relaxed"
+                  className="w-full px-4 py-3 bg-gray-50 border-0 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#5D8CF1] resize-none text-sm"
                 />
               </div>
             ))

@@ -1096,7 +1096,7 @@ export default function Home() {
                 className={`flex flex-col gap-9 overflow-x-hidden overflow-y-auto pr-2 ${isSidebarVisible ? PROTOCOL_COLUMN_WITH_SIDEBAR : 'w-full'}`}
                 ref={setSectionContainerEl}
               >
-                <div className="text-[40px] pl-6 font-semibold leading-[150%] bg-transparent border-0 focus:outline-none focus:ring-0 w-full">
+                <div className="text-[40px] pl-6 font-semibold bg-transparent border-0 focus:outline-none focus:ring-0 w-full">
                   {templateTitle}
                 </div>
 
@@ -1267,7 +1267,7 @@ export default function Home() {
                               <p className="text-xl font-medium text-[#D91528] pb-2">
                                 {finding.section}
                               </p>
-                              <p className="text-md leading-[140%]">
+                              <p className="text-md">
                                 {finding.recommendation}
                               </p>
                             </div>
@@ -1282,7 +1282,7 @@ export default function Home() {
                               <p className="text-xl font-medium text-[#F29100] pb-2">
                                 {finding.section}
                               </p>
-                              <p className="text-md leading-[140%]">
+                              <p className="text-md">
                                 {finding.recommendation}
                               </p>
                             </div>
@@ -1297,7 +1297,7 @@ export default function Home() {
                               <p className="text-xl font-medium text-[#5D8CF1] pb-2">
                                 {finding.section}
                               </p>
-                              <p className="text-md leading-[140%]">
+                              <p className="text-md">
                                 {finding.recommendation}
                               </p>
                             </div>

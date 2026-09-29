@@ -80,7 +80,7 @@ export const ChatComposer = ({
     if (!element) return;
 
     const styles = window.getComputedStyle(element);
-    const lineHeight = Number.parseFloat(styles.lineHeight) || 24;
+    const lineHeight = Number.parseFloat(styles.lineHeight) || 20;
     const padding =
       Number.parseFloat(styles.paddingTop) +
       Number.parseFloat(styles.paddingBottom);
@@ -220,7 +220,7 @@ export const ChatComposer = ({
           aria-describedby={hint ? hintId : undefined}
           // Высоту и прокрутку задаёт resize(): в классах их нет, иначе
           // они перебивались бы и предел в шесть строк не соблюдался.
-          className="custom-scrollbar flex-1 resize-none bg-transparent py-3 text-base leading-6 outline-none disabled:opacity-60"
+          className="custom-scrollbar flex-1 resize-none bg-transparent py-3 text-base outline-none disabled:opacity-60"
         />
 
         <button

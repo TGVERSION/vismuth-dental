@@ -512,7 +512,7 @@ export const SectionInput: React.FC<SectionInputProps> = ({
         )}
       </div>
       <div
-        className={`text-[30px] font-medium leading-[140%] text-[#202020] mb-1 ${animate ? 'animate-scale-pulse' : ''}`}
+        className={`text-[30px] font-medium text-[#202020] mb-1 ${animate ? 'animate-scale-pulse' : ''}`}
       >
         {label}
       </div>
@@ -673,7 +673,7 @@ export const SectionInput: React.FC<SectionInputProps> = ({
                 setIsComposing(false);
                 handleInput();
               }}
-              className="text-[#202020] border-0 focus:border-0 focus:outline-none focus:ring-0 w-full resize-none bg-transparent min-h-5.5 leading-[140%] text-[16px] whitespace-pre-wrap wrap-break-word"
+              className="text-[#202020] border-0 focus:border-0 focus:outline-none focus:ring-0 w-full resize-none bg-transparent min-h-5.5 text-[16px] whitespace-pre-wrap wrap-break-word"
               style={{ wordBreak: 'break-word' }}
               role="textbox"
               aria-multiline="true"

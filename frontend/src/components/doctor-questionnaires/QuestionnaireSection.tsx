@@ -37,7 +37,7 @@ export const QuestionnaireSection = ({
     <section aria-labelledby={headingId} className="flex flex-col gap-4">
       <h2
         id={headingId}
-        className="pl-6 text-[32px] leading-tight font-medium text-[#202020]"
+        className="pl-6 text-[32px] font-medium text-[#202020]"
       >
         {section.title}
       </h2>
@@ -69,7 +69,7 @@ export const QuestionnaireSection = ({
           <p className="text-[14px] font-medium text-[#5D8CF1]">
             Что доспросить?
           </p>
-          <ul className="mt-1 list-disc pl-5 text-[13px] leading-snug text-[#6C757D] marker:text-[#8B8B8B]">
+          <ul className="mt-1 list-disc pl-5 text-[13px] text-[#6C757D] marker:text-[#8B8B8B]">
             {section.gaps.map((question, index) => (
               <li key={index}>{question}</li>
             ))}

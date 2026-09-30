@@ -202,6 +202,7 @@ export const patientName = (
 
 export type QuestionnaireSectionKey =
   | 'complaints'
+  | 'life_anamnesis'
   | 'allergy_anamnesis'
   | 'medications';
 
@@ -211,6 +212,7 @@ export const QUESTIONNAIRE_SECTIONS: {
   title: string;
 }[] = [
   { key: 'complaints', title: 'Жалобы' },
+  { key: 'life_anamnesis', title: 'Анамнез жизни' },
   { key: 'allergy_anamnesis', title: 'Аллергологический анамнез' },
   { key: 'medications', title: 'Принимаемые препараты' },
 ];
@@ -231,6 +233,7 @@ export const parseGaps = (
 ): Record<QuestionnaireSectionKey, string[]> => {
   const result: Record<QuestionnaireSectionKey, string[]> = {
     complaints: [],
+    life_anamnesis: [],
     allergy_anamnesis: [],
     medications: [],
   };

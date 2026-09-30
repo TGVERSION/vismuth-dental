@@ -15,8 +15,8 @@ export const viewport: Viewport = {
   // Экранная клавиатура должна уменьшать высоту страницы, а не наезжать на
   // неё: иначе поле ввода чата остаётся под клавиатурой и пациент не видит,
   // что печатает. Это поведение Chrome на Android; Safari на iOS так не
-  // умеет, там высоту приходится считать через Visual Viewport — см.
-  // src/hooks/useViewportHeight.ts.
+  // умеет, там высоту и положение экрана чата приходится считать через
+  // Visual Viewport — см. src/hooks/useVisualViewport.ts.
   interactiveWidget: 'resizes-content',
 };
 

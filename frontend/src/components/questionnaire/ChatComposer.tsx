@@ -168,7 +168,14 @@ export const ChatComposer = ({
   };
 
   return (
-    <div className="bg-[var(--q-bg)] px-4 pb-[calc(env(safe-area-inset-bottom)+12px)]">
+    // Снизу — запас под индикатор «домой», но только без фокуса в поле.
+    // Safari не обнуляет safe-area при открытой клавиатуре, хотя индикатор
+    // под ней не виден, и над клавиатурой оставалась бы пустая полоса.
+    // Фокус в поле на телефоне и есть открытая клавиатура: кнопки его не
+    // забирают, а на шагах с выбором поле отключено. Условие — фокус
+    // именно в поле, а не где-то в панели: кнопка в фокусе (Tab с внешней
+    // клавиатуры) экранную клавиатуру не открывает.
+    <div className="bg-[var(--q-bg)] px-4 pb-[calc(env(safe-area-inset-bottom)+12px)] has-[textarea:focus]:pb-3">
       {/* Быстрые ответы прижаты вправо, к стороне ответов пациента: так
           видно, что это его реплика, а не продолжение вопроса. */}
       {prompt.chips.length ? (
@@ -220,6 +227,9 @@ export const ChatComposer = ({
           aria-describedby={hint ? hintId : undefined}
           // Высоту и прокрутку задаёт resize(): в классах их нет, иначе
           // они перебивались бы и предел в шесть строк не соблюдался.
+          // Шрифт не меньше 16px (`text-base`): мельче iOS при фокусе
+          // масштабирует страницу, и подстройка экрана под клавиатуру
+          // выключается (см. useVisualViewport).
           className="custom-scrollbar flex-1 resize-none bg-transparent py-3 text-base outline-none disabled:opacity-60"
         />
 

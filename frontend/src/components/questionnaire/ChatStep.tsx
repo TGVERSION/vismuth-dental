@@ -3,7 +3,7 @@
 import { useEffect, useRef } from 'react';
 import type { QuestionnaireStep, QuestionnaireStepAnswer } from '@/api';
 import { useQuestionnaireChat } from '@/hooks/useQuestionnaireChat';
-import { useViewportHeight } from '@/hooks/useViewportHeight';
+import { useVisualViewport } from '@/hooks/useVisualViewport';
 import { useIsDesktop } from '@/hooks/useIsDesktop';
 import { ChatBubble, TypingIndicator } from './ChatBubble';
 import { ChatComposer } from './ChatComposer';
@@ -39,14 +39,16 @@ export const ChatStep = ({
   // чтобы после изменения высоты ленты вернуть её в то же положение
   // относительно низа.
   const bottomGapRef = useRef(0);
-  // Высота с учётом клавиатуры: на iOS `100dvh` на неё не реагирует, и поле
-  // ввода оказалось бы под клавиатурой. Пока API недоступно — остаёмся
-  // на высоте из класса.
-  const viewportHeight = useViewportHeight();
+  // Видимая область с учётом клавиатуры: на iOS `100dvh` на неё не
+  // реагирует, а сама область при открытии клавиатуры ещё и сдвигается вниз.
+  // Экран совмещается с ней по высоте и по сдвигу, иначе поле ввода висит
+  // над клавиатурой. Пока API недоступно или страница увеличена жестом —
+  // остаёмся на высоте из класса.
+  const visualViewport = useVisualViewport();
   const isDesktop = useIsDesktop();
   // На десктопе чат живёт в карточке фиксированной высоты, и подстройка
   // под клавиатуру там не нужна — она растянула бы карточку на весь экран.
-  const keyboardHeight = isDesktop ? null : viewportHeight;
+  const viewportFit = isDesktop ? null : visualViewport;
 
   // Лента всегда показывает последнее сообщение: на телефоне с открытой
   // клавиатурой иначе не видно, на что отвечать.
@@ -88,8 +90,17 @@ export const ChatStep = ({
 
   return (
     <div
-      className="q-screen-fixed flex flex-col"
-      style={keyboardHeight ? { height: `${keyboardHeight}px` } : undefined}
+      // Свой фон обязателен: на телефоне экран закреплён поверх страницы,
+      // и без фона под лентой проступало бы то, что лежит за ним.
+      className="q-screen-fixed flex flex-col bg-[var(--q-bg)]"
+      style={
+        viewportFit
+          ? {
+              height: `${viewportFit.height}px`,
+              transform: `translateY(${viewportFit.offsetTop}px)`,
+            }
+          : undefined
+      }
     >
       <header className="flex shrink-0 items-center gap-2 px-4 pt-[calc(env(safe-area-inset-top)+16px)] pb-3">
         {onBack ? (
@@ -119,11 +130,17 @@ export const ChatStep = ({
           контейнере: когда переписка перестаёт помещаться, автоотступ
           обращается в ноль и прокрутка работает обычным образом, тогда как
           `justify-end` в прокручиваемом контейнере делает начало ленты
-          недостижимым. */}
+          недостижимым.
+          `overscroll-contain`: когда лента докручена до края, жест не
+          переходит на страницу. На iOS с открытой клавиатурой он сдвинул
+          бы видимую область, и экран чата дёргался бы вслед за ней.
+          Только на телефоне: в десктопной карточке прокрутка должна
+          переходить на страницу, иначе на невысоком окне до поля ввода не
+          докрутить колесом. */}
       <div
         ref={listRef}
         onScroll={rememberBottomGap}
-        className="flex flex-1 flex-col overflow-y-auto px-4 pb-4"
+        className="flex flex-1 flex-col overflow-y-auto px-4 pb-4 max-md:overscroll-contain"
       >
         <div className="mt-auto space-y-3">
           {/* Служебная плашка, как в мессенджерах: стоит над первым вопросом

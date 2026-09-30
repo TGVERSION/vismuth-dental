@@ -227,6 +227,7 @@ describe('parseGaps', () => {
   it('пустое и отсутствующее — пустые списки', () => {
     const empty = {
       complaints: [],
+      life_anamnesis: [],
       allergy_anamnesis: [],
       medications: [],
     };
@@ -249,6 +250,7 @@ describe('parseGaps', () => {
 
     expect(result).toEqual({
       complaints: ['Как давно это началось?'],
+      life_anamnesis: [],
       allergy_anamnesis: [],
       medications: ['Сколько раз в день?'],
     });
@@ -256,18 +258,22 @@ describe('parseGaps', () => {
 });
 
 describe('buildSections', () => {
-  it('три раздела в порядке макета, пустой помечается', () => {
+  it('четыре раздела в порядке макета, пустой помечается', () => {
     const sections = buildSections({
       structured: {
         complaints: ' Боль в пояснице ',
+        life_anamnesis: 'Гипертоническая болезнь',
         allergy_anamnesis: '   ',
-        life_anamnesis: 'Не показывается',
       },
-      gaps: [{ section: 'complaints', question: 'Где именно болит?' }],
+      gaps: [
+        { section: 'complaints', question: 'Где именно болит?' },
+        { section: 'life_anamnesis', question: 'С какого года?' },
+      ],
     });
 
     expect(sections.map((section) => section.key)).toEqual([
       'complaints',
+      'life_anamnesis',
       'allergy_anamnesis',
       'medications',
     ]);
@@ -277,8 +283,14 @@ describe('buildSections', () => {
       isEmpty: false,
       gaps: ['Где именно болит?'],
     });
-    expect(sections[1]).toMatchObject({ text: '', isEmpty: true, gaps: [] });
-    expect(sections[2]).toMatchObject({ text: '', isEmpty: true });
+    expect(sections[1]).toMatchObject({
+      title: 'Анамнез жизни',
+      text: 'Гипертоническая болезнь',
+      isEmpty: false,
+      gaps: ['С какого года?'],
+    });
+    expect(sections[2]).toMatchObject({ text: '', isEmpty: true, gaps: [] });
+    expect(sections[3]).toMatchObject({ text: '', isEmpty: true });
   });
 
   it('без результата обработки все разделы пустые', () => {

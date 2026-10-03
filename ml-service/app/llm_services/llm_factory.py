@@ -11,6 +11,8 @@ from langchain_gigachat.chat_models.gigachat import GigaChat
 
 from app.config import GigaChatConfig
 
+from .token_usage_callback import TokenUsageCallbackHandler
+
 logger = logging.getLogger(__name__)
 
 
@@ -30,6 +32,8 @@ class LLMFactory:
     def __init__(self, config: GigaChatConfig) -> None:
         self._config = config
         self._chats: dict[LLMRole, GigaChat] = {}
+        # по обработчику на роль: имя в логе указывает, кто потратил токены
+        self._usage_handlers: dict[LLMRole, TokenUsageCallbackHandler] = {}
 
     def get_chat(self, role: LLMRole) -> GigaChat:
         """Возвращает клиент для роли; создаёт его при первом обращении."""
@@ -45,18 +49,21 @@ class LLMFactory:
         match role:
             case LLMRole.MKB:
                 return self._build(
+                    role=role,
                     model=config.mkb_model,
                     temperature=config.mkb_temperature,
                     max_tokens=config.mkb_max_tokens,
                 )
             case LLMRole.FULLNESS:
                 return self._build(
+                    role=role,
                     model=config.fullness_model,
                     temperature=config.fullness_temperature,
                     max_tokens=config.fullness_max_tokens,
                 )
             case LLMRole.CLINREC:
                 return self._build(
+                    role=role,
                     model=config.clinrec_model,
                     temperature=config.clinrec_temperature,
                     max_tokens=config.clinrec_max_tokens,
@@ -64,6 +71,7 @@ class LLMFactory:
             # ultra-модели доступны только на отдельном endpoint и скоупе
             case LLMRole.COLLECT_FORM:
                 return self._build(
+                    role=role,
                     model=config.collect_form_model,
                     temperature=config.collect_form_temperature,
                     max_tokens=config.collect_form_max_tokens,
@@ -72,6 +80,7 @@ class LLMFactory:
                 )
             case LLMRole.SUMMARIZE_FORM:
                 return self._build(
+                    role=role,
                     model=config.summarize_form_model,
                     temperature=config.summarize_form_temperature,
                     max_tokens=config.summarize_form_max_tokens,
@@ -83,6 +92,7 @@ class LLMFactory:
 
     def _build(
         self,
+        role: LLMRole,
         model: str,
         temperature: float,
         max_tokens: int,
@@ -97,4 +107,13 @@ class LLMFactory:
             base_url=base_url,
             scope=scope,
             verify_ssl_certs=False,
+            callbacks=[self._get_usage_handler(role)],
         )
+
+    def _get_usage_handler(self, role: LLMRole) -> TokenUsageCallbackHandler:
+        """Отдаёт колбэк роли: он логирует токены каждого вызова этой роли."""
+        handler = self._usage_handlers.get(role)
+        if handler is None:
+            handler = TokenUsageCallbackHandler(name=role.value)
+            self._usage_handlers[role] = handler
+        return handler

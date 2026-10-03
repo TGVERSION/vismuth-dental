@@ -1,5 +1,5 @@
 from langchain_core.messages import SystemMessage, HumanMessage
-from .llm_setup import llm_clinrec, clinrec_emb_model, clinrec_collection
+from app.llm_services.llm_setup import llm_clinrec, clinrec_emb_model, clinrec_collection
 from .prompts import CLINREC_SYSTEM_PROMPT, CLINREC_HUMAN_PROMPT_TEMPLATE
 import json
 

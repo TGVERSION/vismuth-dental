@@ -1,13 +1,14 @@
 from fastapi import Depends
 from langchain_gigachat.chat_models.gigachat import GigaChat
 
+from app.llm_services.llm_factory import LLMRole
+from app.llm_services.llm_setup import llm_factory
 from app.services.collect_form import CollectFormService
-from app.services.llm_setup import llm_collect_form
 
 
 def get_collect_form_llm() -> GigaChat:
-    """LLM-клиент для collect_form. Один на процесс, создан в llm_setup."""
-    return llm_collect_form
+    """LLM-клиент для collect_form. Создаётся фабрикой и кешируется в ней."""
+    return llm_factory.get_chat(LLMRole.COLLECT_FORM)
 
 
 def get_collect_form_service(

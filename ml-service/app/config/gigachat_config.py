@@ -12,12 +12,13 @@ from .base_config import BaseConfig
 
 
 class GigaChatConfig(BaseConfig):
-    # populate_by_name нужен из-за validation_alias ниже:
-    # с алиасом конструктор ждёт имя алиаса, а не поля.
+    # validate_by_name=False: у token есть validation_alias, и по умолчанию
+    # поле принималось бы ещё и по префиксному имени GIGACHAT_TOKEN.
+    # Токен читается только из GIGA_TOKEN — как и написано в описании поля.
     model_config = SettingsConfigDict(
         extra="ignore",
         env_prefix="GIGACHAT_",
-        populate_by_name=True,
+        validate_by_name=False,
     )
 
     # обязательное поле: без токена сервис не стартует (fail fast).
@@ -41,12 +42,12 @@ class GigaChatConfig(BaseConfig):
     # поиск кода МКБ
     mkb_model: str = Field(default="GigaChat-2", description="Модель для поиска кода МКБ")
     mkb_temperature: float = Field(default=0.1, description="Температура для поиска кода МКБ")
-    mkb_max_tokens: int = Field(default=50, description="Лимит токенов ответа для поиска кода МКБ")
+    mkb_max_tokens: int = Field(default=100, description="Лимит токенов ответа для поиска кода МКБ")
 
     # проверка полноты протокола
     fullness_model: str = Field(default="GigaChat-2-Pro", description="Модель для проверки полноты")
     fullness_temperature: float = Field(default=0.1, description="Температура для проверки полноты")
-    fullness_max_tokens: int = Field(default=500, description="Лимит токенов ответа для проверки полноты")
+    fullness_max_tokens: int = Field(default=1000, description="Лимит токенов ответа для проверки полноты")
 
     # проверка клинических рекомендаций
     clinrec_model: str = Field(default="GigaChat-2-Pro", description="Модель для проверки клинреков")
@@ -56,9 +57,16 @@ class GigaChatConfig(BaseConfig):
     # сбор формы
     collect_form_model: str = Field(default="GigaChat-3-Ultra", description="Модель для сбора формы")
     collect_form_temperature: float = Field(default=0.3, description="Температура для сбора формы")
-    collect_form_max_tokens: int = Field(default=200, description="Лимит токенов ответа для сбора формы")
+    collect_form_max_tokens: int = Field(default=1500, description="Лимит токенов ответа для сбора формы")
+    # бюджет вопросов: исчерпан — сервис отдаёт stopped, а не спрашивает бесконечно
+    collect_form_max_questions: int = Field(
+        default=5,
+        ge=1,
+        le=20,
+        description="Лимит вопросов ассистента за диалог сбора формы",
+    )
 
     # суммаризация формы
     summarize_form_model: str = Field(default="GigaChat-3-Ultra", description="Модель для суммаризации формы")
     summarize_form_temperature: float = Field(default=0.1, description="Температура для суммаризации формы")
-    summarize_form_max_tokens: int = Field(default=500, description="Лимит токенов ответа для суммаризации формы")
+    summarize_form_max_tokens: int = Field(default=1200, description="Лимит токенов ответа для суммаризации формы")

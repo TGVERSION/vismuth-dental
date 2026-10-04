@@ -3,16 +3,40 @@ from .mkb_code import MKBRequest, MKBResponse
 from .protocol_fullness import FullnessRequest, FullnessResponse
 from .clinrec import ClinrecRequest, Finding, ClinrecResponse
 from .chat_form import (
+    AssistantMessage,
     ChatMessage,
     ChatMessages,
-    ChatAnswer,
+    ChatRole,
+)
+from .collect_form import (
+    AllergyAnamnesis,
+    CollectFormAnswer,
+    CollectFormRequest,
+    CollectionTarget,
+    CollectStatus,
+    Complaints,
+    FieldStatus,
+    FormField,
+    FormProgress,
+    Medications,
 )
 from .summarize_form import PatientFormSummary
 
 __all__ = [
+    "AssistantMessage",
     "ChatMessage",
     "ChatMessages",
-    "ChatAnswer",
+    "ChatRole",
+    "AllergyAnamnesis",
+    "CollectFormAnswer",
+    "CollectFormRequest",
+    "CollectionTarget",
+    "CollectStatus",
+    "Complaints",
+    "FieldStatus",
+    "FormField",
+    "FormProgress",
+    "Medications",
     "PatientFormSummary",
     "CompletionRequest",
     "CompletionResponse",

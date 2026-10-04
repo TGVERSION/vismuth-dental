@@ -1,4 +1,5 @@
 from enum import StrEnum
+from typing import Literal
 
 from pydantic import BaseModel, Field
 
@@ -17,15 +18,15 @@ class ChatMessage(BaseModel):
     text: str = Field(description="Текст сообщения")
 
 
+class AssistantMessage(ChatMessage):
+    """Сообщение ассистента: роль зафиксирована, ошибиться нельзя."""
+
+    role: Literal[ChatRole.ASSISTANT] = ChatRole.ASSISTANT
+
+
 class ChatMessages(BaseModel):
     """Набор сообщений чата."""
 
     messages: list[ChatMessage] = Field(
         description="История сообщений чата",
     )
-
-
-class ChatAnswer(BaseModel):
-    """Ответ чата."""
-
-    messages: ChatMessage = Field(description="Сообщение чата")

@@ -12,4 +12,4 @@ async def summarize_form(
     request: ChatMessages,
     service: SummarizeFormService = Depends(get_summarize_form_service),
 ) -> PatientFormSummary:
-    return service.run(request)
+    return await service.run(request)

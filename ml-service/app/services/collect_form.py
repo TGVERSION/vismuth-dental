@@ -1,32 +1,205 @@
+"""Сбор трёх полей формы по истории чата.
+
+Состояние сбора хранит вызывающая сторона: сервис получает его в запросе
+и возвращает обновлённым, поэтому сам остаётся без состояния.
+"""
+
+import logging
+
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
+from langchain_core.runnables import Runnable
 from langchain_gigachat.chat_models.gigachat import GigaChat
 
-from app.schemas import ChatAnswer, ChatMessages
-from app.schemas.chat_form import ChatMessage, ChatRole
+from app.schemas import (
+    AssistantMessage,
+    ChatRole,
+    CollectFormAnswer,
+    CollectFormRequest,
+    CollectionTarget,
+    CollectStatus,
+    FieldStatus,
+    FormField,
+    FormProgress,
+)
 
-from .prompts import COLLECT_FORM_SYSTEM_PROMPT
+from .prompts import EXTRACT_SYSTEM_PROMPT, QUESTION_PROMPT, STATE_SECTION
+
+logger = logging.getLogger(__name__)
+
+# Сколько последних сообщений отдаём в модель: защита от мусорной истории.
+_HISTORY_LIMIT = 40
+
+# Первый вопрос по полю: формулировка фиксирована, LLM не зовём.
+_FIRST_QUESTIONS: dict[CollectionTarget, str] = {
+    CollectionTarget.COMPLAINTS: (
+        "Что вас беспокоит? Опишите, пожалуйста, подробнее: где именно, "
+        "какого характера и как давно."
+    ),
+    CollectionTarget.MEDICATIONS: (
+        "Какие лекарства принимаете сейчас? Если да — назовите, пожалуйста, "
+        "названия и дозы."
+    ),
+    CollectionTarget.ALLERGY_ANAMNESIS: (
+        "Есть ли аллергия на лекарства или продукты? Если да — на что "
+        "и какая реакция."
+    ),
+}
+
+# Переформулировка, если первый вопрос уже звучал, а поле так и не закрыто.
+_REPEAT_QUESTIONS: dict[CollectionTarget, str] = {
+    CollectionTarget.COMPLAINTS: (
+        "Давайте вернёмся к жалобам. Что именно вас беспокоит — где, "
+        "какого характера и как давно?"
+    ),
+    CollectionTarget.MEDICATIONS: (
+        "Уточните, пожалуйста: какие лекарства вы принимаете сейчас "
+        "и в каких дозах?"
+    ),
+    CollectionTarget.ALLERGY_ANAMNESIS: (
+        "Уточните, пожалуйста: была ли аллергия или непереносимость "
+        "лекарств, продуктов?"
+    ),
+}
+
+# Цель уточняющего вопроса и поле, из которого берётся уже известное.
+_FOLLOWUPS: dict[CollectionTarget, tuple[str, FormField]] = {
+    CollectionTarget.COMPLAINTS_DETAIL: (
+        "детали жалоб: где именно болит, какого характера боль, как давно началось",
+        FormField.COMPLAINTS,
+    ),
+    CollectionTarget.MEDICATIONS_DOSE: (
+        "доза принимаемых препаратов",
+        FormField.MEDICATIONS,
+    ),
+}
+
+
+def _next_target(progress: FormProgress) -> CollectionTarget | None:
+    """Выбирает, что спросить дальше. None — все поля закрыты."""
+    complaints = progress.complaints
+    if complaints.status == FieldStatus.EMPTY:
+        return CollectionTarget.COMPLAINTS
+    if complaints.status == FieldStatus.FILLED and not complaints.detailed:
+        return CollectionTarget.COMPLAINTS_DETAIL
+
+    medications = progress.medications
+    if medications.status == FieldStatus.EMPTY:
+        return CollectionTarget.MEDICATIONS
+    if medications.status == FieldStatus.FILLED and not medications.has_dose:
+        return CollectionTarget.MEDICATIONS_DOSE
+
+    if progress.allergy_anamnesis.status == FieldStatus.EMPTY:
+        return CollectionTarget.ALLERGY_ANAMNESIS
+    return None
+
+
+def _merge(known: FormProgress | None, fresh: FormProgress) -> FormProgress:
+    """Не даёт заполненному полю молча откатиться в empty.
+
+    Откат в denied разрешён: пациент мог сказать «я ошибся, аллергий нет».
+    """
+    if known is None:
+        return fresh
+    for field in FormField:
+        previous = getattr(known, field.value)
+        current = getattr(fresh, field.value)
+        if previous.status == FieldStatus.FILLED and current.status == FieldStatus.EMPTY:
+            logger.info("collect form rollback prevented field=%s", field.value)
+            setattr(fresh, field.value, previous)
+    return fresh
 
 
 class CollectFormService:
-    """Собирает уточняющий вопрос по истории чата через LLM."""
+    """Ведёт сбор трёх полей формы: состояние, следующий вопрос, завершённость."""
 
-    def __init__(self, llm: GigaChat) -> None:
+    def __init__(self, llm: GigaChat, max_questions: int) -> None:
         self._llm = llm
+        self._max_questions = max_questions
+        self._extractor: Runnable = llm.with_structured_output(FormProgress)
 
-    def _build_messages(self, request: ChatMessages) -> list:
-        messages: list = [SystemMessage(content=COLLECT_FORM_SYSTEM_PROMPT)]
-        for message in request.messages:
+    async def run(self, request: CollectFormRequest) -> CollectFormAnswer:
+        progress = _merge(request.state, await self._extract(request))
+        target = _next_target(progress)
+
+        if target is None:
+            return CollectFormAnswer(status=CollectStatus.COMPLETE, state=progress)
+
+        if self._questions_asked(request) >= self._max_questions:
+            logger.info(
+                "collect form budget exhausted missing=%s",
+                [field.value for field in progress.missing()],
+            )
+            return CollectFormAnswer(
+                status=CollectStatus.STOPPED,
+                missing_fields=progress.missing(),
+                state=progress,
+            )
+
+        return CollectFormAnswer(
+            status=CollectStatus.QUESTION,
+            messages=AssistantMessage(
+                text=await self._question(target, progress, request),
+            ),
+            next_field=target,
+            missing_fields=progress.missing(),
+            state=progress,
+        )
+
+    async def _extract(self, request: CollectFormRequest) -> FormProgress:
+        """Просит модель проверить состояние полей по всей истории чата."""
+        system = EXTRACT_SYSTEM_PROMPT
+        if request.state is not None:
+            system += STATE_SECTION.format(state=request.state.model_dump_json())
+        messages: list = [SystemMessage(content=system), *self._build_messages(request)]
+        try:
+            progress = await self._extractor.ainvoke(messages)
+        except Exception:
+            logger.exception("collect form extraction failed")
+            raise
+        if not isinstance(progress, FormProgress):
+            raise TypeError(f"unexpected extraction result: {type(progress).__name__}")
+        return progress
+
+    async def _question(
+        self,
+        target: CollectionTarget,
+        progress: FormProgress,
+        request: CollectFormRequest,
+    ) -> str:
+        """Текст вопроса: шаблон для первого, LLM для уточняющего."""
+        followup = _FOLLOWUPS.get(target)
+        if followup is None:
+            return self._template(target, request)
+
+        goal, source = followup
+        known = getattr(progress, source.value).value
+        system = QUESTION_PROMPT.format(goal=f"{goal}. Уже известно: {known}")
+        history = self._build_messages(request)
+        response = await self._llm.ainvoke([SystemMessage(content=system), *history])
+        return str(response.content).strip()
+
+    def _template(self, target: CollectionTarget, request: CollectFormRequest) -> str:
+        """Шаблон первого вопроса; если он уже звучал — переформулировка."""
+        text = _FIRST_QUESTIONS[target]
+        asked = any(
+            message.role == ChatRole.ASSISTANT and message.text == text
+            for message in request.messages
+        )
+        return _REPEAT_QUESTIONS[target] if asked else text
+
+    @staticmethod
+    def _questions_asked(request: CollectFormRequest) -> int:
+        """Число заданных вопросов: каждое сообщение ассистента — это вопрос."""
+        return sum(
+            1 for message in request.messages if message.role == ChatRole.ASSISTANT
+        )
+
+    @staticmethod
+    def _build_messages(request: CollectFormRequest) -> list:
+        messages: list = []
+        for message in request.messages[-_HISTORY_LIMIT:]:
             if message.role == ChatRole.USER:
                 messages.append(HumanMessage(content=message.text))
             else:
                 messages.append(AIMessage(content=message.text))
         return messages
-
-    def run(self, request: ChatMessages) -> ChatAnswer:
-        response = self._llm.invoke(self._build_messages(request))
-        return ChatAnswer(
-            messages=ChatMessage(
-                role=ChatRole.ASSISTANT,
-                text=response.content.strip(),
-            )
-        )

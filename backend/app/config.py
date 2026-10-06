@@ -16,8 +16,21 @@ class Settings(BaseModel):
     jwt_secret: str = os.getenv("JWT_SECRET", "dev-only-change-me-in-production")
     jwt_algorithm: str = os.getenv("JWT_ALGORITHM", "HS256")
     access_token_expire_minutes: int = int(
-        os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "60"),
+        os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "15"),
     )
+    refresh_token_expire_days: int = int(
+        os.getenv("REFRESH_TOKEN_EXPIRE_DAYS", "30"),
+    )
+    refresh_cookie_name: str = os.getenv("REFRESH_COOKIE_NAME", "refresh_token")
+    refresh_cookie_path: str = os.getenv("REFRESH_COOKIE_PATH", "/")
+    refresh_cookie_secure: bool = os.getenv(
+        "REFRESH_COOKIE_SECURE",
+        "false",
+    ).lower() in {"1", "true", "yes"}
+    refresh_cookie_samesite: str = os.getenv(
+        "REFRESH_COOKIE_SAMESITE",
+        "lax",
+    ).lower()
 
     smtp_host: str = os.getenv("SMTP_HOST", "")
     smtp_port: int = int(os.getenv("SMTP_PORT", "465"))

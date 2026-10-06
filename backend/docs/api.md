@@ -7,14 +7,16 @@
 
 ## Auth
 
-Префикс `/auth` ([`routers/auth.py`](../app/routers/auth.py)) — контракт: [auth.md](../../docs/contracts/auth.md).
+Префикс `/auth` ([`routers/auth.py`](../app/routers/auth.py)) — контракт: [auth.md](../../docs/contracts/auth.md).  
+Гайд для frontend (cookie + interceptor): [auth-refresh.md](../../docs/frontend/auth-refresh.md).
 
 | Метод | Путь | Описание |
 |-------|------|----------|
 | POST | `/auth/register` | Заявка: email + пароль → код на почту |
-| POST | `/auth/register/confirm` | Подтверждение кода → JWT + пользователь |
-| POST | `/auth/login` | Логин → JWT |
-| POST | `/auth/logout` | Logout (клиентский контракт) |
+| POST | `/auth/register/confirm` | Подтверждение кода → access JWT + refresh cookie |
+| POST | `/auth/login` | Логин → access JWT + refresh cookie |
+| POST | `/auth/refresh` | Ротация refresh cookie → новый access |
+| POST | `/auth/logout` | Revoke refresh + clear cookie (Bearer не обязателен) |
 
 Большинство остальных endpoint'ов требуют заголовок:
 
@@ -22,7 +24,9 @@
 Authorization: Bearer <access_token>
 ```
 
-Проверка: [`deps.get_current_user`](../app/deps.py). Роль: `service_user_role` → `role`; в ответах `role` + `role_name_ru`.  
+Refresh **не** передаётся в JSON/header — только httpOnly cookie (`REFRESH_COOKIE_NAME`, default `refresh_token`).
+
+Проверка access: [`deps.get_current_user`](../app/deps.py). Роль: `service_user_role` → `role`; в ответах `role` + `role_name_ru`.  
 Privileged (`super_admin` \| `admin`): [`require_privileged`](../app/deps.py).  
 Только `super_admin`: [`require_roles("super_admin")`](../app/deps.py) на `/super-admin/*`.  
 Подробнее: [roles-and-permissions.md](../../docs/domains/roles-and-permissions.md).

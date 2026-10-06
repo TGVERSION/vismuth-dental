@@ -80,7 +80,6 @@ Invite создаётся даже при сбое SMTP: в ответе `invite
 | `QUESTIONNAIRE_RETENTION_DAYS` | `45` | Удаление completed |
 | `QUESTIONNAIRE_CODE_WINDOW_DAYS` | `30` | Уникальность кода |
 | `QUESTIONNAIRE_APPOINTMENT_DAYS_AHEAD` | `30` | Календарь записи |
-| `QUESTIONNAIRE_TIME_SLOTS` | `09:00,…,18:00` | CSV слотов времени |
 | `TRUST_PROXY` | `false` | Брать IP из `X-Forwarded-For` |
 
 ## Локальный запуск vs docker

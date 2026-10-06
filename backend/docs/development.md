@@ -67,7 +67,7 @@ docker compose up -d --build backend backend-worker questionnaire-worker
 
 | Файл | Назначение |
 |------|------------|
-| `_client.py` | `SmokeContext`, `print_response`, login/register/logout |
+| `_client.py` | `SmokeContext` (Session + cookies), `print_response`, login/register/refresh/logout |
 | `groups/*.py` | suites по группам роутеров (`run_*`), в т.ч. `questionnaire.py` |
 | `test_endpoints.ipynb` | тонкий runner backend (`localhost:8000`) |
 | `ml_service.py` + `test_ml_endpoints.ipynb` | прямой smoke ml-service (`:8001`) |

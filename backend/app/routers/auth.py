@@ -1,18 +1,18 @@
 import asyncio
 from datetime import datetime, timedelta, timezone
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from sqlalchemy import func, select
 from sqlalchemy.exc import ProgrammingError, SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..config import settings
 from ..db import get_db
-from ..deps import get_current_user
 from ..email import send_registration_code
 from ..models.clinic import Clinic
 from ..models.clinic_invitation import ClinicInvitation
 from ..models.clinic_membership import ClinicMembership
+from ..models.clinic_membership_specialization import ClinicInvitationSpecialization
 from ..models.registration_pending import RegistrationPending
 from ..models.service_user import ServiceUser
 from ..models.user_settings import UserSettings
@@ -43,14 +43,37 @@ from ..services.clinic_members import (
     set_membership_specializations,
     unique_membership_public_slug,
 )
+from ..services.refresh_tokens import (
+    RefreshTokenError,
+    clear_refresh_cookie,
+    issue_refresh_token,
+    revoke_refresh_token,
+    rotate_refresh_token,
+    set_refresh_cookie,
+)
 from ..services.roles import set_user_role, user_role_load_options
-from ..models.clinic_membership_specialization import ClinicInvitationSpecialization
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
 
 def _normalize_login(login: str) -> str:
     return login.strip().lower()
+
+
+async def _attach_session_tokens(
+    response: Response,
+    db: AsyncSession,
+    user: ServiceUser,
+) -> TokenResponse:
+    """Access JWT in body + opaque refresh in httpOnly cookie."""
+    raw_refresh, _ = await issue_refresh_token(db, user.id)
+    await db.commit()
+    set_refresh_cookie(response, raw_refresh)
+    access = create_access_token(user.id, {"role": user.role})
+    return TokenResponse(
+        access_token=access,
+        user=UserPublic.model_validate(user),
+    )
 
 
 async def _load_active_invitation(
@@ -164,6 +187,7 @@ async def register(
 @router.post("/register/confirm", response_model=TokenResponse)
 async def register_confirm(
     payload: RegisterConfirmRequest,
+    response: Response,
     db: AsyncSession = Depends(get_db),
 ) -> TokenResponse:
     login_norm = _normalize_login(str(payload.login))
@@ -235,17 +259,13 @@ async def register_confirm(
         .where(ServiceUser.id == user.id),
     )
     user = result.scalar_one()
-
-    token = create_access_token(user.id, {"role": user.role})
-    return TokenResponse(
-        access_token=token,
-        user=UserPublic.model_validate(user),
-    )
+    return await _attach_session_tokens(response, db, user)
 
 
 @router.post("/login", response_model=TokenResponse)
 async def login(
     payload: LoginRequest,
+    response: Response,
     db: AsyncSession = Depends(get_db),
 ) -> TokenResponse:
     login_norm = _normalize_login(str(payload.login))
@@ -277,17 +297,55 @@ async def login(
             detail="Incorrect email or password",
         )
 
-    token = create_access_token(user.id, {"role": user.role})
+    return await _attach_session_tokens(response, db, user)
+
+
+@router.post("/refresh", response_model=TokenResponse)
+async def refresh(
+    request: Request,
+    response: Response,
+    db: AsyncSession = Depends(get_db),
+) -> TokenResponse:
+    raw = request.cookies.get(settings.refresh_cookie_name)
+    if not raw:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Refresh token missing",
+        )
+    try:
+        user, new_raw = await rotate_refresh_token(db, raw)
+        await db.commit()
+    except RefreshTokenError:
+        await db.rollback()
+        clear_refresh_cookie(response)
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid or expired refresh token",
+        ) from None
+
+    set_refresh_cookie(response, new_raw)
+    access = create_access_token(user.id, {"role": user.role})
     return TokenResponse(
-        access_token=token,
+        access_token=access,
         user=UserPublic.model_validate(user),
     )
 
 
 @router.post("/logout", response_model=MessageResponse)
 async def logout(
-    _: ServiceUser = Depends(get_current_user),
+    request: Request,
+    response: Response,
+    db: AsyncSession = Depends(get_db),
 ) -> MessageResponse:
+    """Revoke refresh cookie session. Works without access JWT."""
+    raw = request.cookies.get(settings.refresh_cookie_name)
+    if raw:
+        try:
+            await revoke_refresh_token(db, raw)
+            await db.commit()
+        except Exception:
+            await db.rollback()
+    clear_refresh_cookie(response)
     return MessageResponse(detail="logged_out")
 
 
@@ -338,6 +396,7 @@ async def preview_invitation(
 @router.post("/invitations/accept", response_model=InvitationAcceptResponse)
 async def accept_invitation(
     payload: InvitationAcceptRequest,
+    response: Response,
     db: AsyncSession = Depends(get_db),
 ) -> InvitationAcceptResponse:
     invitation = await _load_active_invitation(db, payload.token)
@@ -426,8 +485,9 @@ async def accept_invitation(
         .where(ServiceUser.id == user.id),
     )
     user = result.scalar_one()
-    token = create_access_token(user.id, {"role": user.role})
+    token_response = await _attach_session_tokens(response, db, user)
     return InvitationAcceptResponse(
-        access_token=token,
-        user=UserPublic.model_validate(user),
+        access_token=token_response.access_token,
+        token_type=token_response.token_type,
+        user=token_response.user,
     )

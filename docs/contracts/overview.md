@@ -27,7 +27,7 @@ Authorization: Bearer <access_token>
 
 Ошибки auth (типично): `401` не аутентифицирован / битый токен / user не найден / удалён; `403` inactive или нет прав.
 
-Logout **не** инвалидирует JWT на сервере — клиент просто забывает токен.
+Access JWT короткий (~15 мин). Длинная сессия — через **refresh cookie** (`POST /auth/refresh`, rotation). Logout отзывает refresh в БД и снимает cookie. Подробности: [auth.md](auth.md), гайд frontend: [../frontend/auth-refresh.md](../frontend/auth-refresh.md).
 
 ## Роли в ответах пользователя
 
@@ -57,7 +57,8 @@ Logout **не** инвалидирует JWT на сервере — клиен�
 
 | Файл | Группа |
 |------|--------|
-| [auth.md](auth.md) | `/auth` (в т.ч. invitations) |
+| [auth.md](auth.md) | `/auth` (в т.ч. invitations, refresh cookie) |
+| [../frontend/auth-refresh.md](../frontend/auth-refresh.md) | Чеклист для frontend (не контракт API) |
 | [roles.md](roles.md) | `/roles` |
 | [service-user.md](service-user.md) | `/service_user*` |
 | [user-settings.md](user-settings.md) | `/user-settings` |

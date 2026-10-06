@@ -23,7 +23,12 @@ URL собираются так:
 |------------|---------|----------|
 | `JWT_SECRET` | `dev-only-change-me-in-production` | Секрет подписи (сменить в проде) |
 | `JWT_ALGORITHM` | `HS256` | Алгоритм |
-| `ACCESS_TOKEN_EXPIRE_MINUTES` | `60` | TTL access token |
+| `ACCESS_TOKEN_EXPIRE_MINUTES` | `15` | TTL access JWT |
+| `REFRESH_TOKEN_EXPIRE_DAYS` | `30` | TTL opaque refresh (БД + cookie) |
+| `REFRESH_COOKIE_NAME` | `refresh_token` | Имя httpOnly cookie |
+| `REFRESH_COOKIE_PATH` | `/` | Path cookie (Next rewrite `/api/main` и прямой `:8000`) |
+| `REFRESH_COOKIE_SECURE` | `false` | `true` на HTTPS в проде |
+| `REFRESH_COOKIE_SAMESITE` | `lax` | `lax` \| `strict` \| `none` |
 | `DEFAULT_USER_ROLE` | `doctor` | Роль при регистрации (`super_admin` \| `admin` \| `doctor` \| `patient`) |
 
 ## Регистрация / SMTP

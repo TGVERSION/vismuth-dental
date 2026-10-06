@@ -25,7 +25,7 @@ def print_response(response: requests.Response) -> None:
 
 @dataclass
 class SmokeContext:
-    """Состояние smoke-сессии: URL, JWT, id созданных сущностей."""
+    """Состояние smoke-сессии: URL, JWT, cookie jar (refresh), id сущностей."""
 
     base_url: str = DEFAULT_BASE_URL
     email: str = ""
@@ -34,6 +34,7 @@ class SmokeContext:
     user_id: str | None = None
     ids: dict[str, Any] = field(default_factory=dict)
     timeout: int = DEFAULT_TIMEOUT
+    session: requests.Session = field(default_factory=requests.Session)
 
     def url(self, path: str) -> str:
         return f"{self.base_url.rstrip('/')}/{path.lstrip('/')}"
@@ -61,7 +62,7 @@ class SmokeContext:
         headers = kwargs.pop("headers", {}) or {}
         if auth:
             headers = {**self.auth_headers(), **headers}
-        return requests.request(
+        return self.session.request(
             method,
             self.url(path),
             headers=headers,
@@ -94,6 +95,8 @@ class SmokeContext:
         self.user_id = user.get("id")
         if self.token:
             print("ACCESS_TOKEN сохранён (начало):", self.token[:40] + "...")
+        if "refresh_token" in self.session.cookies:
+            print("REFRESH cookie получена (httpOnly на браузере; здесь в Session).")
         if self.user_id:
             print("user_id:", self.user_id)
 
@@ -141,13 +144,20 @@ def login(ctx: SmokeContext) -> requests.Response:
     return resp
 
 
+def refresh(ctx: SmokeContext) -> requests.Response:
+    print("=== POST /auth/refresh ===")
+    resp = ctx.post("/auth/refresh", auth=False)
+    print_response(resp)
+    ctx.set_token_from_auth_response(resp)
+    return resp
+
+
 def logout(ctx: SmokeContext) -> requests.Response | None:
-    if not ctx.require_token():
-        return None
     print("=== POST /auth/logout ===")
-    resp = ctx.post("/auth/logout")
+    # Logout работает по refresh cookie; Bearer не обязателен.
+    resp = ctx.post("/auth/logout", auth=False)
     print_response(resp)
     if resp.ok:
         ctx.token = None
-        print("\nACCESS_TOKEN очищен.")
+        print("\nACCESS_TOKEN очищен; refresh cookie снята сервером.")
     return resp

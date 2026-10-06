@@ -17,6 +17,7 @@ Source of truth схемы: [`alembic/versions/`](../alembic/versions/). Ста�
 | `0007_clinics` | `clinic`, `clinic_membership`, `clinic_invitation` (тенанты, участники, invite) |
 | `0008_specializations` | `ref_specialization`, M2M специализаций, `middle_name`, `membership.public_slug` |
 | `0009_questionnaires` | `questionnaire`, `questionnaire_answer`, связь протокол↔анкета |
+| `0010_refresh_tokens` | `refresh_token` — opaque refresh (hash), rotation, revoke |
 
 Порядок важен из‑за FK (`service_user` раньше протоколов и т.д.).
 
@@ -43,6 +44,14 @@ Source of truth схемы: [`alembic/versions/`](../alembic/versions/). Ста�
 Статус подписки **не хранится** — вычисляется по `access_until` + `access_type`.
 
 `protocols.source_questionnaire_id` (SET NULL) + `created_from_questionnaire` — связь с анкетой.
+
+### Refresh tokens (0010)
+
+| Таблица | Суть |
+|--------|------|
+| `refresh_token` | Opaque refresh: `token_hash` (sha256), `user_id`, `expires_at`, `revoked_at`, `replaced_by_id` (rotation chain) |
+
+Raw token только в httpOnly cookie; в API body не отдаётся. Logout / refresh — [`services/refresh_tokens.py`](../app/services/refresh_tokens.py).
 
 ## Команды (из каталога `backend/` или контейнера)
 

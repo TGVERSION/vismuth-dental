@@ -18,9 +18,9 @@ HTTP → routers → schemas (валидация)
 | `db.py` | async engine, session (`get_db`) |
 | `deps.py` | зависимости: текущий пользователь (JWT), `require_roles` / `require_privileged` / `require_clinic_admin` |
 | `config.py` | настройки из env |
-| `security.py` | JWT / password hash |
+| `security.py` | access JWT / password hash |
 | `email.py` | SMTP (регистрация, clinic invite) |
-| `services/` | ML proxy, Redis, clinic_members, questionnaire_* |
+| `services/` | ML proxy, Redis, clinic_members, questionnaire_*, refresh_tokens |
 | `workers/` | фоновые consumer'ы |
 
 Точка входа API: [`app/main.py`](../app/main.py) — сборка `FastAPI` и `include_router`.

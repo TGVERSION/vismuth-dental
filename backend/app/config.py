@@ -103,15 +103,6 @@ class Settings(BaseModel):
         "true",
         "yes",
     }
-    questionnaire_time_slots: str = os.getenv(
-        "QUESTIONNAIRE_TIME_SLOTS",
-        "09:00,09:30,10:00,10:30,11:00,11:30,12:00,12:30,"
-        "13:00,13:30,14:00,14:30,15:00,15:30,16:00,16:30,17:00,17:30,18:00",
-    )
-
-    @property
-    def appointment_time_slots(self) -> list[str]:
-        return [s.strip() for s in self.questionnaire_time_slots.split(",") if s.strip()]
 
     @property
     def database_url_async(self) -> str:

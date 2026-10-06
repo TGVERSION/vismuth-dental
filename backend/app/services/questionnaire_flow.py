@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass, field
 from datetime import date, datetime, timedelta, timezone
 from typing import Any, Literal, Optional
@@ -17,6 +18,8 @@ from ..models.specialization import RefSpecialization
 from ..services.clinic_members import load_specializations_map
 from ..services.ml_proxy import proxy_post_to_ml
 from ..services.questionnaire_code import allocate_code
+
+_APPOINTMENT_TIME_RE = re.compile(r"^([01]\d|2[0-3]):([0-5]\d)$")
 
 StepKey = Literal[
     "choose_doctor",
@@ -58,7 +61,6 @@ class StepDescriptor:
     options: list[dict[str, Any]] = field(default_factory=list)
     date_min: Optional[str] = None
     date_max: Optional[str] = None
-    time_slots: list[str] = field(default_factory=list)
     code: Optional[str] = None
     completed: bool = False
     truncated: bool = False
@@ -70,6 +72,11 @@ def truncate_answer(value: str) -> tuple[str, bool]:
     if len(value) <= max_len:
         return value, False
     return value[:max_len], True
+
+
+def _is_valid_appointment_time(value: str) -> bool:
+    """Любое HH:MM (00:00–23:59)."""
+    return _APPOINTMENT_TIME_RE.fullmatch(value) is not None
 
 
 def ai_max_for(visit_type: str | None) -> int:
@@ -268,7 +275,6 @@ async def build_step_descriptor(
             date_max=(
                 today + timedelta(days=settings.questionnaire_appointment_days_ahead)
             ).isoformat(),
-            time_slots=settings.appointment_time_slots,
         )
 
     raise HTTPException(
@@ -669,10 +675,10 @@ async def apply_answer(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="appointment_date out of range",
             )
-        if appointment_time not in settings.appointment_time_slots:
+        if not _is_valid_appointment_time(appointment_time):
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="appointment_time not in allowed slots",
+                detail="appointment_time must be HH:MM",
             )
         first_name, trunc1 = truncate_answer(first_name.strip())
         middle = middle_name.strip() if middle_name else None

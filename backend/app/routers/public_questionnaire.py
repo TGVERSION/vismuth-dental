@@ -67,7 +67,6 @@ def _step_response(descriptor) -> StepDescriptorResponse:
         options=descriptor.options,
         date_min=descriptor.date_min,
         date_max=descriptor.date_max,
-        time_slots=descriptor.time_slots,
         code=descriptor.code,
         completed=descriptor.completed,
         truncated=descriptor.truncated,

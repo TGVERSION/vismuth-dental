@@ -47,7 +47,6 @@ class StepDescriptorResponse(BaseModel):
     options: list[dict[str, Any]] = Field(default_factory=list)
     date_min: Optional[str] = None
     date_max: Optional[str] = None
-    time_slots: list[str] = Field(default_factory=list)
     code: Optional[str] = None
     completed: bool = False
     truncated: bool = False

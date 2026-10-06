@@ -34,7 +34,7 @@ Timeout: `QUESTIONNAIRE_AI_TIMEOUT` (~20s). Ошибка → `ai_unavailable`, �
 ## GET /public/questionnaires/{id}/step
 
 - **Auth:** `X-Questionnaire-Token`
-- **Назначение:** дескриптор текущего шага (тип, текст, choices, слоты времени, код)
+- **Назначение:** дескриптор текущего шага (тип, текст, choices, код)
 - **Код:** `get_step`
 
 ## POST /public/questionnaires/{id}/answer
@@ -43,4 +43,5 @@ Timeout: `QUESTIONNAIRE_AI_TIMEOUT` (~20s). Ошибка → `ai_unavailable`, �
 - **Назначение:** ответ на текущий шаг → следующий дескриптор
 - **Поведение:** валидация `step_key`; обрезка текста до 1000 (`truncated: true`); на `ai_clarify` — вызов `/collect_form`; финал `patient_info` выдаёт 4-значный код (уникален в клинике 30 дней) и запускает фоновую обработку (`summarize_form`)
 - **Тело:** `step_key` + `value` / `choice` / `skip` / `none` / поля выбора врача / patient_info
+- **patient_info:** `appointment_time` — любое `HH:MM` (00:00–23:59)
 - **Код:** `post_answer`

@@ -130,7 +130,15 @@ async def _doctor_payload(
     )
 
 
-@router.get("/links/{slug}", response_model=PublicLinkResponse)
+@router.get(
+    "/links/{slug}",
+    response_model=PublicLinkResponse,
+    summary="Публичная ссылка клиники или врача",
+    description=(
+        "Без JWT. Ищет slug в clinic.public_slug или membership.public_slug. "
+        "При блокировке: blocked + block_code (subscription_expired | clinic_daily_limit | doctor_inactive)."
+    ),
+)
 async def get_public_link(
     slug: str,
     db: AsyncSession = Depends(get_db),
@@ -201,7 +209,7 @@ async def get_public_link(
                 doctors=doctors,
                 blocked=True,
                 block_code="doctor_inactive",
-                block_message="Врач не ведёт приём, выберите другого",
+                block_message="Врач не ведет прием, выберите другого",
             )
         doctor = await _doctor_payload(db, membership)
         return PublicLinkResponse(
@@ -232,12 +240,21 @@ async def get_public_link(
     "/questionnaires",
     response_model=QuestionnaireCreateResponse,
     status_code=status.HTTP_201_CREATED,
+    summary="Начать публичную анкету",
+    description=(
+        "Требует X-Device-Id. Проверки: подписка, суточный лимит клиники, "
+        "лимиты device/IP. Возвращает id, session token и первый step."
+    ),
 )
 async def create_questionnaire(
     payload: QuestionnaireCreateRequest,
     request: Request,
     db: AsyncSession = Depends(get_db),
-    x_device_id: Optional[str] = Header(default=None, alias="X-Device-Id"),
+    x_device_id: Optional[str] = Header(
+        default=None,
+        alias="X-Device-Id",
+        description="Стабильный ID устройства клиента (обязателен).",
+    ),
 ) -> QuestionnaireCreateResponse:
     if not x_device_id:
         raise HTTPException(
@@ -274,7 +291,7 @@ async def create_questionnaire(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail={
                 "code": "doctor_inactive",
-                "message": "Врач не ведёт приём, выберите другого",
+                "message": "Врач не ведет прием, выберите другого",
             },
         )
 
@@ -337,6 +354,8 @@ async def _load_questionnaire_for_token(
 @router.get(
     "/questionnaires/{questionnaire_id}/step",
     response_model=StepDescriptorResponse,
+    summary="Текущий шаг анкеты",
+    description="Дескриптор шага (тип, текст, choices). Auth: X-Questionnaire-Token.",
 )
 async def get_step(
     questionnaire_id: UUID,
@@ -344,6 +363,7 @@ async def get_step(
     x_questionnaire_token: Optional[str] = Header(
         default=None,
         alias="X-Questionnaire-Token",
+        description="Сессионный token из POST /public/questionnaires.",
     ),
 ) -> StepDescriptorResponse:
     questionnaire = await _load_questionnaire_for_token(
@@ -358,6 +378,11 @@ async def get_step(
 @router.post(
     "/questionnaires/{questionnaire_id}/answer",
     response_model=StepDescriptorResponse,
+    summary="Ответить на шаг анкеты",
+    description=(
+        "Валидирует step_key, сохраняет ответ, возвращает следующий дескриптор. "
+        "На финале patient_info выдает code и ставит фоновую summarize_form."
+    ),
 )
 async def post_answer(
     questionnaire_id: UUID,
@@ -367,6 +392,7 @@ async def post_answer(
     x_questionnaire_token: Optional[str] = Header(
         default=None,
         alias="X-Questionnaire-Token",
+        description="Сессионный token из POST /public/questionnaires.",
     ),
 ) -> StepDescriptorResponse:
     questionnaire = await _load_questionnaire_for_token(

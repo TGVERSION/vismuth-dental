@@ -31,6 +31,7 @@ _ROLES_ALLOWED_GENERAL_PRIVACY = PRIVILEGED_ROLE_NAMES
 @router.get(
     "",
     response_model=List[ProtocolTemplateListItem],
+    summary="Список шаблонов протоколов",
 )
 async def list_protocol_templates(
     current_user: ServiceUser = Depends(get_current_user),
@@ -62,6 +63,7 @@ async def list_protocol_templates(
 @router.get(
     "/{template_id}",
     response_model=ProtocolTemplateRead,
+    summary="Шаблон протокола по id",
 )
 async def get_protocol_template(
     template_id: UUID,
@@ -145,6 +147,7 @@ async def _ensure_protocol_structure_exists(
 @router.put(
     "/{template_id}",
     response_model=ProtocolTemplateRead,
+    summary="Обновить шаблон протокола",
 )
 async def update_protocol_template(
     template_id: UUID,
@@ -296,6 +299,7 @@ async def update_protocol_template(
 @router.delete(
     "/{template_id}",
     status_code=status.HTTP_204_NO_CONTENT,
+    summary="Удалить шаблон протокола",
 )
 async def delete_protocol_template(
     template_id: UUID,
@@ -340,6 +344,7 @@ async def delete_protocol_template(
     "",
     response_model=ProtocolTemplateRead,
     status_code=status.HTTP_201_CREATED,
+    summary="Создать шаблон протокола",
 )
 async def create_protocol_template(
     payload: ProtocolTemplateCreate,

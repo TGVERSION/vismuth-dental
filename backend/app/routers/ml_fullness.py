@@ -22,6 +22,7 @@ router = APIRouter(tags=["ml_fullness"])
 @router.post(
     "/ml_fullness_complaints",
     response_model=MlFullnessComplaintsResponse,
+    summary="Оценка полноты жалоб (ML-proxy)",
 )
 async def proxy_ml_fullness_complaints(
     payload: MlFullnessComplaintsRequest,

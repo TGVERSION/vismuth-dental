@@ -13,7 +13,13 @@ class RegisterRequest(BaseModel):
 
 class RegisterConfirmRequest(BaseModel):
     login: EmailStr
-    code: str = Field(..., min_length=4, max_length=10, pattern=r"^\d{4}$")
+    code: str = Field(
+        ...,
+        min_length=4,
+        max_length=10,
+        pattern=r"^\d{4}$",
+        description="4-значный код из письма после /auth/register.",
+    )
 
 
 class LoginRequest(BaseModel):
@@ -32,7 +38,9 @@ class UserPublic(BaseModel):
 
 
 class TokenResponse(BaseModel):
-    access_token: str
+    access_token: str = Field(
+        description="Access JWT. Refresh не в body — только httpOnly cookie.",
+    )
     token_type: str = "bearer"
     user: UserPublic
 

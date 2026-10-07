@@ -18,11 +18,26 @@ router = APIRouter(prefix="/super-admin", tags=["super-admin-statistics"])
 require_super_admin = require_roles("super_admin")
 
 
-@router.get("/statistics", response_model=SuperAdminQuestionnaireStatistics)
+@router.get(
+    "/statistics",
+    response_model=SuperAdminQuestionnaireStatistics,
+    summary="Статистика анкет по всем клиникам",
+)
 async def get_super_admin_statistics(
-    period: Optional[Literal["week", "month"]] = Query(default=None),
-    date_from: Optional[date] = Query(default=None, alias="from"),
-    date_to: Optional[date] = Query(default=None, alias="to"),
+    period: Optional[Literal["week", "month"]] = Query(
+        default=None,
+        description="Предустановленный период: week | month. Либо задайте from/to.",
+    ),
+    date_from: Optional[date] = Query(
+        default=None,
+        alias="from",
+        description="Начало периода (YYYY-MM-DD). Вместе с to, если period не задан.",
+    ),
+    date_to: Optional[date] = Query(
+        default=None,
+        alias="to",
+        description="Конец периода (YYYY-MM-DD).",
+    ),
     _: ServiceUser = Depends(require_super_admin),
     db: AsyncSession = Depends(get_db),
 ) -> SuperAdminQuestionnaireStatistics:

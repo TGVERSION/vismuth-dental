@@ -26,7 +26,12 @@ def _quote_ident(identifier: str) -> str:
     return f'"{identifier}"'
 
 
-@router.get("/dictionary", response_model=list[DictionaryRead])
+@router.get(
+    "/dictionary",
+    response_model=list[DictionaryRead],
+    summary="Реестр справочников",
+    description="OID → имя таблицы ref_*.",
+)
 async def list_dictionary(
     current_user: ServiceUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
@@ -41,7 +46,12 @@ async def list_dictionary(
     return result.scalars().all()
 
 
-@router.get("/ref/{name}", response_model=RefSearchResponse)
+@router.get(
+    "/ref/{name}",
+    response_model=RefSearchResponse,
+    summary="Поиск по справочнику ref_*",
+    description="name — whitelist-имя таблицы из /dictionary.",
+)
 async def get_ref_values(
     name: str,
     search: Optional[str] = Query(None),

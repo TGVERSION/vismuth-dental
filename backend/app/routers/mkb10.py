@@ -15,7 +15,11 @@ from ..schemas.mkb10 import Mkb10ItemRead, Mkb10SearchResponse
 router = APIRouter(prefix="/mkb10", tags=["mkb10"])
 
 
-@router.get("", response_model=Mkb10SearchResponse)
+@router.get(
+    "",
+    response_model=Mkb10SearchResponse,
+    summary="Поиск диагнозов МКБ-10",
+)
 async def search_mkb10(
     page: int = Query(1, ge=1, description="Номер страницы (>= 1)"),
     size: int = Query(10, ge=1, le=100, description="Размер страницы (1..100)"),

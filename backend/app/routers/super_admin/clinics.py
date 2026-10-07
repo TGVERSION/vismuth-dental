@@ -68,7 +68,12 @@ def _to_clinic_read(
     return ClinicRead.model_validate(fields)
 
 
-@router.post("", response_model=ClinicRead, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "",
+    response_model=ClinicRead,
+    status_code=status.HTTP_201_CREATED,
+    summary="Создать клинику",
+)
 async def create_clinic(
     payload: ClinicCreate,
     _: ServiceUser = Depends(require_super_admin),
@@ -100,7 +105,11 @@ async def create_clinic(
     return _to_clinic_read(clinic, 0)
 
 
-@router.get("", response_model=List[ClinicRead])
+@router.get(
+    "",
+    response_model=List[ClinicRead],
+    summary="Список клиник",
+)
 async def list_clinics(
     _: ServiceUser = Depends(require_super_admin),
     db: AsyncSession = Depends(get_db),
@@ -138,7 +147,11 @@ async def list_clinics(
     return out
 
 
-@router.get("/{clinic_id}", response_model=ClinicRead)
+@router.get(
+    "/{clinic_id}",
+    response_model=ClinicRead,
+    summary="Клиника по id",
+)
 async def get_clinic(
     clinic_id: UUID,
     _: ServiceUser = Depends(require_super_admin),
@@ -164,7 +177,11 @@ async def get_clinic(
     )
 
 
-@router.patch("/{clinic_id}", response_model=ClinicRead)
+@router.patch(
+    "/{clinic_id}",
+    response_model=ClinicRead,
+    summary="Обновить клинику",
+)
 async def patch_clinic(
     clinic_id: UUID,
     payload: ClinicPatch,
@@ -188,7 +205,11 @@ async def patch_clinic(
     return _to_clinic_read(clinic, count)
 
 
-@router.delete("/{clinic_id}", response_model=ClinicRead)
+@router.delete(
+    "/{clinic_id}",
+    response_model=ClinicRead,
+    summary="Soft-delete клиники",
+)
 async def delete_clinic(
     clinic_id: UUID,
     _: ServiceUser = Depends(require_super_admin),
@@ -208,6 +229,7 @@ async def delete_clinic(
     "/{clinic_id}/invitations",
     response_model=ClinicInvitationCreated,
     status_code=status.HTTP_201_CREATED,
+    summary="Создать приглашение в клинику",
 )
 async def create_invitation_endpoint(
     clinic_id: UUID,
@@ -241,6 +263,7 @@ async def create_invitation_endpoint(
 @router.get(
     "/{clinic_id}/invitations",
     response_model=List[ClinicInvitationRead],
+    summary="Список приглашений клиники",
 )
 async def list_invitations(
     clinic_id: UUID,
@@ -262,6 +285,7 @@ async def list_invitations(
 @router.post(
     "/{clinic_id}/invitations/{invitation_id}/resend",
     response_model=ClinicInvitationCreated,
+    summary="Повторно отправить приглашение",
 )
 async def resend_invitation_endpoint(
     clinic_id: UUID,

@@ -193,7 +193,11 @@ def _to_read(protocol: Protocol, field_values: dict[UUID, str | None]) -> Protoc
     )
 
 
-@router.get("", response_model=List[ProtocolListItem])
+@router.get(
+    "",
+    response_model=List[ProtocolListItem],
+    summary="Список протоколов",
+)
 async def list_protocols(
     current_user: ServiceUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
@@ -210,7 +214,11 @@ async def list_protocols(
     return list(result.scalars().all())
 
 
-@router.get("/{protocol_id}", response_model=ProtocolRead)
+@router.get(
+    "/{protocol_id}",
+    response_model=ProtocolRead,
+    summary="Протокол по id",
+)
 async def get_protocol(
     protocol_id: UUID,
     current_user: ServiceUser = Depends(get_current_user),
@@ -221,7 +229,12 @@ async def get_protocol(
     return _to_read(protocol, field_values)
 
 
-@router.post("", response_model=ProtocolRead, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "",
+    response_model=ProtocolRead,
+    status_code=status.HTTP_201_CREATED,
+    summary="Создать протокол",
+)
 async def create_protocol(
     payload: ProtocolCreate,
     current_user: ServiceUser = Depends(get_current_user),
@@ -271,7 +284,11 @@ async def create_protocol(
     return _to_read(protocol, field_values)
 
 
-@router.put("/{protocol_id}", response_model=ProtocolRead)
+@router.put(
+    "/{protocol_id}",
+    response_model=ProtocolRead,
+    summary="Полная замена протокола",
+)
 async def put_protocol(
     protocol_id: UUID,
     payload: ProtocolPut,
@@ -315,7 +332,11 @@ async def put_protocol(
     return _to_read(protocol, field_values)
 
 
-@router.patch("/{protocol_id}", response_model=ProtocolRead)
+@router.patch(
+    "/{protocol_id}",
+    response_model=ProtocolRead,
+    summary="Частичное обновление протокола",
+)
 async def patch_protocol(
     protocol_id: UUID,
     payload: ProtocolPatch,
@@ -363,7 +384,11 @@ async def patch_protocol(
     return _to_read(protocol, field_values)
 
 
-@router.delete("/{protocol_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete(
+    "/{protocol_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Удалить протокол",
+)
 async def delete_protocol(
     protocol_id: UUID,
     current_user: ServiceUser = Depends(get_current_user),

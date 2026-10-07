@@ -1,6 +1,7 @@
 # API
 
-Интерактивная спецификация: **http://localhost:8000/docs** (Swagger) или `/redoc`.
+Интерактивная спецификация: **http://localhost:8000/docs** (Swagger) или `/redoc`.  
+У endpoint'ов есть `summary`; у ключевых схем (анкеты, клиники, auth, статистика) — field `description` для неочевидных полей.
 
 **Поведение для frontend / AI-агентов:** [`../../docs/contracts/`](../../docs/contracts/) (старт с [overview.md](../../docs/contracts/overview.md)).  
 Точные тела запросов/ответов — в OpenAPI, не дублируются здесь.
@@ -24,7 +25,7 @@
 Authorization: Bearer <access_token>
 ```
 
-Refresh **не** передаётся в JSON/header — только httpOnly cookie (`REFRESH_COOKIE_NAME`, default `refresh_token`).
+Refresh **не** передается в JSON/header — только httpOnly cookie (`REFRESH_COOKIE_NAME`, default `refresh_token`).
 
 Проверка access: [`deps.get_current_user`](../app/deps.py). Роль: `service_user_role` → `role`; в ответах `role` + `role_name_ru`.  
 Privileged (`super_admin` \| `admin`): [`require_privileged`](../app/deps.py).  
@@ -88,10 +89,10 @@ Whitelist: [`dictionaries_config.py`](../app/dictionaries_config.py).
 
 | Путь | Назначение |
 |------|------------|
-| `POST /ml_autocomplete` | Proxy → ml-service (или dict-режим); ML-режим при истёкшей подписке — `503 subscription_expired` |
-| `POST /ml_mkb_code` | Proxy подбора кода МКБ; при истёкшей подписке — `503 subscription_expired` |
-| `POST /ml_fullness_complaints` | Proxy проверки полноты; при истёкшей подписке — `503 subscription_expired` |
-| `POST /ml_clinrec_check` | Proxy клинических рекомендаций; при истёкшей подписке — `503 subscription_expired` |
+| `POST /ml_autocomplete` | Proxy → ml-service (или dict-режим); ML-режим при истекшей подписке — `503 subscription_expired` |
+| `POST /ml_mkb_code` | Proxy подбора кода МКБ; при истекшей подписке — `503 subscription_expired` |
+| `POST /ml_fullness_complaints` | Proxy проверки полноты; при истекшей подписке — `503 subscription_expired` |
+| `POST /ml_clinrec_check` | Proxy клинических рекомендаций; при истекшей подписке — `503 subscription_expired` |
 | `POST /autocomplete_dict/complete_dict` | Dict-autocomplete в Postgres |
 
 ## Регистрация роутеров

@@ -66,14 +66,23 @@ async def _check_login_unique(
         )
 
 
-@router.get("/service_user", response_model=ServiceUserMeResponse)
+@router.get(
+    "/service_user",
+    response_model=ServiceUserMeResponse,
+    summary="Текущий пользователь (me)",
+)
 async def get_service_user_me(
     current_user: ServiceUser = Depends(get_current_user),
 ) -> ServiceUserMeResponse:
     return ServiceUserMeResponse.model_validate(current_user)
 
 
-@router.get("/service_user_ids", response_model=List[ServiceUserIdRead])
+@router.get(
+    "/service_user_ids",
+    response_model=List[ServiceUserIdRead],
+    summary="Список id пользователей",
+    description="Только privileged (super_admin | admin).",
+)
 async def list_service_user_ids(
     _: ServiceUser = Depends(require_privileged),
     db: AsyncSession = Depends(get_db),
@@ -88,7 +97,11 @@ async def list_service_user_ids(
     return list(result.scalars().all())
 
 
-@router.get("/service_user/{user_id}", response_model=ServiceUserRead)
+@router.get(
+    "/service_user/{user_id}",
+    response_model=ServiceUserRead,
+    summary="Пользователь по id",
+)
 async def get_service_user(
     user_id: UUID,
     _: ServiceUser = Depends(require_privileged),
@@ -98,7 +111,11 @@ async def get_service_user(
     return ServiceUserRead.model_validate(user)
 
 
-@router.put("/service_user/{user_id}", response_model=ServiceUserRead)
+@router.put(
+    "/service_user/{user_id}",
+    response_model=ServiceUserRead,
+    summary="Полная замена пользователя",
+)
 async def replace_service_user(
     user_id: UUID,
     payload: ServiceUserUpdate,
@@ -133,7 +150,11 @@ async def replace_service_user(
     return ServiceUserRead.model_validate(user)
 
 
-@router.patch("/service_user/{user_id}", response_model=ServiceUserRead)
+@router.patch(
+    "/service_user/{user_id}",
+    response_model=ServiceUserRead,
+    summary="Частичное обновление пользователя",
+)
 async def patch_service_user(
     user_id: UUID,
     payload: ServiceUserPatch,
@@ -180,7 +201,11 @@ async def patch_service_user(
     return ServiceUserRead.model_validate(user)
 
 
-@router.delete("/service_user/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete(
+    "/service_user/{user_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Soft-delete пользователя",
+)
 async def delete_service_user(
     user_id: UUID,
     _: ServiceUser = Depends(require_privileged),

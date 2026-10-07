@@ -20,7 +20,12 @@ class InvitationPreview(BaseModel):
 
 
 class InvitationAcceptRequest(BaseModel):
-    token: str = Field(..., min_length=16, max_length=256)
+    token: str = Field(
+        ...,
+        min_length=16,
+        max_length=256,
+        description="Raw token из invite URL (не hash).",
+    )
     password: str = Field(..., min_length=8, max_length=128)
     first_name: Optional[str] = Field(default=None, max_length=255)
     last_name: Optional[str] = Field(default=None, max_length=255)

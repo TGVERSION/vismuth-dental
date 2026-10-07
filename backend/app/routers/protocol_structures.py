@@ -142,7 +142,11 @@ def _ensure_owner(
     return structure
 
 
-@router.get("", response_model=List[ProtocolStructureListItem])
+@router.get(
+    "",
+    response_model=List[ProtocolStructureListItem],
+    summary="Список структур протоколов",
+)
 async def list_protocol_structures(
     current_user: ServiceUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
@@ -160,7 +164,11 @@ async def list_protocol_structures(
     return list(result.scalars().all())
 
 
-@router.get("/{structure_id}", response_model=ProtocolStructureRead)
+@router.get(
+    "/{structure_id}",
+    response_model=ProtocolStructureRead,
+    summary="Структура протокола по id",
+)
 async def get_protocol_structure(
     structure_id: UUID,
     current_user: ServiceUser = Depends(get_current_user),
@@ -177,7 +185,12 @@ async def get_protocol_structure(
     return _to_read(structure, fields)
 
 
-@router.post("", response_model=ProtocolStructureRead, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "",
+    response_model=ProtocolStructureRead,
+    status_code=status.HTTP_201_CREATED,
+    summary="Создать структуру протокола",
+)
 async def create_protocol_structure(
     payload: ProtocolStructureCreate,
     current_user: ServiceUser = Depends(get_current_user),
@@ -224,7 +237,11 @@ async def create_protocol_structure(
         ) from exc
 
 
-@router.put("/{structure_id}", response_model=ProtocolStructureRead)
+@router.put(
+    "/{structure_id}",
+    response_model=ProtocolStructureRead,
+    summary="Полная замена структуры протокола",
+)
 async def put_protocol_structure(
     structure_id: UUID,
     payload: ProtocolStructurePut,
@@ -267,7 +284,11 @@ async def put_protocol_structure(
         ) from exc
 
 
-@router.patch("/{structure_id}", response_model=ProtocolStructureRead)
+@router.patch(
+    "/{structure_id}",
+    response_model=ProtocolStructureRead,
+    summary="Частичное обновление структуры (fields_add/update/delete)",
+)
 async def patch_protocol_structure(
     structure_id: UUID,
     payload: ProtocolStructurePatch,
@@ -393,7 +414,11 @@ async def patch_protocol_structure(
         ) from exc
 
 
-@router.delete("/{structure_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete(
+    "/{structure_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Удалить структуру протокола",
+)
 async def delete_protocol_structure(
     structure_id: UUID,
     current_user: ServiceUser = Depends(get_current_user),

@@ -24,6 +24,7 @@ router = APIRouter(prefix="/template-groups", tags=["template-groups"])
 @router.get(
     "",
     response_model=List[TemplateGroupIdNameRead],
+    summary="Список групп шаблонов",
 )
 async def list_template_groups(
     current_user: ServiceUser = Depends(get_current_user),
@@ -46,6 +47,7 @@ async def list_template_groups(
     "",
     response_model=TemplateGroupRead,
     status_code=status.HTTP_201_CREATED,
+    summary="Создать группу шаблонов",
 )
 async def create_template_group(
     payload: TemplateGroupCreate,
@@ -88,6 +90,7 @@ async def create_template_group(
 @router.put(
     "/{group_id}",
     response_model=TemplateGroupRead,
+    summary="Переименовать группу шаблонов",
 )
 async def update_template_group(
     group_id: UUID,
@@ -138,6 +141,7 @@ async def update_template_group(
 @router.delete(
     "/{group_id}",
     status_code=status.HTTP_204_NO_CONTENT,
+    summary="Удалить группу шаблонов",
 )
 async def delete_template_group(
     group_id: UUID,

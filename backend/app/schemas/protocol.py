@@ -4,13 +4,21 @@ from uuid import UUID
 from pydantic import BaseModel, Field
 
 
+_FIELD_VALUES_DESC = (
+    "Значения полей: ключ — UUID поля структуры протокола, значение — текст (или null)."
+)
+
+
 class ProtocolCreate(BaseModel):
     protocol_structure_id: UUID
     patient_id: int | None = None
     doctor_id: UUID | None = None
     protocol_name: str | None = Field(default=None, max_length=255)
     status_protocol: str | None = Field(default=None, max_length=255)
-    field_values: dict[UUID, str | None] = Field(default_factory=dict)
+    field_values: dict[UUID, str | None] = Field(
+        default_factory=dict,
+        description=_FIELD_VALUES_DESC,
+    )
 
 
 class ProtocolPut(BaseModel):
@@ -18,7 +26,10 @@ class ProtocolPut(BaseModel):
     doctor_id: UUID | None = None
     protocol_name: str | None = Field(default=None, max_length=255)
     status_protocol: str | None = Field(default=None, max_length=255)
-    field_values: dict[UUID, str | None] = Field(default_factory=dict)
+    field_values: dict[UUID, str | None] = Field(
+        default_factory=dict,
+        description=_FIELD_VALUES_DESC,
+    )
 
 
 class ProtocolPatch(BaseModel):
@@ -26,7 +37,10 @@ class ProtocolPatch(BaseModel):
     doctor_id: UUID | None = None
     protocol_name: str | None = Field(default=None, max_length=255)
     status_protocol: str | None = Field(default=None, max_length=255)
-    field_values: dict[UUID, str | None] = Field(default_factory=dict)
+    field_values: dict[UUID, str | None] = Field(
+        default_factory=dict,
+        description=_FIELD_VALUES_DESC,
+    )
 
 
 class ProtocolListItem(BaseModel):
@@ -58,7 +72,7 @@ class ProtocolRead(BaseModel):
     created_at: datetime
     updated_at: datetime | None = None
     deleted_at: datetime | None = None
-    field_values: dict[UUID, str | None]
+    field_values: dict[UUID, str | None] = Field(description=_FIELD_VALUES_DESC)
     source_questionnaire_id: UUID | None = None
     created_from_questionnaire: bool = False
 

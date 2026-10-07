@@ -48,7 +48,11 @@ async def _publish_autocomplete_shown(
         await redis.aclose()
 
 
-@router.post("/ml_autocomplete", response_model=MlAutocompleteProxyResponse)
+@router.post(
+    "/ml_autocomplete",
+    response_model=MlAutocompleteProxyResponse,
+    summary="Автодополнение поля протокола (ML-proxy)",
+)
 async def proxy_ml_autocomplete(
     payload: MlAutocompleteProxyRequest,
     current_user: ServiceUser = Depends(get_current_user),
@@ -94,7 +98,8 @@ async def proxy_ml_autocomplete(
 @router.post(
     "/ml_autocomplete_stats",
     response_model=EventAcceptedResponse,
-    summary="Push Selected Field Or Selected Event",
+    summary="Отправить событие выбора автодополнения",
+    description="Пишет selected-event в Redis Stream для ML worker.",
 )
 async def push_selected_event(
     payload: MkbCodeSelectRequest,

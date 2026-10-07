@@ -24,7 +24,102 @@ from .routers.public_questionnaire import router as public_questionnaire_router
 from .routers.questionnaires import router as questionnaires_router
 
 
-app = FastAPI(title="Vismuth Clinical Decision Support")
+app = FastAPI(
+    title="Vismuth Clinical Decision Support",
+    description=(
+        ""
+    ),
+    openapi_tags=[
+        {
+            "name": "system",
+            "description": "Служебные проверки доступности.",
+        },
+        {
+            "name": "auth",
+            "description": "Регистрация, логин, refresh/logout (cookie), приглашения в клинику.",
+        },
+        {
+            "name": "service_user",
+            "description": "Профиль текущего пользователя и CRUD service_user (privileged).",
+        },
+        {
+            "name": "roles",
+            "description": "Справочник ролей для UI (name + name_ru).",
+        },
+        {
+            "name": "user-settings",
+            "description": "Настройки пользователя (тема, язык и т.п.).",
+        },
+        {
+            "name": "super-admin-clinics",
+            "description": "CRUD клиник и invites. Только роль super_admin.",
+        },
+        {
+            "name": "super-admin-statistics",
+            "description": "Сводная статистика анкет по всем клиникам. Только super_admin.",
+        },
+        {
+            "name": "clinic-admin",
+            "description": "Админка клиники: профиль, участники, invites, статистика анкет.",
+        },
+        {
+            "name": "public-questionnaire",
+            "description": "Публичная анкета пациента без JWT. Headers: X-Device-Id, X-Questionnaire-Token.",
+        },
+        {
+            "name": "questionnaires",
+            "description": "Анкеты для врача: список, детали, повторная ML-обработка, создание протокола.",
+        },
+        {
+            "name": "protocols",
+            "description": "Клинические протоколы пользователя.",
+        },
+        {
+            "name": "protocol-structures",
+            "description": "Каталог структур протоколов и их полей.",
+        },
+        {
+            "name": "protocol-fields-main",
+            "description": "Справочник основных полей протоколов.",
+        },
+        {
+            "name": "protocol-templates",
+            "description": "Шаблоны протоколов (личные / общие).",
+        },
+        {
+            "name": "template-groups",
+            "description": "Группы шаблонов протоколов.",
+        },
+        {
+            "name": "dictionaries",
+            "description": "Реестр справочников и поиск по ref_* таблицам.",
+        },
+        {
+            "name": "mkb10",
+            "description": "Поиск диагнозов МКБ-10.",
+        },
+        {
+            "name": "ml_mkb_code",
+            "description": "ML-proxy: подбор кода МКБ по описанию.",
+        },
+        {
+            "name": "ml_autocomplete",
+            "description": "ML-proxy: автодополнение полей протокола.",
+        },
+        {
+            "name": "ml_clinrec_check",
+            "description": "ML-proxy: проверка соответствия клиническим рекомендациям.",
+        },
+        {
+            "name": "ml_fullness",
+            "description": "ML-proxy: оценка полноты жалоб.",
+        },
+        {
+            "name": "autocomplete_dict",
+            "description": "Автодополнение по словарю (без ML-токенов подписки).",
+        },
+    ],
+)
 
 app.include_router(auth_router)
 app.include_router(dictionaries_router)
@@ -49,6 +144,6 @@ app.include_router(public_questionnaire_router)
 app.include_router(questionnaires_router)
 
 
-@app.get("/health", tags=["system"])
+@app.get("/health", tags=["system"], summary="Health check")
 async def health_check():
     return {"status": "ok"}

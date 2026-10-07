@@ -90,7 +90,12 @@ async def _load_active_invitation(
     return result.scalar_one_or_none()
 
 
-@router.post("/register", response_model=RegisterResponse)
+@router.post(
+    "/register",
+    response_model=RegisterResponse,
+    summary="Заявка на регистрацию",
+    description="Email + пароль → 4-значный код на почту. Без JWT.",
+)
 async def register(
     payload: RegisterRequest,
     db: AsyncSession = Depends(get_db),
@@ -184,7 +189,12 @@ async def register(
     return RegisterResponse()
 
 
-@router.post("/register/confirm", response_model=TokenResponse)
+@router.post(
+    "/register/confirm",
+    response_model=TokenResponse,
+    summary="Подтвердить код регистрации",
+    description="Создает user, отдает access JWT и ставит refresh httpOnly cookie.",
+)
 async def register_confirm(
     payload: RegisterConfirmRequest,
     response: Response,
@@ -262,7 +272,12 @@ async def register_confirm(
     return await _attach_session_tokens(response, db, user)
 
 
-@router.post("/login", response_model=TokenResponse)
+@router.post(
+    "/login",
+    response_model=TokenResponse,
+    summary="Вход",
+    description="Email + пароль → access JWT + refresh cookie.",
+)
 async def login(
     payload: LoginRequest,
     response: Response,
@@ -300,7 +315,15 @@ async def login(
     return await _attach_session_tokens(response, db, user)
 
 
-@router.post("/refresh", response_model=TokenResponse)
+@router.post(
+    "/refresh",
+    response_model=TokenResponse,
+    summary="Обновить access через refresh cookie",
+    description=(
+        "Читает httpOnly refresh cookie, ротирует токен, возвращает новый access JWT. "
+        "Bearer не нужен."
+    ),
+)
 async def refresh(
     request: Request,
     response: Response,
@@ -331,7 +354,12 @@ async def refresh(
     )
 
 
-@router.post("/logout", response_model=MessageResponse)
+@router.post(
+    "/logout",
+    response_model=MessageResponse,
+    summary="Выход",
+    description="Revoke refresh в БД и Clear-Cookie. Bearer не обязателен.",
+)
 async def logout(
     request: Request,
     response: Response,
@@ -349,7 +377,12 @@ async def logout(
     return MessageResponse(detail="logged_out")
 
 
-@router.get("/invitations/{token}", response_model=InvitationPreview)
+@router.get(
+    "/invitations/{token}",
+    response_model=InvitationPreview,
+    summary="Превью приглашения в клинику",
+    description="По raw token из invite URL. Без JWT.",
+)
 async def preview_invitation(
     token: str,
     db: AsyncSession = Depends(get_db),
@@ -393,7 +426,12 @@ async def preview_invitation(
     )
 
 
-@router.post("/invitations/accept", response_model=InvitationAcceptResponse)
+@router.post(
+    "/invitations/accept",
+    response_model=InvitationAcceptResponse,
+    summary="Принять приглашение",
+    description="Создает/привязывает user к клинике, выдает сессию (access + refresh cookie).",
+)
 async def accept_invitation(
     payload: InvitationAcceptRequest,
     response: Response,

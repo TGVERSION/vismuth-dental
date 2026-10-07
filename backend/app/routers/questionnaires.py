@@ -151,7 +151,11 @@ async def _build_doctor_detail(
     )
 
 
-@router.get("", response_model=List[DoctorQuestionnaireListItem])
+@router.get(
+    "",
+    response_model=List[DoctorQuestionnaireListItem],
+    summary="Список анкет текущего врача",
+)
 async def list_questionnaires(
     name: Optional[str] = Query(default=None),
     date_filter: Optional[date] = Query(default=None, alias="date"),
@@ -213,7 +217,11 @@ async def list_questionnaires(
     ]
 
 
-@router.get("/{questionnaire_id}", response_model=DoctorQuestionnaireDetail)
+@router.get(
+    "/{questionnaire_id}",
+    response_model=DoctorQuestionnaireDetail,
+    summary="Детали анкеты",
+)
 async def get_questionnaire(
     questionnaire_id: UUID,
     current_user: ServiceUser = Depends(get_current_user),
@@ -240,6 +248,11 @@ async def get_questionnaire(
     "/{questionnaire_id}/process",
     response_model=DoctorQuestionnaireDetail,
     status_code=status.HTTP_202_ACCEPTED,
+    summary="Повторно запустить ML-обработку анкеты",
+    description=(
+        "Ставит processing_status=pending и в фоне вызывает summarize_form. "
+        "Только завершенные анкеты текущего врача; нужна активная подписка клиники."
+    ),
 )
 async def process_questionnaire(
     questionnaire_id: UUID,
@@ -276,6 +289,10 @@ async def process_questionnaire(
     "/{questionnaire_id}/protocol",
     response_model=ProtocolRead,
     status_code=status.HTTP_201_CREATED,
+    summary="Создать протокол из анкеты",
+    description=(
+        "Маппинг structured/ответов анкеты в поля выбранной структуры протокола."
+    ),
 )
 async def create_protocol_from_questionnaire(
     questionnaire_id: UUID,

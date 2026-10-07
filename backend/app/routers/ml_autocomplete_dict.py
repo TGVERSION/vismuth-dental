@@ -49,7 +49,12 @@ async def autocomplete_mixed(db: AsyncSession, full_text: str, limit: int = 6):
     return result[:limit]
 
 
-@router.post("/complete_dict", response_model=AutocompleteResponse)
+@router.post(
+    "/complete_dict",
+    response_model=AutocompleteResponse,
+    summary="Автодополнение по словарю",
+    description="Без проверки подписки клиники (не тратит ML-токены).",
+)
 async def autocomplete_endpoint(
     request: AutocompleteRequest,
     db: AsyncSession = Depends(get_db)

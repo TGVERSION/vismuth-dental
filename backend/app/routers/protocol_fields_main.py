@@ -17,7 +17,11 @@ from ..schemas.protocol_field_main import (
 router = APIRouter(prefix="/protocol-fields-main", tags=["protocol-fields-main"])
 
 
-@router.get("", response_model=List[ProtocolFieldMainListItem])
+@router.get(
+    "",
+    response_model=List[ProtocolFieldMainListItem],
+    summary="Список основных полей протоколов",
+)
 async def list_protocol_fields_main(
     current_user: ServiceUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
@@ -35,7 +39,11 @@ async def list_protocol_fields_main(
     return list(result.scalars().all())
 
 
-@router.get("/{field_id}", response_model=ProtocolFieldMainRead)
+@router.get(
+    "/{field_id}",
+    response_model=ProtocolFieldMainRead,
+    summary="Основное поле протокола по id",
+)
 async def get_protocol_field_main(
     field_id: UUID,
     current_user: ServiceUser = Depends(get_current_user),

@@ -11,7 +11,11 @@ from ..services.questionnaire_limits import ensure_user_clinic_subscription_acti
 router = APIRouter(tags=["ml_clinrec_check"])
 
 
-@router.post("/ml_clinrec_check", response_model=MlClinrecCheckResponse)
+@router.post(
+    "/ml_clinrec_check",
+    response_model=MlClinrecCheckResponse,
+    summary="Проверка по клиническим рекомендациям (ML-proxy)",
+)
 async def proxy_ml_clinrec_check(
     payload: MlClinrecCheckRequest,
     current_user: ServiceUser = Depends(get_current_user),

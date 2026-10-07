@@ -51,6 +51,7 @@ async def _ensure_target_user_exists(db: AsyncSession, user_id: UUID) -> None:
 @router.get(
     "/{user_id}",
     response_model=UserSettingsRead,
+    summary="Настройки пользователя",
 )
 async def get_user_settings(
     user_id: UUID,
@@ -72,6 +73,7 @@ async def get_user_settings(
     "/{user_id}",
     response_model=UserSettingsRead,
     status_code=status.HTTP_201_CREATED,
+    summary="Создать настройки пользователя",
 )
 async def create_user_settings(
     user_id: UUID,
@@ -107,6 +109,7 @@ async def create_user_settings(
 @router.put(
     "/{user_id}",
     response_model=UserSettingsRead,
+    summary="Полная замена настроек",
 )
 async def replace_user_settings(
     user_id: UUID,
@@ -136,6 +139,7 @@ async def replace_user_settings(
 @router.patch(
     "/{user_id}",
     response_model=UserSettingsRead,
+    summary="Частичное обновление настроек",
 )
 async def patch_user_settings(
     user_id: UUID,

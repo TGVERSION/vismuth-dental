@@ -18,7 +18,12 @@ from ..services.redis_stream import build_event_payload, get_redis_client, publi
 router = APIRouter(prefix="/ml_mkb_code", tags=["ml_mkb_code"])
 
 
-@router.post("", response_model=MkbCodeProxyResponse)
+@router.post(
+    "",
+    response_model=MkbCodeProxyResponse,
+    summary="Подбор кода МКБ (ML-proxy)",
+    description="Прокси к ml-service; требует активной подписки клиники пользователя.",
+)
 async def proxy_mkb_code(
     payload: MkbCodeProxyRequest,
     current_user: ServiceUser = Depends(get_current_user),

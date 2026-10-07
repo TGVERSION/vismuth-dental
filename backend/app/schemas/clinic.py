@@ -14,9 +14,13 @@ class ClinicCreate(BaseModel):
     email: Optional[EmailStr] = None
     logo_url: Optional[str] = None
     brand_color: Optional[str] = Field(default=None, max_length=32)
-    doctors_limit: int = Field(default=10, ge=0)
-    access_until: date
-    access_type: AccessType
+    doctors_limit: int = Field(
+        default=10,
+        ge=0,
+        description="Максимум активных врачей (membership is_doctor) в клинике.",
+    )
+    access_until: date = Field(description="Дата окончания доступа (включительно по логике access).")
+    access_type: AccessType = Field(description="trial | paid — тип подписки.")
 
 
 class ClinicPatch(BaseModel):
@@ -25,9 +29,19 @@ class ClinicPatch(BaseModel):
     email: Optional[EmailStr] = None
     logo_url: Optional[str] = None
     brand_color: Optional[str] = Field(default=None, max_length=32)
-    doctors_limit: Optional[int] = Field(default=None, ge=0)
-    access_until: Optional[date] = None
-    access_type: Optional[AccessType] = None
+    doctors_limit: Optional[int] = Field(
+        default=None,
+        ge=0,
+        description="Максимум активных врачей в клинике.",
+    )
+    access_until: Optional[date] = Field(
+        default=None,
+        description="Дата окончания доступа.",
+    )
+    access_type: Optional[AccessType] = Field(
+        default=None,
+        description="trial | paid.",
+    )
 
 
 class ClinicRead(BaseModel):
@@ -37,16 +51,30 @@ class ClinicRead(BaseModel):
     email: Optional[str]
     logo_url: Optional[str]
     brand_color: Optional[str]
-    doctors_limit: int
+    doctors_limit: int = Field(description="Лимит активных врачей.")
     access_until: date
     access_type: AccessType
-    public_slug: str
-    access_status_code: AccessStatusCode
-    access_status_label: str
+    public_slug: str = Field(description="Slug публичной ссылки клиники (/public/links/{slug}).")
+    access_status_code: AccessStatusCode = Field(
+        description="Вычисляемый статус: trial | paid | expired.",
+    )
+    access_status_label: str = Field(description="Человекочитаемая подпись статуса доступа.")
     doctors_count: int = 0
-    free_codes_ratio: Optional[float] = None
-    clinic_daily_limit_exceeded: bool = False
-    questionnaires_completed_month: int = 0
+    free_codes_ratio: Optional[float] = Field(
+        default=None,
+        description=(
+            "Доля еще свободных 4-значных кодов клиники в окне уникальности "
+            "(1.0 = все свободны, уменьшается по мере выдачи)."
+        ),
+    )
+    clinic_daily_limit_exceeded: bool = Field(
+        default=False,
+        description="True — суточный лимит завершенных анкет клиники исчерпан.",
+    )
+    questionnaires_completed_month: int = Field(
+        default=0,
+        description="Число завершенных анкет за текущий календарный месяц.",
+    )
     created_at: datetime
     updated_at: Optional[datetime]
     deleted_at: Optional[datetime]
@@ -60,9 +88,18 @@ class ClinicInvitationCreate(BaseModel):
     last_name: Optional[str] = Field(default=None, max_length=255)
     middle_name: Optional[str] = Field(default=None, max_length=255)
     photo_url: Optional[str] = None
-    is_clinic_admin: bool = True
-    is_doctor: bool = False
-    specialization_ids: list[int] = Field(default_factory=list)
+    is_clinic_admin: bool = Field(
+        default=True,
+        description="Приглашаемый станет clinic admin.",
+    )
+    is_doctor: bool = Field(
+        default=False,
+        description="Приглашаемый получит роль врача (membership is_doctor).",
+    )
+    specialization_ids: list[int] = Field(
+        default_factory=list,
+        description="ID специализаций врача (если is_doctor).",
+    )
 
 
 class ClinicInvitationRead(BaseModel):
@@ -86,6 +123,9 @@ class ClinicInvitationRead(BaseModel):
 
 
 class ClinicInvitationCreated(ClinicInvitationRead):
-    invite_url: str
-    email_sent: bool
-    email_error: Optional[str] = None
+    invite_url: str = Field(description="Ссылка для принятия приглашения (raw token в URL).")
+    email_sent: bool = Field(description="True — письмо с invite ушло через SMTP.")
+    email_error: Optional[str] = Field(
+        default=None,
+        description="Текст ошибки SMTP, если email_sent=false.",
+    )

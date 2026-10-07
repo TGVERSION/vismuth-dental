@@ -45,8 +45,16 @@ Worker использует тот же image и entrypoint (migrate + seed), з
 
 Каждые ~10 минут:
 
-1. `in_progress` без активности > `QUESTIONNAIRE_ABANDON_HOURS` → `abandoned`, ответы и ПДн стираются, `current_step` остаётся;
+1. `in_progress` без активности > `QUESTIONNAIRE_ABANDON_HOURS` → `abandoned`, ответы и ПДн стираются (`collect_form_state` тоже), `current_step` остаётся;
 2. `completed` старше `QUESTIONNAIRE_RETENTION_DAYS` → удаление (у протокола остаётся `created_from_questionnaire`).
+
+## Уточнения анкеты (`/collect_form`)
+
+Публичный flow (`questionnaire_flow.request_ai_question`) вызывает `POST {ML_SERVICE_URL}/collect_form` через `proxy_post_to_ml` (без отдельного proxy-endpoint для врача).
+
+- Запрос: `messages` + опциональный `state` из `questionnaire.collect_form_state`.
+- Ответ: `status` (`question` / `complete` / `stopped`), вопрос в `messages`, новый `state` → в колонку (не в API UI).
+- Лимиты backend: `QUESTIONNAIRE_AI_PRIMARY_MAX` / `QUESTIONNAIRE_AI_REPEAT_MAX`; без ключа `status` — эвристика конца сбора. Контракт для UI: [questionnaire-public.md](../../docs/contracts/questionnaire-public.md).
 
 ## Обработка анкеты после кода
 

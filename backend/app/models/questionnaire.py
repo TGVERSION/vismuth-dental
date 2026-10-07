@@ -81,6 +81,10 @@ class Questionnaire(Base):
     structured: Mapped[Optional[dict[str, Any]]] = mapped_column(JSONB, nullable=True)
     gaps: Mapped[Optional[list[Any]]] = mapped_column(JSONB, nullable=True)
     processing_status: Mapped[Optional[str]] = mapped_column(String(32), nullable=True)
+    collect_form_state: Mapped[Optional[dict[str, Any]]] = mapped_column(
+        JSONB,
+        nullable=True,
+    )
     created_at: Mapped[datetime] = mapped_column(
         TIMESTAMP(timezone=True),
         default=lambda: datetime.now(timezone.utc),

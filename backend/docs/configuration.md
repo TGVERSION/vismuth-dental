@@ -68,10 +68,10 @@ Invite создаётся даже при сбое SMTP: в ответе `invite
 
 | Переменная | Default | Описание |
 |------------|---------|----------|
-| `QUESTIONNAIRE_AI_TIMEOUT` | `20` | Timeout вызова `/collect_form` (сек) |
+| `QUESTIONNAIRE_AI_TIMEOUT` | `20` | Timeout `/collect_form` и `/summarize_form` (сек) |
 | `QUESTIONNAIRE_ANSWER_MAX_LEN` | `1000` | Обрезка ответа |
-| `QUESTIONNAIRE_AI_PRIMARY_MAX` | `6` | Лимит уточняющих (первичный) |
-| `QUESTIONNAIRE_AI_REPEAT_MAX` | `2` | Лимит уточняющих (повторный) |
+| `QUESTIONNAIRE_AI_PRIMARY_MAX` | `6` | Лимит уточняющих на backend (первичный); у ml-service свой бюджет вопросов |
+| `QUESTIONNAIRE_AI_REPEAT_MAX` | `2` | Лимит уточняющих на backend (повторный) |
 | `QUESTIONNAIRE_DEVICE_LIMIT_PER_HOUR` | `5` | С устройства |
 | `QUESTIONNAIRE_IP_LIMIT_PER_HOUR` | `30` | С IP |
 | `QUESTIONNAIRE_CLINIC_DAILY_PER_DOCTOR` | `30` | Суточный лимит × активные врачи |

@@ -5,10 +5,11 @@
 
 Код: `routers/public_questionnaire.py`, `services/questionnaire_flow.py`.
 
-## Ограничения ML (без правок ml-service)
+## Ограничения ML
 
 Backend вызывает `POST {ML_SERVICE_URL}/collect_form` на шаге уточнений.  
-Сигнала «вопросов достаточно» нет: лимит 6/2, skip, эвристика (нет `?`, пусто, >300 символов, повтор).  
+В запрос уходит история `messages` и сохранённый `state` (FormProgress); ответ с `status` (`question` / `complete` / `stopped`) и новым `state` бэкенд хранит в `questionnaire.collect_form_state` и **не** отдаёт в UI.  
+Для фронта сигнала «вопросов достаточно» нет: шаги те же (`ai_clarify` → фиксированные). Стоп по `status`, лимит 6/2; без ключа `status` (старый ml-service) — эвристика (нет `?`, пусто, >300 символов, повтор).  
 Специализация и тип приёма — первая служебная реплика в `messages`.  
 Timeout: `QUESTIONNAIRE_AI_TIMEOUT` (~20s). Ошибка → `ai_unavailable`, фиксированные вопросы продолжаются.
 

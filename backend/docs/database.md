@@ -18,6 +18,7 @@ Source of truth схемы: [`alembic/versions/`](../alembic/versions/). Ста�
 | `0008_specializations` | `ref_specialization`, M2M специализаций, `middle_name`, `membership.public_slug` |
 | `0009_questionnaires` | `questionnaire`, `questionnaire_answer`, связь протокол↔анкета |
 | `0010_refresh_tokens` | `refresh_token` — opaque refresh (hash), rotation, revoke |
+| `0011_collect_form_state` | `questionnaire.collect_form_state` JSONB — FormProgress из `/collect_form` |
 
 Порядок важен из‑за FK (`service_user` раньше протоколов и т.д.).
 
@@ -29,7 +30,7 @@ Source of truth схемы: [`alembic/versions/`](../alembic/versions/). Ста�
 - Privileged (CRUD users, чужие settings, general templates): `super_admin` или `admin`.
 - API `/super-admin/*` — только `super_admin` (не `admin`).
 
-### Клиники, специализации и анкеты (0007–0009)
+### Клиники, специализации и анкеты (0007–0011)
 
 | Таблица | Суть |
 |--------|------|
@@ -38,12 +39,14 @@ Source of truth схемы: [`alembic/versions/`](../alembic/versions/). Ста�
 | `clinic_invitation` | Invite: email, ФИО (+ middle_name), photo_url, token_hash, роли, expires_at, used_at; soft-delete = revoke |
 | `ref_specialization` | Справочник специализаций (seed CSV) |
 | `clinic_membership_specialization` / `clinic_invitation_specialization` | M2M специализаций |
-| `questionnaire` | Анкета пациента: шаги, `code` CHAR(4), AI-флаги, patient info, protocol_id, `structured`/`gaps`/`processing_status` (после `/summarize_form`) |
+| `questionnaire` | Анкета пациента: шаги, `code` CHAR(4), AI-флаги, patient info, protocol_id, `structured`/`gaps`/`processing_status` (после `/summarize_form`), `collect_form_state` (FormProgress `/collect_form`, не в API) |
 | `questionnaire_answer` | Реплики/ответы (CASCADE) |
 
 Статус подписки **не хранится** — вычисляется по `access_until` + `access_type`.
 
 `protocols.source_questionnaire_id` (SET NULL) + `created_from_questionnaire` — связь с анкетой.
+
+`collect_form_state` (0011): JSONB с прошлого ответа ml-service `/collect_form`; бэкенд шлёт его обратно в следующем вызове. В ответы врача/пациента не попадает. При abandon (`questionnaire_maintenance`) обнуляется вместе с ответами и ПДн.
 
 ### Refresh tokens (0010)
 
@@ -111,6 +114,6 @@ docker compose exec -T db pg_dump -U vismuth vismuth > backup_$(date +%F).sql
 docker compose run --rm backend alembic stamp head
 ```
 
-(либо после успешного первого `upgrade` проверить `alembic current` → `0009_questionnaires`).
+(либо после успешного первого `upgrade` проверить `alembic current` → `0011_collect_form_state`).
 
 4. Таблицы вроде старого `ref_mis` на сервере **не удаляются** автоматически — просто больше не создаются новыми миграциями.

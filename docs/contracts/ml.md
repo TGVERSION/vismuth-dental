@@ -63,4 +63,5 @@
 ## Использование /collect_form из анкеты
 
 Публичный flow пациента (`questionnaire-public.md`) вызывает ml-service `POST /collect_form` через `proxy_post_to_ml` **без** отдельного backend proxy-endpoint для врача.  
-Лимиты и fallback — на стороне backend; контракт ML не менялся.
+Тело: `messages` + опциональный `state` с прошлого шага. Ответ: `status`, `messages` (вопрос или null), `state` (сохраняется в `questionnaire.collect_form_state`).  
+Лимиты вопросов и fallback `ai_unavailable` — на стороне backend; публичный API для UI не меняется.

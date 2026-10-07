@@ -30,7 +30,7 @@ Source of truth схемы: [`alembic/versions/`](../alembic/versions/). Ста�
 - Privileged (CRUD users, чужие settings, general templates): `super_admin` или `admin`.
 - API `/super-admin/*` — только `super_admin` (не `admin`).
 
-### Клиники, специализации и анкеты (0007–0009)
+### Клиники, специализации и анкеты (0007–0011)
 
 | Таблица | Суть |
 |--------|------|
@@ -45,6 +45,8 @@ Source of truth схемы: [`alembic/versions/`](../alembic/versions/). Ста�
 Статус подписки **не хранится** — вычисляется по `access_until` + `access_type`.
 
 `protocols.source_questionnaire_id` (SET NULL) + `created_from_questionnaire` — связь с анкетой.
+
+`collect_form_state` (0011): JSONB с прошлого ответа ml-service `/collect_form`; бэкенд шлёт его обратно в следующем вызове. В ответы врача/пациента не попадает. При abandon (`questionnaire_maintenance`) обнуляется вместе с ответами и ПДн.
 
 ### Refresh tokens (0010)
 
@@ -112,6 +114,6 @@ docker compose exec -T db pg_dump -U vismuth vismuth > backup_$(date +%F).sql
 docker compose run --rm backend alembic stamp head
 ```
 
-(либо после успешного первого `upgrade` проверить `alembic current` → `0009_questionnaires`).
+(либо после успешного первого `upgrade` проверить `alembic current` → `0011_collect_form_state`).
 
 4. Таблицы вроде старого `ref_mis` на сервере **не удаляются** автоматически — просто больше не создаются новыми миграциями.

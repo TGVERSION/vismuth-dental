@@ -65,7 +65,7 @@ flowchart LR
 
 - **Postgres** — основная БД (`POSTGRES_*`).
 - **Redis** — stream событий ML/autocomplete + rate-limit анкет (`REDIS_*`).
-- **ml-service** — HTTP upstream (`ML_SERVICE_URL`, в docker-сети обычно `http://ml-service:8000`); анкета вызывает `/collect_form`.
+- **ml-service** — HTTP upstream (`ML_SERVICE_URL`, в docker-сети обычно `http://ml-service:8000`); анкета: `/collect_form` (уточнения, state в `questionnaire.collect_form_state`) и `/summarize_form` (после кода).
 
 ## Конфигурация в compose
 

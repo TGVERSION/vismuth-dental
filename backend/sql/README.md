@@ -2,7 +2,7 @@
 
 Source of truth for schema: `alembic/versions/`.
 
-Current head: `0009_questionnaires` (после `0008_specializations`).
+Current head: `0011_collect_form_state` (после `0010_refresh_tokens`).
 
 ## Fresh database
 

@@ -407,10 +407,14 @@ async def request_ai_question(
         None,
     )
 
+    body: dict[str, Any] = {"messages": messages}
+    if questionnaire.collect_form_state is not None:
+        body["state"] = questionnaire.collect_form_state
+
     try:
         response = await proxy_post_to_ml(
             "/collect_form",
-            {"messages": messages},
+            body,
             timeout=settings.questionnaire_ai_timeout,
         )
     except HTTPException:
@@ -420,12 +424,38 @@ async def request_ai_question(
         questionnaire.ai_unavailable = True
         return None
 
-    question_obj = response.get("messages") if isinstance(response, dict) else None
-    text = None
-    if isinstance(question_obj, dict):
-        text = question_obj.get("text")
-    if is_ai_done_heuristic(text, previous_q):
+    if not isinstance(response, dict):
         return None
+
+    status_value = response.get("status")
+    if isinstance(status_value, str):
+        if status_value in {"complete", "stopped"}:
+            new_state = response.get("state")
+            if isinstance(new_state, dict):
+                questionnaire.collect_form_state = new_state
+            return None
+        if status_value != "question":
+            return None
+        question_obj = response.get("messages")
+        text = None
+        if isinstance(question_obj, dict):
+            text = question_obj.get("text")
+        if not text or not str(text).strip():
+            return None
+        new_state = response.get("state")
+        if isinstance(new_state, dict):
+            questionnaire.collect_form_state = new_state
+    else:
+        # Старый ml-service без status: эвристика конца сбора.
+        question_obj = response.get("messages")
+        text = None
+        if isinstance(question_obj, dict):
+            text = question_obj.get("text")
+        if is_ai_done_heuristic(text, previous_q):
+            return None
+        new_state = response.get("state")
+        if isinstance(new_state, dict):
+            questionnaire.collect_form_state = new_state
 
     await add_answer(
         db,

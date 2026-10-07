@@ -39,6 +39,7 @@ async def abandon_stale(now: datetime) -> int:
             q.device_id_hash = None
             q.ip_hash = None
             q.code = None
+            q.collect_form_state = None
             q.updated_at = now
         await db.commit()
         return len(rows)

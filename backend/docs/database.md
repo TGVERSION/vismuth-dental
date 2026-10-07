@@ -18,6 +18,7 @@ Source of truth схемы: [`alembic/versions/`](../alembic/versions/). Ста�
 | `0008_specializations` | `ref_specialization`, M2M специализаций, `middle_name`, `membership.public_slug` |
 | `0009_questionnaires` | `questionnaire`, `questionnaire_answer`, связь протокол↔анкета |
 | `0010_refresh_tokens` | `refresh_token` — opaque refresh (hash), rotation, revoke |
+| `0011_collect_form_state` | `questionnaire.collect_form_state` JSONB — FormProgress из `/collect_form` |
 
 Порядок важен из‑за FK (`service_user` раньше протоколов и т.д.).
 
@@ -38,7 +39,7 @@ Source of truth схемы: [`alembic/versions/`](../alembic/versions/). Ста�
 | `clinic_invitation` | Invite: email, ФИО (+ middle_name), photo_url, token_hash, роли, expires_at, used_at; soft-delete = revoke |
 | `ref_specialization` | Справочник специализаций (seed CSV) |
 | `clinic_membership_specialization` / `clinic_invitation_specialization` | M2M специализаций |
-| `questionnaire` | Анкета пациента: шаги, `code` CHAR(4), AI-флаги, patient info, protocol_id, `structured`/`gaps`/`processing_status` (после `/summarize_form`) |
+| `questionnaire` | Анкета пациента: шаги, `code` CHAR(4), AI-флаги, patient info, protocol_id, `structured`/`gaps`/`processing_status` (после `/summarize_form`), `collect_form_state` (FormProgress `/collect_form`, не в API) |
 | `questionnaire_answer` | Реплики/ответы (CASCADE) |
 
 Статус подписки **не хранится** — вычисляется по `access_until` + `access_type`.

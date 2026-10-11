@@ -15,7 +15,11 @@ import type {
   QuestionnaireStep,
   QuestionnaireStepAnswer,
 } from '@/api';
-import { APPOINTMENT_DAYS_AHEAD, toDateInputValue } from '@/lib/questionnaire';
+import {
+  APPOINTMENT_DAYS_AHEAD,
+  isAppointmentTime,
+  toDateInputValue,
+} from '@/lib/questionnaire';
 import { MOCK_AI_QUESTIONS } from './script';
 
 export type MockStepKey =
@@ -80,29 +84,6 @@ const FIXED_TEXTS: Partial<Record<MockStepKey, string>> = {
   repeat_side_effects: 'Были ли побочные эффекты или новые жалобы?',
 };
 
-/** QUESTIONNAIRE_TIME_SLOTS backend по умолчанию. */
-export const MOCK_TIME_SLOTS: readonly string[] = [
-  '09:00',
-  '09:30',
-  '10:00',
-  '10:30',
-  '11:00',
-  '11:30',
-  '12:00',
-  '12:30',
-  '13:00',
-  '13:30',
-  '14:00',
-  '14:30',
-  '15:00',
-  '15:30',
-  '16:00',
-  '16:30',
-  '17:00',
-  '17:30',
-  '18:00',
-];
-
 /** QUESTIONNAIRE_ANSWER_MAX_LEN backend по умолчанию. */
 const ANSWER_MAX_LEN = 1000;
 
@@ -135,7 +116,6 @@ const emptyStep = (step_key: string, step_type: string): QuestionnaireStep => ({
   options: [],
   date_min: null,
   date_max: null,
-  time_slots: [],
   code: null,
   completed: false,
   truncated: false,
@@ -268,7 +248,6 @@ export const describeStep = (
         title: 'Имя, отчество, дата и время приёма',
         date_min: range.min,
         date_max: range.max,
-        time_slots: [...MOCK_TIME_SLOTS],
       };
     }
   }
@@ -458,8 +437,9 @@ export const applyAnswer = (
       ) {
         return fail(400, 'appointment_date out of range');
       }
-      if (!MOCK_TIME_SLOTS.includes(answer.appointment_time)) {
-        return fail(400, 'appointment_time not in allowed slots');
+      // Любое время суток, как у backend: списка слотов больше нет.
+      if (!isAppointmentTime(answer.appointment_time)) {
+        return fail(400, 'appointment_time must be HH:MM');
       }
       next = {
         ...questionnaire,

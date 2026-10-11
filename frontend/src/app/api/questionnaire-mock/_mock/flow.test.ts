@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { PublicLinkDoctor, QuestionnaireStepAnswer } from '@/api';
 import {
-  MOCK_TIME_SLOTS,
   applyAnswer,
   describeStep,
   initialStep,
@@ -284,7 +283,7 @@ describe('отказы', () => {
     ).toBe(false);
   });
 
-  it('данные приёма: дата вне диапазона и время вне слотов — 400', () => {
+  it('данные приёма: дата вне диапазона и некорректное время — 400', () => {
     const { questionnaire } = run(
       atVisitType(),
       [
@@ -308,16 +307,47 @@ describe('отказы', () => {
       ok: false,
       error: { status: 400, detail: 'appointment_date out of range' },
     });
-    expect(
-      applyAnswer(
+    for (const appointment_time of ['25:00', '12:60', '9:30', 'утром']) {
+      expect(
+        applyAnswer(
+          questionnaire,
+          { ...base, appointment_date: '2026-10-01', appointment_time },
+          makeEnv(),
+        ),
+      ).toEqual({
+        ok: false,
+        error: { status: 400, detail: 'appointment_time must be HH:MM' },
+      });
+    }
+  });
+
+  it('данные приёма: время вне прежних слотов принимается', () => {
+    const { questionnaire } = run(
+      atVisitType(),
+      [
+        { step_key: 'visit_type', choice: 'primary' },
+        { step_key: 'complaint', value: 'кашель' },
+        { step_key: 'medications', none: true },
+        { step_key: 'chronic', none: true },
+        { step_key: 'allergy', none: true },
+      ],
+      makeEnv({ aiDown: true }),
+    );
+    const base = {
+      step_key: 'patient_info',
+      first_name: 'Анна',
+      appointment_date: '2026-10-01',
+    };
+
+    for (const appointment_time of ['00:00', '08:15', '19:30', '23:59']) {
+      const result = applyAnswer(
         questionnaire,
-        { ...base, appointment_date: '2026-10-01', appointment_time: '19:30' },
+        { ...base, appointment_time },
         makeEnv(),
-      ),
-    ).toEqual({
-      ok: false,
-      error: { status: 400, detail: 'appointment_time not in allowed slots' },
-    });
+      );
+
+      expect(result.ok).toBe(true);
+    }
   });
 
   it('завершённая анкета — 400 «not in progress»', () => {
@@ -356,18 +386,21 @@ describe('отказы', () => {
 });
 
 describe('describeStep', () => {
-  it('данные приёма — диапазон дат по «сегодня» сервера и слоты', () => {
+  it('данные приёма — диапазон дат по «сегодня» сервера, слотов нет', () => {
     const questionnaire: MockQuestionnaire = {
       ...atVisitType(),
       currentStep: 'patient_info',
     };
 
-    expect(describeStep(questionnaire, makeEnv())).toMatchObject({
+    const step = describeStep(questionnaire, makeEnv());
+
+    expect(step).toMatchObject({
       step_key: 'patient_info',
       date_min: '2026-09-28',
       date_max: '2026-10-28',
-      time_slots: [...MOCK_TIME_SLOTS],
     });
+    // Backend убрал поле из дескриптора — заглушка не должна его возвращать.
+    expect(step).not.toHaveProperty('time_slots');
   });
 
   it('выбор врача — врачи в options', () => {

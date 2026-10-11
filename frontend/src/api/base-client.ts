@@ -4,10 +4,18 @@ import axios, {
   AxiosRequestConfig,
   AxiosResponse,
   AxiosError,
+  InternalAxiosRequestConfig,
 } from 'axios';
 import axiosRetry from 'axios-retry';
 import { logWarn } from '@/lib/logger';
 import { parseErrorBody } from '@/lib/api-error';
+import {
+  createSessionRefresher,
+  extractBearerToken,
+  resolveUnauthorized,
+  withCrossTabLock,
+  type SessionRefresher,
+} from '@/lib/auth-refresh';
 
 export type RequestMethod = 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH';
 
@@ -42,6 +50,53 @@ export class RequestAbortedError extends Error {
 export const isAbortError = (error: unknown): boolean =>
   error instanceof RequestAbortedError;
 
+// ---------------------------------------------------------------------------
+// Продление сессии
+//
+// Access-токен живёт 15 минут, сессию продлевает refresh-токен в
+// httpOnly-cookie (`POST /auth/refresh`). Получив 401, клиент с авторизацией
+// обновляет токен и повторяет запрос. Решения — в `src/lib/auth-refresh.ts`
+// (там же объяснено, почему обновление должно быть ровно одно); здесь только
+// связь со стором и axios.
+//
+// Обработчик один на все клиенты: 401 одновременно приходит запросам разных
+// клиентов, а обновление у них должно быть общее.
+
+/** Отметки на конфигурации запроса: что с ним уже делали после 401. */
+interface SessionRequestConfig extends InternalAxiosRequestConfig {
+  /** Сколько раз запрос повторялся после 401. */
+  _sessionRetries?: number;
+  /** Повторялся ли он с токеном, который только что выдал сервер. */
+  _sessionRefreshed?: boolean;
+}
+
+let sessionRefresher: SessionRefresher | null = null;
+
+/**
+ * Подключает продление сессии. `requestRefresh` — сетевой запрос обновления;
+ * он объявлен в `main-api.ts` и передаётся сюда, потому что этот модуль
+ * не может импортировать `main-api.ts` (получился бы цикл).
+ *
+ * Запрос обязан идти клиентом без авторизации (иначе его собственный 401
+ * запустил бы обновление заново) и без повторов (повтор отзывает все сессии).
+ */
+export const registerSessionRefresh = (
+  requestRefresh: () => Promise<string>,
+): void => {
+  sessionRefresher = createSessionRefresher({
+    getToken: () => useAuthStore.getState().accessToken,
+    // Стор каждой вкладки живёт в её памяти: токен, обновлённый соседней
+    // вкладкой, виден только в localStorage. На сервере `persist` нет.
+    syncFromStorage: () => useAuthStore.persist?.rehydrate(),
+    requestRefresh,
+    applyToken: (token) => useAuthStore.getState().setAccessToken(token),
+    clearSession: () => useAuthStore.getState().clearAuth(),
+    withLock: withCrossTabLock,
+    isUnauthorized: (error) =>
+      error instanceof ApiError && error.status === 401,
+  });
+};
+
 export interface RequestOptions {
   signal?: AbortSignal;
   /**
@@ -64,7 +119,8 @@ export interface ApiClientConfig {
    * `false` нужен публичным эндпоинтам (анкета пациента): токен врача туда
    * отправлять незачем, а сброс авторизации по 401 там вреден — врач,
    * открывший ссылку анкеты в своём браузере, оказался бы разлогинен
-   * в Ассистенте.
+   * в Ассистенте. Такой клиент не продлевает сессию по 401 — поэтому им же
+   * отправляется сам запрос обновления.
    */
   auth?: boolean;
 }
@@ -141,16 +197,54 @@ export class ApiClient {
 
     this.client.interceptors.response.use(
       (response) => response,
-      (error: AxiosError) => {
-        if (error.response?.status === 401) {
-          // Только сбрасываем авторизацию. Переход на /login выполнит
-          // ProtectedRoute средствами роутера — без жёсткой перезагрузки,
-          // которая теряет несохранённые правки протокола.
-          if (typeof window !== 'undefined') {
-            useAuthStore.getState().clearAuth();
-          }
+      async (error: AxiosError) => {
+        const config = error.config as SessionRequestConfig | undefined;
+
+        if (
+          error.response?.status !== 401 ||
+          typeof window === 'undefined' ||
+          !config
+        ) {
+          return Promise.reject(error);
         }
-        return Promise.reject(error);
+
+        // 401 — access-токен истёк либо сессии нет. Сначала пробуем продлить
+        // сессию; авторизация сбрасывается, только когда продлевать нечего.
+        // Переход на /login после сброса выполнит ProtectedRoute средствами
+        // роутера — без жёсткой перезагрузки, которая теряет несохранённые
+        // правки протокола.
+        const resolution = await resolveUnauthorized(
+          {
+            url: config.url,
+            // Токен берём из заголовка запроса, а не из стора: пока запрос
+            // был в пути, стор мог обновиться, и по нему не понять, с чем
+            // запрос уходил.
+            failedToken: extractBearerToken(config.headers?.Authorization),
+            retries: config._sessionRetries ?? 0,
+            refreshedByServer: config._sessionRefreshed ?? false,
+            error,
+          },
+          {
+            refresher: sessionRefresher,
+            clearSession: () => useAuthStore.getState().clearAuth(),
+          },
+        );
+
+        if (resolution.action === 'reject') {
+          if (resolution.refreshFailed) {
+            // Только метка: ни токенов, ни тела ответа в лог не передаём.
+            logWarn('Не удалось продлить сессию');
+          }
+          return Promise.reject(resolution.error);
+        }
+
+        // Повтор безопасен и для POST: 401 значит, что backend запрос не
+        // выполнял. Актуальный токен подставит интерцептор запроса.
+        config._sessionRetries = (config._sessionRetries ?? 0) + 1;
+        config._sessionRefreshed =
+          (config._sessionRefreshed ?? false) || resolution.fresh;
+
+        return this.client.request(config);
       },
     );
   }

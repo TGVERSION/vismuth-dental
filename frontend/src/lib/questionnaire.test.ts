@@ -3,6 +3,8 @@ import type { PublicLink, PublicLinkDoctor, QuestionnaireStep } from '@/api';
 import { ApiError } from '@/api/base-client';
 import {
   ANSWER_MAX_LENGTH,
+  TIME_HOURS,
+  TIME_MINUTES,
   VISIT_TYPE_QUESTION,
   buildAnswer,
   chatPrompt,
@@ -13,6 +15,7 @@ import {
   doctorSpecializationNames,
   estimateProgress,
   filterDoctors,
+  isAppointmentTime,
   isDateInRange,
   isSameStep,
   isValidPatientName,
@@ -21,8 +24,7 @@ import {
   parseSpecializationOptions,
   patientReplyText,
   screenForStep,
-  slotHours,
-  slotMinutes,
+  splitAppointmentTime,
   startErrorBlock,
 } from './questionnaire';
 
@@ -64,7 +66,6 @@ const makeStep = (patch: Partial<QuestionnaireStep>): QuestionnaireStep => ({
   options: [],
   date_min: null,
   date_max: null,
-  time_slots: [],
   code: null,
   completed: false,
   truncated: false,
@@ -162,7 +163,6 @@ const steps = {
     title: 'Имя, отчество, дата и время приёма',
     date_min: '2026-09-28',
     date_max: '2026-10-28',
-    time_slots: ['09:00', '09:30', '10:00'],
   }),
   code: makeStep({
     step_key: 'code',
@@ -704,66 +704,52 @@ describe('isDateInRange', () => {
   });
 });
 
-describe('slotHours и slotMinutes', () => {
-  const backendDefault = [
-    '09:00',
-    '09:30',
-    '10:00',
-    '10:30',
-    '11:00',
-    '11:30',
-    '12:00',
-    '12:30',
-    '13:00',
-    '13:30',
-    '14:00',
-    '14:30',
-    '15:00',
-    '15:30',
-    '16:00',
-    '16:30',
-    '17:00',
-    '17:30',
-    '18:00',
-  ];
-
-  it('слоты backend по умолчанию', () => {
-    expect(slotHours(backendDefault)).toEqual([
-      '09',
-      '10',
-      '11',
-      '12',
-      '13',
-      '14',
-      '15',
-      '16',
-      '17',
-      '18',
-    ]);
-    expect(slotMinutes(backendDefault, '09')).toEqual(['00', '30']);
-    expect(slotMinutes(backendDefault, '18')).toEqual(['00']);
-    expect(slotMinutes(backendDefault, '08')).toEqual([]);
+describe('время приёма', () => {
+  it('колёса: все часы суток и все минуты часа', () => {
+    expect(TIME_HOURS).toHaveLength(24);
+    expect(TIME_HOURS[0]).toBe('00');
+    expect(TIME_HOURS[23]).toBe('23');
+    expect(TIME_MINUTES).toHaveLength(60);
+    expect(TIME_MINUTES[0]).toBe('00');
+    expect(TIME_MINUTES[59]).toBe('59');
   });
 
-  it('пустой список', () => {
-    expect(slotHours([])).toEqual([]);
-    expect(slotMinutes([], '09')).toEqual([]);
+  it('любое сочетание значений колёс проходит проверку', () => {
+    for (const hour of TIME_HOURS) {
+      for (const minute of TIME_MINUTES) {
+        expect(isAppointmentTime(`${hour}:${minute}`)).toBe(true);
+      }
+    }
   });
 
-  it('несортированные, повторы и мусор', () => {
-    const slots = [
-      '14:30',
-      '09:15',
-      '14:00',
-      '09:15',
-      'утро',
-      '9:00',
-      ' 10:45 ',
-    ];
+  it('границы суток и время вне прежних слотов', () => {
+    expect(isAppointmentTime('00:00')).toBe(true);
+    expect(isAppointmentTime('23:59')).toBe(true);
+    expect(isAppointmentTime('08:15')).toBe(true);
+    expect(isAppointmentTime('19:40')).toBe(true);
+  });
 
-    expect(slotHours(slots)).toEqual(['09', '10', '14']);
-    expect(slotMinutes(slots, '14')).toEqual(['00', '30']);
-    expect(slotMinutes(slots, '10')).toEqual(['45']);
+  it('то, что backend отклонит', () => {
+    expect(isAppointmentTime('')).toBe(false);
+    expect(isAppointmentTime('24:00')).toBe(false);
+    expect(isAppointmentTime('12:60')).toBe(false);
+    expect(isAppointmentTime('9:00')).toBe(false);
+    expect(isAppointmentTime('09:5')).toBe(false);
+    expect(isAppointmentTime(' 09:00')).toBe(false);
+    expect(isAppointmentTime('09:00 ')).toBe(false);
+    expect(isAppointmentTime('09:00:00')).toBe(false);
+    expect(isAppointmentTime('утро')).toBe(false);
+  });
+
+  it('разбор выбранного времени на часы и минуты', () => {
+    expect(splitAppointmentTime('09:30')).toEqual({ hour: '09', minute: '30' });
+    expect(splitAppointmentTime('23:59')).toEqual({ hour: '23', minute: '59' });
+  });
+
+  it('время не выбрано или некорректно — полдень', () => {
+    expect(splitAppointmentTime('')).toEqual({ hour: '12', minute: '00' });
+    expect(splitAppointmentTime('25:00')).toEqual({ hour: '12', minute: '00' });
+    expect(splitAppointmentTime('9:00')).toEqual({ hour: '12', minute: '00' });
   });
 });
 

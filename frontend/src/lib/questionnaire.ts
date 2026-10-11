@@ -470,27 +470,44 @@ export const isDateInRange = (
   return true;
 };
 
-const SLOT = /^(\d{2}):(\d{2})$/;
+const pad2 = (value: number): string => String(value).padStart(2, '0');
 
-const parseSlots = (slots: string[]): { hour: string; minute: string }[] =>
-  slots.flatMap((slot) => {
-    const match = SLOT.exec(slot.trim());
-    return match ? [{ hour: match[1], minute: match[2] }] : [];
-  });
+/** Значения колеса часов. */
+export const TIME_HOURS: readonly string[] = Array.from(
+  { length: 24 },
+  (_, index) => pad2(index),
+);
 
-/** Часы, в которые есть хотя бы один разрешённый слот, по возрастанию. */
-export const slotHours = (slots: string[]): string[] =>
-  Array.from(new Set(parseSlots(slots).map((slot) => slot.hour))).sort();
+/**
+ * Значения колеса минут. Без шага: backend принимает любое время, а приём
+ * бывает назначен и на 09:12.
+ */
+export const TIME_MINUTES: readonly string[] = Array.from(
+  { length: 60 },
+  (_, index) => pad2(index),
+);
 
-/** Минуты разрешённых слотов в указанный час, по возрастанию. */
-export const slotMinutes = (slots: string[], hour: string): string[] =>
-  Array.from(
-    new Set(
-      parseSlots(slots)
-        .filter((slot) => slot.hour === hour)
-        .map((slot) => slot.minute),
-    ),
-  ).sort();
+// То же правило, что у backend (`_APPOINTMENT_TIME_RE` в
+// `questionnaire_flow.py`): любое время суток, строго две цифры и две цифры.
+const APPOINTMENT_TIME = /^([01]\d|2[0-3]):([0-5]\d)$/;
+
+/** Примет ли backend такое время приёма: `HH:MM`, 00:00–23:59. */
+export const isAppointmentTime = (value: string): boolean =>
+  APPOINTMENT_TIME.test(value);
+
+/**
+ * Часы и минуты для колёс выбора времени. Пока время не выбрано (или
+ * значение некорректно) — полдень, середина рабочего дня.
+ */
+export const splitAppointmentTime = (
+  value: string,
+): { hour: string; minute: string } => {
+  const match = APPOINTMENT_TIME.exec(value);
+
+  return match
+    ? { hour: match[1], minute: match[2] }
+    : { hour: '12', minute: '00' };
+};
 
 // ---------------------------------------------------------------------------
 // Ввод пациента

@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { SpinnerButton } from '@/components/SpinnerButton';
 import { formatDateLabel } from '@/lib/calendar';
-import { isDateInRange } from '@/lib/questionnaire';
+import { isAppointmentTime, isDateInRange } from '@/lib/questionnaire';
 import { SheetField } from './SheetField';
 import { DateSheet } from './DateSheet';
 import { TimeSheet } from './TimeSheet';
@@ -13,8 +13,6 @@ interface AppointmentTimeFormProps {
   /** Границы выбора даты из шага, `YYYY-MM-DD` по часам сервера. */
   dateMin: string | null;
   dateMax: string | null;
-  /** Разрешённое время приёма из шага, `HH:MM`. */
-  timeSlots: string[];
   isSubmitting: boolean;
   error: string | null;
   onSubmit: (data: { date: string; time: string }) => void;
@@ -23,14 +21,13 @@ interface AppointmentTimeFormProps {
 /**
  * Дата и время приёма — отдельный шаг после имени.
  *
- * Диапазон дат и слоты времени приходят с сервера: он проверяет ответ по
- * своим часам и своим слотам, и значение, выбранное по часам телефона или
- * вне слотов, получило бы отказ.
+ * Диапазон дат приходит с сервера: он проверяет дату по своим часам, и
+ * значение, выбранное по часам телефона, могло бы получить отказ. Время —
+ * любое `HH:MM`: списка разрешённых слотов backend больше не присылает.
  */
 export const AppointmentTimeForm = ({
   dateMin,
   dateMax,
-  timeSlots,
   isSubmitting,
   error,
   onSubmit,
@@ -41,11 +38,11 @@ export const AppointmentTimeForm = ({
   const [dateSheetOpen, setDateSheetOpen] = useState(false);
   const [timeSheetOpen, setTimeSheetOpen] = useState(false);
 
-  // Без слотов или без диапазона дат выбрать нечего: сервер отклонит любое
-  // значение. Диапазон backend присылает всегда — проверка на всякий случай.
-  const hasSlots = timeSlots.length > 0 && Boolean(dateMin && dateMax);
+  // Без диапазона дат календарь не открыть, и отправить форму нельзя.
+  // Backend присылает диапазон всегда — проверка на всякий случай.
+  const hasDateRange = Boolean(dateMin && dateMax);
   const dateValid = isDateInRange(date, dateMin, dateMax);
-  const timeValid = timeSlots.includes(time);
+  const timeValid = isAppointmentTime(time);
   const canSubmit = dateValid && timeValid && !isSubmitting;
 
   return (
@@ -85,44 +82,41 @@ export const AppointmentTimeForm = ({
           />
         ) : null}
       </div>
-      {touched && !dateValid ? (
+      {!hasDateRange ? (
+        <p role="alert" className="mt-1 text-sm text-[#C2334D]">
+          Нет доступных дат, обратитесь в клинику
+        </p>
+      ) : touched && !dateValid ? (
         <p role="alert" className="mt-1 text-sm text-[#C2334D]">
           Выберите дату в ближайшие 30 дней
         </p>
       ) : null}
 
-      {hasSlots ? (
-        <div className="relative mt-3">
-          <SheetField
-            value={time}
-            placeholder="Время"
-            ariaLabel="Время приёма"
-            onClick={() => setTimeSheetOpen((open) => !open)}
-            icon={<ClockIcon className="h-5 w-5" />}
-            className="min-h-[52px] w-full"
-          />
+      <div className="relative mt-3">
+        <SheetField
+          value={time}
+          placeholder="Время"
+          ariaLabel="Время приёма"
+          onClick={() => setTimeSheetOpen((open) => !open)}
+          icon={<ClockIcon className="h-5 w-5" />}
+          className="min-h-[52px] w-full"
+        />
 
-          {timeSheetOpen ? (
-            <TimeSheet
-              slots={timeSlots}
-              value={time}
-              onClose={() => setTimeSheetOpen(false)}
-              onApply={(next) => {
-                setTime(next);
-                setTimeSheetOpen(false);
-              }}
-              // Десктоп: время складывается из двух значений, поэтому выбор
-              // применяется сразу, а список закроется кликом вне.
-              onChange={setTime}
-            />
-          ) : null}
-        </div>
-      ) : (
-        <p role="alert" className="mt-3 text-sm text-[#C2334D]">
-          Нет доступного времени, обратитесь в клинику
-        </p>
-      )}
-      {hasSlots && touched && !timeValid ? (
+        {timeSheetOpen ? (
+          <TimeSheet
+            value={time}
+            onClose={() => setTimeSheetOpen(false)}
+            onApply={(next) => {
+              setTime(next);
+              setTimeSheetOpen(false);
+            }}
+            // Десктоп: время складывается из двух значений, поэтому выбор
+            // применяется сразу, а список закроется кликом вне.
+            onChange={setTime}
+          />
+        ) : null}
+      </div>
+      {hasDateRange && touched && !timeValid ? (
         <p role="alert" className="mt-1 text-sm text-[#C2334D]">
           Выберите время
         </p>
@@ -137,7 +131,7 @@ export const AppointmentTimeForm = ({
       <div className="mt-auto pb-[calc(env(safe-area-inset-bottom)+16px)] pt-8">
         <button
           type="submit"
-          disabled={isSubmitting || !hasSlots}
+          disabled={isSubmitting || !hasDateRange}
           className="min-h-[52px] w-full rounded-xl bg-[var(--q-brand)] px-4 text-base font-medium text-[var(--q-brand-contrast)] disabled:opacity-60"
         >
           {isSubmitting ? <SpinnerButton /> : 'Подтвердить'}

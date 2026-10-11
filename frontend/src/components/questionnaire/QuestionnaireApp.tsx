@@ -72,7 +72,6 @@ const PatientInfoStep = ({
     <AppointmentTimeForm
       dateMin={step.date_min}
       dateMax={step.date_max}
-      timeSlots={step.time_slots}
       isSubmitting={isSubmitting}
       error={submitError}
       onSubmit={({ date, time }) => {

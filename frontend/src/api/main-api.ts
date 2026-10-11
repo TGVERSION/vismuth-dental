@@ -1,4 +1,8 @@
-import { ApiClient, RequestOptions } from './base-client';
+import {
+  ApiClient,
+  RequestOptions,
+  registerSessionRefresh,
+} from './base-client';
 import { fileExtensionForMime } from '@/lib/voice-recording';
 import type {
   ConsultationsRequest,
@@ -163,6 +167,23 @@ const speechApiClient = new ApiClient({
   retries: 0,
 });
 
+// Обновление сессии по refresh-cookie.
+//
+// `auth: false` — клиент без интерцепторов: 401 от самого обновления значит
+// «сессии нет» и не должен запускать обновление заново. Заголовок
+// Authorization здесь тоже не нужен: backend читает только cookie, а браузер
+// отправляет её сам — запрос идёт на тот же origin через прокси Next.
+//
+// `retries: 0` — refresh-токен одноразовый. Если сервер уже обновил его,
+// а ответ потерялся, повтор предъявит отозванный токен, и backend отзовёт
+// все сессии пользователя.
+const sessionApiClient = new ApiClient({
+  baseUrl: '/api/main',
+  timeout: 15000,
+  retries: 0,
+  auth: false,
+});
+
 export const mainApi = {
   serviceUsers: {
     register: (data: LoginRequest) =>
@@ -175,6 +196,13 @@ export const mainApi = {
       apiClient.post<TokenResponse>('/auth/login', data),
 
     logout: () => apiClient.post<LoginResponse>('/auth/logout'),
+
+    /**
+     * Новый access-токен по refresh-cookie. Вызывается не из интерфейса,
+     * а обработчиком 401 в `base-client.ts` — и только им: параллельный
+     * вызов из другого места отозвал бы все сессии пользователя.
+     */
+    refresh: () => sessionApiClient.post<TokenResponse>('/auth/refresh'),
 
     serviceUser: () => apiClient.get<ServiceUserData>('/service_user'),
 
@@ -606,3 +634,9 @@ export const mainApi = {
     ) => apiClient.get<RefSearchResponse>(`/ref/${name}`, params),
   },
 };
+
+// Клиенты с авторизацией продлевают сессию этим запросом, когда получают 401
+// (см. «Продление сессии» в `base-client.ts`).
+registerSessionRefresh(
+  async () => (await mainApi.serviceUsers.refresh()).access_token,
+);

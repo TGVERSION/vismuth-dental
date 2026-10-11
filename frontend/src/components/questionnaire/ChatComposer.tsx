@@ -177,7 +177,10 @@ export const ChatComposer = ({
     // клавиатуры) экранную клавиатуру не открывает.
     <div className="bg-[var(--q-bg)] px-4 pb-[calc(env(safe-area-inset-bottom)+12px)] has-[textarea:focus]:pb-3">
       {/* Быстрые ответы прижаты вправо, к стороне ответов пациента: так
-          видно, что это его реплика, а не продолжение вопроса. */}
+          видно, что это его реплика, а не продолжение вопроса.
+          Чип контурный и полностью скруглён: с серой заливкой и скруглением
+          пузыря он выглядел как уже отправленное сообщение. При нажатии
+          заливается цветом бренда — как ответ, который появится в ленте. */}
       {prompt.chips.length ? (
         <div className="mb-3 flex flex-wrap justify-end gap-2">
           {prompt.chips.map((chip) => (
@@ -187,7 +190,7 @@ export const ChatComposer = ({
               onMouseDown={keepInputFocus}
               onClick={() => handleChip(chip)}
               disabled={isAwaiting}
-              className="min-h-[44px] rounded-xl bg-[var(--q-surface)] px-4 text-base disabled:opacity-60"
+              className="min-h-[44px] rounded-full border border-[var(--q-brand)] bg-[var(--q-bg)] px-4 text-base text-[var(--q-brand)] transition-colors active:bg-[var(--q-brand)] active:text-[var(--q-brand-contrast)] disabled:opacity-60"
             >
               {chip.label}
             </button>

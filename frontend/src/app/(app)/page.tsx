@@ -43,8 +43,6 @@ import {
   revertVoiceFill,
   type VoiceFillEntry,
 } from '@/lib/voice-fill';
-import { hasEnoughSessionTime } from '@/lib/jwt';
-import { RECORDING_TOKEN_MARGIN_MS } from '@/lib/voice-recording';
 
 type SectionData = DraftSection;
 export interface TemplateUI extends ListsTemplatesResponse {
@@ -482,7 +480,6 @@ export default function Home() {
     onCompleted: watchTranscription,
   });
 
-  const accessToken = useAuthStore((state) => state.accessToken);
   // Раскладывать результат некуда, если у разделов нет полей структуры.
   const hasStructureFields = sections.some((section) => section.fieldMeta?.id);
 
@@ -492,15 +489,10 @@ export default function Home() {
       ? 'У протокола нет структуры: результат записи некуда разложить'
       : null;
 
+  // Срок access-токена перед записью не проверяется: сессию продлевает
+  // refresh-cookie, и 401 посреди приёма клиент обрабатывает сам
+  // (см. «Продление сессии» в src/api/base-client.ts).
   const handleStartRecording = () => {
-    // Токен живёт 60 минут и не продлевается: если он истечёт посреди приёма,
-    // 401 сбросит авторизацию и запись оборвётся.
-    if (!hasEnoughSessionTime(accessToken, RECORDING_TOKEN_MARGIN_MS)) {
-      toast.warning(
-        'Сессия скоро истечёт. Лучше выйти и войти заново, иначе запись может прерваться посреди приёма.',
-        { toastId: 'voice-session-expiring' },
-      );
-    }
     void recorder.start();
   };
 

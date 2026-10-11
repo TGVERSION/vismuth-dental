@@ -683,8 +683,6 @@ export interface QuestionnaireStep {
   /** YYYY-MM-DD по часам сервера. */
   date_min: string | null;
   date_max: string | null;
-  /** HH:MM — единственные значения времени, которые примет сервер. */
-  time_slots: string[];
   /** Четыре цифры на шаге `code`. */
   code: string | null;
   completed: boolean;

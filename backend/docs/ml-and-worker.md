@@ -13,6 +13,15 @@
 
 Ошибки upstream превращаются в HTTP-ошибки FastAPI с `detail` от ml-service, если он есть.
 
+### Clinrec: каталог и заготовка ML
+
+Каталог: [`routers/clinrec_guidelines.py`](../app/routers/clinrec_guidelines.py) + [`services/s3.py`](../app/services/s3.py).  
+Контракт тел/путей: [`services/clinrec_ml.py`](../app/services/clinrec_ml.py) — без правок ml-service в этом срезе.
+
+- `POST /clinrec/guidelines/{id}/index` (super_admin): `head_object` → presigned → `POST {ML}/clinrec/index` (`CLINREC_INDEX_TIMEOUT`). Пока пути на ML нет — 502 / статус `failed`.
+- `DELETE /clinrec/guidelines/{id}`: best-effort `DELETE {ML}/clinrec/index/{code}` (пока no-op при ошибке).
+- `POST /ml_clinrec_check`: resolve по `mkb` / `guideline_code` / `main_diagnosis`; в ML пока только legacy `{ protocol_text }`. Целевой body с guideline+presigned — флаг `use_guideline_source` в `request_check`.
+
 ## Redis Stream
 
 Настройки: `REDIS_URL`, `REDIS_STREAM_KEY`, `REDIS_CONSUMER_GROUP`, `REDIS_CONSUMER_NAME` — см. [configuration.md](configuration.md).

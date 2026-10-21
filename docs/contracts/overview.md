@@ -52,6 +52,7 @@ Access JWT короткий (~15 мин). Длинная сессия — чер
 
 - `/super-admin/clinics*` (CRUD клиник, invitations)
 - `/super-admin/statistics` (сводная статистика анкет)
+- `/clinrec/guidelines` запись (POST/PATCH/DELETE/index)
 
 ## Группы контрактов
 
@@ -72,6 +73,7 @@ Access JWT короткий (~15 мин). Длинная сессия — чер
 | [protocol-structures.md](protocol-structures.md) | `/protocol-structures`, `/protocol-fields-main` |
 | [template-groups.md](template-groups.md) | `/template-groups` |
 | [dictionaries.md](dictionaries.md) | `/dictionary`, `/ref`, `/mkb10` |
+| [clinrec.md](clinrec.md) | `/clinrec/guidelines` каталог КР, resolve, index |
 | [ml.md](ml.md) | ML proxy и dict-autocomplete |
 
 Системный: `GET /health` — без auth, `{ status: "ok" }`.

@@ -83,6 +83,20 @@ Privileged (`super_admin` \| `admin`): [`require_privileged`](../app/deps.py).
 
 Whitelist: [`dictionaries_config.py`](../app/dictionaries_config.py).
 
+## Клинические рекомендации (каталог)
+
+Контракт: [clinrec.md](../../docs/contracts/clinrec.md). Префикс `/clinrec/guidelines`.
+
+| Путь | Auth | Назначение |
+|------|------|------------|
+| `POST /clinrec/guidelines` | super_admin | Создать запись (PDF уже в S3) |
+| `GET /clinrec/guidelines` | JWT | Список (`active` для врача; `?status=` у SA) |
+| `GET /clinrec/guidelines/resolve` | JWT | Resolve по `mkb` / `diagnosis` |
+| `GET /clinrec/guidelines/{id}` | JWT | Детали |
+| `PATCH /clinrec/guidelines/{id}` | super_admin | Обновление |
+| `DELETE /clinrec/guidelines/{id}` | super_admin | Удаление (+ best-effort ML delete) |
+| `POST /clinrec/guidelines/{id}/index` | super_admin | Синхронная индексация PDF в ML |
+
 ## ML (proxy и dict-autocomplete)
 
 Контракт: [ml.md](../../docs/contracts/ml.md). Internals: [ml-and-worker.md](ml-and-worker.md).
@@ -92,7 +106,7 @@ Whitelist: [`dictionaries_config.py`](../app/dictionaries_config.py).
 | `POST /ml_autocomplete` | Proxy → ml-service (или dict-режим); ML-режим при истекшей подписке — `503 subscription_expired` |
 | `POST /ml_mkb_code` | Proxy подбора кода МКБ; при истекшей подписке — `503 subscription_expired` |
 | `POST /ml_fullness_complaints` | Proxy проверки полноты; при истекшей подписке — `503 subscription_expired` |
-| `POST /ml_clinrec_check` | Proxy клинических рекомендаций; при истекшей подписке — `503 subscription_expired` |
+| `POST /ml_clinrec_check` | Proxy клинреков (`protocol_text` + опц. `mkb` / `guideline_code` / `main_diagnosis`); в ML пока legacy body; при истекшей подписке — `503 subscription_expired` |
 | `POST /autocomplete_dict/complete_dict` | Dict-autocomplete в Postgres |
 
 ## Регистрация роутеров

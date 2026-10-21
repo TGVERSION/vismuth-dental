@@ -21,3 +21,4 @@ from .clinic_membership_specialization import (  # noqa: F401
 )
 from .questionnaire import Questionnaire, QuestionnaireAnswer  # noqa: F401
 from .refresh_token import RefreshToken  # noqa: F401
+from .clinrec_guideline import ClinrecGuideline, ClinrecGuidelineMkb  # noqa: F401

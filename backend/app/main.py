@@ -22,6 +22,7 @@ from .routers.super_admin.statistics import router as super_admin_statistics_rou
 from .routers.clinic_admin import router as clinic_admin_router
 from .routers.public_questionnaire import router as public_questionnaire_router
 from .routers.questionnaires import router as questionnaires_router
+from .routers.clinrec_guidelines import router as clinrec_guidelines_router
 
 
 app = FastAPI(
@@ -107,6 +108,10 @@ app = FastAPI(
             "description": "ML-proxy: автодополнение полей протокола.",
         },
         {
+            "name": "clinrec",
+            "description": "Каталог клинических рекомендаций: CRUD, resolve, индексация.",
+        },
+        {
             "name": "ml_clinrec_check",
             "description": "ML-proxy: проверка соответствия клиническим рекомендациям.",
         },
@@ -142,6 +147,7 @@ app.include_router(super_admin_statistics_router)
 app.include_router(clinic_admin_router)
 app.include_router(public_questionnaire_router)
 app.include_router(questionnaires_router)
+app.include_router(clinrec_guidelines_router)
 
 
 @app.get("/health", tags=["system"], summary="Health check")

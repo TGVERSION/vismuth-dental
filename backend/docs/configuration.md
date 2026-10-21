@@ -86,18 +86,19 @@ Invite создаётся даже при сбое SMTP: в ответе `invite
 
 Локально — S3-совместимый **Silo** (форк MinIO) в compose: сервисы `minio`, `minio-init`. Образ `pgsty/silo` с pinned digest: `quay.io/minio/*` больше не отдаётся анонимно. Env и API совместимы с MinIO (`MINIO_ROOT_*`, `/minio/health/live`, `mc`). Бакет приватный: `vismuth-clinrec`. Ключи объектов: `guidelines/{source_id}/{version}/source.pdf` (см. [clinrec-architecture.md](../../../clinrec-architecture.md)).
 
-Имена переменных — контракт для будущего клиента; в `app/config.py` пока **не** читаются.
+Читаются в [`app/config.py`](../app/config.py); клиент — [`app/services/s3.py`](../app/services/s3.py) (boto3).
 
 | Переменная | Default | Описание |
 |------------|---------|----------|
-| `S3_ENDPOINT_URL` | `http://minio:9000` | Endpoint для SDK (put/get с backend) |
-| `S3_PRESIGN_ENDPOINT_URL` | `http://minio:9000` | Host внутри presigned URL (SigV4); пока ML в той же сети — как `S3_ENDPOINT_URL` |
+| `S3_ENDPOINT_URL` | `http://minio:9000` | Endpoint для SDK (`head_object` с backend) |
+| `S3_PRESIGN_ENDPOINT_URL` | `http://minio:9000` | Host внутри presigned URL (SigV4); ML в той же сети — как `S3_ENDPOINT_URL` |
 | `S3_ACCESS_KEY` | — | Access key (= `MINIO_ROOT_USER` в compose) |
 | `S3_SECRET_KEY` | — | Secret key (= `MINIO_ROOT_PASSWORD` в compose) |
-| `S3_BUCKET` | `vismuth-clinrec` | Имя бакета |
+| `S3_BUCKET` | `vismuth-clinrec` | Имя бакета (пишется в `clinrec_guideline.s3_bucket`) |
 | `S3_REGION` | `us-east-1` | Обязателен для boto3; MinIO значение не использует |
 | `S3_ADDRESSING_STYLE` | `path` | `path` для MinIO; в облаке при необходимости `virtual` |
 | `S3_PRESIGN_TTL_SECONDS` | `900` | TTL presigned GET для ML |
+| `CLINREC_INDEX_TIMEOUT` | `600` | Timeout HTTP backend→ML на `POST /clinrec/index` (сек) |
 | `MINIO_API_PORT` | `9000` | Publish API на хост |
 | `MINIO_CONSOLE_PORT` | `9001` | Publish консоли на хост |
 

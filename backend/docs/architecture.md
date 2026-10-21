@@ -69,7 +69,7 @@ flowchart LR
 - **Postgres** — основная БД (`POSTGRES_*`).
 - **Redis** — stream событий ML/autocomplete + rate-limit анкет (`REDIS_*`).
 - **ml-service** — HTTP upstream (`ML_SERVICE_URL`, в docker-сети обычно `http://ml-service:8000`); анкета: `/collect_form` (уточнения, state в `questionnaire.collect_form_state`) и `/summarize_form` (после кода).
-- **MinIO / Silo** — локальный S3 для PDF клинреков (`S3_*`, бакет `vismuth-clinrec`). В compose: сервисы `minio` + `minio-init` на образе `pgsty/silo` (S3 API как у MinIO; официальные `quay.io/minio/*` недоступны анонимно). Клиент и endpoint проверки — следующие этапы. Ключи: `guidelines/{source_id}/{version}/source.pdf`.
+- **MinIO / Silo** — локальный S3 для PDF клинреков (`S3_*`, бакет `vismuth-clinrec`). В compose: сервисы `minio` + `minio-init` на образе `pgsty/silo`. Клиент: [`app/services/s3.py`](../app/services/s3.py) (presign + head). Каталог: `/clinrec/guidelines`, проверка: `POST /ml_clinrec_check`. Ключи: `guidelines/{source_id}/{version}/source.pdf`.
 
 ## Конфигурация в compose
 

@@ -64,6 +64,10 @@ docker-compose.override.yml
 *.sqlite3
 data/local/
 
+# Clinrec S3 loader (venv + download journal)
+scripts/clinrec/.venv/
+scripts/clinrec/.cache/
+
 # ML models (large binaries)
 ml-service/finetuned_autocomplete_kaggle/
 ml-service/autocomplete_model/

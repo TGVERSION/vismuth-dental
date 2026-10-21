@@ -5,6 +5,19 @@ from pydantic import BaseModel, Field
 
 class MlClinrecCheckRequest(BaseModel):
     protocol_text: str = Field(..., min_length=1)
+    mkb: Optional[str] = Field(
+        default=None,
+        description="Код МКБ-10 для resolve guideline (предпочтительный вход с UI)",
+    )
+    guideline_code: Optional[str] = Field(
+        default=None,
+        min_length=1,
+        description="Код guideline из каталога; если задан — должен быть active",
+    )
+    main_diagnosis: Optional[str] = Field(
+        default=None,
+        description="Строка диагноза с ведущим МКБ, если mkb/guideline_code не заданы",
+    )
 
 
 class ClinrecFinding(BaseModel):
@@ -21,3 +34,5 @@ class MlClinrecCheckResponse(BaseModel):
     findings: list[ClinrecFinding]
     compliant_sections: list[str]
     error: Optional[str] = None
+    guideline_code: Optional[str] = None
+    guideline_title: Optional[str] = None

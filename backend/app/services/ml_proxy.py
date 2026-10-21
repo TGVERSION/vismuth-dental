@@ -92,16 +92,18 @@ async def _publish_ml_response_log(
             await redis.aclose()
 
 
-async def proxy_post_to_ml(
+async def _proxy_request_to_ml(
+    method: str,
     path: str,
-    body: dict,
     *,
+    body: dict | None = None,
     timeout: float = 180.0,
     log_context: MlProxyLogContext | None = None,
 ) -> dict:
     async with httpx.AsyncClient(timeout=timeout) as client:
         try:
-            response = await client.post(
+            response = await client.request(
+                method,
                 f"{settings.ml_service_url}{path}",
                 json=body,
             )
@@ -142,6 +144,16 @@ async def proxy_post_to_ml(
                 status_code=status.HTTP_502_BAD_GATEWAY,
                 detail="ml-service unavailable",
             ) from exc
+
+    if response.status_code == status.HTTP_204_NO_CONTENT or not response.content:
+        await _publish_ml_response_log(
+            log_context=log_context,
+            ml_path=path,
+            http_status_code=response.status_code,
+            response_status="success",
+        )
+        return {}
+
     try:
         response_body = response.json()
     except (ValueError, TypeError):
@@ -160,6 +172,38 @@ async def proxy_post_to_ml(
         http_status_code=response.status_code,
         response_status="success",
         response_comment=_extract_success_comment(response_body),
-        response_payload=response_body if isinstance(response_body, (dict, list)) else None,
+        response_payload=(
+            response_body if isinstance(response_body, (dict, list)) else None
+        ),
     )
-    return response_body
+    return response_body if isinstance(response_body, dict) else {"data": response_body}
+
+
+async def proxy_post_to_ml(
+    path: str,
+    body: dict,
+    *,
+    timeout: float = 180.0,
+    log_context: MlProxyLogContext | None = None,
+) -> dict:
+    return await _proxy_request_to_ml(
+        "POST",
+        path,
+        body=body,
+        timeout=timeout,
+        log_context=log_context,
+    )
+
+
+async def proxy_delete_to_ml(
+    path: str,
+    *,
+    timeout: float = 60.0,
+    log_context: MlProxyLogContext | None = None,
+) -> dict:
+    return await _proxy_request_to_ml(
+        "DELETE",
+        path,
+        timeout=timeout,
+        log_context=log_context,
+    )

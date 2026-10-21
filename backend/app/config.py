@@ -104,6 +104,21 @@ class Settings(BaseModel):
         "yes",
     }
 
+    s3_endpoint_url: str = os.getenv("S3_ENDPOINT_URL", "http://minio:9000").rstrip("/")
+    s3_presign_endpoint_url: str = os.getenv(
+        "S3_PRESIGN_ENDPOINT_URL",
+        os.getenv("S3_ENDPOINT_URL", "http://minio:9000"),
+    ).rstrip("/")
+    s3_access_key: str = os.getenv("S3_ACCESS_KEY", "")
+    s3_secret_key: str = os.getenv("S3_SECRET_KEY", "")
+    s3_bucket: str = os.getenv("S3_BUCKET", "vismuth-clinrec")
+    s3_region: str = os.getenv("S3_REGION", "us-east-1")
+    s3_addressing_style: str = os.getenv("S3_ADDRESSING_STYLE", "path")
+    s3_presign_ttl_seconds: int = int(os.getenv("S3_PRESIGN_TTL_SECONDS", "900"))
+    clinrec_index_timeout: float = float(
+        os.getenv("CLINREC_INDEX_TIMEOUT", "600"),
+    )
+
     @property
     def database_url_async(self) -> str:
         return (

@@ -49,8 +49,20 @@
 
 - **Auth:** JWT
 - **Назначение:** проверка клинических рекомендаций
-- **Поведение:** проверка подписки; proxy ML `/clinrec_checking/check` с `protocol_text`; без Redis
+- **Поведение:**
+  - проверка подписки;
+  - request: `protocol_text` + опционально `mkb` / `guideline_code` / `main_diagnosis`;
+  - без `mkb`/`guideline_code`/`main_diagnosis` — в ML legacy `{ protocol_text }` (как раньше);
+  - с `guideline_code` — строка должна быть `active`, иначе `422`, ML не вызывается;
+  - с `mkb` или `main_diagnosis` — resolve как `GET /clinrec/guidelines/resolve`; нет active → `422`;
+  - **сейчас** в ML всегда уходит только `{ protocol_text }` (текущий ml-service);
+  - целевой body с `guideline` + presigned GET уже собран в `services/clinrec_ml.py` (`use_guideline_source=True` — когда ML будет готов);
+  - в ответ добавляются `guideline_code` / `guideline_title`, если guideline найден;
+  - без Redis
+- **Frontend:** UI может слать `mkb` + `protocol_text`; без mkb — как раньше
 - **Код:** `proxy_ml_clinrec_check`
+
+Каталог: [clinrec.md](clinrec.md).
 
 ## POST /autocomplete_dict/complete_dict
 

@@ -19,6 +19,7 @@ Source of truth схемы: [`alembic/versions/`](../alembic/versions/). Ста�
 | `0009_questionnaires` | `questionnaire`, `questionnaire_answer`, связь протокол↔анкета |
 | `0010_refresh_tokens` | `refresh_token` — opaque refresh (hash), rotation, revoke |
 | `0011_collect_form_state` | `questionnaire.collect_form_state` JSONB — FormProgress из `/collect_form` |
+| `0012_clinrec_guidelines` | `clinrec_guideline` + `clinrec_guideline_mkb` — каталог КР и префиксы МКБ |
 
 Порядок важен из‑за FK (`service_user` раньше протоколов и т.д.).
 
@@ -114,6 +115,15 @@ docker compose exec -T db pg_dump -U vismuth vismuth > backup_$(date +%F).sql
 docker compose run --rm backend alembic stamp head
 ```
 
-(либо после успешного первого `upgrade` проверить `alembic current` → `0011_collect_form_state`).
+(либо после успешного первого `upgrade` проверить `alembic current` → `0012_clinrec_guidelines`).
+
+### Клинические рекомендации (0012)
+
+| Таблица | Суть |
+|--------|------|
+| `clinrec_guideline` | Текущая версия КР: `code`, `source_id`, title, status (`draft`\|`uploaded`\|`indexing`\|`active`\|`failed`\|`disabled`), `version`, `s3_bucket`/`s3_key`, `index_error` |
+| `clinrec_guideline_mkb` | Префиксы МКБ → guideline; `mkb_prefix` глобально UNIQUE |
+
+Одна строка = текущая редакция; история версий в БД не хранится. Seed АГ нет — запись создаёт super_admin на объект из `scripts/clinrec/`.
 
 4. Таблицы вроде старого `ref_mis` на сервере **не удаляются** автоматически — просто больше не создаются новыми миграциями.

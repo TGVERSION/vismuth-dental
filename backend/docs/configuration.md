@@ -82,11 +82,32 @@ Invite создаётся даже при сбое SMTP: в ответе `invite
 | `QUESTIONNAIRE_APPOINTMENT_DAYS_AHEAD` | `30` | Календарь записи |
 | `TRUST_PROXY` | `false` | Брать IP из `X-Forwarded-For` |
 
+## S3 / MinIO (PDF клинреков)
+
+Локально — S3-совместимый **Silo** (форк MinIO) в compose: сервисы `minio`, `minio-init`. Образ `pgsty/silo` с pinned digest: `quay.io/minio/*` больше не отдаётся анонимно. Env и API совместимы с MinIO (`MINIO_ROOT_*`, `/minio/health/live`, `mc`). Бакет приватный: `vismuth-clinrec`. Ключи объектов: `guidelines/{source_id}/{version}/source.pdf` (см. [clinrec-architecture.md](../../../clinrec-architecture.md)).
+
+Имена переменных — контракт для будущего клиента; в `app/config.py` пока **не** читаются.
+
+| Переменная | Default | Описание |
+|------------|---------|----------|
+| `S3_ENDPOINT_URL` | `http://minio:9000` | Endpoint для SDK (put/get с backend) |
+| `S3_PRESIGN_ENDPOINT_URL` | `http://minio:9000` | Host внутри presigned URL (SigV4); пока ML в той же сети — как `S3_ENDPOINT_URL` |
+| `S3_ACCESS_KEY` | — | Access key (= `MINIO_ROOT_USER` в compose) |
+| `S3_SECRET_KEY` | — | Secret key (= `MINIO_ROOT_PASSWORD` в compose) |
+| `S3_BUCKET` | `vismuth-clinrec` | Имя бакета |
+| `S3_REGION` | `us-east-1` | Обязателен для boto3; MinIO значение не использует |
+| `S3_ADDRESSING_STYLE` | `path` | `path` для MinIO; в облаке при необходимости `virtual` |
+| `S3_PRESIGN_TTL_SECONDS` | `900` | TTL presigned GET для ML |
+| `MINIO_API_PORT` | `9000` | Publish API на хост |
+| `MINIO_CONSOLE_PORT` | `9001` | Publish консоли на хост |
+
+Переезд в облачный S3: те же бакет и ключи объектов; меняются endpoint’ы, ключи доступа и при необходимости `S3_ADDRESSING_STYLE`.
+
 ## Локальный запуск vs docker
 
-| Контекст | `POSTGRES_HOST` | `ML_SERVICE_URL` |
-|----------|-----------------|------------------|
-| Контейнеры compose | `db` | `http://ml-service:8000` |
-| Процессы на хосте | `localhost` | `http://localhost:8001` (порт publish ml-service) |
+| Контекст | `POSTGRES_HOST` | `ML_SERVICE_URL` | `S3_ENDPOINT_URL` / `S3_PRESIGN_ENDPOINT_URL` |
+|----------|-----------------|------------------|-----------------------------------------------|
+| Контейнеры compose | `db` | `http://ml-service:8000` | `http://minio:9000` |
+| Процессы на хосте | `localhost` | `http://localhost:8001` (порт publish ml-service) | `http://localhost:9000` (и оба URL, если presign для процесса на хосте) |
 
 `API_MAIN_URL` / `API_ML_URL` в `.env` относятся к **frontend** (Next.js rewrites), backend их не читает.

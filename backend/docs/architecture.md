@@ -53,11 +53,14 @@ flowchart LR
   db[(Postgres)]
   redis[(Redis)]
   ml[ml_service]
+  minio[MinIO]
 
   frontend --> backend
   backend --> db
   backend --> redis
   backend --> ml
+  backend -.->|"будущий put/presign PDF клинреков"| minio
+  ml -.->|"будущий GET по presigned URL"| minio
   worker --> redis
   worker --> db
   qWorker --> db
@@ -66,9 +69,11 @@ flowchart LR
 - **Postgres** — основная БД (`POSTGRES_*`).
 - **Redis** — stream событий ML/autocomplete + rate-limit анкет (`REDIS_*`).
 - **ml-service** — HTTP upstream (`ML_SERVICE_URL`, в docker-сети обычно `http://ml-service:8000`); анкета: `/collect_form` (уточнения, state в `questionnaire.collect_form_state`) и `/summarize_form` (после кода).
+- **MinIO / Silo** — локальный S3 для PDF клинреков (`S3_*`, бакет `vismuth-clinrec`). В compose: сервисы `minio` + `minio-init` на образе `pgsty/silo` (S3 API как у MinIO; официальные `quay.io/minio/*` недоступны анонимно). Клиент и endpoint проверки — следующие этапы. Ключи: `guidelines/{source_id}/{version}/source.pdf`.
 
 ## Конфигурация в compose
 
 - `env_file: .env` из корня `vismuth/`.
-- Внутри сети контейнеров: `POSTGRES_HOST=db`, `REDIS_HOST=redis`, не IP хоста.
+- Внутри сети контейнеров: `POSTGRES_HOST=db`, `REDIS_HOST=redis`, `S3_ENDPOINT_URL=http://minio:9000`, не IP хоста.
 - Порт API на хост: `BACKEND_PORT` (по умолчанию 8000).
+- MinIO на хост: `MINIO_API_PORT` (9000), консоль `MINIO_CONSOLE_PORT` (9001).

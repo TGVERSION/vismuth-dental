@@ -46,6 +46,11 @@ interface SectionInputProps {
     status: { color: string; analysis: string } | null,
   ) => void;
   fieldMeta?: StructureProtocolsFields;
+  /**
+   * Содержимое между заголовком и текстом поля — например, ход работы
+   * помощника над этим разделом. Только у текстовых полей.
+   */
+  aboveValue?: React.ReactNode;
 }
 
 function parseFieldOptions(jsonb: unknown): string[] {
@@ -65,6 +70,7 @@ export const SectionInput: React.FC<SectionInputProps> = ({
   onAnalysisChange,
   isActive,
   fieldMeta,
+  aboveValue,
 }) => {
   const editableRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -651,6 +657,7 @@ export const SectionInput: React.FC<SectionInputProps> = ({
     <div ref={containerRef} className="flex flex-col mb-6 relative">
       <div className="grow relative">
         {renderLabel()}
+        {aboveValue && <div className="ml-7 mb-3">{aboveValue}</div>}
 
         <div className="flex ml-7 items-center gap-3">
           <div className="relative w-full">

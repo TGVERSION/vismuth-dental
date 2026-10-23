@@ -24,8 +24,18 @@ import { logError } from '@/lib/logger';
 import { isAbortError } from '@/api/base-client';
 import {
   DEFAULT_ACTIVE_SECTION,
+  findDmsTargetSections,
+  findMainDiagnosisSection,
   findMainDiagnosisValue,
 } from '@/lib/protocol-fields';
+import { buildDmsRequest } from '@/lib/dms-justification';
+import { useDmsJustification } from '@/hooks/useDmsJustification';
+import { DmsReviewBlock } from '@/components/dms/DmsReviewBlock';
+import {
+  DmsFieldError,
+  DmsLoadingNotice,
+  DmsNoGuidelineNotice,
+} from '@/components/dms/DmsNotices';
 import {
   buildSectionsFromStructure,
   type DraftSection,
@@ -98,7 +108,7 @@ export default function Home() {
     fetchStructureById,
   } = useProtocolStructuresStore();
   const { user } = useAuthStore();
-  const { fetchUserSettings, voiceEnabled } = useHelpersStore();
+  const { fetchUserSettings, voiceEnabled, dmsEnabled } = useHelpersStore();
   const [templateTitle, setTemplateTitle] = useState<string>(
     'Протокол консультации терапевта №1',
   );
@@ -480,6 +490,25 @@ export default function Home() {
     onCompleted: watchTranscription,
   });
 
+  // Обоснование для ДМС: предложения помощника живут в хуке, а не в форме,
+  // пока врач их не принял.
+  const dms = useDmsJustification(protocolId);
+  const mainDiagnosisSection = findMainDiagnosisSection(sections);
+  // Кнопка показывается, когда есть диагноз и непустые «Рекомендации» или
+  // «Назначения» — ровно тогда, когда помощнику есть что отправить.
+  const canJustifyDms = dmsEnabled && buildDmsRequest(sections) !== null;
+  // Помощник не запускается, пока идёт запись: расшифровка поменяла бы
+  // разделы, по которым строится предложение. `unsupported` и `error` —
+  // не запись: в браузере без микрофона помощник должен работать.
+  const isRecorderActive =
+    recorder.state === 'starting' ||
+    recorder.state === 'recording' ||
+    recorder.state === 'paused' ||
+    recorder.state === 'finishing';
+  // Пока помощник работает или предложения ждут решения, разделы нельзя
+  // менять шаблоном или записью: «Было» перестало бы совпадать с формой.
+  const isDmsBusy = dms.isLocked || dms.hasPendingReview;
+
   // Раскладывать результат некуда, если у разделов нет полей структуры.
   const hasStructureFields = sections.some((section) => section.fieldMeta?.id);
 
@@ -487,7 +516,9 @@ export default function Home() {
     ? 'Сначала откройте или создайте протокол'
     : !hasStructureFields
       ? 'У протокола нет структуры: результат записи некуда разложить'
-      : null;
+      : isDmsBusy
+        ? 'Сначала завершите обоснование для ДМС'
+        : null;
 
   // Срок access-токена перед записью не проверяется: сессию продлевает
   // refresh-cookie, и 401 посреди приёма клиент обрабатывает сам
@@ -704,6 +735,31 @@ export default function Home() {
         ? prev.filter((entry) => entry.sectionId !== id)
         : prev,
     );
+    // Диагноз исправлен — сообщение «нет клинических рекомендаций» к нему
+    // больше не относится.
+    if (dms.phase === 'nofound' && mainDiagnosisSection?.id === id) {
+      dms.dismissNoGuideline();
+    }
+  };
+
+  const handleDmsStart = () => {
+    // Ход работы показывается в разделах помощника — прокручиваем к ним.
+    const firstTarget = findDmsTargetSections(sections).find((section) =>
+      section.value.trim(),
+    );
+    if (firstTarget) handleSectionClick(firstTarget.sectionKey);
+
+    const diagnosisKey = mainDiagnosisSection?.sectionKey;
+    void dms.start(sections).then((phase) => {
+      // Причина отказа — в диагнозе: сообщение стоит у него.
+      if (phase === 'nofound' && diagnosisKey) handleSectionClick(diagnosisKey);
+    });
+  };
+
+  const handleDmsAccept = (sectionId: number) => {
+    const text = dms.accept(sectionId);
+    // Тот же путь, что ручной ввод: автосохранение и снятие подсветки записи.
+    if (text !== null) handleValueChange(sectionId, text);
   };
 
   const handleSave = async () => {
@@ -965,6 +1021,30 @@ export default function Home() {
               className="mx-6.25 mt-2 bg-white border-b border-b-[#E9ECEF]"
             >
               <div className="mx-auto mb-2 flex flex-row items-center justify-center gap-6">
+                {dmsEnabled && (canJustifyDms || dms.phase !== 'idle') && (
+                  <button
+                    type="button"
+                    onClick={handleDmsStart}
+                    disabled={isDmsBusy || isRecorderActive || isTranscribing}
+                    title={
+                      dms.isLocked
+                        ? 'Помощник работает'
+                        : dms.hasPendingReview
+                          ? 'Сначала примите или оставьте предложения в разделах'
+                          : isRecorderActive || isTranscribing
+                            ? 'Дождитесь окончания записи приёма'
+                            : undefined
+                    }
+                    className={`cursor-pointer rounded-xl hover:bg-white shadow-custom-hover flex flex-row items-center gap-2 py-3 px-3.75 ${
+                      isDmsBusy
+                        ? 'shadow-custom disabled:cursor-progress'
+                        : 'disabled:cursor-not-allowed disabled:opacity-50'
+                    }`}
+                  >
+                    <Image alt="" src="/check-all.svg" width={20} height={20} />
+                    Обосновать для ДМС
+                  </button>
+                )}
                 {!showClinRecPanel && findMainDiagnosisValue(sections) && (
                   <button
                     type="button"
@@ -1051,6 +1131,14 @@ export default function Home() {
                           setShowTemplatePopup(true);
                           setShowTemplateMenu(false);
                         }}
+                        // Шаблон перезаписал бы разделы, которые сейчас
+                        // обосновывает помощник.
+                        disabled={isDmsBusy}
+                        title={
+                          isDmsBusy
+                            ? 'Сначала завершите обоснование для ДМС'
+                            : undefined
+                        }
                         className="hover:bg-[#F0F5FF] text-[14px] w-ful rounded-md h-8.25 cursor-pointer px-2.5 py-1.5 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                       >
                         Использовать шаблон
@@ -1092,75 +1180,175 @@ export default function Home() {
                   {templateTitle}
                 </div>
 
-                <VoiceFillBanner
-                  entries={voiceEntries}
-                  onShowTranscript={() =>
-                    handleOpenTranscriptPanel(voiceSessionId)
-                  }
-                  onRevertAll={handleRevertAllVoice}
-                  onDismiss={() => {
-                    setVoiceEntries([]);
-                    setVoiceSessionId(null);
-                  }}
-                />
+                {/* Ход обоснования для ДМС объявляется отсюда: протокол
+                    ниже на это время инертен, а инертное содержимое скрыто
+                    от экранного диктора. */}
+                <p className="sr-only" role="status">
+                  {dms.isLocked ? `${dms.stepText}…` : ''}
+                </p>
 
-                <div className="flex gap-9 flex-col pl-6">
-                  {sections.map((section) => {
-                    const voiceEntry = voiceEntries.find(
-                      (entry) => entry.sectionId === section.id,
-                    );
-
-                    return (
-                      <div
-                        key={section.id}
-                        ref={(el) => {
-                          sectionRefs.current[section.sectionKey] = el;
-                        }}
-                        className={
-                          voiceEntry
-                            ? 'scroll-mt-24 rounded-xl border-l-4 border-[#5D8CF1] bg-[#F8FAFF] pl-2 py-1'
-                            : 'scroll-mt-24'
+                {/* Пока помощник работает, весь протокол только для чтения.
+                    `inert` — на обёртке, а не на колонке: колонку должно быть
+                    можно прокручивать. */}
+                <div
+                  inert={dms.isLocked}
+                  aria-busy={dms.isLocked}
+                  className="flex flex-col gap-9"
+                >
+                  {voiceEntries.length > 0 && (
+                    <div className={dms.isLocked ? 'opacity-60' : undefined}>
+                      <VoiceFillBanner
+                        entries={voiceEntries}
+                        onShowTranscript={() =>
+                          handleOpenTranscriptPanel(voiceSessionId)
                         }
-                      >
-                        {voiceEntry && (
+                        onRevertAll={handleRevertAllVoice}
+                        onDismiss={() => {
+                          setVoiceEntries([]);
+                          setVoiceSessionId(null);
+                        }}
+                      />
+                    </div>
+                  )}
+
+                  <div className="flex gap-9 flex-col pl-6">
+                    {sections.map((section) => {
+                      const voiceEntry = voiceEntries.find(
+                        (entry) => entry.sectionId === section.id,
+                      );
+                      const dmsItem = dms.items[section.id];
+                      const isDmsTarget = dms.targetIds.includes(section.id);
+                      // Ошибку объявляем у первого раздела помощника, а не у
+                      // каждого.
+                      const isFirstDmsTarget = dms.targetIds[0] === section.id;
+
+                      if (dmsItem) {
+                        return (
                           <div
-                            data-print-hide
-                            className="ml-7 mb-1 flex items-center gap-3 text-[13px] text-[#5D8CF1]"
+                            key={section.id}
+                            ref={(el) => {
+                              sectionRefs.current[section.sectionKey] = el;
+                            }}
+                            className="scroll-mt-24"
                           >
-                            <span>
-                              {voiceEntry.mode === 'append'
-                                ? 'дописано из записи приёма'
-                                : 'заполнено из записи приёма'}
-                            </span>
-                            <button
-                              type="button"
-                              onClick={() => handleRevertVoiceField(voiceEntry)}
-                              className="cursor-pointer hover:underline"
-                            >
-                              вернуть
-                            </button>
+                            <div className="flex flex-col mb-6 relative">
+                              {/* Заголовок — как в SectionInput, текст — с тем
+                                же отступом. */}
+                              <div className="flex items-center gap-3">
+                                <div className="shrink-0 w-4 h-4" />
+                                <div className="text-[30px] font-medium text-[#202020] mb-1">
+                                  {section.label}
+                                </div>
+                              </div>
+                              <div className="ml-7 mt-1">
+                                <DmsReviewBlock
+                                  sectionId={section.id}
+                                  label={section.label}
+                                  original={dmsItem.original}
+                                  draft={dmsItem.draft}
+                                  onDraftChange={(draft) =>
+                                    dms.setDraft(section.id, draft)
+                                  }
+                                  onAccept={() => handleDmsAccept(section.id)}
+                                  onKeep={() => dms.keep(section.id)}
+                                  scrollContainer={sectionContainerEl}
+                                />
+                                {/* На печать — текущий текст раздела, без
+                                  предложения и кнопок. */}
+                                <div className="hidden print:block whitespace-pre-wrap text-[16px] text-[#202020]">
+                                  {section.value}
+                                </div>
+                              </div>
+                            </div>
                           </div>
-                        )}
-                        <SectionInput
+                        );
+                      }
+
+                      return (
+                        <div
                           key={section.id}
-                          id={section.id}
-                          label={section.label}
-                          value={section.value}
-                          onLabelChange={handleLabelChange}
-                          onValueChange={handleValueChange}
-                          sectionKey={section.sectionKey}
-                          onAnalysisChange={(status) => {
-                            setSectionStatus((prev) => ({
-                              ...prev,
-                              [section.sectionKey]: status,
-                            }));
+                          ref={(el) => {
+                            sectionRefs.current[section.sectionKey] = el;
                           }}
-                          isActive={section.sectionKey === activeSection}
-                          fieldMeta={section.fieldMeta}
-                        />
-                      </div>
-                    );
-                  })}
+                          className={
+                            voiceEntry
+                              ? 'scroll-mt-24 rounded-xl border-l-4 border-[#5D8CF1] bg-[#F8FAFF] pl-2 py-1'
+                              : 'scroll-mt-24'
+                          }
+                        >
+                          {voiceEntry && (
+                            <div
+                              data-print-hide
+                              className="ml-7 mb-1 flex items-center gap-3 text-[13px] text-[#5D8CF1]"
+                            >
+                              <span>
+                                {voiceEntry.mode === 'append'
+                                  ? 'дописано из записи приёма'
+                                  : 'заполнено из записи приёма'}
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  handleRevertVoiceField(voiceEntry)
+                                }
+                                className="cursor-pointer hover:underline"
+                              >
+                                вернуть
+                              </button>
+                            </div>
+                          )}
+                          <div
+                            className={dms.isLocked ? 'opacity-60' : undefined}
+                          >
+                            <SectionInput
+                              key={section.id}
+                              id={section.id}
+                              label={section.label}
+                              value={section.value}
+                              onLabelChange={handleLabelChange}
+                              onValueChange={handleValueChange}
+                              sectionKey={section.sectionKey}
+                              onAnalysisChange={(status) => {
+                                setSectionStatus((prev) => ({
+                                  ...prev,
+                                  [section.sectionKey]: status,
+                                }));
+                              }}
+                              isActive={section.sectionKey === activeSection}
+                              fieldMeta={section.fieldMeta}
+                              aboveValue={
+                                dms.isLocked && isDmsTarget ? (
+                                  <DmsLoadingNotice stepText={dms.stepText} />
+                                ) : undefined
+                              }
+                            />
+                          </div>
+                          {dms.failure && isDmsTarget && (
+                            <div className="ml-7 -mt-3 mb-6">
+                              <DmsFieldError
+                                message={dms.failure.message}
+                                onRetry={
+                                  dms.failure.kind === 'error'
+                                    ? handleDmsStart
+                                    : undefined
+                                }
+                                announce={isFirstDmsTarget}
+                              />
+                            </div>
+                          )}
+                          {dms.noGuideline &&
+                            section.id === mainDiagnosisSection?.id && (
+                              <div className="ml-7 -mt-3 mb-6">
+                                <DmsNoGuidelineNotice
+                                  text={dms.noGuideline}
+                                  onDismiss={dms.dismissNoGuideline}
+                                />
+                              </div>
+                            )}
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
                 <div data-print-hide className="flex flex-col gap-3">
                   <div className="ml-6 min-h-5 text-[14px]" aria-live="polite">

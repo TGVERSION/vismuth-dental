@@ -55,6 +55,8 @@ import type {
   UserSettingsPatch,
   ClinrecCheck,
   ClinrecCheckResponse,
+  DmsJustifyRequest,
+  DmsJustifyResponse,
   DictionaryNames,
   RefSearchResponse,
   AutocompleteRequest,
@@ -329,6 +331,17 @@ export const mainApi = {
     ml_clinrec_check: (data: ClinrecCheck, options?: RequestOptions) =>
       mlLongRunningApiClient.post<ClinrecCheckResponse>(
         '/ml_clinrec_check',
+        data,
+        undefined,
+        options,
+      ),
+
+    // Обоснование назначений для ДМС. Эндпоинта в backend пока нет — в
+    // разработке и на демо-контуре запрос перехватывает заглушка `dms`
+    // (src/lib/mocks.ts). Долгий и неидемпотентный: клиент без повторов.
+    ml_clinrec_dms: (data: DmsJustifyRequest, options?: RequestOptions) =>
+      mlLongRunningApiClient.post<DmsJustifyResponse>(
+        '/ml_clinrec_dms',
         data,
         undefined,
         options,

@@ -1,9 +1,13 @@
 import { describe, it, expect } from 'vitest';
 import {
   DEFAULT_ACTIVE_SECTION,
+  findDmsTargetSections,
+  findMainDiagnosisSection,
   findMainDiagnosisValue,
   isComplaintsField,
   isMainDiagnosisField,
+  isPrescriptionsField,
+  isRecommendationsField,
 } from './protocol-fields';
 
 describe('isComplaintsField', () => {
@@ -91,6 +95,78 @@ describe('findMainDiagnosisValue', () => {
     expect(
       findMainDiagnosisValue([{ sectionKey: 'main_diagnosis', value: '' }]),
     ).toBe('');
+  });
+});
+
+describe('isRecommendationsField / isPrescriptionsField', () => {
+  it('узнают поля по имени', () => {
+    expect(isRecommendationsField('recommendations')).toBe(true);
+    expect(isPrescriptionsField('prescriptions')).toBe(true);
+  });
+
+  it('узнают поля по подписи, когда имя другое', () => {
+    expect(isRecommendationsField('rekomendatsii', 'Рекомендации')).toBe(true);
+    expect(isRecommendationsField('x', 'Рекомендации пациенту')).toBe(true);
+    expect(isPrescriptionsField('naznacheniya', 'Назначения')).toBe(true);
+    expect(isPrescriptionsField('x', 'Назначено:')).toBe(true);
+  });
+
+  it('не путают разделы между собой и с другими полями', () => {
+    expect(isRecommendationsField('x', 'Назначения')).toBe(false);
+    expect(isPrescriptionsField('x', 'Рекомендации')).toBe(false);
+    expect(isPrescriptionsField('x', 'Диагноз')).toBe(false);
+    expect(isRecommendationsField('x', 'Клинические рекомендации')).toBe(false);
+    expect(isRecommendationsField('x', '')).toBe(false);
+  });
+});
+
+describe('findDmsTargetSections', () => {
+  const text = { field_type: 'text' };
+
+  it('возвращает текстовые разделы рекомендаций и назначений в порядке формы', () => {
+    const sections = [
+      { sectionKey: 'naznacheniya', label: 'Назначения', fieldMeta: text },
+      { sectionKey: 'complaints', label: 'Жалобы', fieldMeta: text },
+      { sectionKey: 'recommendations', label: 'Рекомендации' },
+    ];
+
+    expect(findDmsTargetSections(sections).map((s) => s.sectionKey)).toEqual([
+      'naznacheniya',
+      'recommendations',
+    ]);
+  });
+
+  it('пропускает нетекстовые поля с подходящей подписью', () => {
+    const sections = [
+      {
+        sectionKey: 'prescriptions',
+        label: 'Назначения',
+        fieldMeta: { field_type: 'multiselect' },
+      },
+    ];
+
+    expect(findDmsTargetSections(sections)).toEqual([]);
+  });
+
+  it('считает текстовым поле без типа, как SectionInput', () => {
+    const sections = [
+      { sectionKey: 'x', label: 'Назначения', fieldMeta: { field_type: null } },
+    ];
+
+    expect(findDmsTargetSections(sections)).toHaveLength(1);
+  });
+});
+
+describe('findMainDiagnosisSection', () => {
+  it('возвращает сам раздел, а не только значение', () => {
+    const diagnosis = { sectionKey: 'main_diagnosis', value: 'J06.9 – ОРВИ' };
+
+    expect(
+      findMainDiagnosisSection([
+        { sectionKey: 'complaints', value: 'Кашель' },
+        diagnosis,
+      ]),
+    ).toBe(diagnosis);
   });
 });
 

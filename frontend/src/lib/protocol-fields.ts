@@ -80,11 +80,68 @@ export const DEFAULT_ACTIVE_SECTION = COMPLAINTS_FIELD_NAMES[0];
 
 /**
  * Найти в списке разделов тот, что играет роль основного диагноза.
- * Используется для кнопки проверки по клиническим рекомендациям.
+ * Используется для кнопок проверки по клиническим рекомендациям и
+ * обоснования для ДМС.
  */
-export const findMainDiagnosisValue = (
-  sections: { sectionKey: string; value: string; label?: string }[],
-): string | undefined =>
+export const findMainDiagnosisSection = <
+  T extends { sectionKey: string; label?: string },
+>(
+  sections: T[],
+): T | undefined =>
   sections.find((section) =>
     isMainDiagnosisField(section.sectionKey, section.label),
-  )?.value;
+  );
+
+export const findMainDiagnosisValue = (
+  sections: { sectionKey: string; value: string; label?: string }[],
+): string | undefined => findMainDiagnosisSection(sections)?.value;
+
+// Разделы, которые дополняет помощник «Обоснование для ДМС». Правило то же,
+// что для жалоб: сначала известное имя поля, затем основа подписи. Привязка
+// к подписи согласована в PL-314 до появления роли поля (F-3.1).
+
+const RECOMMENDATIONS_FIELD_NAMES = ['recommendations'];
+const PRESCRIPTIONS_FIELD_NAMES = ['prescriptions'];
+
+/** «Рекомендации», «Рекомендации пациенту». */
+const RECOMMENDATIONS_LABEL_STEM = 'рекомендац';
+/** «Назначения», «Назначено», «Назначения и рекомендации». */
+const PRESCRIPTIONS_LABEL_STEM = 'назначен';
+
+export const isRecommendationsField = (
+  sectionKey: string,
+  fieldLabel?: string | null,
+): boolean => {
+  if (RECOMMENDATIONS_FIELD_NAMES.includes(sectionKey)) return true;
+  if (!fieldLabel) return false;
+  return normalizeLabel(fieldLabel).startsWith(RECOMMENDATIONS_LABEL_STEM);
+};
+
+export const isPrescriptionsField = (
+  sectionKey: string,
+  fieldLabel?: string | null,
+): boolean => {
+  if (PRESCRIPTIONS_FIELD_NAMES.includes(sectionKey)) return true;
+  if (!fieldLabel) return false;
+  return normalizeLabel(fieldLabel).startsWith(PRESCRIPTIONS_LABEL_STEM);
+};
+
+/**
+ * Разделы для обоснования по ДМС в порядке формы. Только текстовые поля:
+ * помощник заменяет текст раздела целиком, а у списков и флажков текста нет.
+ */
+export const findDmsTargetSections = <
+  T extends {
+    sectionKey: string;
+    label?: string;
+    fieldMeta?: { field_type?: string | null } | null;
+  },
+>(
+  sections: T[],
+): T[] =>
+  sections.filter(
+    (section) =>
+      (section.fieldMeta?.field_type ?? 'text') === 'text' &&
+      (isRecommendationsField(section.sectionKey, section.label) ||
+        isPrescriptionsField(section.sectionKey, section.label)),
+  );

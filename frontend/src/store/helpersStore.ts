@@ -6,13 +6,14 @@ import { ApiError } from '@/api/base-client';
 import { toast } from 'react-toastify';
 import { logError } from '@/lib/logger';
 
-export type HelperId = 'mkb' | 'autocomplete' | 'fullness' | 'voice';
+export type HelperId = 'mkb' | 'autocomplete' | 'fullness' | 'voice' | 'dms';
 
 /**
  * Помощники, состояние которых хранится на сервере в `user_settings`.
  *
- * Запись приёма в этот список не входит: в схеме `user_settings` поля под неё
- * нет, и завести его может только backend. До тех пор её флаг живёт локально
+ * Запись приёма и обоснование для ДМС в этот список не входят: в схеме
+ * `user_settings` полей под них нет, и завести их может только backend
+ * (для ДМС — E-7 в docs/plans/PL-314). До тех пор их флаги живут локально
  * (см. `persist` ниже) — настройка не переезжает на другое устройство.
  */
 const SERVER_BACKED_HELPERS: HelperId[] = ['mkb', 'autocomplete', 'fullness'];
@@ -43,6 +44,7 @@ interface HelpersStoreState {
   mkbEnabled: boolean;
   fullnessEnabled: boolean;
   voiceEnabled: boolean;
+  dmsEnabled: boolean;
   autocompleteProvider: AutocompleteProvider;
 
   setUserSettings: (settings: UserSettings) => void;
@@ -119,6 +121,20 @@ export const HELPERS_META: Record<HelperId, HelperMeta> = {
     whenNotToRely:
       'Помощник оценивает только текст, а не клиническую ситуацию. Если жалобы нетипичны или пациент общается с трудом, часть критериев может быть объективно невыполнима — это нормально. Зелёный сигнал означает полноту записи, а не полноту клинической картины',
   },
+  dms: {
+    id: 'dms',
+    name: 'Обоснование для ДМС',
+    icon: '/check-all.svg',
+    provider: 'VISMUTH',
+    url: 'https://vismuth.ru',
+    likes: 0,
+    howItWorks:
+      'Нажмите «Обосновать для ДМС» в верхней панели протокола. Помощник подберёт клинические рекомендации по основному диагнозу и дополнит «Рекомендации» и «Назначения» обоснованием каждого пункта. Новый текст выделен цветом — его можно поправить, принять или оставить раздел как был',
+    whenUseful:
+      'Когда назначения нужно согласовать со страховой по ДМС: помощник добавляет к обследованиям и препаратам показания и ссылки на разделы клинических рекомендаций',
+    whenNotToRely:
+      'Помощник опирается только на клинические рекомендации, загруженные в систему, и не знает особенностей договора ДМС. Если для пункта обоснование не найдено, он так и пишет — решение остаётся за вами. Проверяйте дозировки и кратность: помощник может изменить и ваши формулировки',
+  },
 };
 
 export const AUTOCOMPLETE_OPTIONS: {
@@ -141,6 +157,8 @@ export const useHelpersStore = create<HelpersStoreState>()(
       // Запись приёма по умолчанию выключена: функция появляется в интерфейсе
       // только после того, как врач включил её в помощниках.
       voiceEnabled: false,
+      // Обоснование для ДМС по умолчанию выключено — так же, как запись приёма.
+      dmsEnabled: false,
       autocompleteProvider: 'dict_autocomplete',
 
       setUserSettings: (settings) => set({ userSettings: settings }),
@@ -216,6 +234,7 @@ export const useHelpersStore = create<HelpersStoreState>()(
           mkbEnabled,
           fullnessEnabled,
           voiceEnabled,
+          dmsEnabled,
         } = get();
 
         if (!userSettings) {
@@ -283,6 +302,15 @@ export const useHelpersStore = create<HelpersStoreState>()(
                 : 'Помощник выключен';
               break;
             }
+            case 'dms': {
+              // Как и запись приёма: поля в `user_settings` нет, флаг локальный.
+              const newValue = !dmsEnabled;
+              optimisticUpdate.dmsEnabled = newValue;
+              toastMessage = newValue
+                ? 'Помощник активирован'
+                : 'Помощник выключен';
+              break;
+            }
           }
 
           set(optimisticUpdate);
@@ -341,6 +369,7 @@ export const useHelpersStore = create<HelpersStoreState>()(
           mkbEnabled,
           fullnessEnabled,
           voiceEnabled,
+          dmsEnabled,
           autocompleteProvider,
         } = get();
 
@@ -355,6 +384,8 @@ export const useHelpersStore = create<HelpersStoreState>()(
             );
           case 'voice':
             return voiceEnabled;
+          case 'dms':
+            return dmsEnabled;
           default:
             return false;
         }
@@ -363,12 +394,15 @@ export const useHelpersStore = create<HelpersStoreState>()(
       getHelperMeta: (helperId: HelperId) => HELPERS_META[helperId],
     }),
     {
-      // Сохраняется только флаг записи приёма: у остальных помощников
-      // источник истины — `user_settings` на сервере, и дублировать их
-      // локально нельзя, иначе состояния разойдутся.
+      // Сохраняются только флаги записи приёма и обоснования для ДМС: у
+      // остальных помощников источник истины — `user_settings` на сервере,
+      // и дублировать их локально нельзя, иначе состояния разойдутся.
       name: 'helpers-storage',
       storage: createJSONStorage(() => localStorage),
-      partialize: (state) => ({ voiceEnabled: state.voiceEnabled }),
+      partialize: (state) => ({
+        voiceEnabled: state.voiceEnabled,
+        dmsEnabled: state.dmsEnabled,
+      }),
     },
   ),
 );

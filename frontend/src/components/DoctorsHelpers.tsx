@@ -14,7 +14,13 @@ import {
 } from '@/store/helpersStore';
 
 /** Порядок карточек в списке помощников. */
-const HELPER_ORDER: HelperId[] = ['mkb', 'autocomplete', 'fullness', 'voice'];
+const HELPER_ORDER: HelperId[] = [
+  'mkb',
+  'autocomplete',
+  'fullness',
+  'voice',
+  'dms',
+];
 
 interface DoctorsHelpersProps {
   isOpen: boolean;
@@ -35,6 +41,7 @@ export const DoctorsHelpers: React.FC<DoctorsHelpersProps> = ({
     mkbEnabled,
     fullnessEnabled,
     voiceEnabled,
+    dmsEnabled,
     autocompleteProvider,
     setSelectedHelper,
     setAutocompleteProvider,
@@ -55,6 +62,8 @@ export const DoctorsHelpers: React.FC<DoctorsHelpersProps> = ({
       isActive = fullnessEnabled;
     } else if (selectedHelper === 'voice') {
       isActive = voiceEnabled;
+    } else if (selectedHelper === 'dms') {
+      isActive = dmsEnabled;
     } else if (selectedHelper === 'autocomplete') {
       isActive =
         autocompleteProvider !== 'off' &&
@@ -81,6 +90,7 @@ export const DoctorsHelpers: React.FC<DoctorsHelpersProps> = ({
     mkbEnabled,
     fullnessEnabled,
     voiceEnabled,
+    dmsEnabled,
     autocompleteProvider,
     userSettings?.autocomplete,
   ]);

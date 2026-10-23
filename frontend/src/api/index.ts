@@ -545,6 +545,44 @@ export interface ClinicalFinding {
   guideline_quote: string;
 }
 
+/**
+ * Раздел протокола, который помощник «Обоснование для ДМС» дополняет
+ * обоснованием по клиническим рекомендациям.
+ *
+ * Контракт предварительный: эндпоинта в backend ещё нет, фронтенд работает
+ * на заглушке (src/app/api/dms-mock). Согласование — задача PL-314, E-5.
+ */
+export interface DmsJustifySection {
+  /** Непрозрачный ключ раздела в форме; backend возвращает его как есть. */
+  key: string;
+  /** UUID поля структуры протокола, если поле есть в структуре. */
+  field_id?: string;
+  label: string;
+  value: string;
+}
+
+export interface DmsJustifyRequest {
+  /** Строка диагноза с ведущим кодом МКБ, как у `ml_clinrec_check`. */
+  main_diagnosis: string;
+  sections: DmsJustifySection[];
+}
+
+export interface DmsJustifiedSection {
+  key: string;
+  /** Новый текст раздела целиком. Без квадратных скобок. */
+  adapted_text: string;
+}
+
+export interface DmsJustifyResponse {
+  guideline_code: string | null;
+  guideline_title: string | null;
+  /** Только разделы, которые помощник изменил. */
+  sections: DmsJustifiedSection[];
+  items_total: number | null;
+  items_justified: number | null;
+  error: string | null;
+}
+
 export interface DictionaryNames {
   id: number;
   oid: string;

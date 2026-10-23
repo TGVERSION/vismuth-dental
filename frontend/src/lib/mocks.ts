@@ -22,6 +22,8 @@ export const MOCK_NAMES = [
   'questionnaire',
   // Анкеты у врача: /api/main/questionnaires*.
   'doctor-questionnaires',
+  // Обоснование для ДМС: /api/main/ml_clinrec_dms (PL-314).
+  'dms',
 ] as const;
 
 export type MockName = (typeof MOCK_NAMES)[number];

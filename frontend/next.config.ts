@@ -94,6 +94,15 @@ const MOCK_REWRITES: Record<
       destination: '/api/doctor-questionnaires-mock/:path*',
     },
   ],
+  // Обоснование для ДМС: эндпоинта в backend нет, контракт ждёт
+  // согласования (PL-314, E-5). Когда удалять — в
+  // src/app/api/dms-mock/_mock/guard.ts.
+  dms: [
+    {
+      source: '/api/main/ml_clinrec_dms',
+      destination: '/api/dms-mock',
+    },
+  ],
 };
 
 if (ALLOWED_ORIGIN === '*') {

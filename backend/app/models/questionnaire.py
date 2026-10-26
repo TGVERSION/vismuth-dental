@@ -39,6 +39,7 @@ class Questionnaire(Base):
         nullable=True,
     )
     specialization_id: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    kind: Mapped[str] = mapped_column(String(20), nullable=False, default="general")
     visit_type: Mapped[Optional[str]] = mapped_column(String(20), nullable=True)
     status: Mapped[str] = mapped_column(
         String(20),
@@ -82,6 +83,10 @@ class Questionnaire(Base):
     gaps: Mapped[Optional[list[Any]]] = mapped_column(JSONB, nullable=True)
     processing_status: Mapped[Optional[str]] = mapped_column(String(32), nullable=True)
     collect_form_state: Mapped[Optional[dict[str, Any]]] = mapped_column(
+        JSONB,
+        nullable=True,
+    )
+    dental_answers: Mapped[Optional[dict[str, Any]]] = mapped_column(
         JSONB,
         nullable=True,
     )

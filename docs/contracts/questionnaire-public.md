@@ -46,3 +46,19 @@ Timeout: `QUESTIONNAIRE_AI_TIMEOUT` (~20s). Ошибка → `ai_unavailable`, �
 - **Тело:** `step_key` + `value` / `choice` / `skip` / `none` / поля выбора врача / patient_info
 - **patient_info:** `appointment_time` — любое `HH:MM` (00:00–23:59)
 - **Код:** `post_answer`
+
+## Стоматологическая анкета (`kind=dental`)
+
+Код: `services/dental/` (`questions.py` — набор вопросов, `flow.py` — шаги, `summary.py` — карточка врача). Ответы хранятся в `questionnaire.dental_answers` (JSONB), при брошенной анкете стираются. ML не вызывается: карточка врача собирается правилами сразу после последнего ответа (`processing_status=done`). Как создаётся такая анкета (персональная ссылка регистратуры) — следующий этап.
+
+Шаги: `dental_reason` → `dental_pain` (только если выбрано `pain`) → `dental_health` → `dental_details` (только по отмеченным строкам; при `none` шаг пропускается) → `done`.
+
+| step_type | Что в дескрипторе | Тело ответа |
+|-----------|-------------------|-------------|
+| `chip_groups` | `groups[]`: `{key, title, question, options[{value,label}], multiple, required, text: {placeholder, required} \| null}` | `selections: {key: [value…]}`, `texts: {key: "…"}` |
+| `checklist` | `choices[]`: `{value, label, hint}`, `allow_none=true` | `selections: {"health": [value…]}` или `none: true` |
+| `done` | `completed=true`, `title` | — |
+
+Проверки (400 с текстом причины): значение не из `options`; больше одного значения при `multiple=false`; пустой выбор при `required`; группа не с этого шага или не по отмеченной строке; текст в группе без поля; нет текста при `text.required` или выбранном `other`; на `checklist` — и строки, и `none`, или ничего. Текст режется до 1000 символов (`truncated: true`).
+
+У врача (`GET /questionnaires/{id}`) `kind=dental`, `structured`: `important[]` (красные строки), `complaints`, `health[]` (`{key, label, has, detail}` по всем 9 строкам), `medications`, `allergy_anamnesis`, `life_anamnesis`; `gaps[]` — «Что доспросить». Ключи `complaints/medications/allergy_anamnesis/life_anamnesis` те же, что у общей анкеты, — по ним создаётся протокол. `POST /questionnaires/{id}/process` для `dental` пересобирает карточку правилами.

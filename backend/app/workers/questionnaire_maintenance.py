@@ -31,6 +31,7 @@ async def abandon_stale(now: datetime) -> int:
                 ),
             )
             q.status = "abandoned"
+            q.dental_answers = None
             q.patient_first_name = None
             q.patient_middle_name = None
             q.appointment_date = None

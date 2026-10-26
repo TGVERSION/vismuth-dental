@@ -29,6 +29,11 @@ class Clinic(Base):
     access_until: Mapped[date] = mapped_column(Date, nullable=False)
     access_type: Mapped[str] = mapped_column(String(20), nullable=False)
     public_slug: Mapped[str] = mapped_column(String(32), nullable=False)
+    questionnaire_kind: Mapped[str] = mapped_column(
+        String(20),
+        nullable=False,
+        default="general",
+    )
 
     created_at: Mapped[datetime] = mapped_column(
         TIMESTAMP(timezone=True),

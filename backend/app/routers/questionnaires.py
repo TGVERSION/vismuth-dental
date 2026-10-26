@@ -125,6 +125,7 @@ async def _build_doctor_detail(
     spec_name = await specialization_name(db, questionnaire.specialization_id)
     return DoctorQuestionnaireDetail(
         id=questionnaire.id,
+        kind=questionnaire.kind,
         visit_type=questionnaire.visit_type,
         specialization_name=spec_name,
         patient_first_name=questionnaire.patient_first_name,

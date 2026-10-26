@@ -65,6 +65,7 @@ def _step_response(descriptor) -> StepDescriptorResponse:
         allow_none=descriptor.allow_none,
         choices=descriptor.choices,
         options=descriptor.options,
+        groups=descriptor.groups,
         date_min=descriptor.date_min,
         date_max=descriptor.date_max,
         code=descriptor.code,
@@ -414,6 +415,8 @@ async def post_answer(
         appointment_date=payload.appointment_date,
         appointment_time=payload.appointment_time,
         none_answer=payload.none,
+        selections=payload.selections,
+        texts=payload.texts,
     )
     if should_process:
         schedule_processing(background_tasks, questionnaire_id)

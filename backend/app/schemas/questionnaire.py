@@ -1,5 +1,5 @@
 from datetime import date
-from typing import Any, Literal, Optional
+from typing import Annotated, Any, Literal, Optional
 from uuid import UUID
 
 from pydantic import BaseModel, Field
@@ -73,6 +73,15 @@ class StepDescriptorResponse(BaseModel):
         default_factory=list,
         description="Доп. опции шага (врачи, специализации и т.п.).",
     )
+    groups: list[dict[str, Any]] = Field(
+        default_factory=list,
+        description=(
+            "Стоматологическая анкета, step_type=chip_groups: группы кнопок "
+            "[{key, title, question, options[{value,label}], multiple, required, "
+            "text: {placeholder, required} | null}]. Для checklist строки — в choices "
+            "[{value, label, hint}]."
+        ),
+    )
     date_min: Optional[str] = None
     date_max: Optional[str] = None
     code: Optional[str] = Field(
@@ -127,6 +136,21 @@ class QuestionnaireAnswerRequest(BaseModel):
         default=None,
         description="Выбор специализации на соответствующем шаге.",
     )
+    selections: Optional[
+        dict[str, Annotated[list[Annotated[str, Field(max_length=64)]], Field(max_length=20)]]
+    ] = Field(
+        default=None,
+        max_length=20,
+        description=(
+            "Стоматологическая анкета: выбранные значения по ключу группы "
+            "(chip_groups) или {\"health\": [...]} (checklist)."
+        ),
+    )
+    texts: Optional[dict[str, Annotated[str, Field(max_length=5000)]]] = Field(
+        default=None,
+        max_length=20,
+        description="Стоматологическая анкета: свой текст по ключу группы.",
+    )
     first_name: Optional[str] = Field(default=None, max_length=255)
     middle_name: Optional[str] = Field(default=None, max_length=255)
     appointment_date: Optional[date] = None
@@ -161,6 +185,10 @@ class DoctorQuestionnaireDetail(BaseModel):
     """Детали завершенной анкеты для врача (ответы + результат ML)."""
 
     id: UUID
+    kind: Literal["general", "dental"] = Field(
+        default="general",
+        description="dental — structured собран правилами: important, health и др.",
+    )
     visit_type: Optional[str] = None
     specialization_name: Optional[str] = None
     patient_first_name: Optional[str] = None

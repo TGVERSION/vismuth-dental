@@ -9,10 +9,13 @@ from uuid import UUID
 
 from fastapi import BackgroundTasks, HTTPException
 from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..config import settings
 from ..db import AsyncSessionLocal
 from ..models.questionnaire import Questionnaire, QuestionnaireAnswer
+from .dental.flow import DentalAnswers
+from .dental.summary import build_dental_summary
 from .ml_proxy import proxy_post_to_ml
 from .questionnaire_flow import load_answers, specialization_name
 
@@ -78,6 +81,17 @@ def schedule_processing(
     background_tasks.add_task(run_questionnaire_processing, questionnaire_id)
 
 
+async def _rebuild_dental_summary(db: AsyncSession, questionnaire: Questionnaire) -> None:
+    """Стоматологическая карточка собирается правилами: ML не нужен."""
+    answers = DentalAnswers.model_validate(questionnaire.dental_answers or {})
+    structured, gaps = build_dental_summary(answers)
+    questionnaire.structured = structured
+    questionnaire.gaps = gaps
+    questionnaire.processing_status = "done"
+    questionnaire.updated_at = datetime.now(timezone.utc)
+    await db.commit()
+
+
 async def run_questionnaire_processing(questionnaire_id: UUID) -> None:
     async with AsyncSessionLocal() as db:
         try:
@@ -93,6 +107,10 @@ async def run_questionnaire_processing(questionnaire_id: UUID) -> None:
                     "Questionnaire %s not found for processing",
                     questionnaire_id,
                 )
+                return
+
+            if questionnaire.kind == "dental":
+                await _rebuild_dental_summary(db, questionnaire)
                 return
 
             answers = await load_answers(db, questionnaire.id)

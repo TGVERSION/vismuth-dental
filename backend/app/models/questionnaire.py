@@ -16,7 +16,7 @@ from sqlalchemy.orm import Mapped, mapped_column
 
 from ..db import Base
 
-QUESTIONNAIRE_STATUSES = frozenset({"in_progress", "completed", "abandoned"})
+QUESTIONNAIRE_STATUSES = frozenset({"invited", "in_progress", "completed", "abandoned"})
 VISIT_TYPES = frozenset({"primary", "repeat"})
 
 
@@ -58,9 +58,27 @@ class Questionnaire(Base):
         String(255),
         nullable=True,
     )
+    patient_last_name: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     appointment_date: Mapped[Optional[date]] = mapped_column(Date, nullable=True)
     appointment_time: Mapped[Optional[str]] = mapped_column(String(16), nullable=True)
     code: Mapped[Optional[str]] = mapped_column(String(4), nullable=True)
+    invite_expires_at: Mapped[Optional[datetime]] = mapped_column(
+        TIMESTAMP(timezone=True),
+        nullable=True,
+    )
+    created_by_membership_id: Mapped[Optional[UUID]] = mapped_column(
+        PG_UUID(as_uuid=True),
+        ForeignKey("clinic_membership.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+    printed_at: Mapped[Optional[datetime]] = mapped_column(
+        TIMESTAMP(timezone=True),
+        nullable=True,
+    )
+    signed_at: Mapped[Optional[datetime]] = mapped_column(
+        TIMESTAMP(timezone=True),
+        nullable=True,
+    )
     session_token_hash: Mapped[str] = mapped_column(String(128), nullable=False)
     device_id_hash: Mapped[Optional[str]] = mapped_column(String(128), nullable=True)
     ip_hash: Mapped[Optional[str]] = mapped_column(String(128), nullable=True)

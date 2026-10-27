@@ -128,6 +128,7 @@ async def _build_doctor_detail(
         kind=questionnaire.kind,
         visit_type=questionnaire.visit_type,
         specialization_name=spec_name,
+        patient_last_name=questionnaire.patient_last_name,
         patient_first_name=questionnaire.patient_first_name,
         patient_middle_name=questionnaire.patient_middle_name,
         appointment_date=questionnaire.appointment_date,
@@ -194,6 +195,7 @@ async def list_questionnaires(
         pattern = f"%{name.strip()}%"
         stmt = stmt.where(
             or_(
+                Questionnaire.patient_last_name.ilike(pattern),
                 Questionnaire.patient_first_name.ilike(pattern),
                 Questionnaire.patient_middle_name.ilike(pattern),
             ),
@@ -206,6 +208,7 @@ async def list_questionnaires(
         DoctorQuestionnaireListItem(
             id=q.id,
             appointment_time=q.appointment_time,
+            patient_last_name=q.patient_last_name,
             patient_first_name=q.patient_first_name,
             patient_middle_name=q.patient_middle_name,
             visit_type=q.visit_type,

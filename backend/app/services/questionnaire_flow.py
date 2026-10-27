@@ -11,6 +11,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..config import settings
+from ..models.clinic import Clinic
 from ..models.clinic_membership import ClinicMembership
 from ..models.questionnaire import Questionnaire, QuestionnaireAnswer
 from ..models.service_user import ServiceUser
@@ -18,6 +19,7 @@ from ..models.specialization import RefSpecialization
 from ..services.clinic_members import load_specializations_map
 from ..services.ml_proxy import proxy_post_to_ml
 from ..services.questionnaire_code import allocate_code
+from ..services.questionnaire_limits import ensure_clinic_subscription_active
 from .dental.flow import (
     STEP_DONE as DENTAL_DONE,
     DentalAnswerError,
@@ -83,7 +85,7 @@ def truncate_answer(value: str) -> tuple[str, bool]:
     return value[:max_len], True
 
 
-def _is_valid_appointment_time(value: str) -> bool:
+def is_valid_appointment_time(value: str) -> bool:
     """Любое HH:MM (00:00–23:59)."""
     return _APPOINTMENT_TIME_RE.fullmatch(value) is not None
 
@@ -316,6 +318,19 @@ def build_dental_descriptor(questionnaire: Questionnaire) -> StepDescriptor:
         choices=step.items,
         groups=step.groups,
     )
+
+
+def _open_invite(questionnaire: Questionnaire) -> None:
+    """Ответ по персональной ссылке: срок истёк — 410; первый ответ начинает анкету."""
+    if questionnaire.status not in {"invited", "in_progress"}:
+        return
+    expires = questionnaire.invite_expires_at
+    if expires is not None and datetime.now(timezone.utc) >= expires:
+        raise HTTPException(
+            status_code=status.HTTP_410_GONE,
+            detail="Invite expired",
+        )
+    questionnaire.status = "in_progress"
 
 
 def apply_dental(
@@ -573,6 +588,13 @@ async def apply_answer(
     texts: dict[str, str] | None = None,
 ) -> tuple[StepDescriptor, bool, bool]:
     should_process = False
+    if questionnaire.kind == "dental":
+        if questionnaire.status == "invited":
+            # Как у общей анкеты: новую не начинаем при истёкшей подписке,
+            # начатую даём закончить.
+            clinic = await db.get(Clinic, questionnaire.clinic_id)
+            ensure_clinic_subscription_active(clinic)
+        _open_invite(questionnaire)
     if questionnaire.status != "in_progress":
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -804,7 +826,7 @@ async def apply_answer(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="appointment_date out of range",
             )
-        if not _is_valid_appointment_time(appointment_time):
+        if not is_valid_appointment_time(appointment_time):
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="appointment_time must be HH:MM",

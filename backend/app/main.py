@@ -20,6 +20,7 @@ from .routers.roles import router as roles_router
 from .routers.super_admin.clinics import router as super_admin_clinics_router
 from .routers.super_admin.statistics import router as super_admin_statistics_router
 from .routers.clinic_admin import router as clinic_admin_router
+from .routers.clinic_questionnaires import router as clinic_questionnaires_router
 from .routers.public_questionnaire import router as public_questionnaire_router
 from .routers.questionnaires import router as questionnaires_router
 from .routers.clinrec_guidelines import router as clinrec_guidelines_router
@@ -145,6 +146,7 @@ app.include_router(user_settings_router)
 app.include_router(super_admin_clinics_router)
 app.include_router(super_admin_statistics_router)
 app.include_router(clinic_admin_router)
+app.include_router(clinic_questionnaires_router)
 app.include_router(public_questionnaire_router)
 app.include_router(questionnaires_router)
 app.include_router(clinrec_guidelines_router)

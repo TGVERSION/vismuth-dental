@@ -21,6 +21,9 @@ async def abandon_stale(now: datetime) -> int:
             select(Questionnaire).where(
                 Questionnaire.status == "in_progress",
                 Questionnaire.last_activity_at < threshold,
+                # Анкету по персональной ссылке не бросаем по бездействию:
+                # пациент может вернуться к ней до срока ссылки.
+                Questionnaire.invite_expires_at.is_(None),
             ),
         )
         rows = list(result.scalars().all())
@@ -63,12 +66,35 @@ async def purge_old(now: datetime) -> int:
         return len(rows)
 
 
+async def purge_expired_invites(now: datetime) -> int:
+    """Незаполненные анкеты по персональной ссылке после её срока удаляются."""
+    async with AsyncSessionLocal() as db:
+        result = await db.execute(
+            delete(Questionnaire)
+            .where(
+                Questionnaire.invite_expires_at.is_not(None),
+                Questionnaire.invite_expires_at < now,
+                Questionnaire.status.in_(("invited", "in_progress")),
+            )
+            .returning(Questionnaire.id),
+        )
+        deleted = len(result.all())
+        await db.commit()
+        return deleted
+
+
 async def run_once() -> None:
     now = datetime.now(timezone.utc)
     abandoned = await abandon_stale(now)
     purged = await purge_old(now)
-    if abandoned or purged:
-        logger.info("abandoned=%s purged=%s", abandoned, purged)
+    expired = await purge_expired_invites(now)
+    if abandoned or purged or expired:
+        logger.info(
+            "abandoned=%s purged=%s expired_invites=%s",
+            abandoned,
+            purged,
+            expired,
+        )
 
 
 async def main() -> None:

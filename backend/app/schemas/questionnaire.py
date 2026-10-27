@@ -107,6 +107,43 @@ class QuestionnaireCreateResponse(BaseModel):
     step: StepDescriptorResponse
 
 
+class PublicInviteDoctor(BaseModel):
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+    middle_name: Optional[str] = None
+    photo_url: Optional[str] = None
+    specializations: list[dict[str, Any]] = Field(default_factory=list)
+
+
+class PublicInviteResponse(BaseModel):
+    """Открытие персональной ссылки: приветствие, брендинг, текущий шаг.
+
+    Дальше — `GET/POST /public/questionnaires/{questionnaire_id}/…` с токеном
+    ссылки в `X-Questionnaire-Token`.
+    """
+
+    questionnaire_id: UUID
+    clinic_name: str
+    phone: Optional[str] = None
+    logo_url: Optional[str] = None
+    brand_color: Optional[str] = None
+    doctor: Optional[PublicInviteDoctor] = None
+    patient_first_name: Optional[str] = None
+    patient_middle_name: Optional[str] = None
+    appointment_date: Optional[date] = None
+    appointment_time: Optional[str] = None
+    blocked: bool = False
+    block_code: Optional[str] = Field(
+        default=None,
+        description="invite_expired | subscription_expired",
+    )
+    block_message: Optional[str] = None
+    step: Optional[StepDescriptorResponse] = Field(
+        default=None,
+        description="Текущий шаг; null при blocked=true",
+    )
+
+
 class QuestionnaireAnswerRequest(BaseModel):
     """Ответ на текущий шаг. Поля зависят от step_type / step_key."""
 
@@ -163,6 +200,7 @@ class QuestionnaireAnswerRequest(BaseModel):
 class DoctorQuestionnaireListItem(BaseModel):
     id: UUID
     appointment_time: Optional[str] = None
+    patient_last_name: Optional[str] = None
     patient_first_name: Optional[str] = None
     patient_middle_name: Optional[str] = None
     visit_type: Optional[str] = None
@@ -191,6 +229,7 @@ class DoctorQuestionnaireDetail(BaseModel):
     )
     visit_type: Optional[str] = None
     specialization_name: Optional[str] = None
+    patient_last_name: Optional[str] = None
     patient_first_name: Optional[str] = None
     patient_middle_name: Optional[str] = None
     appointment_date: Optional[date] = None

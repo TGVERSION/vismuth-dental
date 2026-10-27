@@ -62,3 +62,12 @@ Timeout: `QUESTIONNAIRE_AI_TIMEOUT` (~20s). Ошибка → `ai_unavailable`, �
 Проверки (400 с текстом причины): значение не из `options`; больше одного значения при `multiple=false`; пустой выбор при `required`; группа не с этого шага или не по отмеченной строке; текст в группе без поля; нет текста при `text.required` или выбранном `other`; на `checklist` — и строки, и `none`, или ничего. Текст режется до 1000 символов (`truncated: true`).
 
 У врача (`GET /questionnaires/{id}`) `kind=dental`, `structured`: `important[]` (красные строки), `complaints`, `health[]` (`{key, label, has, detail}` по всем 9 строкам), `medications`, `allergy_anamnesis`, `life_anamnesis`; `gaps[]` — «Что доспросить». Ключи `complaints/medications/allergy_anamnesis/life_anamnesis` те же, что у общей анкеты, — по ним создаётся протокол. `POST /questionnaires/{id}/process` для `dental` пересобирает карточку правилами.
+
+## GET /public/invites/{token}
+
+- **Auth:** none — токен персональной ссылки
+- **Назначение:** открыть анкету, созданную регистратурой ([clinic-questionnaires.md](clinic-questionnaires.md))
+- **Ответ:** `questionnaire_id`, брендинг клиники, `doctor`, `patient_first_name`, `patient_middle_name`, `appointment_date`, `appointment_time`, `step`. Фамилию пациенту не отдаём
+- **Блокировки:** `blocked=true` + `block_code`: `invite_expired` (срок ссылки истёк, анкета не заполнена), `subscription_expired` (подписка истекла, а пациент ещё не начинал). Заполненная анкета открывается всегда — шаг `done`
+- **Ошибки:** `404` `invite_not_found` (нет такой ссылки, выпущена новая или анкета удалена)
+- **Дальше:** `GET/POST /public/questionnaires/{questionnaire_id}/step|answer` с этим токеном в `X-Questionnaire-Token`. Первый ответ переводит `invited` → `in_progress`; после срока ссылки ответы — `410`

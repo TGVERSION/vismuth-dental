@@ -1,4 +1,5 @@
 import secrets
+from datetime import datetime, timezone
 from typing import Optional
 from uuid import UUID
 
@@ -12,6 +13,8 @@ from ..models.clinic_membership import ClinicMembership
 from ..models.questionnaire import Questionnaire
 from ..models.service_user import ServiceUser
 from ..schemas.questionnaire import (
+    PublicInviteDoctor,
+    PublicInviteResponse,
     PublicLinkDoctor,
     PublicLinkResponse,
     QuestionnaireAnswerRequest,
@@ -37,9 +40,20 @@ from ..services.questionnaire_limits import (
     hash_ip,
     hash_session_token,
 )
+from ..services.questionnaire_invites import find_by_invite_token, is_invite_expired
 from ..services.questionnaire_process import schedule_processing
 
 router = APIRouter(prefix="/public", tags=["public-questionnaire"])
+
+
+INVITE_ONLY = "invite_only"
+
+
+def _invite_only_message(clinic: Clinic) -> str:
+    return (
+        "Анкету клиника присылает ссылкой при записи. Если ссылки нет — "
+        f"позвоните в клинику по телефону {clinic.phone or '…'}"
+    )
 
 
 def _client_ip(request: Request) -> str:
@@ -137,7 +151,9 @@ async def _doctor_payload(
     summary="Публичная ссылка клиники или врача",
     description=(
         "Без JWT. Ищет slug в clinic.public_slug или membership.public_slug. "
-        "При блокировке: blocked + block_code (subscription_expired | clinic_daily_limit | doctor_inactive)."
+        "При блокировке: blocked + block_code (subscription_expired | clinic_daily_limit | "
+        "doctor_inactive | invite_only — у стоматологической клиники анкета только по "
+        "персональной ссылке)."
     ),
 )
 async def get_public_link(
@@ -160,6 +176,20 @@ async def get_public_link(
         )
         for d in doctors_raw
     ]
+
+    if clinic.questionnaire_kind == "dental":
+        return PublicLinkResponse(
+            link_type="doctor" if membership else "clinic",
+            clinic_id=clinic.id,
+            clinic_name=clinic.name,
+            phone=clinic.phone,
+            logo_url=clinic.logo_url,
+            brand_color=clinic.brand_color,
+            clinic_public_slug=clinic.public_slug,
+            blocked=True,
+            block_code=INVITE_ONLY,
+            block_message=_invite_only_message(clinic),
+        )
 
     if status_code == "expired":
         return PublicLinkResponse(
@@ -264,6 +294,11 @@ async def create_questionnaire(
         )
 
     clinic, membership = await _resolve_slug(db, payload.slug)
+    if clinic.questionnaire_kind == "dental":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail={"code": INVITE_ONLY, "message": _invite_only_message(clinic)},
+        )
     ensure_clinic_subscription_active(clinic)
     await check_clinic_daily_limit(db, clinic)
     await check_device_limit(x_device_id)
@@ -421,3 +456,89 @@ async def post_answer(
     if should_process:
         schedule_processing(background_tasks, questionnaire_id)
     return _step_response(descriptor)
+
+
+@router.get(
+    "/invites/{token}",
+    response_model=PublicInviteResponse,
+    summary="Открыть персональную ссылку на анкету",
+    description=(
+        "Без JWT: токен ссылки сам по себе. Приветствие (имя, приём, врач), "
+        "брендинг и текущий шаг. Дальше — /public/questionnaires/{id}/step и "
+        "/answer с этим же токеном в X-Questionnaire-Token. "
+        "blocked + block_code: invite_expired | subscription_expired."
+    ),
+)
+async def get_invite(
+    token: str,
+    db: AsyncSession = Depends(get_db),
+) -> PublicInviteResponse:
+    questionnaire = await find_by_invite_token(db, token)
+    if questionnaire is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={"code": "invite_not_found", "message": "Ссылка не найдена"},
+        )
+    clinic = (
+        await db.execute(select(Clinic).where(Clinic.id == questionnaire.clinic_id))
+    ).scalar_one()
+
+    doctor = None
+    if questionnaire.doctor_membership_id is not None:
+        membership = (
+            await db.execute(
+                select(ClinicMembership).where(
+                    ClinicMembership.id == questionnaire.doctor_membership_id,
+                ),
+            )
+        ).scalar_one_or_none()
+        if membership is not None:
+            payload = await _doctor_payload(db, membership)
+            doctor = PublicInviteDoctor(**payload.model_dump(
+                include={"first_name", "last_name", "middle_name", "photo_url", "specializations"},
+            ))
+
+    block_code, block_message = _invite_block(questionnaire, clinic)
+    step = None
+    if block_code is None:
+        step = _step_response(await build_step_descriptor(db, questionnaire))
+    return PublicInviteResponse(
+        questionnaire_id=questionnaire.id,
+        clinic_name=clinic.name,
+        phone=clinic.phone,
+        logo_url=clinic.logo_url,
+        brand_color=clinic.brand_color,
+        doctor=doctor,
+        patient_first_name=questionnaire.patient_first_name,
+        patient_middle_name=questionnaire.patient_middle_name,
+        appointment_date=questionnaire.appointment_date,
+        appointment_time=questionnaire.appointment_time,
+        blocked=block_code is not None,
+        block_code=block_code,
+        block_message=block_message,
+        step=step,
+    )
+
+
+def _invite_block(
+    questionnaire: Questionnaire,
+    clinic: Clinic,
+) -> tuple[Optional[str], Optional[str]]:
+    """Заполненную анкету показываем всегда; начатую даём закончить при истёкшей
+    подписке, как в общей анкете; просроченную ссылку — нет."""
+    if questionnaire.status == "completed":
+        return None, None
+    phone = clinic.phone or "…"
+    if is_invite_expired(questionnaire, datetime.now(timezone.utc)):
+        return (
+            "invite_expired",
+            f"Ссылка устарела. Попросите новую в клинике по телефону {phone}",
+        )
+    access, _ = compute_access_status(clinic.access_until, clinic.access_type)
+    if access == "expired" and questionnaire.status == "invited":
+        return (
+            "subscription_expired",
+            "Сервис временно недоступен. По вопросам записи "
+            f"обращайтесь в клинику по телефону {phone}",
+        )
+    return None, None

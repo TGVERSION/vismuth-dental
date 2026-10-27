@@ -824,6 +824,8 @@ export interface DoctorQuestionnaireListItem {
   appointment_date: string | null;
   /** HH:MM — слот из настроек backend. */
   appointment_time: string | null;
+  /** Есть только у анкеты по персональной ссылке регистратуры. */
+  patient_last_name?: string | null;
   patient_first_name: string | null;
   patient_middle_name: string | null;
   /** В схеме backend — `Optional[str]`; сужается в `lib/doctor-questionnaires`. */
@@ -885,6 +887,8 @@ export interface DoctorQuestionnaireDetail extends Omit<
   DoctorQuestionnaireListItem,
   'processing_status'
 > {
+  /** `dental` — стоматологическая анкета: карточка собрана правилами. */
+  kind?: 'general' | 'dental';
   ai_unavailable: boolean;
   processing_status: QuestionnaireProcessingStatus | null;
   /** Результат обработки ИИ; `null`, пока обработка не завершилась. */
@@ -1005,7 +1009,8 @@ export interface RegistryQuestionnaireCreated extends RegistryQuestionnaireItem 
 
 export interface RegistryQuestionnaireDetail extends RegistryQuestionnaireItem {
   structured: DoctorQuestionnaireStructured | null;
-  gaps: string[] | null;
+  /** `{ section, question }`, как у врача — разбирается в `lib/doctor-questionnaires`. */
+  gaps: unknown[] | null;
 }
 
 export interface RegistryQuestionnaireCreate {

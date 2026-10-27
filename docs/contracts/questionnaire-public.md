@@ -61,7 +61,7 @@ Timeout: `QUESTIONNAIRE_AI_TIMEOUT` (~20s). Ошибка → `ai_unavailable`, �
 
 Проверки (400 с текстом причины): значение не из `options`; больше одного значения при `multiple=false`; пустой выбор при `required`; группа не с этого шага или не по отмеченной строке; текст в группе без поля; нет текста при `text.required` или выбранном `other`; на `checklist` — и строки, и `none`, или ничего. Текст режется до 1000 символов (`truncated: true`).
 
-У врача (`GET /questionnaires/{id}`) `kind=dental`, `structured`: `important[]` (красные строки: факт + предупреждение врачу), `important_facts[]` (только факты из ответов — для листа, который подписывает пациент), `complaints`, `health[]` (`{key, label, has, detail}` по всем 9 строкам), `medications`, `allergy_anamnesis`, `life_anamnesis`; `gaps[]` — «Что доспросить». Ключи `complaints/medications/allergy_anamnesis/life_anamnesis` те же, что у общей анкеты, — по ним создаётся протокол. `POST /questionnaires/{id}/process` для `dental` пересобирает карточку правилами.
+У врача (`GET /questionnaires/{id}`) `kind=dental`, `structured`: `important[]` (красные строки: факт + предупреждение врачу), `important_facts[]` (только факты из ответов — для листа, который подписывает пациент), `complaints`, `health[]` (`{key, label, has, detail}` по всем 9 строкам), `medications`, `allergy_anamnesis`, `life_anamnesis`; `gaps[]` — «Что доспросить» в формате общей анкеты `{section, question}` (`section`: `complaints` | `medications` | `allergy_anamnesis`) — врач видит вопрос под своим разделом. Ключи `complaints/medications/allergy_anamnesis/life_anamnesis` те же, что у общей анкеты, — по ним создаётся протокол. `POST /questionnaires/{id}/process` для `dental` пересобирает карточку правилами.
 
 ## GET /public/invites/{token}
 

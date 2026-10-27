@@ -4,6 +4,10 @@ from app.services.dental.flow import DentalAnswers, GroupAnswer
 from app.services.dental.summary import build_dental_summary
 
 
+def _questions(gaps):
+    return [gap["question"] for gap in gaps]
+
+
 def _answers(health, **groups):
     return DentalAnswers(
         health=health,
@@ -64,7 +68,7 @@ def test_olga_protocol_fields():
 def test_olga_gaps_ask_why_blood_thinner_is_prescribed():
     _, gaps = build_dental_summary(OLGA)
 
-    assert gaps == ["По какому поводу назначен Эликвис"]
+    assert _questions(gaps) == ["По какому поводу назначен Эликвис"]
 
 
 def test_igor_has_nothing_important():
@@ -75,7 +79,7 @@ def test_igor_has_nothing_important():
     assert summary["medications"] == "Постоянно не принимает."
     assert summary["allergy_anamnesis"] == "Аллергии нет."
     assert all(row["has"] is False for row in summary["health"])
-    assert gaps == []
+    assert _questions(gaps) == []
 
 
 def test_blood_thinner_without_dose_asks_for_dose():
@@ -84,7 +88,7 @@ def test_blood_thinner_without_dose_asks_for_dose():
 
     _, gaps = build_dental_summary(answers)
 
-    assert "Доза и схема приёма препарата, разжижающего кровь" in gaps
+    assert "Доза и схема приёма препарата, разжижающего кровь" in _questions(gaps)
 
 
 def test_blood_thinner_written_in_other_meds_is_flagged():
@@ -96,7 +100,7 @@ def test_blood_thinner_written_in_other_meds_is_flagged():
     assert summary["important"] == [
         "Упомянут «Кардиомагнил» — разжижает кровь, а строка «разжижающие кровь» не отмечена",
     ]
-    assert "Принимает ли Кардиомагнил сейчас и в какой дозе" in gaps
+    assert "Принимает ли Кардиомагнил сейчас и в какой дозе" in _questions(gaps)
     assert summary["medications"] == "Кардиомагнил 75 мг утром, конкор"
 
 
@@ -107,7 +111,7 @@ def test_incomplete_pain_asks_what_is_missing():
     summary, gaps = build_dental_summary(answers)
 
     assert summary["complaints"] == "Болит зуб сверху слева."
-    assert gaps == ["От чего возникает боль", "Как давно болит"]
+    assert _questions(gaps) == ["От чего возникает боль", "Как давно болит"]
 
 
 def test_other_reason_text_goes_to_complaint_and_gaps():
@@ -116,7 +120,7 @@ def test_other_reason_text_goes_to_complaint_and_gaps():
     summary, gaps = build_dental_summary(answers)
 
     assert summary["complaints"] == "Кровоточат дёсны. Другое: Хочу консультацию по брекетам."
-    assert gaps == ["Уточнить повод визита: «Хочу консультацию по брекетам»"]
+    assert _questions(gaps) == ["Уточнить повод визита: «Хочу консультацию по брекетам»"]
 
 
 def test_chronic_conditions_go_to_life_anamnesis_and_important():
@@ -170,7 +174,7 @@ def test_latin_brand_name_is_recognised():
     assert summary["important"] == [
         "Упомянут «Ксарелто» — разжижает кровь, а строка «разжижающие кровь» не отмечена",
     ]
-    assert gaps == ["Принимает ли Ксарелто сейчас и в какой дозе"]
+    assert _questions(gaps) == ["Принимает ли Ксарелто сейчас и в какой дозе"]
 
 
 def test_hyphenated_brand_name_is_recognised():
@@ -249,3 +253,21 @@ def test_other_label_never_appears_in_text():
 
     assert summary["important_facts"] == ["Принимает Варфарин, Синкумар"]
     assert "Другое" not in summary["medications"]
+
+
+def test_gaps_are_attached_to_doctor_card_sections():
+    answers = _answers(
+        ["anticoagulants", "allergy"],
+        reason={"selected": ["pain", "other"], "text": "Шатается зуб"},
+        anticoagulants={"selected": ["xarelto"]},
+    )
+
+    _, gaps = build_dental_summary(answers)
+
+    assert {(gap["section"], gap["question"]) for gap in gaps} >= {
+        ("complaints", "Уточнить повод визита: «Шатается зуб»"),
+        ("complaints", "Как давно болит"),
+        ("medications", "Доза и схема приёма препарата, разжижающего кровь"),
+        ("medications", "По какому поводу назначен Ксарелто"),
+        ("allergy_anamnesis", "На что аллергия"),
+    }

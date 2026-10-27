@@ -211,11 +211,22 @@ def _medications(answers: DentalAnswers, health: list[str]) -> str:
     return "; ".join(p for p in parts if p) or "Постоянно не принимает."
 
 
-def _gaps(answers: DentalAnswers, health: list[str]) -> list[str]:
+# Раздел карточки врача, под которым показывается вопрос «Что доспросить»:
+# тот же формат `{section, question}`, что у общей анкеты.
+COMPLAINTS = "complaints"
+MEDICATIONS = "medications"
+ALLERGY = "allergy_anamnesis"
+
+
+def _gap(section: str, question: str) -> dict[str, str]:
+    return {"section": section, "question": question}
+
+
+def _gaps(answers: DentalAnswers, health: list[str]) -> list[dict[str, str]]:
     gaps = []
     other_text = _answer(answers, REASON.key).text
     if other_text:
-        gaps.append(f"Уточнить повод визита: «{other_text}»")
+        gaps.append(_gap(COMPLAINTS, f"Уточнить повод визита: «{other_text}»"))
     if has_pain(answers):
         for key, question in (
             ("pain.where", "Где именно болит"),
@@ -223,27 +234,29 @@ def _gaps(answers: DentalAnswers, health: list[str]) -> list[str]:
             ("pain.since", "Как давно болит"),
         ):
             if not _answer(answers, key).selected:
-                gaps.append(question)
+                gaps.append(_gap(COMPLAINTS, question))
     if "anticoagulants" in health:
         if not _answer(answers, "anticoagulants").text:
-            gaps.append("Доза и схема приёма препарата, разжижающего кровь")
+            gaps.append(_gap(MEDICATIONS, "Доза и схема приёма препарата, разжижающего кровь"))
         drugs = ", ".join(_labels(answers, "anticoagulants")) or _BLOOD_THINNER_FALLBACK
-        gaps.append(f"По какому поводу назначен {drugs}")
+        gaps.append(_gap(MEDICATIONS, f"По какому поводу назначен {drugs}"))
     if "allergy" in health:
         substance = _answer(answers, "allergy.substance")
         if not substance.selected and not substance.text:
-            gaps.append("На что аллергия")
+            gaps.append(_gap(ALLERGY, "На что аллергия"))
         if not _answer(answers, "allergy.reaction").selected:
-            gaps.append("Как проявлялась аллергия")
+            gaps.append(_gap(ALLERGY, "Как проявлялась аллергия"))
     if "anticoagulants" not in health:
         gaps.extend(
-            f"Принимает ли {name} сейчас и в какой дозе"
+            _gap(MEDICATIONS, f"Принимает ли {name} сейчас и в какой дозе")
             for name in _mentioned_blood_thinners(answers)
         )
     return gaps
 
 
-def build_dental_summary(answers: DentalAnswers) -> tuple[dict[str, Any], list[str]]:
+def build_dental_summary(
+    answers: DentalAnswers,
+) -> tuple[dict[str, Any], list[dict[str, str]]]:
     """Карточка врача и список «Что доспросить».
 
     Ключи `complaints`, `medications`, `allergy_anamnesis`, `life_anamnesis`

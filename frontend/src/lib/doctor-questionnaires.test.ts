@@ -4,6 +4,7 @@ import {
   buildSections,
   doctorDateRange,
   formatAppointmentTime,
+  gapQuestions,
   isAppointmentPast,
   isQuestionnaireReady,
   isVisibleInList,
@@ -296,5 +297,28 @@ describe('buildSections', () => {
   it('без результата обработки все разделы пустые', () => {
     const sections = buildSections({ structured: null, gaps: null });
     expect(sections.every((section) => section.isEmpty)).toBe(true);
+  });
+});
+
+describe('стоматологическая анкета у врача', () => {
+  it('имя пациента с фамилией, если она есть', () => {
+    expect(
+      patientName({
+        patient_last_name: 'Белова',
+        patient_first_name: 'Ольга',
+        patient_middle_name: 'Сергеевна',
+      }),
+    ).toBe('Белова Ольга Сергеевна');
+  });
+
+  it('все вопросы «Что доспросить» одним списком', () => {
+    expect(
+      gapQuestions([
+        { section: 'complaints', question: 'Как давно болит' },
+        { section: 'medications', question: 'По какому поводу назначен Эликвис' },
+        { section: 'unknown', question: 'Чужой раздел' },
+        'строка без раздела',
+      ]),
+    ).toEqual(['Как давно болит', 'По какому поводу назначен Эликвис']);
   });
 });

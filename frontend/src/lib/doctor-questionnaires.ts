@@ -186,14 +186,17 @@ export const isVisitType = (value: unknown): value is QuestionnaireVisitType =>
 export const visitTypeLabel = (value: string | null): string | null =>
   isVisitType(value) ? VISIT_TYPE_LABELS[value] : null;
 
-/** Имя и отчество пациента одной строкой; пустая строка, если их нет. */
+/**
+ * ФИО пациента одной строкой; пустая строка, если их нет. Фамилия есть только
+ * у анкеты по персональной ссылке — у общей анкеты пациент её не называет.
+ */
 export const patientName = (
   item: Pick<
     DoctorQuestionnaireListItem,
-    'patient_first_name' | 'patient_middle_name'
+    'patient_last_name' | 'patient_first_name' | 'patient_middle_name'
   >,
 ): string =>
-  [item.patient_first_name, item.patient_middle_name]
+  [item.patient_last_name, item.patient_first_name, item.patient_middle_name]
     .map((part) => part?.trim())
     .filter(Boolean)
     .join(' ');
@@ -250,6 +253,12 @@ export const parseGaps = (
   }
 
   return result;
+};
+
+/** Все вопросы «Что доспросить» по порядку разделов — для общего списка. */
+export const gapQuestions = (gaps: unknown[] | null | undefined): string[] => {
+  const bySection = parseGaps(gaps);
+  return QUESTIONNAIRE_SECTIONS.flatMap(({ key }) => bySection[key]);
 };
 
 export interface QuestionnaireSectionView {

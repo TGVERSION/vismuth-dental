@@ -7,6 +7,7 @@ import {
   patientName,
   visitTypeLabel,
 } from '@/lib/doctor-questionnaires';
+import { DentalDoctorSummary } from './DentalDoctorSummary';
 import { ProtocolActionButton } from './ProtocolActionButton';
 import { QuestionnaireSection } from './QuestionnaireSection';
 
@@ -43,6 +44,9 @@ export const QuestionnaireCard = ({
 
       {isReady ? (
         <>
+          {questionnaire.kind === 'dental' && questionnaire.structured ? (
+            <DentalDoctorSummary structured={questionnaire.structured} />
+          ) : null}
           {buildSections(questionnaire).map((section) => (
             <QuestionnaireSection key={section.key} section={section} />
           ))}

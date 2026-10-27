@@ -25,7 +25,7 @@ Invite врача: `specialization_ids` обязательны при `is_doctor
 ## POST /super-admin/clinics
 
 - **Назначение:** создать клинику
-- **Поведение:** генерирует immutable `public_slug`; `201`
+- **Поведение:** генерирует immutable `public_slug`; `201`. `questionnaire_kind`: `general` (по умолчанию — общая анкета по ссылке и QR) или `dental` (стоматологическая, только по персональным ссылкам регистратуры, см. [clinic-questionnaires.md](clinic-questionnaires.md))
 - **Ответ (смысл):** карточка клиники + computed access status, `doctors_count=0`
 - **Frontend:** форма создания в супер-админке
 - **Код:** `create_clinic`
@@ -45,8 +45,8 @@ Invite врача: `specialization_ids` обязательны при `is_doctor
 
 ## PATCH /super-admin/clinics/{clinic_id}
 
-- **Назначение:** частичное обновление (name, phone, email, logo_url, brand_color, doctors_limit, access_*)
-- **Поведение:** `public_slug` не меняется; выставляет `updated_at`
+- **Назначение:** частичное обновление (name, phone, email, logo_url, brand_color, doctors_limit, access_*, questionnaire_kind)
+- **Поведение:** `public_slug` не меняется; выставляет `updated_at`. `questionnaire_kind: null` → `400`. Смена типа не трогает начатые анкеты: у каждой свой `kind`, она дозаполняется по прежним правилам
 - **Код:** `patch_clinic`
 
 ## DELETE /super-admin/clinics/{clinic_id}

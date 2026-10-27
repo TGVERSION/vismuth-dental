@@ -71,6 +71,7 @@ def clinic_to_read_fields(clinic: Clinic, doctors_count: int = 0) -> dict:
         "doctors_limit": clinic.doctors_limit,
         "access_until": clinic.access_until,
         "access_type": clinic.access_type,
+        "questionnaire_kind": clinic.questionnaire_kind,
         "public_slug": clinic.public_slug,
         "access_status_code": status_code,
         "access_status_label": status_label,

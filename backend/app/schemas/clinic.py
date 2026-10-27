@@ -6,6 +6,12 @@ from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
 AccessType = Literal["trial", "paid"]
 AccessStatusCode = Literal["trial", "paid", "expired"]
+QuestionnaireKind = Literal["general", "dental"]
+
+_KIND_DESCRIPTION = (
+    "general — общая анкета по ссылке и QR врача; dental — стоматологическая, "
+    "только по персональным ссылкам регистратуры."
+)
 
 
 class ClinicCreate(BaseModel):
@@ -21,6 +27,10 @@ class ClinicCreate(BaseModel):
     )
     access_until: date = Field(description="Дата окончания доступа (включительно по логике access).")
     access_type: AccessType = Field(description="trial | paid — тип подписки.")
+    questionnaire_kind: QuestionnaireKind = Field(
+        default="general",
+        description=_KIND_DESCRIPTION,
+    )
 
 
 class ClinicPatch(BaseModel):
@@ -42,6 +52,10 @@ class ClinicPatch(BaseModel):
         default=None,
         description="trial | paid.",
     )
+    questionnaire_kind: Optional[QuestionnaireKind] = Field(
+        default=None,
+        description=_KIND_DESCRIPTION + " Начатые анкеты дозаполняются по прежним правилам.",
+    )
 
 
 class ClinicRead(BaseModel):
@@ -54,6 +68,7 @@ class ClinicRead(BaseModel):
     doctors_limit: int = Field(description="Лимит активных врачей.")
     access_until: date
     access_type: AccessType
+    questionnaire_kind: QuestionnaireKind = Field(description=_KIND_DESCRIPTION)
     public_slug: str = Field(description="Slug публичной ссылки клиники (/public/links/{slug}).")
     access_status_code: AccessStatusCode = Field(
         description="Вычисляемый статус: trial | paid | expired.",

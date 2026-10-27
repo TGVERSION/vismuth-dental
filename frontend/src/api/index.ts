@@ -912,6 +912,9 @@ export interface CreateProtocolFromQuestionnaireRequest {
 
 export type ClinicAccessType = 'trial' | 'paid';
 
+/** `dental` — стоматологическая анкета по персональным ссылкам регистратуры. */
+export type ClinicQuestionnaireKind = 'general' | 'dental';
+
 /** Статус доступа, который backend вычисляет по типу и дате. */
 export type ClinicAccessStatus = 'trial' | 'paid' | 'expired';
 
@@ -926,6 +929,7 @@ export interface ClinicRead {
   /** `YYYY-MM-DD`. */
   access_until: string;
   access_type: ClinicAccessType;
+  questionnaire_kind: ClinicQuestionnaireKind;
   public_slug: string;
   access_status_code: ClinicAccessStatus;
   access_status_label: string;
@@ -943,6 +947,7 @@ export interface ClinicCreate {
   doctors_limit?: number;
   access_until: string;
   access_type: ClinicAccessType;
+  questionnaire_kind?: ClinicQuestionnaireKind;
 }
 
 export type ClinicPatch = Partial<ClinicCreate>;

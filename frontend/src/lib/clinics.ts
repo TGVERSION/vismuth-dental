@@ -7,6 +7,7 @@ import type {
   ClinicMemberPatch,
   ClinicMemberRead,
   ClinicPatch,
+  ClinicQuestionnaireKind,
   ClinicRead,
 } from '@/api';
 import { formatDayMonth } from './calendar';
@@ -78,10 +79,20 @@ export const ACCESS_TYPE_OPTIONS: { value: ClinicAccessType; label: string }[] =
     { value: 'paid', label: 'Платный' },
   ];
 
+export const QUESTIONNAIRE_KIND_OPTIONS: {
+  value: ClinicQuestionnaireKind;
+  label: string;
+}[] = [
+  { value: 'general', label: 'Общая' },
+  { value: 'dental', label: 'Стоматологическая' },
+];
+
 /** Значения полей карточки в том виде, в каком их редактирует пользователь. */
 export interface ClinicDraft {
   name: string;
   access_type: ClinicAccessType | '';
+  /** Общая анкета по ссылке и QR врача или стоматологическая по ссылкам регистратуры. */
+  questionnaire_kind: ClinicQuestionnaireKind;
   /** `YYYY-MM-DD` или пусто. */
   access_until: string;
   doctors_limit: number;
@@ -95,6 +106,7 @@ export type ClinicField = keyof ClinicDraft;
 export const EMPTY_CLINIC_DRAFT: ClinicDraft = {
   name: '',
   access_type: 'trial',
+  questionnaire_kind: 'general',
   access_until: '',
   doctors_limit: DOCTORS_LIMIT_DEFAULT,
   phone: '',
@@ -105,6 +117,7 @@ export const EMPTY_CLINIC_DRAFT: ClinicDraft = {
 export const clinicToDraft = (clinic: ClinicRead): ClinicDraft => ({
   name: clinic.name,
   access_type: clinic.access_type,
+  questionnaire_kind: clinic.questionnaire_kind,
   access_until: clinic.access_until,
   doctors_limit: clinic.doctors_limit,
   phone: clinic.phone ? formatPhone(clinic.phone) : '',
@@ -156,6 +169,8 @@ export const validateClinicField = (
       return draft.name.trim() ? null : 'Введите название клиники';
     case 'access_type':
       return draft.access_type ? null : 'Выберите тип доступа';
+    case 'questionnaire_kind':
+      return null;
     case 'access_until':
       return draft.access_until ? null : 'Выберите дату';
     case 'doctors_limit':
@@ -188,6 +203,8 @@ const toApiValue = (
       return draft.name.trim();
     case 'access_type':
       return draft.access_type || undefined;
+    case 'questionnaire_kind':
+      return draft.questionnaire_kind;
     case 'access_until':
       return draft.access_until;
     case 'doctors_limit':
@@ -224,6 +241,7 @@ export const buildClinicCreate = (draft: ClinicDraft): ClinicCreate => {
     name: draft.name.trim(),
     access_type: draft.access_type as ClinicAccessType,
     access_until: draft.access_until,
+    questionnaire_kind: draft.questionnaire_kind,
   };
 
   for (const field of OPTIONAL_FIELDS) {

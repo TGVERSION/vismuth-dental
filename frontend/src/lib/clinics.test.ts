@@ -40,6 +40,7 @@ const clinic: ClinicRead = {
   doctors_limit: 5,
   access_until: '2026-10-05',
   access_type: 'trial',
+  questionnaire_kind: 'general',
   public_slug: 'angio',
   access_status_code: 'trial',
   access_status_label: 'Пробный период до 05.10.2026',
@@ -183,6 +184,7 @@ describe('создание и сохранение клиники', () => {
       name: 'Ангио-лайн',
       access_type: 'trial',
       access_until: '2026-10-05',
+      questionnaire_kind: 'general',
       doctors_limit: 10,
       phone: '+79000000000',
     });
@@ -221,6 +223,20 @@ describe('создание и сохранение клиники', () => {
     expect(nextClinicSave(clinic, draft, 'phone')).toEqual({
       kind: 'patch',
       data: { phone: null },
+    });
+  });
+
+  it('стоматологическая анкета уходит при создании', () => {
+    expect(buildClinicCreate({ ...filled, questionnaire_kind: 'dental' }).questionnaire_kind).toBe(
+      'dental',
+    );
+  });
+
+  it('смена типа анкеты у клиники — отдельный патч', () => {
+    const draft = { ...clinicToDraft(clinic), questionnaire_kind: 'dental' as const };
+    expect(nextClinicSave(clinic, draft, 'questionnaire_kind')).toEqual({
+      kind: 'patch',
+      data: { questionnaire_kind: 'dental' },
     });
   });
 

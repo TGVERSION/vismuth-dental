@@ -89,6 +89,7 @@ async def create_clinic(
         doctors_limit=payload.doctors_limit,
         access_until=payload.access_until,
         access_type=payload.access_type,
+        questionnaire_kind=payload.questionnaire_kind,
         public_slug=await _unique_public_slug(db),
         created_at=now,
     )
@@ -194,6 +195,11 @@ async def patch_clinic(
         data["email"] = _normalize_email(str(data["email"]))
     if "name" in data and data["name"] is not None:
         data["name"] = data["name"].strip()
+    if "questionnaire_kind" in data and data["questionnaire_kind"] is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="questionnaire_kind cannot be null",
+        )
 
     for key, value in data.items():
         setattr(clinic, key, value)

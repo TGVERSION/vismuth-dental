@@ -10,6 +10,7 @@ import { sanitizeBrandColor } from '@/lib/branding';
 import { fieldFillClass } from '@/lib/field-fill';
 import {
   ACCESS_TYPE_OPTIONS,
+  QUESTIONNAIRE_KIND_OPTIONS,
   canAddDoctor as checkCanAddDoctor,
   doctorsLimitOptions,
   filterOptions,
@@ -17,7 +18,7 @@ import {
   normalizePhone,
   type MemberRole,
 } from '@/lib/clinics';
-import type { ClinicAccessType } from '@/api';
+import type { ClinicAccessType, ClinicQuestionnaireKind } from '@/api';
 import { ClinicAdminsField } from './ClinicAdminsField';
 import { ClinicDateField } from './ClinicDateField';
 import { ClinicMembers } from './ClinicMembers';
@@ -128,6 +129,26 @@ export const ClinicCard = ({ clinicId }: ClinicCardProps) => {
             onChange={(value) => card.setAndCommit('access_type', value)}
             triggerClassName={fieldFillClass(draft.access_type)}
             aria-label="Тип доступа"
+          />
+        </FieldRow>
+
+        {/* Подсказка — по сохранённому значению: при неудачном сохранении
+            она не должна выдавать желаемое за действительное. */}
+        <FieldRow
+          label="Анкета пациента"
+          error={errors.questionnaire_kind}
+          hint={
+            (saved?.questionnaire_kind ?? draft.questionnaire_kind) === 'dental'
+              ? 'По персональным ссылкам от регистратуры. Если переключить на общую, у регистратуры пропадёт раздел «Анкеты пациентов», а начатые анкеты пациенты дозаполнят'
+              : 'По ссылке и QR врача или клиники'
+          }
+        >
+          <CustomDropdown<ClinicQuestionnaireKind>
+            options={QUESTIONNAIRE_KIND_OPTIONS}
+            value={draft.questionnaire_kind}
+            onChange={(value) => card.setAndCommit('questionnaire_kind', value)}
+            triggerClassName={fieldFillClass(draft.questionnaire_kind)}
+            aria-label="Анкета пациента"
           />
         </FieldRow>
 

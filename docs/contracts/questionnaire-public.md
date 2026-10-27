@@ -55,7 +55,7 @@ Timeout: `QUESTIONNAIRE_AI_TIMEOUT` (~20s). Ошибка → `ai_unavailable`, �
 
 | step_type | Что в дескрипторе | Тело ответа |
 |-----------|-------------------|-------------|
-| `chip_groups` | `groups[]`: `{key, title, question, options[{value,label}], multiple, required, text: {placeholder, required} \| null}` | `selections: {key: [value…]}`, `texts: {key: "…"}` |
+| `chip_groups` | `groups[]`: `{key, title, question, options[{value,label}], multiple, required, text: {placeholder, required, show: always | on_select | on_other} | null}`\| null}` | `selections: {key: [value…]}`, `texts: {key: "…"}` |
 | `checklist` | `choices[]`: `{value, label, hint}`, `allow_none=true` | `selections: {"health": [value…]}` или `none: true` |
 | `done` | `completed=true`, `title` | — |
 

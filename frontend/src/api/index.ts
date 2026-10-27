@@ -701,6 +701,8 @@ export interface PublicLink {
 export interface QuestionnaireChoice {
   value: string;
   label: string;
+  /** Подпись под строкой: только у списка здоровья стоматологической анкеты. */
+  hint?: string;
 }
 
 /** Дескриптор шага. step_key и step_type — строки backend, сужаются в lib. */
@@ -718,6 +720,11 @@ export interface QuestionnaireStep {
    * Форма зависит от шага, поэтому `unknown` с разбором в lib.
    */
   options: unknown[];
+  /**
+   * Стоматологическая анкета, `step_type=chip_groups`: группы кнопок.
+   * Форма сужается в `lib/dental-questionnaire.ts`. У общей анкеты пусто.
+   */
+  groups?: unknown[];
   /** YYYY-MM-DD по часам сервера. */
   date_min: string | null;
   date_max: string | null;
@@ -761,6 +768,43 @@ export interface QuestionnaireStepAnswer {
   appointment_date?: string | null;
   /** HH:MM. */
   appointment_time?: string | null;
+  /** Стоматологическая анкета: выбранные значения по ключу группы. */
+  selections?: Record<string, string[]>;
+  /** Стоматологическая анкета: свой текст по ключу группы. */
+  texts?: Record<string, string>;
+}
+
+/**
+ * Персональная ссылка регистратуры (`GET /public/invites/{token}`):
+ * приветствие и текущий шаг. Дальше — те же `/public/questionnaires/{id}/…`
+ * с токеном ссылки. Описание — docs/contracts/questionnaire-public.md.
+ */
+export interface PublicInviteDoctor {
+  first_name: string | null;
+  last_name: string | null;
+  middle_name: string | null;
+  photo_url: string | null;
+  specializations: PublicSpecialization[];
+}
+
+export interface PublicInvite {
+  questionnaire_id: string;
+  clinic_name: string;
+  phone: string | null;
+  logo_url: string | null;
+  brand_color: string | null;
+  doctor: PublicInviteDoctor | null;
+  patient_first_name: string | null;
+  patient_middle_name: string | null;
+  /** YYYY-MM-DD. */
+  appointment_date: string | null;
+  /** HH:MM. */
+  appointment_time: string | null;
+  blocked: boolean;
+  /** invite_expired | subscription_expired. */
+  block_code: string | null;
+  block_message: string | null;
+  step: QuestionnaireStep | null;
 }
 
 // ---------------------------------------------------------------------------

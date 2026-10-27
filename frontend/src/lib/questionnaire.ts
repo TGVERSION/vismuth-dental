@@ -64,7 +64,11 @@ export type QuestionnaireBlock =
   | 'clinic_daily_limit'
   | 'doctor_inactive'
   | 'device_limit'
-  | 'ip_limit';
+  | 'ip_limit'
+  // Стоматологическая клиника: анкета только по персональной ссылке.
+  | 'invite_only'
+  | 'invite_expired'
+  | 'invite_not_found';
 
 const BLOCKS: readonly QuestionnaireBlock[] = [
   'subscription_expired',
@@ -72,6 +76,9 @@ const BLOCKS: readonly QuestionnaireBlock[] = [
   'doctor_inactive',
   'device_limit',
   'ip_limit',
+  'invite_only',
+  'invite_expired',
+  'invite_not_found',
 ];
 
 const toBlock = (code: unknown): QuestionnaireBlock | null =>

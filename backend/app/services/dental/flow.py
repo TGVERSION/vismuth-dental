@@ -89,7 +89,11 @@ def _groups_for(step: str, answers: DentalAnswers) -> tuple[Group, ...]:
 def _group_descriptor(group: Group) -> dict[str, Any]:
     text = None
     if group.text_placeholder is not None:
-        text = {"placeholder": group.text_placeholder, "required": group.text_required}
+        text = {
+            "placeholder": group.text_placeholder,
+            "required": group.text_required,
+            "show": group.text_show,
+        }
     return {
         "key": group.key,
         "title": group.title,

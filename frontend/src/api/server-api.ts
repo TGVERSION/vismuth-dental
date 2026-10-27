@@ -15,7 +15,7 @@ import { cache } from 'react';
 import { headers } from 'next/headers';
 import { logError } from '@/lib/logger';
 import { isBuiltWithMock } from '@/lib/mocks';
-import type { PublicLink } from './index';
+import type { PublicInvite, PublicLink } from './index';
 
 /**
  * Бюджет ожидания. Запрос блокирует первый байт HTML: лучше отдать анкету
@@ -85,6 +85,49 @@ export const getQuestionnaireLink = cache(
     } catch (error) {
       logError('Анкета: ошибка загрузки ссылки', error);
       return null;
+    }
+  },
+);
+
+/**
+ * Ссылка регистратуры — единственный вход в анкету: без неё пациенту нечего
+ * показать, кроме заглушки. Поэтому ждём дольше, чем общую ссылку, у которой
+ * есть запасной вариант без брендинга.
+ */
+const INVITE_FETCH_TIMEOUT_MS = 5000;
+
+/** Результат загрузки персональной ссылки: «нет такой» и «сбой» — разные экраны. */
+export type InviteLoadResult =
+  | { status: 'ok'; invite: PublicInvite }
+  | { status: 'not_found' }
+  | { status: 'error' };
+
+/**
+ * Персональная ссылка регистратуры (`/q/i/{token}`). Как и общая ссылка —
+ * без кэша: в ответе имя пациента и время его приёма.
+ */
+export const getQuestionnaireInvite = cache(
+  async (token: string): Promise<InviteLoadResult> => {
+    try {
+      const baseUrl = await resolveBaseUrl();
+      const response = await fetch(
+        `${baseUrl}/public/invites/${encodeURIComponent(token)}`,
+        {
+          cache: 'no-store',
+          signal: AbortSignal.timeout(INVITE_FETCH_TIMEOUT_MS),
+        },
+      );
+
+      if (response.status === 404) return { status: 'not_found' };
+      if (!response.ok) {
+        logError('Анкета: персональная ссылка не загружена');
+        return { status: 'error' };
+      }
+
+      return { status: 'ok', invite: (await response.json()) as PublicInvite };
+    } catch (error) {
+      logError('Анкета: ошибка загрузки персональной ссылки', error);
+      return { status: 'error' };
     }
   },
 );

@@ -8,6 +8,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import Literal
 
 OTHER = "other"
 
@@ -23,7 +24,8 @@ class Group:
     """Группа кнопок на экране; у группы может быть поле для своего текста.
 
     `text_required` — текст нужен всегда; если поле есть и выбрано «Другое»,
-    текст нужен тоже.
+    текст нужен тоже. `text_show` — когда экран показывает поле: всегда,
+    после выбора любого варианта или только при «Другое».
     """
 
     key: str
@@ -32,6 +34,7 @@ class Group:
     multiple: bool = True
     text_placeholder: str | None = None
     text_required: bool = False
+    text_show: Literal["always", "on_select", "on_other"] = "on_select"
     selection_required: bool = False
     title: str | None = None
 
@@ -61,6 +64,7 @@ REASON = Group(
         (OTHER, "Другое"),
     ),
     text_placeholder="Напишите, с чем пришли",
+    text_show="on_other",
     selection_required=True,
 )
 
@@ -177,7 +181,8 @@ HEALTH_ITEMS = (
     )),
     HealthItem("other_meds", "Другие лекарства каждый день", "", (
         _detail("other_meds", "другие лекарства", "Какие лекарства и в какой дозе?", (),
-                text_placeholder="Например: Конкор 5 мг утром", text_required=True),
+                text_placeholder="Например: Конкор 5 мг утром", text_required=True,
+                text_show="always"),
     )),
 )
 

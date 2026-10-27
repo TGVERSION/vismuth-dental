@@ -78,7 +78,7 @@ class StepDescriptorResponse(BaseModel):
         description=(
             "Стоматологическая анкета, step_type=chip_groups: группы кнопок "
             "[{key, title, question, options[{value,label}], multiple, required, "
-            "text: {placeholder, required} | null}]. Для checklist строки — в choices "
+            "text: {placeholder, required, show} | null}]. Для checklist строки — в choices "
             "[{value, label, hint}]."
         ),
     )

@@ -37,7 +37,7 @@ def test_reason_step_offers_seven_reasons_with_other_text():
     assert [o["value"] for o in group["options"]] == [
         "pain", "checkup", "cleaning", "gums", "broken", "missing", "other",
     ]
-    assert group["text"] is not None
+    assert group["text"]["show"] == "on_other"
 
 
 def test_pain_reason_leads_to_pain_step():
@@ -145,6 +145,10 @@ def test_details_show_groups_only_for_checked_items_in_list_order():
         "allergy.substance", "allergy.reaction", "other_meds",
     ]
     assert step.groups[0]["title"] == "Вы отметили: аллергия на лекарства"
+    assert step.groups[0]["text"]["show"] == "on_select"
+    assert step.groups[2]["text"] == {
+        "placeholder": "Например: Конкор 5 мг утром", "required": True, "show": "always",
+    }
 
 
 def test_details_other_meds_text_is_required():

@@ -1,6 +1,7 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useEffect, useEffectEvent, useRef, useState } from 'react';
+import { flushSync } from 'react-dom';
 import type { RegistryQuestionnaireDetail } from '@/api';
 import { mainApi } from '@/api';
 import { ApiError } from '@/api/base-client';
@@ -15,10 +16,17 @@ import {
   registryActions,
   registryStatusView,
 } from '@/lib/registry';
+import { printSheet } from '@/lib/registry-print';
+import { AnketaPrintSheet } from './AnketaPrintSheet';
 import { DentalCardBody } from './DentalCardBody';
+
+/** Режим печати анкеты: правила в globals.css действуют только под ним. */
+const PRINT_MODE_ATTR = 'data-print-mode';
 
 interface RegistryDetailProps {
   clinicId: string;
+  /** Название клиники — в шапке листа печати. */
+  clinicName: string;
   questionnaire: RegistryQuestionnaireDetail;
   /** Анкета изменилась на сервере: перечитать её и список. */
   onChanged: () => void;
@@ -42,6 +50,7 @@ const actionError = (error: unknown): { text: string; refresh: boolean } => {
 /** Открытая анкета у регистратуры: кто, к кому, статус, действия и карточка. */
 export const RegistryDetail = ({
   clinicId,
+  clinicName,
   questionnaire,
   onChanged,
   onDeleted,
@@ -51,6 +60,33 @@ export const RegistryDetail = ({
   const [isBusy, setIsBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const busyRef = useRef(false);
+  const [isPrinting, setIsPrinting] = useState(false);
+
+  // Событие эффекта: видит свежие данные анкеты, но не перевешивает слушатель.
+  const markPrinted = useEffectEvent(() => {
+    if (questionnaire.printed_at) return;
+    void run(() => mainApi.clinicQuestionnaires.markPrinted(clinicId, questionnaire.id), onChanged);
+  });
+
+  // Режим печати снимается по afterprint (и при уходе с карточки), а не сразу
+  // после window.print(): там, где вызов не ждёт диалога, лист исчез бы до
+  // печати. После печати анкета отмечается распечатанной — браузер не
+  // сообщает, нажали «Печать» или «Отмена», поэтому отметка ставится в любом
+  // случае; регистратура видит её в списке.
+  useEffect(() => {
+    const root = document.documentElement;
+    const endPrint = () => {
+      if (root.getAttribute(PRINT_MODE_ATTR) !== 'anketa') return;
+      root.removeAttribute(PRINT_MODE_ATTR);
+      setIsPrinting(false);
+      markPrinted();
+    };
+    window.addEventListener('afterprint', endPrint);
+    return () => {
+      window.removeEventListener('afterprint', endPrint);
+      if (root.getAttribute(PRINT_MODE_ATTR) === 'anketa') root.removeAttribute(PRINT_MODE_ATTR);
+    };
+  }, []);
 
   const status = registryStatusView(questionnaire.status);
   const actions = registryActions(questionnaire.status);
@@ -86,6 +122,14 @@ export const RegistryDetail = ({
       () => undefined,
     );
 
+
+  const print = () => {
+    // Лист должен оказаться в DOM до вызова print().
+    flushSync(() => setIsPrinting(true));
+    document.documentElement.setAttribute(PRINT_MODE_ATTR, 'anketa');
+    window.print();
+  };
+
   const markSigned = () =>
     run(() => mainApi.clinicQuestionnaires.markSigned(clinicId, questionnaire.id), onChanged);
 
@@ -110,6 +154,16 @@ export const RegistryDetail = ({
       </header>
 
       <div className="flex flex-wrap gap-x-5 gap-y-2">
+        {actions.canPrint ? (
+          <button
+            type="button"
+            onClick={print}
+            disabled={isBusy}
+            className="h-9 rounded-xl bg-[#5D8CF1] px-4 text-sm font-medium text-white hover:bg-[#769CEF] disabled:opacity-60"
+          >
+            Распечатать
+          </button>
+        ) : null}
         {actions.canMarkSigned ? (
           <button type="button" className={LINK_BUTTON_CLASS} disabled={isBusy} onClick={markSigned}>
             Отметить подписанной
@@ -146,6 +200,8 @@ export const RegistryDetail = ({
             : 'Пациент заполняет анкету'}
         </p>
       )}
+
+      {isPrinting ? <AnketaPrintSheet sheet={printSheet(questionnaire, clinicName)} /> : null}
 
       {newUrl ? (
         <ModalShell title="Новая ссылка" onClose={() => setNewUrl(null)} closeDisabled>

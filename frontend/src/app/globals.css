@@ -377,3 +377,25 @@ div[contenteditable][data-placeholder]:empty:before {
     padding-top: 30mm;
   }
 }
+
+/* Печать анкеты пациента у регистратуры: на лист — только анкета А4.
+   Тот же приём, что у печати QR: атрибут data-print-mode="anketa" на <html>
+   ставит карточка анкеты на время печати и снимает после (afterprint). */
+[data-print-anketa-sheet] {
+  display: none;
+}
+
+@media print {
+  html[data-print-mode='anketa'] body > :not([data-print-anketa-sheet]) {
+    display: none !important;
+  }
+
+  html[data-print-mode='anketa'] [data-print-anketa-sheet] {
+    display: block !important;
+    /* Поля внутри листа, а не @page: правило @page действовало бы и на
+       печать протокола. Браузерные поля по умолчанию ~10 мм. */
+    padding: 4mm 6mm;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+}

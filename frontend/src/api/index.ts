@@ -855,6 +855,11 @@ export interface DoctorQuestionnaireStructured {
   life_anamnesis?: string | null;
   /** Стоматологическая анкета: «Самое важное» — красные строки. */
   important?: string[];
+  /**
+   * То же без предупреждений врачу — только факты из ответов пациента.
+   * Идёт на лист, который пациент подписывает.
+   */
+  important_facts?: string[];
   /** Стоматологическая анкета: все 9 строк здоровья, «да» и «нет». */
   health?: DentalHealthRow[];
 }

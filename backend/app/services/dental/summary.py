@@ -57,7 +57,10 @@ def _labels(answers: DentalAnswers, key: str) -> list[str]:
     group = _GROUPS[key]
     by_value = {o.value: o.label for o in group.options}
     # Значение могло пропасть из questions.py, пока анкета хранится: пропускаем.
-    return [by_value[v] for v in _answer(answers, key).selected if v in by_value]
+    # «Другое» — не ответ, а приглашение написать свой текст: в фразы не идёт.
+    return [
+        by_value[v] for v in _answer(answers, key).selected if v in by_value and v != OTHER
+    ]
 
 
 def _group_detail(answers: DentalAnswers, key: str, *, lower: bool) -> str:
@@ -134,39 +137,54 @@ def _mentioned_blood_thinners(answers: DentalAnswers) -> list[str]:
     return list(dict.fromkeys(found))
 
 
-def _heart_line(answers: DentalAnswers) -> str | None:
+# Пункт «Самого важного»: факт из ответов пациента и предупреждение врачу.
+# Врач видит их одной строкой, на лист для подписи идёт только факт —
+# пациент подписывает свои ответы, а не выводы системы.
+ImportantItem = tuple[str, str | None]
+
+
+def _heart_item(answers: DentalAnswers) -> ImportantItem | None:
     selected = _answer(answers, "heart").selected
     labels = {o.value: o.label for o in _GROUPS["heart"].options}
     serious = [labels[v] for v in _SERIOUS_HEART if v in selected]
     if not serious:
         return None
     note = _PACEMAKER_NOTE if "pacemaker" in selected else _HEART_NOTE
-    return f"{', '.join(serious)}: {note}"
+    return ", ".join(serious), note
 
 
-def _risk_line(answers: DentalAnswers, item_value: str) -> str | None:
+def _risk_item(answers: DentalAnswers, item_value: str) -> ImportantItem | None:
     if item_value == "heart":
-        return _heart_line(answers)
+        return _heart_item(answers)
     note = _RISK_NOTES.get(item_value)
     if note is None:
         return None
     detail = _item_detail(answers, item_value, lower=False)
     label = next(i.label for i in HEALTH_ITEMS if i.value == item_value)
-    return f"{_upper_first(detail) if detail else label}: {note}"
+    return (_upper_first(detail) if detail else label), note
+
+
+def _important_items(answers: DentalAnswers, health: list[str]) -> list[ImportantItem]:
+    items: list[ImportantItem] = []
+    if "anticoagulants" in health:
+        drug = _blood_thinner_text(answers) or _BLOOD_THINNER_FALLBACK
+        items.append((f"Принимает {drug}", "риск кровотечения при удалении и хирургии"))
+    if "allergy" in health:
+        items.append((_allergy_line(answers), None))
+    for item in HEALTH_ITEMS:
+        risk = _risk_item(answers, item.value) if item.value in health else None
+        if risk:
+            items.append(risk)
+    return items
 
 
 def _important(answers: DentalAnswers, health: list[str]) -> list[str]:
-    lines = []
-    if "anticoagulants" in health:
-        drug = _blood_thinner_text(answers) or _BLOOD_THINNER_FALLBACK
-        lines.append(f"Принимает {drug}: риск кровотечения при удалении и хирургии")
-    if "allergy" in health:
-        lines.append(_allergy_line(answers))
-    for item in HEALTH_ITEMS:
-        line = _risk_line(answers, item.value) if item.value in health else None
-        if line:
-            lines.append(line)
+    lines = [
+        f"{fact}: {note}" if note else fact
+        for fact, note in _important_items(answers, health)
+    ]
     if "anticoagulants" not in health:
+        # Вывод системы по словарю, а не ответ пациента: только врачу.
         lines.extend(
             f"Упомянут «{name}» — разжижает кровь, а строка «разжижающие кровь» не отмечена"
             for name in _mentioned_blood_thinners(answers)
@@ -234,6 +252,8 @@ def build_dental_summary(answers: DentalAnswers) -> tuple[dict[str, Any], list[s
     health = answers.health or []
     structured = {
         "important": _important(answers, health),
+        # Для листа, который подписывает пациент: только факты из его ответов.
+        "important_facts": [fact for fact, _ in _important_items(answers, health)],
         "complaints": _complaints(answers),
         "health": [
             {

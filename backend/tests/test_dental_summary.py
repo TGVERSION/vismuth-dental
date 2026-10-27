@@ -207,3 +207,45 @@ def test_unknown_stored_value_does_not_break_the_card():
     summary, _ = build_dental_summary(answers)
 
     assert summary["complaints"].startswith("Болит зуб")
+
+
+def test_signed_sheet_gets_facts_without_doctor_warnings():
+    summary, _ = build_dental_summary(OLGA)
+
+    assert summary["important_facts"] == [
+        "Принимает Эликвис, 5 мг, 2 раза в день",
+        "Аллергия: антибиотики — амоксициллин; реакция: сыпь, зуд",
+    ]
+
+
+def test_dictionary_hits_are_not_patient_facts():
+    summary, _ = build_dental_summary(_other_meds("Кардиомагнил 75 мг"))
+
+    assert summary["important"] != []
+    assert summary["important_facts"] == []
+
+
+def test_risk_facts_keep_patient_words_only():
+    answers = _answers(
+        ["heart", "pregnancy"],
+        reason={"selected": ["checkup"]},
+        heart={"selected": ["pacemaker"]},
+        pregnancy={"selected": ["pregnant"], "text": "20 недель"},
+    )
+
+    summary, _ = build_dental_summary(answers)
+
+    assert summary["important_facts"] == ["Кардиостимулятор", "Беременность; 20 недель"]
+
+
+def test_other_label_never_appears_in_text():
+    answers = _answers(
+        ["anticoagulants"],
+        reason={"selected": ["checkup"]},
+        anticoagulants={"selected": ["warfarin", "other"], "text": "Синкумар"},
+    )
+
+    summary, _ = build_dental_summary(answers)
+
+    assert summary["important_facts"] == ["Принимает Варфарин, Синкумар"]
+    assert "Другое" not in summary["medications"]

@@ -78,6 +78,11 @@ import type {
   ClinicInvitationCreated,
   SpecializationRead,
   MyClinicRead,
+  RegistryQuestionnaireCreate,
+  RegistryQuestionnaireCreated,
+  RegistryQuestionnaireDetail,
+  RegistryQuestionnaireItem,
+  RegistryQuestionnaireQuery,
   InvitationPreview,
   InvitationAcceptRequest,
   DoctorQuestionnaireListItem,
@@ -572,6 +577,57 @@ export const mainApi = {
     resendInvitation: (clinicId: string, invitationId: string) =>
       mutationApiClient.post<ClinicInvitationCreated>(
         `/clinics/${encodeURIComponent(clinicId)}/invitations/${encodeURIComponent(invitationId)}/resend`,
+      ),
+  },
+
+  /**
+   * Анкеты пациентов у регистратуры: персональные ссылки стоматологической
+   * клиники. Доступ — администратор клиники или super_admin.
+   */
+  clinicQuestionnaires: {
+    list: (
+      clinicId: string,
+      query: RegistryQuestionnaireQuery,
+      options?: RequestOptions,
+    ) =>
+      apiClient.get<RegistryQuestionnaireItem[]>(
+        `/clinics/${encodeURIComponent(clinicId)}/questionnaires`,
+        query,
+        options,
+      ),
+
+    get: (clinicId: string, id: string, options?: RequestOptions) =>
+      apiClient.get<RegistryQuestionnaireDetail>(
+        `/clinics/${encodeURIComponent(clinicId)}/questionnaires/${encodeURIComponent(id)}`,
+        undefined,
+        options,
+      ),
+
+    create: (clinicId: string, data: RegistryQuestionnaireCreate) =>
+      mutationApiClient.post<RegistryQuestionnaireCreated>(
+        `/clinics/${encodeURIComponent(clinicId)}/questionnaires`,
+        data,
+      ),
+
+    /** Новая ссылка взамен прежней: старая перестаёт работать. */
+    regenerateLink: (clinicId: string, id: string) =>
+      mutationApiClient.post<{ url: string }>(
+        `/clinics/${encodeURIComponent(clinicId)}/questionnaires/${encodeURIComponent(id)}/link`,
+      ),
+
+    markPrinted: (clinicId: string, id: string) =>
+      mutationApiClient.post<RegistryQuestionnaireItem>(
+        `/clinics/${encodeURIComponent(clinicId)}/questionnaires/${encodeURIComponent(id)}/printed`,
+      ),
+
+    markSigned: (clinicId: string, id: string) =>
+      mutationApiClient.post<RegistryQuestionnaireItem>(
+        `/clinics/${encodeURIComponent(clinicId)}/questionnaires/${encodeURIComponent(id)}/signed`,
+      ),
+
+    remove: (clinicId: string, id: string) =>
+      mutationApiClient.delete<void>(
+        `/clinics/${encodeURIComponent(clinicId)}/questionnaires/${encodeURIComponent(id)}`,
       ),
   },
 

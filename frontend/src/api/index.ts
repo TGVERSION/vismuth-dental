@@ -853,6 +853,18 @@ export interface DoctorQuestionnaireStructured {
   medications?: string | null;
   allergy_anamnesis?: string | null;
   life_anamnesis?: string | null;
+  /** Стоматологическая анкета: «Самое важное» — красные строки. */
+  important?: string[];
+  /** Стоматологическая анкета: все 9 строк здоровья, «да» и «нет». */
+  health?: DentalHealthRow[];
+}
+
+export interface DentalHealthRow {
+  key: string;
+  label: string;
+  has: boolean;
+  /** Уточнение пациента; пусто при «нет». */
+  detail: string;
 }
 
 export interface DoctorQuestionnaireAnswer {
@@ -943,6 +955,8 @@ export interface MyClinicRead {
   clinic_public_slug: string;
   /** `{FRONTEND_PUBLIC_URL}/q/{slug}` — адрес собирает backend. */
   clinic_public_url: string;
+  /** `dental` — анкета по персональным ссылкам регистратуры. */
+  questionnaire_kind: 'general' | 'dental';
   membership_id: string;
   is_clinic_admin: boolean;
   is_doctor: boolean;
@@ -950,6 +964,60 @@ export interface MyClinicRead {
   doctor_public_slug: string | null;
   doctor_public_url: string | null;
   specializations: SpecializationRead[];
+}
+
+// ---------------------------------------------------------------------------
+// Анкеты пациентов у регистратуры (админ стоматологической клиники) —
+// backend routers/clinic_questionnaires.py, описание —
+// docs/contracts/clinic-questionnaires.md.
+
+export type RegistryStatus = 'invited' | 'in_progress' | 'completed' | 'printed' | 'signed';
+
+export interface RegistryQuestionnaireItem {
+  id: string;
+  status: RegistryStatus;
+  patient_last_name: string | null;
+  patient_first_name: string | null;
+  patient_middle_name: string | null;
+  doctor_membership_id: string | null;
+  /** «Смирнов Д. А.». */
+  doctor_name: string | null;
+  /** YYYY-MM-DD. */
+  appointment_date: string | null;
+  /** HH:MM. */
+  appointment_time: string | null;
+  created_at: string;
+  completed_at: string | null;
+  printed_at: string | null;
+  signed_at: string | null;
+  invite_expires_at: string | null;
+}
+
+export interface RegistryQuestionnaireCreated extends RegistryQuestionnaireItem {
+  /** Персональная ссылка; показывается один раз. */
+  url: string;
+}
+
+export interface RegistryQuestionnaireDetail extends RegistryQuestionnaireItem {
+  structured: DoctorQuestionnaireStructured | null;
+  gaps: string[] | null;
+}
+
+export interface RegistryQuestionnaireCreate {
+  doctor_membership_id: string;
+  last_name: string;
+  first_name: string;
+  middle_name: string | null;
+  appointment_date: string;
+  appointment_time: string;
+}
+
+export interface RegistryQuestionnaireQuery {
+  /** YYYY-MM-DD; по умолчанию сервер берёт сегодня. */
+  date?: string;
+  doctor_membership_id?: string;
+  status?: RegistryStatus;
+  name?: string;
 }
 
 export type ClinicMemberStatus = 'invited' | 'active' | 'deactivated';

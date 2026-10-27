@@ -106,6 +106,7 @@ async def my_clinic(
         clinic_name=clinic.name,
         clinic_public_slug=clinic.public_slug,
         clinic_public_url=_public_url(clinic.public_slug),
+        questionnaire_kind=clinic.questionnaire_kind,
         membership_id=membership.id,
         is_clinic_admin=membership.is_clinic_admin,
         is_doctor=membership.is_doctor,

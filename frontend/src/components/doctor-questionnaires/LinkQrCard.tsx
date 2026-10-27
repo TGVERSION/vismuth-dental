@@ -50,7 +50,8 @@ const DISABLED_LINK_CLASS =
 
 interface LinkQrCardProps {
   item: QuestionnaireLinkItem;
-  onPrint: (item: QuestionnaireLinkItem) => void;
+  /** Печать листа с QR для кабинета. Нет — кнопки «Печать» нет. */
+  onPrint?: (item: QuestionnaireLinkItem) => void;
 }
 
 /** Одна ссылка анкеты: адрес, QR и действия ТЗ. */
@@ -233,13 +234,15 @@ export const LinkQrCard = ({ item, onPrint }: LinkQrCardProps) => {
                 </span>
               )}
 
-              <button
-                type="button"
-                onClick={() => onPrint(item)}
-                className={LINK_BUTTON_CLASS}
-              >
-                Печать
-              </button>
+              {onPrint ? (
+                <button
+                  type="button"
+                  onClick={() => onPrint(item)}
+                  className={LINK_BUTTON_CLASS}
+                >
+                  Печать
+                </button>
+              ) : null}
             </>
           ) : null}
         </div>

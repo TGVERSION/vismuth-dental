@@ -82,6 +82,10 @@ class MyClinicRead(BaseModel):
     clinic_name: str
     clinic_public_slug: str
     clinic_public_url: str
+    questionnaire_kind: Literal["general", "dental"] = Field(
+        default="general",
+        description="dental — анкета по персональным ссылкам регистратуры",
+    )
     membership_id: UUID
     is_clinic_admin: bool
     is_doctor: bool

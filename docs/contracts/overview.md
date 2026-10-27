@@ -67,6 +67,7 @@ Access JWT короткий (~15 мин). Длинная сессия — чер
 | [questionnaire-statistics.md](questionnaire-statistics.md) | `/clinics/{id}/statistics`, `/super-admin/statistics` |
 | [clinic-admin.md](clinic-admin.md) | `/clinics/{id}`, `/specializations`, `/me/clinic` |
 | [questionnaire-public.md](questionnaire-public.md) | `/public/*` анкета пациента |
+| [clinic-questionnaires.md](clinic-questionnaires.md) | `/clinics/{id}/questionnaires` персональные ссылки и регистратура |
 | [questionnaires.md](questionnaires.md) | `/questionnaires` раздел врача |
 | [protocols.md](protocols.md) | `/protocols` |
 | [protocol-templates.md](protocol-templates.md) | `/protocol-templates` |

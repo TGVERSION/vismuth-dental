@@ -11,6 +11,7 @@ const makeClinic = (patch: Partial<MyClinicRead> = {}): MyClinicRead => ({
   clinic_name: 'Клиника «Демо»',
   clinic_public_slug: 'demo1234',
   clinic_public_url: 'https://vismuth.example.ru/q/demo1234',
+  questionnaire_kind: 'general',
   membership_id: 'membership-1',
   is_clinic_admin: false,
   is_doctor: true,

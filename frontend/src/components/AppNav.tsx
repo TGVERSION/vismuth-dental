@@ -2,7 +2,8 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { NAV_ITEMS, getActiveNavItem } from '@/lib/app-nav';
+import { useMyClinic } from '@/hooks/useMyClinic';
+import { canUseRegistry, getActiveNavItem, getNavItems } from '@/lib/app-nav';
 
 /**
  * Разделы в шапке защищённой зоны.
@@ -18,10 +19,14 @@ import { NAV_ITEMS, getActiveNavItem } from '@/lib/app-nav';
  */
 export const AppNav = () => {
   const active = getActiveNavItem(usePathname());
+  // «Анкеты пациентов» видны только регистратуре стоматологической клиники;
+  // пока клиника не загрузилась, раздела нет.
+  const { clinic } = useMyClinic();
+  const items = getNavItems({ showRegistry: canUseRegistry(clinic) });
 
   return (
     <nav aria-label="Разделы" className="flex items-center gap-11">
-      {NAV_ITEMS.map((item) =>
+      {items.map((item) =>
         item.id === active ? (
           <span key={item.id} aria-current="page" className="text-[#8B8B8B]">
             {item.label}

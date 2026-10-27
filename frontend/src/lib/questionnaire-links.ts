@@ -8,7 +8,8 @@
 import type { MyClinicRead } from '@/api';
 import { normalizeQrUrl } from './qr';
 
-export type QuestionnaireLinkKind = 'doctor' | 'clinic';
+/** `invite` — персональная ссылка пациента от регистратуры. */
+export type QuestionnaireLinkKind = 'doctor' | 'clinic' | 'invite';
 
 export interface QuestionnaireLinkItem {
   kind: QuestionnaireLinkKind;

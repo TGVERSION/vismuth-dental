@@ -35,6 +35,14 @@ const detail = (
       },
       { key: 'diabetes', label: 'Сахарный диабет', has: false, detail: '' },
     ],
+    dental_history: {
+      last_visit: 'Больше года назад',
+      signs: [
+        { key: 'gums_bleed', label: 'Кровоточат дёсны при чистке', has: true },
+        { key: 'dry_mouth', label: 'Сухость во рту', has: false },
+      ],
+      complications: '',
+    },
     clarifications: [
       {
         question: 'Когда последний раз принимали Эликвис?',
@@ -71,6 +79,14 @@ describe('printSheet', () => {
         },
         { label: 'Сахарный диабет', has: false, detail: '' },
       ],
+      dentalHistory: {
+        lastVisit: 'Больше года назад',
+        signs: [
+          { label: 'Кровоточат дёсны при чистке', has: true, detail: '' },
+          { label: 'Сухость во рту', has: false, detail: '' },
+        ],
+        complications: 'Не было',
+      },
       clarifications: [
         {
           question: 'Когда последний раз принимали Эликвис?',
@@ -94,7 +110,29 @@ describe('printSheet', () => {
       'Я ответил(а) на вопросы анкеты сам(а) и правдиво.',
       'Мне известно, что результат лечения зависит от состояния моего здоровья.',
       'Если состояние здоровья изменится или я начну принимать новые лекарства, я сообщу об этом врачу.',
+      'Мне известно, что при неполных или неверных сведениях о болезнях и операциях клиника не отвечает за последствия.',
     ]);
+  });
+
+  it('keeps the dental history section out of sheets filled before it existed', () => {
+    const old = detail();
+    const structured = { ...old.structured, dental_history: undefined };
+
+    expect(printSheet({ ...old, structured }, 'Здоровье', 'UTC').dentalHistory).toBeNull();
+  });
+
+  it('says when the patient left the last visit blank', () => {
+    const old = detail();
+    const structured = {
+      ...old.structured,
+      dental_history: { last_visit: '', signs: [], complications: 'Долго шла кровь' },
+    };
+
+    expect(printSheet({ ...old, structured }, 'Здоровье', 'UTC').dentalHistory).toEqual({
+      lastVisit: 'Не указан',
+      signs: [],
+      complications: 'Долго шла кровь',
+    });
   });
 
   it('does not put doctor prompts or warnings on the sheet the patient signs', () => {

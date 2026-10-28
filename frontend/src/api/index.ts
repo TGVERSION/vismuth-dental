@@ -851,8 +851,12 @@ export interface DoctorQuestionnaireStructured {
    * Идёт на лист, который пациент подписывает.
    */
   important_facts?: string[];
-  /** Стоматологическая анкета: все 9 строк здоровья, «да» и «нет». */
+  /** Стоматологическая анкета: все строки здоровья, «да» и «нет». */
   health?: DentalHealthRow[];
+  /** Стоматологический анамнез бумажной анкеты: шаг «Зубы и дёсны». */
+  dental_history?: DentalHistory;
+  /** То же одной фразой — врачу. */
+  dental_anamnesis?: string | null;
   /** Вопросы нейросети и ответы пациента дословно; пустой ответ — пропустил. */
   clarifications?: DentalClarification[];
 }
@@ -860,6 +864,15 @@ export interface DoctorQuestionnaireStructured {
 export interface DentalClarification {
   question: string;
   answer: string;
+}
+
+export interface DentalHistory {
+  /** «Больше года назад»; пусто — пациент не ответил. */
+  last_visit: string;
+  /** Все признаки бланка: невыбранный — «нет». */
+  signs: { key: string; label: string; has: boolean }[];
+  /** Осложнения при прошлом лечении; пусто — не было. */
+  complications: string;
 }
 
 export interface DentalHealthRow {

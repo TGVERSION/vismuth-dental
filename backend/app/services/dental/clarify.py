@@ -109,6 +109,7 @@ def clarify_request(answers: DentalAnswers) -> dict:
         lines.append("Нет: " + ", ".join(has_not))
     lines.append(f"Препараты: {summary['medications']}")
     lines.append(f"Аллергия: {summary['allergy_anamnesis']}")
+    lines.append(f"Зубы и дёсны: {summary['dental_anamnesis']}")
     return {
         "answers": "\n".join(lines),
         "history": [

@@ -5,6 +5,7 @@ import type { DoctorQuestionnaireStructured } from '@/api';
 import {
   DentalClarifications,
   DentalHealth,
+  DentalHistory,
   DentalImportant,
 } from '@/components/dental-card/DentalCardParts';
 
@@ -37,6 +38,12 @@ export const DentalDoctorSummary = ({
     <Block title="Здоровье">
       <DentalHealth health={structured.health ?? []} />
     </Block>
+    {/* Анкеты до шага «Зубы и дёсны» хранятся без него. */}
+    {structured.dental_history ? (
+      <Block title="Зубы и дёсны">
+        <DentalHistory history={structured.dental_history} />
+      </Block>
+    ) : null}
     {structured.clarifications && structured.clarifications.length > 0 ? (
       <Block title="Уточнения">
         <DentalClarifications items={structured.clarifications} />

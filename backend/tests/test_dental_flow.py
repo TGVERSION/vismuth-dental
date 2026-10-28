@@ -109,18 +109,45 @@ def test_health_step_is_checklist_like_paper_forms_with_none():
     assert step.allow_none is True
     assert [item["value"] for item in step.items] == [
         "allergy", "anesthesia_reaction", "anticoagulants", "bleeding", "heart",
-        "lungs", "diabetes", "thyroid", "liver_kidney", "pregnancy", "epilepsy",
-        "infections", "bone_onco", "other_meds",
+        "lungs", "diabetes", "thyroid", "liver_kidney", "stomach", "ent",
+        "bones_skin", "lymph", "epilepsy", "infections", "transfusion",
+        "bone_onco", "pregnancy", "other_diseases", "other_meds",
     ]
     anticoagulants = step.items[2]
     assert "Кардиомагнил" in anticoagulants["hint"]
 
 
-def test_health_none_completes_questionnaire():
+def test_health_none_leads_to_mouth_step():
     answers, next_step = _answer(EMPTY, "dental_health", none=True)
 
-    assert next_step == "done"
+    assert next_step == "dental_mouth"
     assert answers.health == []
+
+
+def test_mouth_step_asks_dental_history_like_paper_form():
+    step = dental_step("dental_mouth", EMPTY)
+
+    assert step.step_type == "chip_groups"
+    assert [g["key"] for g in step.groups] == [
+        "mouth.last_visit", "mouth.signs", "mouth.complications",
+    ]
+    assert step.groups[0]["multiple"] is False
+    assert [o["value"] for o in step.groups[1]["options"]] == [
+        "tmj", "bruxism", "gums_bleed", "herpes", "dry_mouth", "bad_breath",
+    ]
+    assert not any(g["required"] for g in step.groups)
+
+
+def test_mouth_step_may_stay_empty_and_completes_questionnaire():
+    answers, next_step = _answer(EMPTY, "dental_mouth")
+
+    assert next_step == "done"
+    assert answers.groups == {}
+
+
+def test_mouth_complication_other_requires_text():
+    with pytest.raises(DentalAnswerError):
+        _answer(EMPTY, "dental_mouth", selections={"mouth.complications": ["other"]})
 
 
 def test_health_needs_choice_or_none():
@@ -148,7 +175,7 @@ def test_details_show_groups_only_for_checked_items_in_list_order():
     assert [g["key"] for g in step.groups] == [
         "allergy.substance", "allergy.reaction", "other_meds",
     ]
-    assert step.groups[0]["title"] == "Вы отметили: аллергия на лекарства"
+    assert step.groups[0]["title"] == "Вы отметили: аллергия"
     assert step.groups[0]["text"]["show"] == "on_select"
     assert step.groups[2]["text"] == {
         "placeholder": "Например: Конкор 5 мг утром", "required": True, "show": "always",
@@ -169,7 +196,7 @@ def test_details_reject_groups_of_unchecked_items():
         _answer(answers, "dental_details", selections={"anticoagulants": ["eliquis"]})
 
 
-def test_details_complete_questionnaire():
+def test_details_lead_to_mouth_step():
     answers, _ = _health(EMPTY, ["anticoagulants"])
 
     answers, next_step = _answer(
@@ -179,7 +206,7 @@ def test_details_complete_questionnaire():
         texts={"anticoagulants": "5 мг, 2 раза в день"},
     )
 
-    assert next_step == "done"
+    assert next_step == "dental_mouth"
     assert answers.groups["anticoagulants"].text == "5 мг, 2 раза в день"
 
 

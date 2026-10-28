@@ -1,6 +1,6 @@
 'use client';
 
-import type { DentalClarification, DentalHealthRow } from '@/api';
+import type { DentalClarification, DentalHealthRow, DentalHistory as DentalHistoryData } from '@/api';
 
 // Части карточки стоматологической анкеты, общие для врача и регистратуры.
 
@@ -38,6 +38,38 @@ export const DentalHealth = ({ health }: { health: DentalHealthRow[] }) => {
       {hasNot.length > 0 ? (
         <p className="text-sm text-[#6C757D]">
           Нет: {hasNot.map((row) => lowerFirst(row.label)).join(', ')}
+        </p>
+      ) : null}
+    </>
+  );
+};
+
+/**
+ * Зубы и дёсны — стоматологический анамнез бумажной анкеты: последний визит,
+ * признаки «есть / нет», осложнения прошлого лечения.
+ */
+export const DentalHistory = ({ history }: { history: DentalHistoryData }) => {
+  const signs = history.signs.filter((sign) => sign.has);
+  const noSigns = history.signs.filter((sign) => !sign.has);
+  return (
+    <>
+      <p>
+        <span className="font-medium">Последний визит к стоматологу:</span>{' '}
+        {history.last_visit ? lowerFirst(history.last_visit) : 'не указан'}
+      </p>
+      {signs.length > 0 ? (
+        <p>
+          <span className="font-medium">Бывает:</span>{' '}
+          {signs.map((sign) => lowerFirst(sign.label)).join(', ')}
+        </p>
+      ) : null}
+      <p>
+        <span className="font-medium">Осложнения при прошлом лечении:</span>{' '}
+        {history.complications || 'не было'}
+      </p>
+      {noSigns.length > 0 ? (
+        <p className="text-sm text-[#6C757D]">
+          Нет: {noSigns.map((sign) => lowerFirst(sign.label)).join(', ')}
         </p>
       ) : null}
     </>

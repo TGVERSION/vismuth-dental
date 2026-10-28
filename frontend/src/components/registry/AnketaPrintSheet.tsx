@@ -1,7 +1,7 @@
 'use client';
 
 import { createPortal } from 'react-dom';
-import type { PrintSheet } from '@/lib/registry-print';
+import type { PrintHealthRow, PrintSheet } from '@/lib/registry-print';
 
 interface AnketaPrintSheetProps {
   sheet: PrintSheet;
@@ -15,6 +15,37 @@ const Answer = ({ isOn, children }: { isOn: boolean; children: string }) => (
   >
     {children}
   </span>
+);
+
+/** Строки «Да / Нет», как в таблице бумажного бланка. */
+const YesNoTable = ({ rows }: { rows: PrintHealthRow[] }) => (
+  <table className="mt-[1mm] w-full border-collapse">
+    <tbody>
+      {rows.map((row) => (
+        <tr
+          key={row.label}
+          className="break-inside-avoid border-b-[0.2mm] border-[#999]"
+        >
+          {/* Уточнение — в ту же строку: так лист короче. */}
+          <td className="py-[0.7mm] pr-[3mm]">
+            {row.label}
+            {row.has && row.detail ? (
+              <span className="text-[9pt] italic">
+                {' — '}
+                {row.detail}
+              </span>
+            ) : null}
+          </td>
+          <td className="w-[13mm] text-center">
+            <Answer isOn={row.has}>Да</Answer>
+          </td>
+          <td className="w-[13mm] text-center">
+            <Answer isOn={!row.has}>Нет</Answer>
+          </td>
+        </tr>
+      ))}
+    </tbody>
+  </table>
 );
 
 /**
@@ -119,34 +150,28 @@ export const AnketaPrintSheet = ({ sheet }: AnketaPrintSheetProps) =>
               <h2 className="mt-[4mm] break-after-avoid text-[11pt] font-bold">
                 Состояние здоровья
               </h2>
-              <table className="mt-[1mm] w-full border-collapse">
-                <tbody>
-                  {sheet.health.map((row) => (
-                    <tr
-                      key={row.label}
-                      className="break-inside-avoid border-b-[0.2mm] border-[#999]"
-                    >
-                      {/* Уточнение — в ту же строку: 14 строк здоровья и
-                          подпись должны уместиться на один лист. */}
-                      <td className="py-[0.7mm] pr-[3mm]">
-                        {row.label}
-                        {row.has && row.detail ? (
-                          <span className="text-[9pt] italic">
-                            {' — '}
-                            {row.detail}
-                          </span>
-                        ) : null}
-                      </td>
-                      <td className="w-[13mm] text-center">
-                        <Answer isOn={row.has}>Да</Answer>
-                      </td>
-                      <td className="w-[13mm] text-center">
-                        <Answer isOn={!row.has}>Нет</Answer>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+              <YesNoTable rows={sheet.health} />
+
+              {sheet.dentalHistory ? (
+                <>
+                  <h2 className="mt-[4mm] break-after-avoid text-[11pt] font-bold">
+                    Стоматологический анамнез
+                  </h2>
+                  <p className="mt-[1mm]">
+                    <span className="text-[#555]">
+                      Последнее посещение стоматолога:
+                    </span>{' '}
+                    {sheet.dentalHistory.lastVisit}
+                  </p>
+                  <YesNoTable rows={sheet.dentalHistory.signs} />
+                  <p className="mt-[1mm] break-inside-avoid">
+                    <span className="text-[#555]">
+                      Осложнения во время или после лечения у стоматолога:
+                    </span>{' '}
+                    {sheet.dentalHistory.complications}
+                  </p>
+                </>
+              ) : null}
 
               {/* Согласие и подпись — одним блоком: при длинных ответах они не должны
           уехать на вторую страницу порознь. */}

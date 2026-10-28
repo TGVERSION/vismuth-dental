@@ -4,6 +4,7 @@ import type { DoctorQuestionnaireStructured } from '@/api';
 import {
   DentalClarifications,
   DentalHealth,
+  DentalHistory,
   DentalImportant,
 } from '@/components/dental-card/DentalCardParts';
 import { gapQuestions } from '@/lib/doctor-questionnaires';
@@ -43,6 +44,11 @@ export const DentalCardBody = ({ structured, gaps }: DentalCardBodyProps) => {
       <Section title="Здоровье">
         <DentalHealth health={structured.health ?? []} />
       </Section>
+      {structured.dental_history ? (
+        <Section title="Зубы и дёсны">
+          <DentalHistory history={structured.dental_history} />
+        </Section>
+      ) : null}
       <Section title="Препараты">
         <p>{structured.medications || '—'}</p>
       </Section>

@@ -10,11 +10,24 @@ import re
 from typing import Any
 
 from .flow import DentalAnswers, GroupAnswer, has_pain
-from .questions import BLOOD_THINNERS, HEALTH_ITEMS, OTHER, PAIN_GROUPS, REASON, Group
+from .questions import (
+    BLOOD_THINNERS,
+    HEALTH_ITEMS,
+    MOUTH_GROUPS,
+    OTHER,
+    PAIN_GROUPS,
+    REASON,
+    Group,
+)
 
 _GROUPS: dict[str, Group] = {
     g.key: g
-    for g in (REASON, *PAIN_GROUPS, *(dg for item in HEALTH_ITEMS for dg in item.detail_groups))
+    for g in (
+        REASON,
+        *PAIN_GROUPS,
+        *MOUTH_GROUPS,
+        *(dg for item in HEALTH_ITEMS for dg in item.detail_groups),
+    )
 }
 
 _PAIN_WHEN = {
@@ -26,27 +39,29 @@ _PAIN_WHEN = {
 }
 # Строки «Здоровья», которые идут в анамнез жизни (аллергия и лекарства —
 # в свои разделы).
-_CHRONIC = (
-    "anesthesia_reaction", "bleeding", "heart", "lungs", "diabetes", "thyroid",
-    "liver_kidney", "pregnancy", "epilepsy", "infections", "bone_onco",
-)
+_NOT_CHRONIC = ("allergy", "anticoagulants", "other_meds")
+_CHRONIC = tuple(item.value for item in HEALTH_ITEMS if item.value not in _NOT_CHRONIC)
 _BLEEDING_NOTE = "риск кровотечения при удалении и хирургии"
 _RISK_NOTES = {
     "anesthesia_reaction": "подобрать анестетик, наблюдать после укола",
     "bleeding": _BLEEDING_NOTE,
     "pregnancy": "учитывать при рентгене и выборе анестетика",
-    "epilepsy": "риск приступа в кресле",
     "infections": "соблюдать меры инфекционной безопасности",
     "bone_onco": "риск осложнений при удалении и имплантации",
 }
 _ADRENALINE_NOTE = "осторожно с анестетиком с адреналином"
 _PACEMAKER_NOTE = "осторожно с анестетиком с адреналином и электроприборами"
 # Строки, где в красное идут только варианты, меняющие лечение в кресле:
-# одно повышенное давление, ХОБЛ или гипотиреоз остаются в анамнезе.
+# давление, ХОБЛ, гипотиреоз или гастрит остаются в анамнезе.
 _SERIOUS: dict[str, tuple[tuple[str, ...], str]] = {
-    "heart": (("pacemaker", "heart_attack", "arrhythmia"), _ADRENALINE_NOTE),
+    "heart": (
+        ("pacemaker", "heart_attack", "stroke", "angina", "arrhythmia"),
+        _ADRENALINE_NOTE,
+    ),
     "lungs": (("asthma",), "риск приступа в кресле — ингалятор пациента под рукой"),
     "thyroid": (("hyperthyroid",), _ADRENALINE_NOTE),
+    "stomach": (("gag",), "учитывать при слепках и снимках"),
+    "epilepsy": (("epilepsy", "fainting"), "риск приступа в кресле"),
 }
 # Текст про аллергию не ищем: «аллергия на аспирин» — не приём аспирина.
 _NOT_MEDICATION_TEXT = ("allergy.substance", "allergy.reaction")
@@ -128,7 +143,7 @@ def _allergy_line(answers: DentalAnswers) -> str:
     substances = ", ".join(_lower_first(l) for l in _labels(answers, "allergy.substance"))
     name = _answer(answers, "allergy.substance").text
     what = " — ".join(part for part in (substances, name) if part)
-    line = f"Аллергия: {what}" if what else "Аллергия на лекарства"
+    line = f"Аллергия: {what}" if what else "Аллергия"
     reaction = _group_detail(answers, "allergy.reaction", lower=True)
     return line + (f"; реакция: {reaction}" if reaction else "")
 
@@ -217,6 +232,39 @@ def _life_anamnesis(answers: DentalAnswers, health: list[str]) -> str:
     return " ".join(sentences) or "Хронических заболеваний не отмечено."
 
 
+_SIGNS = next(g for g in MOUTH_GROUPS if g.key == "mouth.signs")
+
+
+def _dental_history(answers: DentalAnswers) -> dict[str, Any]:
+    """Стоматологический анамнез для листа: каждый признак — «да» или «нет»."""
+    last_visit = _labels(answers, "mouth.last_visit")
+    selected = _answer(answers, _SIGNS.key).selected
+    return {
+        "last_visit": last_visit[0] if last_visit else "",
+        "signs": [
+            {"key": o.value, "label": o.label, "has": o.value in selected}
+            for o in _SIGNS.options
+        ],
+        "complications": _group_detail(answers, "mouth.complications", lower=False),
+    }
+
+
+def _dental_anamnesis(answers: DentalAnswers) -> str:
+    sentences = []
+    last_visit = _group_detail(answers, "mouth.last_visit", lower=True)
+    if last_visit:
+        sentences.append(f"Последний визит к стоматологу: {last_visit}.")
+    selected = _answer(answers, _SIGNS.key).selected
+    # В порядке бланка, а не в порядке нажатия.
+    signs = ", ".join(_lower_first(o.label) for o in _SIGNS.options if o.value in selected)
+    if signs:
+        sentences.append(f"Бывает: {signs}.")
+    complications = _group_detail(answers, "mouth.complications", lower=True)
+    if complications:
+        sentences.append(f"Осложнения при прошлом лечении: {complications}.")
+    return " ".join(sentences) or "Жалоб на дёсны, челюсть и прошлое лечение не отмечено."
+
+
 def _medications(answers: DentalAnswers, health: list[str]) -> str:
     parts = []
     if "anticoagulants" in health:
@@ -299,6 +347,8 @@ def build_dental_summary(
         "medications": _medications(answers, health),
         "allergy_anamnesis": _allergy_line(answers) if "allergy" in health else "Аллергии нет.",
         "life_anamnesis": _life_anamnesis(answers, health),
+        "dental_history": _dental_history(answers),
+        "dental_anamnesis": _dental_anamnesis(answers),
         # Вопросы нейросети и ответы пациента дословно; пусто — пропустил.
         "clarifications": [
             {"question": turn.question, "answer": turn.answer}

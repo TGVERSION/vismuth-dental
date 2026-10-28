@@ -8,7 +8,7 @@
 // «ответы верны». Поэтому «Самое важное» — факты без предупреждений врачу
 // (`important_facts`), а «Что доспросить» не идёт вовсе: это подсказки врачу.
 
-import type { RegistryQuestionnaireDetail } from '@/api';
+import type { DentalHistory, RegistryQuestionnaireDetail } from '@/api';
 import { formatDateTime, patientFullName } from './registry';
 
 /** Заявление пациента над подписью — как в бумажных анкетах клиник. */
@@ -16,12 +16,20 @@ export const ATTESTATION: readonly string[] = Object.freeze([
   'Я ответил(а) на вопросы анкеты сам(а) и правдиво.',
   'Мне известно, что результат лечения зависит от состояния моего здоровья.',
   'Если состояние здоровья изменится или я начну принимать новые лекарства, я сообщу об этом врачу.',
+  'Мне известно, что при неполных или неверных сведениях о болезнях и операциях клиника не отвечает за последствия.',
 ]);
 
 export interface PrintHealthRow {
   label: string;
   has: boolean;
   detail: string;
+}
+
+/** Стоматологический анамнез, как в бумажном бланке. */
+export interface PrintDentalHistory {
+  lastVisit: string;
+  signs: PrintHealthRow[];
+  complications: string;
 }
 
 export interface PrintSheet {
@@ -32,12 +40,25 @@ export interface PrintSheet {
   important: string[];
   complaints: string;
   health: PrintHealthRow[];
+  /** Null — анкета заполнена до шага «Зубы и дёсны». */
+  dentalHistory: PrintDentalHistory | null;
   /** Вопросы нейросети и ответы пациента дословно. */
   clarifications: { question: string; answer: string }[];
   attestation: readonly string[];
 }
 
 const NO_ANSWER = 'Пациент не ответил';
+
+const printDentalHistory = (
+  history: DentalHistory | undefined,
+): PrintDentalHistory | null =>
+  history
+    ? {
+        lastVisit: history.last_visit || 'Не указан',
+        signs: history.signs.map(({ label, has }) => ({ label, has, detail: '' })),
+        complications: history.complications || 'Не было',
+      }
+    : null;
 
 export const printSheet = (
   detail: RegistryQuestionnaireDetail,
@@ -58,6 +79,7 @@ export const printSheet = (
       has,
       detail: text,
     })),
+    dentalHistory: printDentalHistory(structured?.dental_history),
     clarifications: (structured?.clarifications ?? []).map(
       ({ question, answer }) => ({
         question,

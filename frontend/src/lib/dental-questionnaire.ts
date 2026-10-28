@@ -33,23 +33,24 @@ export const dentalScreenFor = (step: QuestionnaireStep): DentalScreen => {
 };
 
 export interface DentalProgress {
-  current: 1 | 2;
-  total: 2;
+  current: 1 | 2 | 3;
+  total: 3;
   label: string;
 }
 
 const PROGRESS: Record<string, DentalProgress> = {
-  dental_reason: { current: 1, total: 2, label: 'Зачем пришли' },
-  dental_pain: { current: 1, total: 2, label: 'Зачем пришли' },
-  dental_health: { current: 2, total: 2, label: 'Здоровье' },
-  dental_details: { current: 2, total: 2, label: 'Уточнение' },
-  dental_ai: { current: 2, total: 2, label: 'Уточнение' },
+  dental_reason: { current: 1, total: 3, label: 'Зачем пришли' },
+  dental_pain: { current: 1, total: 3, label: 'Зачем пришли' },
+  dental_health: { current: 2, total: 3, label: 'Здоровье' },
+  dental_details: { current: 2, total: 3, label: 'Уточнение' },
+  dental_mouth: { current: 3, total: 3, label: 'Зубы и дёсны' },
+  dental_ai: { current: 3, total: 3, label: 'Уточнение' },
 };
 
 /** Шаг уточняющего вопроса нейросети. */
 export const AI_STEP = 'dental_ai';
 
-/** «Шаг 1 из 2 · Зачем пришли». Уточнения не меняют номер шага. */
+/** «Шаг 1 из 3 · Зачем пришли». Уточнения не меняют номер шага. */
 export const dentalProgress = (stepKey: string): DentalProgress | null =>
   PROGRESS[stepKey] ?? null;
 

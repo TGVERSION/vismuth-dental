@@ -50,7 +50,7 @@ def test_olga_health_marks_checked_and_negative_rows():
     summary, _ = build_dental_summary(OLGA)
 
     rows = {row["key"]: row for row in summary["health"]}
-    assert len(rows) == 14
+    assert len(rows) == 20
     assert rows["anticoagulants"]["has"] is True
     assert rows["anticoagulants"]["detail"] == "Эликвис; 5 мг, 2 раза в день"
     assert rows["diabetes"]["has"] is False
@@ -138,12 +138,12 @@ def test_chronic_conditions_go_to_life_anamnesis_and_important():
     assert summary["life_anamnesis"] == (
         "Болезни сердца или давление: повышенное давление. "
         "Сахарный диабет: второго типа; метформин. "
-        "Беременность или кормление грудью: беременность; 20 недель. "
-        "Лечение остеопороза или онкологии: лекарства от остеопороза."
+        "Онкология или лечение остеопороза: лекарства от остеопороза. "
+        "Беременность или кормление грудью: беременность; 20 недель."
     )
     assert summary["important"] == [
-        "Беременность; 20 недель: учитывать при рентгене и выборе анестетика",
         "Лекарства от остеопороза: риск осложнений при удалении и имплантации",
+        "Беременность; 20 недель: учитывать при рентгене и выборе анестетика",
     ]
 
 
@@ -207,6 +207,75 @@ def test_copd_and_low_thyroid_function_stay_in_anamnesis():
 
     assert summary["important"] == []
     assert "Болезни щитовидной железы: пониженная функция (гипотиреоз)." in summary["life_anamnesis"]
+
+
+def test_paper_form_diseases_go_to_life_anamnesis():
+    answers = _answers(
+        ["stomach", "ent", "bones_skin", "lymph", "transfusion", "other_diseases"],
+        reason={"selected": ["checkup"]},
+        stomach={"selected": ["ulcer"]},
+        ent={"selected": ["sinusitis"]},
+        bones_skin={"selected": ["bones"]},
+        lymph={"text": "на шее, полгода"},
+        transfusion={"text": "в 2015 году"},
+        other_diseases={"text": "Удаление аппендицита в 2010"},
+    )
+
+    summary, _ = build_dental_summary(answers)
+
+    assert summary["important"] == []
+    assert summary["life_anamnesis"] == (
+        "Болезни желудка или кишечника: язва или гастрит. "
+        "Болезни уха, горла, носа или гайморит: гайморит. "
+        "Болезни костей, суставов или кожи: кости или суставы. "
+        "Постоянно увеличены лимфоузлы: на шее, полгода. "
+        "Было переливание крови: в 2015 году. "
+        "Другие болезни, операции или травмы: Удаление аппендицита в 2010."
+    )
+
+
+def test_strong_gag_reflex_is_important():
+    answers = _answers(["stomach"], reason={"selected": ["checkup"]},
+                       stomach={"selected": ["gag"]})
+
+    summary, _ = build_dental_summary(answers)
+
+    assert summary["important"] == [
+        "Сильный рвотный рефлекс: учитывать при слепках и снимках",
+    ]
+
+
+def test_dental_history_lists_every_sign_with_yes_or_no():
+    answers = _answers(
+        [],
+        reason={"selected": ["checkup"]},
+        mouth__last_visit={"selected": ["over_year"]},
+        mouth__signs={"selected": ["gums_bleed", "bruxism"]},
+        mouth__complications={"selected": ["long_bleeding", "other"], "text": "болела десна неделю"},
+    )
+
+    summary, _ = build_dental_summary(answers)
+
+    history = summary["dental_history"]
+    assert history["last_visit"] == "Больше года назад"
+    assert [(row["key"], row["has"]) for row in history["signs"]] == [
+        ("tmj", False), ("bruxism", True), ("gums_bleed", True),
+        ("herpes", False), ("dry_mouth", False), ("bad_breath", False),
+    ]
+    assert history["complications"] == "Долго шла кровь; болела десна неделю"
+    assert summary["dental_anamnesis"] == (
+        "Последний визит к стоматологу: больше года назад. "
+        "Бывает: скрежет зубами (бруксизм), кровоточат дёсны при чистке. "
+        "Осложнения при прошлом лечении: долго шла кровь; болела десна неделю."
+    )
+
+
+def test_empty_dental_history_says_nothing_noted():
+    summary, _ = build_dental_summary(IGOR)
+
+    assert summary["dental_history"]["last_visit"] == ""
+    assert summary["dental_history"]["complications"] == ""
+    assert summary["dental_anamnesis"] == "Жалоб на дёсны, челюсть и прошлое лечение не отмечено."
 
 
 def _other_meds(text, **extra):

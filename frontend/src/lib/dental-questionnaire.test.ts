@@ -257,7 +257,10 @@ describe('buildGroupsAnswer', () => {
 
 describe('skip', () => {
   it('builds a skip answer for the clarifying question', () => {
-    expect(buildSkipAnswer('dental_ai')).toEqual({ step_key: 'dental_ai', skip: true });
+    expect(buildSkipAnswer('dental_ai')).toEqual({
+      step_key: 'dental_ai',
+      skip: true,
+    });
   });
 });
 
@@ -300,7 +303,11 @@ describe('dentalProgress', () => {
       total: 2,
       label: 'Уточнение',
     });
-    expect(dentalProgress('dental_ai')).toEqual({ current: 2, total: 2, label: 'Уточнение' });
+    expect(dentalProgress('dental_ai')).toEqual({
+      current: 2,
+      total: 2,
+      label: 'Уточнение',
+    });
     expect(dentalProgress('done')).toBeNull();
   });
 });

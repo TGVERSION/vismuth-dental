@@ -2,7 +2,11 @@
 
 import Link from 'next/link';
 import type { RegistryQuestionnaireItem } from '@/api';
-import { patientFullName, registryStatusView, registryWhenLine } from '@/lib/registry';
+import {
+  patientFullName,
+  registryStatusView,
+  registryWhenLine,
+} from '@/lib/registry';
 
 interface RegistryListProps {
   items: RegistryQuestionnaireItem[];
@@ -25,12 +29,16 @@ export const RegistryList = ({ items, selectedId }: RegistryListProps) => (
               isSelected ? 'bg-[#EAF0FB]' : 'bg-white hover:bg-[#F7F9FB]'
             }`}
           >
-            <span className="truncate text-[15px] text-[#202020]">{patientFullName(item)}</span>
+            <span className="truncate text-[15px] text-[#202020]">
+              {patientFullName(item)}
+            </span>
             <span className="flex items-center gap-3">
               <span className="min-w-0 flex-1 truncate text-sm text-[#6C757D]">
                 {registryWhenLine(item)}
               </span>
-              <span className={`shrink-0 rounded-full px-2.5 py-0.5 text-xs font-medium ${status.className}`}>
+              <span
+                className={`shrink-0 rounded-full px-2.5 py-0.5 text-xs font-medium ${status.className}`}
+              >
                 {status.label}
               </span>
             </span>

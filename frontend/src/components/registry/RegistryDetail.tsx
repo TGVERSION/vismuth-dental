@@ -41,10 +41,21 @@ interface RegistryDetailProps {
  */
 const actionError = (error: unknown): { text: string; refresh: boolean } => {
   const status = error instanceof ApiError ? error.status : undefined;
-  if (status === 409) return { text: 'Анкета уже изменилась — показываем актуальное состояние', refresh: true };
-  if (status === 410) return { text: 'Срок ссылки истёк — создайте пациенту новую', refresh: true };
+  if (status === 409)
+    return {
+      text: 'Анкета уже изменилась — показываем актуальное состояние',
+      refresh: true,
+    };
+  if (status === 410)
+    return {
+      text: 'Срок ссылки истёк — создайте пациенту новую',
+      refresh: true,
+    };
   if (status === 404) return { text: 'Анкета уже удалена', refresh: true };
-  return { text: 'Не получилось. Проверьте интернет и попробуйте ещё раз.', refresh: false };
+  return {
+    text: 'Не получилось. Проверьте интернет и попробуйте ещё раз.',
+    refresh: false,
+  };
 };
 
 /** Открытая анкета у регистратуры: кто, к кому, статус, действия и карточка. */
@@ -65,7 +76,11 @@ export const RegistryDetail = ({
   // Событие эффекта: видит свежие данные анкеты, но не перевешивает слушатель.
   const markPrinted = useEffectEvent(() => {
     if (questionnaire.printed_at) return;
-    void run(() => mainApi.clinicQuestionnaires.markPrinted(clinicId, questionnaire.id), onChanged);
+    void run(
+      () =>
+        mainApi.clinicQuestionnaires.markPrinted(clinicId, questionnaire.id),
+      onChanged,
+    );
   });
 
   // Режим печати снимается по afterprint (и при уходе с карточки), а не сразу
@@ -84,7 +99,8 @@ export const RegistryDetail = ({
     window.addEventListener('afterprint', endPrint);
     return () => {
       window.removeEventListener('afterprint', endPrint);
-      if (root.getAttribute(PRINT_MODE_ATTR) === 'anketa') root.removeAttribute(PRINT_MODE_ATTR);
+      if (root.getAttribute(PRINT_MODE_ATTR) === 'anketa')
+        root.removeAttribute(PRINT_MODE_ATTR);
     };
   }, []);
 
@@ -115,12 +131,14 @@ export const RegistryDetail = ({
   const resendLink = () =>
     run(
       async () => {
-        const { url } = await mainApi.clinicQuestionnaires.regenerateLink(clinicId, questionnaire.id);
+        const { url } = await mainApi.clinicQuestionnaires.regenerateLink(
+          clinicId,
+          questionnaire.id,
+        );
         setNewUrl(url);
       },
       () => undefined,
     );
-
 
   const print = () => {
     // Лист должен оказаться в DOM до вызова print().
@@ -130,24 +148,34 @@ export const RegistryDetail = ({
   };
 
   const markSigned = () =>
-    run(() => mainApi.clinicQuestionnaires.markSigned(clinicId, questionnaire.id), onChanged);
+    run(
+      () => mainApi.clinicQuestionnaires.markSigned(clinicId, questionnaire.id),
+      onChanged,
+    );
 
   const remove = () =>
-    run(() => mainApi.clinicQuestionnaires.remove(clinicId, questionnaire.id), () => {
-      setConfirmDelete(false);
-      onDeleted();
-    });
+    run(
+      () => mainApi.clinicQuestionnaires.remove(clinicId, questionnaire.id),
+      () => {
+        setConfirmDelete(false);
+        onDeleted();
+      },
+    );
 
   return (
     <article className="flex flex-col gap-5">
       <header className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
-          <h2 className="text-xl font-semibold text-[#202020]">{patientFullName(questionnaire)}</h2>
+          <h2 className="text-xl font-semibold text-[#202020]">
+            {patientFullName(questionnaire)}
+          </h2>
           <p className="mt-1 text-sm text-[#6C757D]">
             {registryWhenLine(questionnaire)}
           </p>
         </div>
-        <span className={`rounded-full px-3 py-1 text-sm font-medium ${status.className}`}>
+        <span
+          className={`rounded-full px-3 py-1 text-sm font-medium ${status.className}`}
+        >
           {status.label}
         </span>
       </header>
@@ -164,12 +192,22 @@ export const RegistryDetail = ({
           </button>
         ) : null}
         {actions.canMarkSigned ? (
-          <button type="button" className={LINK_BUTTON_CLASS} disabled={isBusy} onClick={markSigned}>
+          <button
+            type="button"
+            className={LINK_BUTTON_CLASS}
+            disabled={isBusy}
+            onClick={markSigned}
+          >
             Отметить подписанной
           </button>
         ) : null}
         {actions.canResendLink ? (
-          <button type="button" className={LINK_BUTTON_CLASS} disabled={isBusy} onClick={resendLink}>
+          <button
+            type="button"
+            className={LINK_BUTTON_CLASS}
+            disabled={isBusy}
+            onClick={resendLink}
+          >
             Новая ссылка
           </button>
         ) : null}
@@ -191,7 +229,10 @@ export const RegistryDetail = ({
       ) : null}
 
       {questionnaire.structured ? (
-        <DentalCardBody structured={questionnaire.structured} gaps={questionnaire.gaps} />
+        <DentalCardBody
+          structured={questionnaire.structured}
+          gaps={questionnaire.gaps}
+        />
       ) : (
         <p className="rounded-xl bg-[#F7F9FB] px-4 py-6 text-center text-[#6C757D]">
           {questionnaire.status === 'invited'
@@ -200,14 +241,28 @@ export const RegistryDetail = ({
         </p>
       )}
 
-      {isPrinting ? <AnketaPrintSheet sheet={printSheet(questionnaire, clinicName)} /> : null}
+      {isPrinting ? (
+        <AnketaPrintSheet sheet={printSheet(questionnaire, clinicName)} />
+      ) : null}
 
       {newUrl ? (
-        <ModalShell title="Новая ссылка" onClose={() => setNewUrl(null)} closeDisabled>
-          <p className="mb-4 text-sm text-[#6C757D]">Прежняя ссылка больше не работает.</p>
-          <LinkQrCard item={inviteLinkItem({ ...questionnaire, url: newUrl })} />
+        <ModalShell
+          title="Новая ссылка"
+          onClose={() => setNewUrl(null)}
+          closeDisabled
+        >
+          <p className="mb-4 text-sm text-[#6C757D]">
+            Прежняя ссылка больше не работает.
+          </p>
+          <LinkQrCard
+            item={inviteLinkItem({ ...questionnaire, url: newUrl })}
+          />
           <div className="mt-5 flex justify-end">
-            <button type="button" className={LINK_BUTTON_CLASS} onClick={() => setNewUrl(null)}>
+            <button
+              type="button"
+              className={LINK_BUTTON_CLASS}
+              onClick={() => setNewUrl(null)}
+            >
               Готово
             </button>
           </div>
@@ -215,12 +270,21 @@ export const RegistryDetail = ({
       ) : null}
 
       {confirmDelete ? (
-        <ModalShell title="Удалить ссылку?" onClose={() => setConfirmDelete(false)} closeDisabled={isBusy}>
+        <ModalShell
+          title="Удалить ссылку?"
+          onClose={() => setConfirmDelete(false)}
+          closeDisabled={isBusy}
+        >
           <p className="text-[#202020]">
-            Анкета {patientFullName(questionnaire)} будет удалена, ссылка перестанет работать.
+            Анкета {patientFullName(questionnaire)} будет удалена, ссылка
+            перестанет работать.
           </p>
           <div className="mt-6 flex justify-end gap-5">
-            <button type="button" className={LINK_BUTTON_CLASS} onClick={() => setConfirmDelete(false)}>
+            <button
+              type="button"
+              className={LINK_BUTTON_CLASS}
+              onClick={() => setConfirmDelete(false)}
+            >
               Отмена
             </button>
             <button

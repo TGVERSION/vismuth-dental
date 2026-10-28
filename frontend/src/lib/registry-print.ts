@@ -47,15 +47,23 @@ export const printSheet = (
   const structured = detail.structured;
   return {
     clinicName,
-    filled: detail.completed_at ? `Заполнена ${formatDateTime(detail.completed_at, timeZone)}` : '',
+    filled: detail.completed_at
+      ? `Заполнена ${formatDateTime(detail.completed_at, timeZone)}`
+      : '',
     patient: patientFullName(detail),
     important: structured?.important_facts ?? [],
     complaints: structured?.complaints ?? '',
-    health: (structured?.health ?? []).map(({ label, has, detail: text }) => ({ label, has, detail: text })),
-    clarifications: (structured?.clarifications ?? []).map(({ question, answer }) => ({
-      question,
-      answer: answer || NO_ANSWER,
+    health: (structured?.health ?? []).map(({ label, has, detail: text }) => ({
+      label,
+      has,
+      detail: text,
     })),
+    clarifications: (structured?.clarifications ?? []).map(
+      ({ question, answer }) => ({
+        question,
+        answer: answer || NO_ANSWER,
+      }),
+    ),
     attestation: ATTESTATION,
   };
 };

@@ -44,7 +44,8 @@ export const registryWhenLine = (
   now: Date = new Date(),
   timeZone?: string,
 ): string => {
-  if (item.completed_at) return `Заполнена ${formatDateTime(item.completed_at, timeZone)}`;
+  if (item.completed_at)
+    return `Заполнена ${formatDateTime(item.completed_at, timeZone)}`;
   if (!item.invite_expires_at) return '';
   if (new Date(item.invite_expires_at) <= now) return 'Ссылка устарела';
   return `Ссылка действует до ${formatDateTime(item.invite_expires_at, timeZone)}`;
@@ -60,17 +61,27 @@ export interface RegistryStatusView {
 }
 
 const STATUS_VIEW: Record<RegistryStatus, RegistryStatusView> = {
-  invited: { label: 'Ссылка отправлена', className: 'bg-[#F1F2F6] text-[#6C757D]' },
-  in_progress: { label: 'Заполняется', className: 'bg-[#FFF4DB] text-[#8A5A00]' },
+  invited: {
+    label: 'Ссылка отправлена',
+    className: 'bg-[#F1F2F6] text-[#6C757D]',
+  },
+  in_progress: {
+    label: 'Заполняется',
+    className: 'bg-[#FFF4DB] text-[#8A5A00]',
+  },
   completed: { label: 'Заполнена', className: 'bg-[#EAF0FB] text-[#2A5AB0]' },
   printed: { label: 'Распечатана', className: 'bg-[#F3ECFC] text-[#6A3FA6]' },
   signed: { label: 'Подписана', className: 'bg-[#E6F4EC] text-[#14603B]' },
 };
 
-export const registryStatusView = (status: RegistryStatus): RegistryStatusView =>
-  STATUS_VIEW[status];
+export const registryStatusView = (
+  status: RegistryStatus,
+): RegistryStatusView => STATUS_VIEW[status];
 
-export const REGISTRY_STATUS_OPTIONS: { value: RegistryStatus | ''; label: string }[] = [
+export const REGISTRY_STATUS_OPTIONS: {
+  value: RegistryStatus | '';
+  label: string;
+}[] = [
   { value: '', label: 'Все статусы' },
   ...(Object.keys(STATUS_VIEW) as RegistryStatus[]).map((value) => ({
     value,
@@ -106,7 +117,11 @@ const joinName = (...parts: (string | null | undefined)[]): string =>
     .join(' ');
 
 export const patientFullName = (item: RegistryQuestionnaireItem): string =>
-  joinName(item.patient_last_name, item.patient_first_name, item.patient_middle_name);
+  joinName(
+    item.patient_last_name,
+    item.patient_first_name,
+    item.patient_middle_name,
+  );
 
 // ---------------------------------------------------------------------------
 // Форма новой ссылки: только ФИО — как бумажная анкета, ссылка не привязана
@@ -133,7 +148,9 @@ export const validateNewLink = (form: NewLinkForm): NewLinkErrors => {
   return errors;
 };
 
-export const buildNewLinkPayload = (form: NewLinkForm): RegistryQuestionnaireCreate => ({
+export const buildNewLinkPayload = (
+  form: NewLinkForm,
+): RegistryQuestionnaireCreate => ({
   last_name: form.lastName.trim(),
   first_name: form.firstName.trim(),
   middle_name: form.middleName.trim() || null,

@@ -3,7 +3,11 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import type { RegistryStatus } from '@/api';
-import { ErrorState, INPUT_CLASS, Spinner } from '@/components/settings/clinics/fields';
+import {
+  ErrorState,
+  INPUT_CLASS,
+  Spinner,
+} from '@/components/settings/clinics/fields';
 import { useMyClinic } from '@/hooks/useMyClinic';
 import { useRegistryDetail, useRegistryList } from '@/hooks/useRegistry';
 import { canUseRegistry } from '@/lib/app-nav';
@@ -53,7 +57,11 @@ const useAutoRefresh = (refresh: () => void) => {
 export const RegistryScreen = () => {
   const router = useRouter();
   const selectedId = useSearchParams().get('id');
-  const { clinic, isLoading: isClinicLoading, error: clinicError } = useMyClinic();
+  const {
+    clinic,
+    isLoading: isClinicLoading,
+    error: clinicError,
+  } = useMyClinic();
   const clinicId = canUseRegistry(clinic) && clinic ? clinic.clinic_id : null;
 
   const [status, setStatus] = useState<RegistryStatus | ''>('');
@@ -79,11 +87,19 @@ export const RegistryScreen = () => {
   useAutoRefresh(refreshAll);
 
   const select = (id: string | null) =>
-    router.replace(id ? `/registry?id=${encodeURIComponent(id)}` : '/registry', { scroll: false });
+    router.replace(
+      id ? `/registry?id=${encodeURIComponent(id)}` : '/registry',
+      { scroll: false },
+    );
 
   if (isClinicLoading) return <Spinner />;
   if (clinicError === 'failed') {
-    return <ErrorState text="Не удалось загрузить данные клиники" onRetry={() => window.location.reload()} />;
+    return (
+      <ErrorState
+        text="Не удалось загрузить данные клиники"
+        onRetry={() => window.location.reload()}
+      />
+    );
   }
   if (!clinicId) {
     return (
@@ -96,13 +112,17 @@ export const RegistryScreen = () => {
   const renderList = () => {
     if (list.isLoading && list.items.length === 0) return <Spinner />;
     if (list.error && list.items.length === 0) {
-      return <ErrorState text="Не удалось загрузить анкеты" onRetry={list.reload} />;
+      return (
+        <ErrorState text="Не удалось загрузить анкеты" onRetry={list.reload} />
+      );
     }
     if (list.items.length === 0) {
       const isFiltered = Boolean(status || searchName);
       return (
         <p className="px-4 py-8 text-center text-sm text-[#8B8B8B]">
-          {isFiltered ? 'Ничего не найдено' : 'Анкет пока нет — создайте ссылку для пациента'}
+          {isFiltered
+            ? 'Ничего не найдено'
+            : 'Анкет пока нет — создайте ссылку для пациента'}
         </p>
       );
     }
@@ -111,12 +131,25 @@ export const RegistryScreen = () => {
 
   const renderDetail = () => {
     if (!selectedId) {
-      return <p className="mt-40 text-center text-[#8B8B8B]">Выберите анкету в списке</p>;
+      return (
+        <p className="mt-40 text-center text-[#8B8B8B]">
+          Выберите анкету в списке
+        </p>
+      );
     }
     let content: React.ReactNode;
-    if (detail.error === 'not_found') content = <p className="my-40 text-center text-[#8B8B8B]">Анкета не найдена</p>;
+    if (detail.error === 'not_found')
+      content = (
+        <p className="my-40 text-center text-[#8B8B8B]">Анкета не найдена</p>
+      );
     else if (!detail.data && detail.isLoading) content = <Spinner />;
-    else if (!detail.data) content = <ErrorState text="Не удалось загрузить анкету" onRetry={detail.reload} />;
+    else if (!detail.data)
+      content = (
+        <ErrorState
+          text="Не удалось загрузить анкету"
+          onRetry={detail.reload}
+        />
+      );
     else {
       content = (
         <RegistryDetail
@@ -158,7 +191,9 @@ export const RegistryScreen = () => {
           aria-label="Статус"
           className={FIELD}
           value={status}
-          onChange={(event) => setStatus(event.target.value as RegistryStatus | '')}
+          onChange={(event) =>
+            setStatus(event.target.value as RegistryStatus | '')
+          }
         >
           {REGISTRY_STATUS_OPTIONS.map((option) => (
             <option key={option.value} value={option.value}>
@@ -174,10 +209,14 @@ export const RegistryScreen = () => {
           value={name}
           onChange={(event) => setName(event.target.value)}
         />
-        <div className="custom-scrollbar flex-1 overflow-x-hidden overflow-y-auto">{renderList()}</div>
+        <div className="custom-scrollbar flex-1 overflow-x-hidden overflow-y-auto">
+          {renderList()}
+        </div>
       </aside>
 
-      <div className="ml-93.5 flex min-w-0 flex-1 justify-center pr-5">{renderDetail()}</div>
+      <div className="ml-93.5 flex min-w-0 flex-1 justify-center pr-5">
+        {renderDetail()}
+      </div>
 
       {isCreating ? (
         <NewLinkModal

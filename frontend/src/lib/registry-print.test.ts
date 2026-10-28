@@ -2,7 +2,9 @@ import { describe, expect, it } from 'vitest';
 import type { RegistryQuestionnaireDetail } from '@/api';
 import { ATTESTATION, printSheet } from './registry-print';
 
-const detail = (patch: Partial<RegistryQuestionnaireDetail> = {}): RegistryQuestionnaireDetail => ({
+const detail = (
+  patch: Partial<RegistryQuestionnaireDetail> = {},
+): RegistryQuestionnaireDetail => ({
   id: 'q1',
   status: 'completed',
   patient_last_name: 'Белова',
@@ -22,17 +24,28 @@ const detail = (patch: Partial<RegistryQuestionnaireDetail> = {}): RegistryQuest
       'Принимает Эликвис, 5 мг, 2 раза в день',
       'Аллергия: антибиотики — амоксициллин; реакция: сыпь, зуд',
     ],
-    complaints: 'Болит зуб снизу справа: от холодного, при накусывании; несколько дней.',
+    complaints:
+      'Болит зуб снизу справа: от холодного, при накусывании; несколько дней.',
     health: [
-      { key: 'allergy', label: 'Аллергия на лекарства', has: true, detail: 'Антибиотики; амоксициллин; Сыпь, зуд' },
+      {
+        key: 'allergy',
+        label: 'Аллергия на лекарства',
+        has: true,
+        detail: 'Антибиотики; амоксициллин; Сыпь, зуд',
+      },
       { key: 'diabetes', label: 'Сахарный диабет', has: false, detail: '' },
     ],
     clarifications: [
-      { question: 'Когда последний раз принимали Эликвис?', answer: 'Сегодня утром' },
+      {
+        question: 'Когда последний раз принимали Эликвис?',
+        answer: 'Сегодня утром',
+      },
       { question: 'Была ли температура?', answer: '' },
     ],
   },
-  gaps: [{ section: 'medications', question: 'По какому поводу назначен Эликвис' }],
+  gaps: [
+    { section: 'medications', question: 'По какому поводу назначен Эликвис' },
+  ],
   ...patch,
 });
 
@@ -48,13 +61,21 @@ describe('printSheet', () => {
         'Принимает Эликвис, 5 мг, 2 раза в день',
         'Аллергия: антибиотики — амоксициллин; реакция: сыпь, зуд',
       ],
-      complaints: 'Болит зуб снизу справа: от холодного, при накусывании; несколько дней.',
+      complaints:
+        'Болит зуб снизу справа: от холодного, при накусывании; несколько дней.',
       health: [
-        { label: 'Аллергия на лекарства', has: true, detail: 'Антибиотики; амоксициллин; Сыпь, зуд' },
+        {
+          label: 'Аллергия на лекарства',
+          has: true,
+          detail: 'Антибиотики; амоксициллин; Сыпь, зуд',
+        },
         { label: 'Сахарный диабет', has: false, detail: '' },
       ],
       clarifications: [
-        { question: 'Когда последний раз принимали Эликвис?', answer: 'Сегодня утром' },
+        {
+          question: 'Когда последний раз принимали Эликвис?',
+          answer: 'Сегодня утром',
+        },
         { question: 'Была ли температура?', answer: 'Пациент не ответил' },
       ],
       attestation: ATTESTATION,
@@ -84,7 +105,11 @@ describe('printSheet', () => {
   });
 
   it('is empty-safe when the card is not built yet', () => {
-    const sheet = printSheet(detail({ structured: null, completed_at: null }), 'Здоровье', 'UTC');
+    const sheet = printSheet(
+      detail({ structured: null, completed_at: null }),
+      'Здоровье',
+      'UTC',
+    );
 
     expect(sheet.filled).toBe('');
     expect(sheet.important).toEqual([]);

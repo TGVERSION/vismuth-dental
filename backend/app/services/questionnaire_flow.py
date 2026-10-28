@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import re
-from dataclasses import dataclass, field
 from datetime import date, datetime, timedelta, timezone
 from typing import Any, Literal, Optional
 from uuid import UUID
@@ -20,14 +19,8 @@ from ..services.clinic_members import load_specializations_map
 from ..services.ml_proxy import proxy_post_to_ml
 from ..services.questionnaire_code import allocate_code
 from ..services.questionnaire_limits import ensure_clinic_subscription_active
-from .dental.flow import (
-    STEP_DONE as DENTAL_DONE,
-    DentalAnswerError,
-    DentalAnswers,
-    apply_dental_answer,
-    dental_step,
-)
-from .dental.summary import build_dental_summary
+from .dental_questionnaire import apply_dental, build_dental_descriptor, open_invite
+from .questionnaire_step import StepDescriptor
 
 _APPOINTMENT_TIME_RE = re.compile(r"^([01]\d|2[0-3]):([0-5]\d)$")
 
@@ -56,26 +49,6 @@ FIXED_TEXTS: dict[str, str] = {
     "repeat_compliance": "Выполняли ли назначения врача?",
     "repeat_side_effects": "Были ли побочные эффекты или новые жалобы?",
 }
-
-
-@dataclass
-class StepDescriptor:
-    step_key: str
-    step_type: str
-    title: Optional[str] = None
-    text: Optional[str] = None
-    required: bool = True
-    allow_skip: bool = False
-    allow_none: bool = False
-    choices: list[dict[str, str]] = field(default_factory=list)
-    options: list[dict[str, Any]] = field(default_factory=list)
-    groups: list[dict[str, Any]] = field(default_factory=list)
-    date_min: Optional[str] = None
-    date_max: Optional[str] = None
-    code: Optional[str] = None
-    completed: bool = False
-    truncated: bool = False
-    ai_unavailable: bool = False
 
 
 def truncate_answer(value: str) -> tuple[str, bool]:
@@ -295,82 +268,6 @@ async def build_step_descriptor(
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
         detail=f"Unknown step {step}",
     )
-
-
-def _dental_answers(questionnaire: Questionnaire) -> DentalAnswers:
-    return DentalAnswers.model_validate(questionnaire.dental_answers or {})
-
-
-def build_dental_descriptor(questionnaire: Questionnaire) -> StepDescriptor:
-    if questionnaire.status == "completed":
-        return StepDescriptor(
-            step_key=DENTAL_DONE,
-            step_type=DENTAL_DONE,
-            title="Спасибо, анкета у врача",
-            completed=True,
-        )
-    step = dental_step(questionnaire.current_step, _dental_answers(questionnaire))
-    return StepDescriptor(
-        step_key=step.step_key,
-        step_type=step.step_type,
-        title=step.title,
-        allow_none=step.allow_none,
-        choices=step.items,
-        groups=step.groups,
-    )
-
-
-def _open_invite(questionnaire: Questionnaire) -> None:
-    """Ответ по персональной ссылке: срок истёк — 410; первый ответ начинает анкету."""
-    if questionnaire.status not in {"invited", "in_progress"}:
-        return
-    expires = questionnaire.invite_expires_at
-    if expires is not None and datetime.now(timezone.utc) >= expires:
-        raise HTTPException(
-            status_code=status.HTTP_410_GONE,
-            detail="Invite expired",
-        )
-    questionnaire.status = "in_progress"
-
-
-def apply_dental(
-    questionnaire: Questionnaire,
-    *,
-    step_key: str,
-    selections: dict[str, list[str]],
-    texts: dict[str, str],
-    none_answer: bool,
-    now: datetime,
-) -> None:
-    """Сохраняет ответ стоматологической анкеты; на финале собирает карточку.
-
-    Карточка строится правилами сразу, без фоновой обработки ML.
-    """
-    try:
-        answers, next_step = apply_dental_answer(
-            step_key,
-            _dental_answers(questionnaire),
-            selections=selections,
-            texts=texts,
-            none=none_answer,
-            max_len=settings.questionnaire_answer_max_len,
-        )
-    except DentalAnswerError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(exc),
-        ) from exc
-
-    questionnaire.dental_answers = answers.model_dump()
-    questionnaire.current_step = next_step
-    if next_step != DENTAL_DONE:
-        return
-    structured, gaps = build_dental_summary(answers)
-    questionnaire.structured = structured
-    questionnaire.gaps = gaps
-    questionnaire.processing_status = "done"
-    questionnaire.status = "completed"
-    questionnaire.completed_at = now
 
 
 async def list_active_doctors(
@@ -594,7 +491,7 @@ async def apply_answer(
             # начатую даём закончить.
             clinic = await db.get(Clinic, questionnaire.clinic_id)
             ensure_clinic_subscription_active(clinic)
-        _open_invite(questionnaire)
+        open_invite(questionnaire)
     if questionnaire.status != "in_progress":
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -610,12 +507,13 @@ async def apply_answer(
         now = datetime.now(timezone.utc)
         questionnaire.last_activity_at = now
         questionnaire.updated_at = now
-        apply_dental(
+        await apply_dental(
             questionnaire,
             step_key=step_key,
             selections=selections or {},
             texts=texts or {},
             none_answer=none_answer,
+            skip=skip,
             now=now,
         )
         await db.commit()

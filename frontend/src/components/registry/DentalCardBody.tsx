@@ -1,7 +1,11 @@
 'use client';
 
 import type { DoctorQuestionnaireStructured } from '@/api';
-import { DentalHealth, DentalImportant } from '@/components/dental-card/DentalCardParts';
+import {
+  DentalClarifications,
+  DentalHealth,
+  DentalImportant,
+} from '@/components/dental-card/DentalCardParts';
 import { gapQuestions } from '@/lib/doctor-questionnaires';
 
 const Section = ({ title, children }: { title: string; children: React.ReactNode }) => (
@@ -31,6 +35,11 @@ export const DentalCardBody = ({ structured, gaps }: DentalCardBodyProps) => {
       <Section title="С чем пришёл">
         <p>{structured.complaints || '—'}</p>
       </Section>
+      {structured.clarifications && structured.clarifications.length > 0 ? (
+        <Section title="Уточнения">
+          <DentalClarifications items={structured.clarifications} />
+        </Section>
+      ) : null}
       <Section title="Здоровье">
         <DentalHealth health={structured.health ?? []} />
       </Section>

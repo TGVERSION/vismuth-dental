@@ -772,6 +772,8 @@ export interface QuestionnaireStepAnswer {
   selections?: Record<string, string[]>;
   /** Стоматологическая анкета: свой текст по ключу группы. */
   texts?: Record<string, string>;
+  /** Пропустить вопрос — только у уточнения нейросети в стоматологической анкете. */
+  skip?: boolean;
 }
 
 /**
@@ -864,6 +866,13 @@ export interface DoctorQuestionnaireStructured {
   important_facts?: string[];
   /** Стоматологическая анкета: все 9 строк здоровья, «да» и «нет». */
   health?: DentalHealthRow[];
+  /** Вопросы нейросети и ответы пациента дословно; пустой ответ — пропустил. */
+  clarifications?: DentalClarification[];
+}
+
+export interface DentalClarification {
+  question: string;
+  answer: string;
 }
 
 export interface DentalHealthRow {

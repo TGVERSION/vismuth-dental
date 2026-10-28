@@ -6,6 +6,7 @@ import {
   appointmentLine,
   buildChecklistAnswer,
   buildGroupsAnswer,
+  buildSkipAnswer,
   canSubmitGroups,
   dentalErrorKind,
   dentalProgress,
@@ -255,6 +256,12 @@ describe('buildGroupsAnswer', () => {
   });
 });
 
+describe('skip', () => {
+  it('builds a skip answer for the clarifying question', () => {
+    expect(buildSkipAnswer('dental_ai')).toEqual({ step_key: 'dental_ai', skip: true });
+  });
+});
+
 describe('checklist', () => {
   it('toggles rows and answers «none» when nothing is checked', () => {
     const checked = toggleChecklist(toggleChecklist([], 'allergy'), 'diabetes');
@@ -294,6 +301,7 @@ describe('dentalProgress', () => {
       total: 2,
       label: 'Уточнение',
     });
+    expect(dentalProgress('dental_ai')).toEqual({ current: 2, total: 2, label: 'Уточнение' });
     expect(dentalProgress('done')).toBeNull();
   });
 });

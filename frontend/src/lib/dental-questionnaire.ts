@@ -43,7 +43,11 @@ const PROGRESS: Record<string, DentalProgress> = {
   dental_pain: { current: 1, total: 2, label: 'Зачем пришли' },
   dental_health: { current: 2, total: 2, label: 'Здоровье' },
   dental_details: { current: 2, total: 2, label: 'Уточнение' },
+  dental_ai: { current: 2, total: 2, label: 'Уточнение' },
 };
+
+/** Шаг уточняющего вопроса нейросети. */
+export const AI_STEP = 'dental_ai';
 
 /** «Шаг 1 из 2 · Зачем пришли». Уточнения не меняют номер шага. */
 export const dentalProgress = (stepKey: string): DentalProgress | null =>
@@ -225,6 +229,12 @@ export const buildGroupsAnswer = (
     ...(Object.keys(texts).length > 0 ? { texts } : {}),
   };
 };
+
+/** «Пропустить» — только у вопроса нейросети (`allow_skip`). */
+export const buildSkipAnswer = (stepKey: string): QuestionnaireStepAnswer => ({
+  step_key: stepKey,
+  skip: true,
+});
 
 // ---------------------------------------------------------------------------
 // Список «Что из этого у вас есть?»

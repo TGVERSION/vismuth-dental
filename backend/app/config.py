@@ -74,6 +74,10 @@ class Settings(BaseModel):
     questionnaire_ai_repeat_max: int = int(
         os.getenv("QUESTIONNAIRE_AI_REPEAT_MAX", "2"),
     )
+    # Уточнения нейросети в стоматологической анкете (ml-service /dental_clarify).
+    questionnaire_dental_ai_max: int = int(
+        os.getenv("QUESTIONNAIRE_DENTAL_AI_MAX", "2"),
+    )
     questionnaire_device_limit_per_hour: int = int(
         os.getenv("QUESTIONNAIRE_DEVICE_LIMIT_PER_HOUR", "5"),
     )

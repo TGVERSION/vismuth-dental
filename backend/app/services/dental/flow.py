@@ -43,6 +43,21 @@ class GroupAnswer(BaseModel):
     text: str = ""
 
 
+class AiTurn(BaseModel):
+    """Уточняющий вопрос нейросети и ответ пациента."""
+
+    model_config = ConfigDict(frozen=True)
+
+    question: str
+    choices: list[str] = Field(default_factory=list)
+    answer: str = ""
+    skipped: bool = False
+
+    @property
+    def is_closed(self) -> bool:
+        return bool(self.answer) or self.skipped
+
+
 class DentalAnswers(BaseModel):
     """Ответы пациента; хранятся в `questionnaire.dental_answers`.
 
@@ -53,6 +68,7 @@ class DentalAnswers(BaseModel):
 
     health: list[str] | None = None
     groups: dict[str, GroupAnswer] = Field(default_factory=dict)
+    ai: list[AiTurn] = Field(default_factory=list)
 
 
 @dataclass(frozen=True)
@@ -63,6 +79,7 @@ class DentalStep:
     groups: list[dict[str, Any]] = field(default_factory=list)
     items: list[dict[str, str]] = field(default_factory=list)
     allow_none: bool = False
+    allow_skip: bool = False
 
 
 def has_pain(answers: DentalAnswers) -> bool:

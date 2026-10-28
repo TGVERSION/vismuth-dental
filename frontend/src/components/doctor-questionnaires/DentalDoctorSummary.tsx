@@ -2,7 +2,11 @@
 
 import { useId } from 'react';
 import type { DoctorQuestionnaireStructured } from '@/api';
-import { DentalHealth, DentalImportant } from '@/components/dental-card/DentalCardParts';
+import {
+  DentalClarifications,
+  DentalHealth,
+  DentalImportant,
+} from '@/components/dental-card/DentalCardParts';
 
 const Block = ({ title, children }: { title: string; children: React.ReactNode }) => {
   const headingId = useId();
@@ -33,5 +37,10 @@ export const DentalDoctorSummary = ({
     <Block title="Здоровье">
       <DentalHealth health={structured.health ?? []} />
     </Block>
+    {structured.clarifications && structured.clarifications.length > 0 ? (
+      <Block title="Уточнения">
+        <DentalClarifications items={structured.clarifications} />
+      </Block>
+    ) : null}
   </>
 );

@@ -29,8 +29,12 @@ export interface PrintSheet {
   important: string[];
   complaints: string;
   health: PrintHealthRow[];
+  /** Вопросы нейросети и ответы пациента дословно. */
+  clarifications: { question: string; answer: string }[];
   attestation: string;
 }
+
+const NO_ANSWER = 'Пациент не ответил';
 
 /** «14.10.2026» из YYYY-MM-DD — по частям, без сдвига часового пояса. */
 export const formatDate = (isoDate: string | null): string => {
@@ -74,6 +78,10 @@ export const printSheet = (
     important: structured?.important_facts ?? [],
     complaints: structured?.complaints ?? '',
     health: (structured?.health ?? []).map(({ label, has, detail: text }) => ({ label, has, detail: text })),
+    clarifications: (structured?.clarifications ?? []).map(({ question, answer }) => ({
+      question,
+      answer: answer || NO_ANSWER,
+    })),
     attestation: ATTESTATION,
   };
 };

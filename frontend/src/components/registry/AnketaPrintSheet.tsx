@@ -89,6 +89,23 @@ export const AnketaPrintSheet = ({ sheet }: AnketaPrintSheetProps) =>
               </h2>
               <p className="mt-[1mm]">{sheet.complaints || '—'}</p>
 
+              {sheet.clarifications.length > 0 ? (
+                <>
+                  <h2 className="mt-[4mm] break-after-avoid text-[11pt] font-bold">
+                    Уточнения
+                  </h2>
+                  {sheet.clarifications.map((item) => (
+                    <p
+                      key={item.question}
+                      className="mt-[1mm] break-inside-avoid"
+                    >
+                      <span className="text-[#555]">{item.question}</span>{' '}
+                      {item.answer}
+                    </p>
+                  ))}
+                </>
+              ) : null}
+
               <h2 className="mt-[4mm] break-after-avoid text-[11pt] font-bold">
                 Здоровье
               </h2>

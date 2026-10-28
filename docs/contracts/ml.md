@@ -77,3 +77,11 @@
 Публичный flow пациента (`questionnaire-public.md`) вызывает ml-service `POST /collect_form` через `proxy_post_to_ml` **без** отдельного backend proxy-endpoint для врача.  
 Тело: `messages` + опциональный `state` с прошлого шага. Ответ: `status`, `messages` (вопрос или null), `state` (сохраняется в `questionnaire.collect_form_state`).  
 Лимиты вопросов и fallback `ai_unavailable` — на стороне backend; публичный API для UI не меняется.
+
+## POST /dental_clarify (ml-service)
+
+- **Назначение:** один уточняющий вопрос пациенту стоматологической анкеты — или «спрашивать нечего»
+- **Тело:** `answers` (ответы анкеты текстом), `history[]` (`{question, answer}`, пустой ответ — пропустил)
+- **Ответ:** `{status: question | done, question, choices[]}`; не больше `DENTAL_LLM_MAX_QUESTIONS` (2) вопросов, без повторов и «Другое»
+- **Модель:** любой OpenAI-совместимый сервер (`DENTAL_LLM_BASE_URL`, `DENTAL_LLM_MODEL`, `DENTAL_LLM_API_KEY`); без адреса — `503`, сбой модели — `502`. Backend при любой ошибке завершает анкету без уточнений
+- **Backend:** зовёт, только если у пациента есть свой текст или неполная боль (`services/dental/clarify.py`)

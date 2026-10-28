@@ -31,8 +31,12 @@ const detail = (patch: Partial<RegistryQuestionnaireDetail> = {}): RegistryQuest
       { key: 'allergy', label: 'Аллергия на лекарства', has: true, detail: 'Антибиотики; амоксициллин; Сыпь, зуд' },
       { key: 'diabetes', label: 'Сахарный диабет', has: false, detail: '' },
     ],
+    clarifications: [
+      { question: 'Когда последний раз принимали Эликвис?', answer: 'Сегодня утром' },
+      { question: 'Была ли температура?', answer: '' },
+    ],
   },
-  gaps: ['По какому поводу назначен Эликвис'],
+  gaps: [{ section: 'medications', question: 'По какому поводу назначен Эликвис' }],
   ...patch,
 });
 
@@ -66,6 +70,10 @@ describe('printSheet', () => {
         { label: 'Аллергия на лекарства', has: true, detail: 'Антибиотики; амоксициллин; Сыпь, зуд' },
         { label: 'Сахарный диабет', has: false, detail: '' },
       ],
+      clarifications: [
+        { question: 'Когда последний раз принимали Эликвис?', answer: 'Сегодня утром' },
+        { question: 'Была ли температура?', answer: 'Пациент не ответил' },
+      ],
       attestation: ATTESTATION,
     });
   });
@@ -84,5 +92,6 @@ describe('printSheet', () => {
     expect(sheet.important).toEqual([]);
     expect(sheet.health).toEqual([]);
     expect(sheet.complaints).toBe('');
+    expect(sheet.clarifications).toEqual([]);
   });
 });

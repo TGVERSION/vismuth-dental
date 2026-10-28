@@ -4,7 +4,9 @@ import type { PublicInvite } from '@/api';
 import type { InviteLoadResult } from '@/api/server-api';
 import { brandStyle } from '@/lib/branding';
 import {
+  AI_STEP,
   appointmentLine,
+  buildSkipAnswer,
   dentalProgress,
   dentalScreenFor,
   inviteGreeting,
@@ -37,7 +39,10 @@ const doctorLine = (invite: PublicInvite): string | null => {
 
 /** Приветствие над первым вопросом: имя уже в ссылке, спрашивать не нужно. */
 const Intro = ({ invite }: { invite: PublicInvite }) => {
-  const appointment = appointmentLine(invite.appointment_date, invite.appointment_time);
+  const appointment = appointmentLine(
+    invite.appointment_date,
+    invite.appointment_time,
+  );
   const doctor = doctorLine(invite);
   return (
     <div className="flex flex-col gap-1 rounded-2xl bg-[var(--q-surface)] px-4 py-3">
@@ -45,21 +50,51 @@ const Intro = ({ invite }: { invite: PublicInvite }) => {
         {inviteGreeting(invite.patient_first_name, invite.patient_middle_name)}
       </p>
       {appointment ? <p className="text-[15px]">{appointment}</p> : null}
-      {doctor ? <p className="text-sm text-[var(--q-muted)]">{doctor}</p> : null}
+      {doctor ? (
+        <p className="text-sm text-[var(--q-muted)]">{doctor}</p>
+      ) : null}
     </div>
   );
 };
 
-const InviteFlow = ({ invite, token }: { invite: PublicInvite; token: string }) => {
+/** Над вопросом нейросети: пациент должен понимать, откуда вопрос. */
+const AiBadge = () => (
+  <p className="flex items-center gap-1.5 text-[13px] font-semibold text-[#7B4CC0]">
+    <svg
+      width="14"
+      height="14"
+      viewBox="0 0 24 24"
+      fill="currentColor"
+      aria-hidden="true"
+    >
+      <path d="M12 2l1.9 6.1L20 10l-6.1 1.9L12 18l-1.9-6.1L4 10l6.1-1.9z" />
+    </svg>
+    Уточним по вашим ответам
+  </p>
+);
+
+const InviteFlow = ({
+  invite,
+  token,
+}: {
+  invite: PublicInvite;
+  token: string;
+}) => {
   const clinic = inviteBranding(invite);
   const flow = useDentalQuestionnaire(invite, token);
   const { step } = flow;
 
-  if (flow.block) return <QuestionnaireStub state={flow.block} clinic={clinic} />;
-  if (!step) return <QuestionnaireStub state="subscription_expired" clinic={clinic} />;
+  if (flow.block)
+    return <QuestionnaireStub state={flow.block} clinic={clinic} />;
+  if (!step)
+    return <QuestionnaireStub state="subscription_expired" clinic={clinic} />;
 
   const renderShell = (body: React.ReactNode, footer: React.ReactNode) => (
-    <DentalShell clinic={clinic} progress={dentalProgress(step.step_key)} footer={footer}>
+    <DentalShell
+      clinic={clinic}
+      progress={dentalProgress(step.step_key)}
+      footer={footer}
+    >
       {body}
     </DentalShell>
   );
@@ -76,7 +111,14 @@ const InviteFlow = ({ invite, token }: { invite: PublicInvite; token: string }) 
           isSubmitting={flow.isSubmitting}
           error={flow.error}
           onSubmit={(answer) => void flow.submit(answer)}
-          intro={step.step_key === 'dental_reason' ? <Intro invite={invite} /> : undefined}
+          intro={
+            step.step_key === 'dental_reason' ? (
+              <Intro invite={invite} />
+            ) : step.step_key === AI_STEP ? (
+              <AiBadge />
+            ) : undefined
+          }
+          onSkip={() => void flow.submit(buildSkipAnswer(step.step_key))}
           renderShell={renderShell}
         />
       );
@@ -96,7 +138,10 @@ const InviteFlow = ({ invite, token }: { invite: PublicInvite; token: string }) 
   }
 };
 
-const LOAD_BLOCK: Record<Exclude<InviteLoadResult['status'], 'ok'>, QuestionnaireBlock> = {
+const LOAD_BLOCK: Record<
+  Exclude<InviteLoadResult['status'], 'ok'>,
+  QuestionnaireBlock
+> = {
   not_found: 'invite_not_found',
   // Сбой загрузки — общий текст «Сервис временно недоступен».
   error: 'subscription_expired',
@@ -108,7 +153,10 @@ interface DentalQuestionnaireAppProps {
 }
 
 /** Стоматологическая анкета по персональной ссылке регистратуры. */
-export const DentalQuestionnaireApp = ({ token, result }: DentalQuestionnaireAppProps) => {
+export const DentalQuestionnaireApp = ({
+  token,
+  result,
+}: DentalQuestionnaireAppProps) => {
   const invite = result.status === 'ok' ? result.invite : null;
   const theme = brandStyle(invite ? inviteBranding(invite) : null);
 

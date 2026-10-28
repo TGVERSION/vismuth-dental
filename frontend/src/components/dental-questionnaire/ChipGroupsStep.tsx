@@ -27,6 +27,8 @@ interface ChipGroupsStepProps {
   isSubmitting: boolean;
   error: string | null;
   onSubmit: (answer: QuestionnaireStepAnswer) => void;
+  /** «Пропустить» — у вопроса нейросети (`allow_skip`). */
+  onSkip?: () => void;
   /** Над первым вопросом: приветствие и время приёма. */
   intro?: React.ReactNode;
   renderShell: (body: React.ReactNode, footer: React.ReactNode) => React.ReactNode;
@@ -151,6 +153,7 @@ export const ChipGroupsStep = ({
   isSubmitting,
   error,
   onSubmit,
+  onSkip,
   intro,
   renderShell,
 }: ChipGroupsStepProps) => {
@@ -195,6 +198,11 @@ export const ChipGroupsStep = ({
       <DentalButton onClick={handleNext} isBusy={isSubmitting}>
         Далее
       </DentalButton>
+      {onSkip && step.allow_skip && !isSubmitting ? (
+        <DentalButton variant="soft" onClick={onSkip}>
+          Пропустить
+        </DentalButton>
+      ) : null}
     </>
   );
 

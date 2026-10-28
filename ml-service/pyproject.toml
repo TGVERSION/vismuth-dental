@@ -15,4 +15,5 @@ dependencies = [
     "langchain-gigachat==0.3.12",
     "chromadb==1.5.5",
     "pydantic-settings>=2.15.0",
+    "langchain-openai==0.3.35",
 ]

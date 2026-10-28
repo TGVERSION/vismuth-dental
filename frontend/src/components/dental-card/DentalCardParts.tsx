@@ -1,6 +1,6 @@
 'use client';
 
-import type { DentalHealthRow } from '@/api';
+import type { DentalClarification, DentalHealthRow } from '@/api';
 
 // Части карточки стоматологической анкеты, общие для врача и регистратуры.
 
@@ -43,3 +43,17 @@ export const DentalHealth = ({ health }: { health: DentalHealthRow[] }) => {
     </>
   );
 };
+
+/** Вопросы нейросети и ответы пациента дословно; пропущенный — серым. */
+export const DentalClarifications = ({ items }: { items: DentalClarification[] }) => (
+  <dl className="flex flex-col gap-2">
+    {items.map((item) => (
+      <div key={item.question}>
+        <dt className="text-sm text-[#6C757D]">{item.question}</dt>
+        <dd className={item.answer ? '' : 'text-sm text-[#8B8B8B]'}>
+          {item.answer || 'Пациент пропустил вопрос'}
+        </dd>
+      </div>
+    ))}
+  </dl>
+);

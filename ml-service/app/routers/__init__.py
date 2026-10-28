@@ -17,6 +17,7 @@ from app.llm_services.llm_setup import log_available_models
 from .autocomplete import router as autocomplete_router
 from .clinrec import router as clinrec_router
 from .collect_form import router as collect_form_router
+from .dental_clarify import router as dental_clarify_router
 from .mkb_code import router as mkb_router
 from .protocol_fullness import router as protocol_fullness_router
 from .summarize_form import router as summarize_form_router
@@ -38,6 +39,7 @@ app.include_router(protocol_fullness_router)
 app.include_router(clinrec_router)
 app.include_router(collect_form_router)
 app.include_router(summarize_form_router)
+app.include_router(dental_clarify_router)
 
 
 @app.get("/health", tags=["system"])

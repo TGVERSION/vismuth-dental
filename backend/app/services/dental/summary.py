@@ -251,6 +251,8 @@ def _gaps(answers: DentalAnswers, health: list[str]) -> list[dict[str, str]]:
             _gap(MEDICATIONS, f"Принимает ли {name} сейчас и в какой дозе")
             for name in _mentioned_blood_thinners(answers)
         )
+    # Пропущенный вопрос нейросети — врач задаст его сам.
+    gaps.extend(_gap(COMPLAINTS, turn.question) for turn in answers.ai if turn.skipped)
     return gaps
 
 
@@ -282,5 +284,11 @@ def build_dental_summary(
         "medications": _medications(answers, health),
         "allergy_anamnesis": _allergy_line(answers) if "allergy" in health else "Аллергии нет.",
         "life_anamnesis": _life_anamnesis(answers, health),
+        # Вопросы нейросети и ответы пациента дословно; пусто — пропустил.
+        "clarifications": [
+            {"question": turn.question, "answer": turn.answer}
+            for turn in answers.ai
+            if turn.is_closed
+        ],
     }
     return structured, _gaps(answers, health)

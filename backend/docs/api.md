@@ -107,6 +107,7 @@ Whitelist: [`dictionaries_config.py`](../app/dictionaries_config.py).
 | `POST /ml_mkb_code` | Proxy подбора кода МКБ; при истекшей подписке — `503 subscription_expired` |
 | `POST /ml_fullness_complaints` | Proxy проверки полноты; при истекшей подписке — `503 subscription_expired` |
 | `POST /ml_clinrec_check` | Proxy клинреков (`protocol_text` + опц. `mkb` / `guideline_code` / `main_diagnosis`); в ML пока legacy body; при истекшей подписке — `503 subscription_expired` |
+| `POST /check_dms` | ДМС: resolve КР → PDF из S3 → multipart ML `/check_dms`; при истекшей подписке — `503 subscription_expired` |
 | `POST /autocomplete_dict/complete_dict` | Dict-autocomplete в Postgres |
 
 ## Регистрация роутеров

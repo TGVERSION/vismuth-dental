@@ -13,14 +13,15 @@
 
 Ошибки upstream превращаются в HTTP-ошибки FastAPI с `detail` от ml-service, если он есть.
 
-### Clinrec: каталог и заготовка ML
+### Clinrec / DMS
 
 Каталог: [`routers/clinrec_guidelines.py`](../app/routers/clinrec_guidelines.py) + [`services/s3.py`](../app/services/s3.py).  
-Контракт тел/путей: [`services/clinrec_ml.py`](../app/services/clinrec_ml.py) — без правок ml-service в этом срезе.
+Контракт ML: [`services/clinrec_ml.py`](../app/services/clinrec_ml.py).
 
 - `POST /clinrec/guidelines/{id}/index` (super_admin): `head_object` → presigned → `POST {ML}/clinrec/index` (`CLINREC_INDEX_TIMEOUT`). Пока пути на ML нет — 502 / статус `failed`.
 - `DELETE /clinrec/guidelines/{id}`: best-effort `DELETE {ML}/clinrec/index/{code}` (пока no-op при ошибке).
-- `POST /ml_clinrec_check`: resolve по `mkb` / `guideline_code` / `main_diagnosis`; в ML пока только legacy `{ protocol_text }`. Целевой body с guideline+presigned — флаг `use_guideline_source` в `request_check`.
+- `POST /ml_clinrec_check`: resolve опционален; в ML legacy `{ protocol_text }`.
+- `POST /check_dms`: resolve (`uploaded`\|`active`\|`failed`) → `get_object` PDF → multipart `POST {ML}/check_dms` (`file`, `mkb`, `appointments`), timeout `CLINREC_DMS_TIMEOUT`.
 
 ## Redis Stream
 

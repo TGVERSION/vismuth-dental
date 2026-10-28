@@ -118,6 +118,9 @@ class Settings(BaseModel):
     clinrec_index_timeout: float = float(
         os.getenv("CLINREC_INDEX_TIMEOUT", "600"),
     )
+    clinrec_dms_timeout: float = float(
+        os.getenv("CLINREC_DMS_TIMEOUT", "600"),
+    )
 
     @property
     def database_url_async(self) -> str:

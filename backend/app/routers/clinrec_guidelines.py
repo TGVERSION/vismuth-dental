@@ -66,7 +66,7 @@ async def create_guideline(
     )
     db.add(guideline)
     await db.flush()
-    replace_mkb_prefixes(guideline, payload.mkb_prefixes)
+    await replace_mkb_prefixes(db, guideline, payload.mkb_prefixes)
     try:
         await db.commit()
     except IntegrityError as exc:
@@ -202,7 +202,7 @@ async def patch_guideline(
     if "status" in data:
         guideline.status = data["status"]
     if "mkb_prefixes" in data:
-        replace_mkb_prefixes(guideline, data["mkb_prefixes"] or [])
+        await replace_mkb_prefixes(db, guideline, data["mkb_prefixes"] or [])
 
     if version_or_key_changed and guideline.status == "active":
         guideline.status = "uploaded"

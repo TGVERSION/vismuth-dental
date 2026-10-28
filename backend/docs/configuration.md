@@ -99,6 +99,7 @@ Invite создаётся даже при сбое SMTP: в ответе `invite
 | `S3_ADDRESSING_STYLE` | `path` | `path` для MinIO; в облаке при необходимости `virtual` |
 | `S3_PRESIGN_TTL_SECONDS` | `900` | TTL presigned GET для ML |
 | `CLINREC_INDEX_TIMEOUT` | `600` | Timeout HTTP backend→ML на `POST /clinrec/index` (сек) |
+| `CLINREC_DMS_TIMEOUT` | `600` | Timeout HTTP backend→ML на multipart `POST /check_dms` (сек) |
 | `MINIO_API_PORT` | `9000` | Publish API на хост |
 | `MINIO_CONSOLE_PORT` | `9001` | Publish консоли на хост |
 

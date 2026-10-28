@@ -781,27 +781,14 @@ export interface QuestionnaireStepAnswer {
  * приветствие и текущий шаг. Дальше — те же `/public/questionnaires/{id}/…`
  * с токеном ссылки. Описание — docs/contracts/questionnaire-public.md.
  */
-export interface PublicInviteDoctor {
-  first_name: string | null;
-  last_name: string | null;
-  middle_name: string | null;
-  photo_url: string | null;
-  specializations: PublicSpecialization[];
-}
-
 export interface PublicInvite {
   questionnaire_id: string;
   clinic_name: string;
   phone: string | null;
   logo_url: string | null;
   brand_color: string | null;
-  doctor: PublicInviteDoctor | null;
   patient_first_name: string | null;
   patient_middle_name: string | null;
-  /** YYYY-MM-DD. */
-  appointment_date: string | null;
-  /** HH:MM. */
-  appointment_time: string | null;
   blocked: boolean;
   /** invite_expired | subscription_expired. */
   block_code: string | null;
@@ -1002,13 +989,6 @@ export interface RegistryQuestionnaireItem {
   patient_last_name: string | null;
   patient_first_name: string | null;
   patient_middle_name: string | null;
-  doctor_membership_id: string | null;
-  /** «Смирнов Д. А.». */
-  doctor_name: string | null;
-  /** YYYY-MM-DD. */
-  appointment_date: string | null;
-  /** HH:MM. */
-  appointment_time: string | null;
   created_at: string;
   completed_at: string | null;
   printed_at: string | null;
@@ -1028,18 +1008,13 @@ export interface RegistryQuestionnaireDetail extends RegistryQuestionnaireItem {
 }
 
 export interface RegistryQuestionnaireCreate {
-  doctor_membership_id: string;
   last_name: string;
   first_name: string;
   middle_name: string | null;
-  appointment_date: string;
-  appointment_time: string;
 }
 
+/** Новые анкеты сверху; фильтры — статус и ФИО. */
 export interface RegistryQuestionnaireQuery {
-  /** YYYY-MM-DD; по умолчанию сервер берёт сегодня. */
-  date?: string;
-  doctor_membership_id?: string;
   status?: RegistryStatus;
   name?: string;
 }

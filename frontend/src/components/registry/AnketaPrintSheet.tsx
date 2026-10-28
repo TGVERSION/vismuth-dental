@@ -18,7 +18,8 @@ const Answer = ({ isOn, children }: { isOn: boolean; children: string }) => (
 );
 
 /**
- * Лист А4 анкеты для подписи пациента — по макету презентации для клиник.
+ * Лист А4 анкеты для подписи пациента — по образцу бумажной стоматологической
+ * «Анкеты о состоянии здоровья»: без врача и приёма, с датой рождения и подписью.
  *
  * Прямой потомок `body` (портал): на экране скрыт, при печати с
  * `data-print-mode="anketa"` на `<html>` остаётся единственным видимым
@@ -56,24 +57,29 @@ export const AnketaPrintSheet = ({ sheet }: AnketaPrintSheetProps) =>
         <tbody>
           <tr>
             <td className="p-0">
-              <h1 className="mt-[2mm] text-[15pt] font-bold">
+              <p className="mt-[1mm] text-center text-[9pt] text-[#333]">
+                Успешность стоматологического лечения зависит от общего
+                состояния здоровья, поэтому врачу важны эти сведения. Они
+                составляют врачебную тайну.
+              </p>
+              <h1 className="mt-[2mm] text-center text-[14pt] font-bold uppercase">
                 Анкета о состоянии здоровья пациента
               </h1>
 
+              {/* Как в бумажной анкете: ФИО и дата рождения. Дату рождения
+                  ссылка не спрашивает — пациент вписывает её при подписи. */}
               <table className="mt-[3mm] w-full border-collapse">
                 <tbody>
-                  {[
-                    ['Пациент', sheet.patient],
-                    ['Врач', sheet.doctor],
-                    ['Приём', sheet.appointment],
-                  ].map(([label, value]) => (
-                    <tr key={label}>
-                      <td className="w-[35mm] py-[0.8mm] text-[#555]">
-                        {label}
-                      </td>
-                      <td className="py-[0.8mm] font-medium">{value}</td>
-                    </tr>
-                  ))}
+                  <tr>
+                    <td className="w-[38mm] py-[1mm] text-[#555]">Ф. И. О. пациента</td>
+                    <td className="py-[1mm] font-medium">{sheet.patient}</td>
+                  </tr>
+                  <tr>
+                    <td className="w-[38mm] py-[1mm] align-bottom text-[#555]">Дата рождения</td>
+                    <td className="py-[1mm]">
+                      <div className="h-[6mm] w-[45mm] border-b-[0.3mm] border-black" />
+                    </td>
+                  </tr>
                 </tbody>
               </table>
 
@@ -85,7 +91,7 @@ export const AnketaPrintSheet = ({ sheet }: AnketaPrintSheetProps) =>
               ) : null}
 
               <h2 className="mt-[4mm] break-after-avoid text-[11pt] font-bold">
-                С чем пришёл пациент
+                Жалобы, причина обращения
               </h2>
               <p className="mt-[1mm]">{sheet.complaints || '—'}</p>
 
@@ -107,7 +113,7 @@ export const AnketaPrintSheet = ({ sheet }: AnketaPrintSheetProps) =>
               ) : null}
 
               <h2 className="mt-[4mm] break-after-avoid text-[11pt] font-bold">
-                Здоровье
+                Состояние здоровья
               </h2>
               <table className="mt-[1mm] w-full border-collapse">
                 <tbody>
@@ -138,18 +144,32 @@ export const AnketaPrintSheet = ({ sheet }: AnketaPrintSheetProps) =>
               {/* Согласие и подпись — одним блоком: при длинных ответах они не должны
           уехать на вторую страницу порознь. */}
               <div className="break-inside-avoid">
-                <p className="mt-[5mm]">{sheet.attestation}</p>
+                <div className="mt-[4mm] flex items-end gap-[2mm]">
+                  <span className="shrink-0">
+                    Дополнительно хочу сообщить о своём здоровье:
+                  </span>
+                  <div className="h-[5mm] flex-1 border-b-[0.3mm] border-black" />
+                </div>
+                <div className="mt-[1mm] h-[6mm] border-b-[0.3mm] border-black" />
 
-                <div className="mt-[10mm] flex gap-[15mm]">
-                  <div className="flex-1">
-                    <div className="h-[8mm] border-b-[0.3mm] border-black" />
-                    <span className="text-[9pt] text-[#555]">
-                      Подпись пациента
-                    </span>
+                <ul className="mt-[4mm] flex flex-col gap-[0.8mm] font-semibold">
+                  {sheet.attestation.map((line) => (
+                    <li key={line}>{line}</li>
+                  ))}
+                </ul>
+
+                <div className="mt-[9mm] flex items-end gap-[8mm]">
+                  <div className="w-[40mm]">
+                    <div className="h-[7mm] border-b-[0.3mm] border-black" />
+                    <span className="text-[8pt] text-[#555]">Дата</span>
                   </div>
-                  <div className="w-[45mm]">
-                    <div className="h-[8mm] border-b-[0.3mm] border-black" />
-                    <span className="text-[9pt] text-[#555]">Дата</span>
+                  <div className="w-[40mm]">
+                    <div className="h-[7mm] border-b-[0.3mm] border-black" />
+                    <span className="text-[8pt] text-[#555]">Подпись пациента</span>
+                  </div>
+                  <div className="flex-1">
+                    <div className="h-[7mm] border-b-[0.3mm] border-black" />
+                    <span className="text-[8pt] text-[#555]">Ф. И. О. полностью</span>
                   </div>
                 </div>
               </div>

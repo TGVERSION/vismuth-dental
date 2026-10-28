@@ -5,7 +5,6 @@ import type { InviteLoadResult } from '@/api/server-api';
 import { brandStyle } from '@/lib/branding';
 import {
   AI_STEP,
-  appointmentLine,
   buildSkipAnswer,
   dentalProgress,
   dentalScreenFor,
@@ -27,35 +26,20 @@ const inviteBranding = (invite: PublicInvite): ClinicBranding => ({
   brand_color: invite.brand_color,
 });
 
-const doctorLine = (invite: PublicInvite): string | null => {
-  const doctor = invite.doctor;
-  if (!doctor) return null;
-  const name = [doctor.last_name, doctor.first_name, doctor.middle_name]
-    .filter(Boolean)
-    .join(' ');
-  const specialization = doctor.specializations[0]?.name;
-  return [name, specialization].filter(Boolean).join(', ') || null;
-};
-
-/** Приветствие над первым вопросом: имя уже в ссылке, спрашивать не нужно. */
-const Intro = ({ invite }: { invite: PublicInvite }) => {
-  const appointment = appointmentLine(
-    invite.appointment_date,
-    invite.appointment_time,
-  );
-  const doctor = doctorLine(invite);
-  return (
-    <div className="flex flex-col gap-1 rounded-2xl bg-[var(--q-surface)] px-4 py-3">
-      <p className="text-[17px] font-semibold">
-        {inviteGreeting(invite.patient_first_name, invite.patient_middle_name)}
-      </p>
-      {appointment ? <p className="text-[15px]">{appointment}</p> : null}
-      {doctor ? (
-        <p className="text-sm text-[var(--q-muted)]">{doctor}</p>
-      ) : null}
-    </div>
-  );
-};
+/**
+ * Приветствие над первым вопросом: имя уже в ссылке, спрашивать не нужно.
+ * Врача и приёма нет — анкета, как бумажная, к ним не привязана.
+ */
+const Intro = ({ invite }: { invite: PublicInvite }) => (
+  <div className="flex flex-col gap-1 rounded-2xl bg-[var(--q-surface)] px-4 py-3">
+    <p className="text-[17px] font-semibold">
+      {inviteGreeting(invite.patient_first_name, invite.patient_middle_name)}
+    </p>
+    <p className="text-sm text-[var(--q-muted)]">
+      Ответы нужны врачу для безопасного лечения и составляют врачебную тайну.
+    </p>
+  </div>
+);
 
 /** Над вопросом нейросети: пациент должен понимать, откуда вопрос. */
 const AiBadge = () => (

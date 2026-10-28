@@ -3,7 +3,6 @@ import type { QuestionnaireStep } from '@/api';
 import { ApiError } from '@/api/base-client';
 import {
   EMPTY_DRAFT,
-  appointmentLine,
   buildChecklistAnswer,
   buildGroupsAnswer,
   buildSkipAnswer,
@@ -313,14 +312,6 @@ describe('greeting', () => {
     );
     expect(inviteGreeting('Игорь', null)).toBe('Игорь, здравствуйте!');
     expect(inviteGreeting(null, null)).toBe('Здравствуйте!');
-  });
-
-  it('formats the appointment without time zone shifts', () => {
-    expect(appointmentLine('2026-10-14', '14:30')).toBe(
-      'Приём 14 октября в 14:30',
-    );
-    expect(appointmentLine('2026-03-01', null)).toBe('Приём 1 марта');
-    expect(appointmentLine(null, '10:00')).toBeNull();
   });
 });
 

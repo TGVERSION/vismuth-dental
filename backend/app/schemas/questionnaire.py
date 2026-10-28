@@ -107,14 +107,6 @@ class QuestionnaireCreateResponse(BaseModel):
     step: StepDescriptorResponse
 
 
-class PublicInviteDoctor(BaseModel):
-    first_name: Optional[str] = None
-    last_name: Optional[str] = None
-    middle_name: Optional[str] = None
-    photo_url: Optional[str] = None
-    specializations: list[dict[str, Any]] = Field(default_factory=list)
-
-
 class PublicInviteResponse(BaseModel):
     """Открытие персональной ссылки: приветствие, брендинг, текущий шаг.
 
@@ -127,11 +119,8 @@ class PublicInviteResponse(BaseModel):
     phone: Optional[str] = None
     logo_url: Optional[str] = None
     brand_color: Optional[str] = None
-    doctor: Optional[PublicInviteDoctor] = None
     patient_first_name: Optional[str] = None
     patient_middle_name: Optional[str] = None
-    appointment_date: Optional[date] = None
-    appointment_time: Optional[str] = None
     blocked: bool = False
     block_code: Optional[str] = Field(
         default=None,

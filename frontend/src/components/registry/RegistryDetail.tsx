@@ -8,13 +8,13 @@ import { ApiError } from '@/api/base-client';
 import { ModalShell } from '@/components/settings/clinics/ModalShell';
 import { LINK_BUTTON_CLASS } from '@/components/settings/clinics/fields';
 import { LinkQrCard } from '@/components/doctor-questionnaires/LinkQrCard';
-import { appointmentLine } from '@/lib/dental-questionnaire';
 import { logWarn } from '@/lib/logger';
 import {
   inviteLinkItem,
   patientFullName,
   registryActions,
   registryStatusView,
+  registryWhenLine,
 } from '@/lib/registry';
 import { printSheet } from '@/lib/registry-print';
 import { AnketaPrintSheet } from './AnketaPrintSheet';
@@ -90,7 +90,6 @@ export const RegistryDetail = ({
 
   const status = registryStatusView(questionnaire.status);
   const actions = registryActions(questionnaire.status);
-  const appointment = appointmentLine(questionnaire.appointment_date, questionnaire.appointment_time);
 
   const run = async (action: () => Promise<unknown>, after: () => void) => {
     // Защита от двойного клика: два перевыпуска ссылки подряд отменили бы
@@ -145,7 +144,7 @@ export const RegistryDetail = ({
         <div className="min-w-0">
           <h2 className="text-xl font-semibold text-[#202020]">{patientFullName(questionnaire)}</h2>
           <p className="mt-1 text-sm text-[#6C757D]">
-            {[appointment, questionnaire.doctor_name].filter(Boolean).join(' · ')}
+            {registryWhenLine(questionnaire)}
           </p>
         </div>
         <span className={`rounded-full px-3 py-1 text-sm font-medium ${status.className}`}>

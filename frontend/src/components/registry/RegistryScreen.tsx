@@ -3,14 +3,11 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import type { RegistryStatus } from '@/api';
-import { mainApi } from '@/api';
 import { ErrorState, INPUT_CLASS, Spinner } from '@/components/settings/clinics/fields';
 import { useMyClinic } from '@/hooks/useMyClinic';
 import { useRegistryDetail, useRegistryList } from '@/hooks/useRegistry';
 import { canUseRegistry } from '@/lib/app-nav';
-import { logWarn } from '@/lib/logger';
-import { toDateInputValue } from '@/lib/questionnaire';
-import { REGISTRY_STATUS_OPTIONS, doctorOptions, type DoctorOption } from '@/lib/registry';
+import { REGISTRY_STATUS_OPTIONS } from '@/lib/registry';
 import { NewLinkModal } from './NewLinkModal';
 import { RegistryDetail } from './RegistryDetail';
 import { RegistryList } from './RegistryList';
@@ -24,33 +21,6 @@ const SEARCH_DEBOUNCE_MS = 300;
  * анкеты: статусы обновляются сами, без перезагрузки страницы.
  */
 const REFRESH_MS = 30000;
-
-export interface DoctorsState {
-  doctors: DoctorOption[];
-  status: 'loading' | 'ready' | 'failed';
-}
-
-/** Врачи клиники для формы новой ссылки. */
-const useDoctors = (clinicId: string | null): DoctorsState => {
-  const [state, setState] = useState<DoctorsState>({ doctors: [], status: 'loading' });
-  useEffect(() => {
-    if (!clinicId) return;
-    let isActive = true;
-    mainApi.clinicMembers
-      .list(clinicId)
-      .then((members) => {
-        if (isActive) setState({ doctors: doctorOptions(members), status: 'ready' });
-      })
-      .catch((error: unknown) => {
-        logWarn('Регистратура: врачи не загружены', error);
-        if (isActive) setState({ doctors: [], status: 'failed' });
-      });
-    return () => {
-      isActive = false;
-    };
-  }, [clinicId]);
-  return state;
-};
 
 const useDebounced = (value: string, delay: number): string => {
   const [debounced, setDebounced] = useState(value);
@@ -77,8 +47,8 @@ const useAutoRefresh = (refresh: () => void) => {
 };
 
 /**
- * Раздел «Анкеты пациентов» регистратуры: слева фильтры и анкеты за день,
- * справа открытая анкета. Выбранная анкета — в адресе (`?id=`).
+ * Раздел «Анкеты пациентов» регистратуры: слева фильтры и анкеты (новые
+ * сверху), справа открытая анкета. Выбранная анкета — в адресе (`?id=`).
  */
 export const RegistryScreen = () => {
   const router = useRouter();
@@ -86,7 +56,6 @@ export const RegistryScreen = () => {
   const { clinic, isLoading: isClinicLoading, error: clinicError } = useMyClinic();
   const clinicId = canUseRegistry(clinic) && clinic ? clinic.clinic_id : null;
 
-  const [date, setDate] = useState(() => toDateInputValue(new Date()));
   const [status, setStatus] = useState<RegistryStatus | ''>('');
   const [name, setName] = useState('');
   const [isCreating, setIsCreating] = useState(false);
@@ -94,15 +63,13 @@ export const RegistryScreen = () => {
   const searchName = useDebounced(name.trim(), SEARCH_DEBOUNCE_MS);
   const query = useMemo(
     () => ({
-      date,
       ...(status ? { status } : {}),
       ...(searchName ? { name: searchName } : {}),
     }),
-    [date, status, searchName],
+    [status, searchName],
   );
   const list = useRegistryList(clinicId, query);
   const detail = useRegistryDetail(clinicId, selectedId);
-  const doctors = useDoctors(clinicId);
   const { reload: reloadList } = list;
   const { reload: reloadDetail } = detail;
   const refreshAll = useCallback(() => {
@@ -132,7 +99,12 @@ export const RegistryScreen = () => {
       return <ErrorState text="Не удалось загрузить анкеты" onRetry={list.reload} />;
     }
     if (list.items.length === 0) {
-      return <p className="px-4 py-8 text-center text-sm text-[#8B8B8B]">На этот день анкет нет</p>;
+      const isFiltered = Boolean(status || searchName);
+      return (
+        <p className="px-4 py-8 text-center text-sm text-[#8B8B8B]">
+          {isFiltered ? 'Ничего не найдено' : 'Анкет пока нет — создайте ссылку для пациента'}
+        </p>
+      );
     }
     return <RegistryList items={list.items} selectedId={selectedId} />;
   };
@@ -172,7 +144,7 @@ export const RegistryScreen = () => {
       <h1 className="sr-only">Анкеты пациентов</h1>
 
       <aside
-        aria-label="Анкеты пациентов за день"
+        aria-label="Анкеты пациентов"
         className="custom-height fixed top-20 left-0 ml-3 mr-5 flex w-85.75 flex-col gap-3 bg-[#F3F4F8]"
       >
         <button
@@ -182,27 +154,18 @@ export const RegistryScreen = () => {
         >
           Новая ссылка
         </button>
-        <div className="flex gap-2">
-          <input
-            type="date"
-            aria-label="День приёма"
-            className={FIELD}
-            value={date}
-            onChange={(event) => event.target.value && setDate(event.target.value)}
-          />
-          <select
-            aria-label="Статус"
-            className={FIELD}
-            value={status}
-            onChange={(event) => setStatus(event.target.value as RegistryStatus | '')}
-          >
-            {REGISTRY_STATUS_OPTIONS.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-        </div>
+        <select
+          aria-label="Статус"
+          className={FIELD}
+          value={status}
+          onChange={(event) => setStatus(event.target.value as RegistryStatus | '')}
+        >
+          {REGISTRY_STATUS_OPTIONS.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
         <input
           type="search"
           aria-label="Поиск по ФИО"
@@ -219,11 +182,8 @@ export const RegistryScreen = () => {
       {isCreating ? (
         <NewLinkModal
           clinicId={clinicId}
-          doctors={doctors.doctors}
-          doctorsStatus={doctors.status}
           onClose={() => setIsCreating(false)}
           onCreated={(created) => {
-            if (created.appointment_date) setDate(created.appointment_date);
             list.reload();
             select(created.id);
           }}

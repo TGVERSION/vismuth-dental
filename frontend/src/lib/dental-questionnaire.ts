@@ -279,21 +279,6 @@ export const buildChecklistAnswer = (
 // ---------------------------------------------------------------------------
 // Приветствие
 
-const MONTHS_GENITIVE = [
-  'января',
-  'февраля',
-  'марта',
-  'апреля',
-  'мая',
-  'июня',
-  'июля',
-  'августа',
-  'сентября',
-  'октября',
-  'ноября',
-  'декабря',
-];
-
 export const inviteGreeting = (
   firstName: string | null,
   middleName: string | null,
@@ -303,22 +288,6 @@ export const inviteGreeting = (
     .filter(Boolean)
     .join(' ');
   return name ? `${name}, здравствуйте!` : 'Здравствуйте!';
-};
-
-/**
- * «Приём 14 октября в 14:30». Дата разбирается по частям, без `Date`:
- * иначе в часовом поясе западнее UTC 14 октября превратилось бы в 13-е.
- */
-export const appointmentLine = (
-  date: string | null,
-  time: string | null,
-): string | null => {
-  const match = date ? /^(\d{4})-(\d{2})-(\d{2})$/.exec(date) : null;
-  if (!match) return null;
-  const month = MONTHS_GENITIVE[Number(match[2]) - 1];
-  if (!month) return null;
-  const day = `${Number(match[3])} ${month}`;
-  return time ? `Приём ${day} в ${time}` : `Приём ${day}`;
 };
 
 // ---------------------------------------------------------------------------

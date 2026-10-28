@@ -1,7 +1,7 @@
 """Анкеты пациентов у админа клиники: регистратура создаёт персональные
 ссылки, видит статусы, печатает и отмечает подписанные."""
 
-from datetime import date, datetime, timezone
+from datetime import datetime, timezone
 from typing import Optional
 from uuid import UUID
 
@@ -55,26 +55,17 @@ _STATUS_FILTERS = {
 }
 
 
-def _short_name(user: Optional[ServiceUser]) -> Optional[str]:
-    if user is None:
-        return None
-    initials = "".join(
-        f"{part[0]}." for part in (user.first_name, user.middle_name) if part
-    )
-    return " ".join(part for part in (user.last_name, initials) if part) or None
+# Анкеты хранятся ограниченный срок, но список всё равно не безразмерный.
+LIST_LIMIT = 300
 
 
-def _item_fields(q: Questionnaire, doctor: Optional[ServiceUser]) -> dict:
+def _item_fields(q: Questionnaire) -> dict:
     return {
         "id": q.id,
         "status": registry_status(q),
         "patient_last_name": q.patient_last_name,
         "patient_first_name": q.patient_first_name,
         "patient_middle_name": q.patient_middle_name,
-        "doctor_membership_id": q.doctor_membership_id,
-        "doctor_name": _short_name(doctor),
-        "appointment_date": q.appointment_date,
-        "appointment_time": q.appointment_time,
         "created_at": q.created_at,
         "completed_at": q.completed_at,
         "printed_at": q.printed_at,
@@ -84,19 +75,11 @@ def _item_fields(q: Questionnaire, doctor: Optional[ServiceUser]) -> dict:
 
 
 def _base_query(clinic_id: UUID):
-    return (
-        select(Questionnaire, ServiceUser)
-        .outerjoin(
-            ClinicMembership,
-            ClinicMembership.id == Questionnaire.doctor_membership_id,
-        )
-        .outerjoin(ServiceUser, ServiceUser.id == ClinicMembership.user_id)
-        .where(
-            Questionnaire.clinic_id == clinic_id,
-            Questionnaire.kind == "dental",
-            Questionnaire.invite_expires_at.is_not(None),
-            Questionnaire.status.in_(_VISIBLE_STATUSES),
-        )
+    return select(Questionnaire).where(
+        Questionnaire.clinic_id == clinic_id,
+        Questionnaire.kind == "dental",
+        Questionnaire.invite_expires_at.is_not(None),
+        Questionnaire.status.in_(_VISIBLE_STATUSES),
     )
 
 
@@ -104,17 +87,17 @@ async def _load(
     db: AsyncSession,
     clinic_id: UUID,
     questionnaire_id: UUID,
-) -> tuple[Questionnaire, Optional[ServiceUser]]:
+) -> Questionnaire:
     result = await db.execute(
         _base_query(clinic_id).where(Questionnaire.id == questionnaire_id),
     )
-    row = result.first()
-    if row is None:
+    questionnaire = result.scalar_one_or_none()
+    if questionnaire is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Questionnaire not found",
         )
-    return row[0], row[1]
+    return questionnaire
 
 
 async def _admin_membership_id(
@@ -147,7 +130,7 @@ def _require_completed(questionnaire: Questionnaire) -> None:
     status_code=status.HTTP_201_CREATED,
     summary="Создать персональную ссылку на анкету",
     description=(
-        "ФИО, врач, дата и время приёма → анкета со статусом invited и ссылка. "
+        "ФИО пациента → анкета со статусом invited и ссылка на 7 дней. "
         "Только для клиники со стоматологической анкетой. Ссылка показывается один раз."
     ),
 )
@@ -161,17 +144,14 @@ async def create_registry_questionnaire(
     questionnaire, token = await create_invite(
         db,
         clinic,
-        doctor_membership_id=payload.doctor_membership_id,
         last_name=payload.last_name,
         first_name=payload.first_name,
         middle_name=payload.middle_name,
-        appointment_date=payload.appointment_date,
-        appointment_time=payload.appointment_time,
         created_by_membership_id=await _admin_membership_id(db, clinic_id, current_user),
     )
-    questionnaire, doctor = await _load(db, clinic_id, questionnaire.id)
+    questionnaire = await _load(db, clinic_id, questionnaire.id)
     return RegistryQuestionnaireCreated(
-        **_item_fields(questionnaire, doctor),
+        **_item_fields(questionnaire),
         url=invite_url(token),
     )
 
@@ -179,13 +159,11 @@ async def create_registry_questionnaire(
 @router.get(
     "/clinics/{clinic_id}/questionnaires",
     response_model=list[RegistryQuestionnaireItem],
-    summary="Анкеты пациентов за день",
-    description="По умолчанию — приёмы сегодня. Фильтры: врач, статус, ФИО.",
+    summary="Анкеты пациентов",
+    description="Новые сверху. Фильтры: статус, ФИО.",
 )
 async def list_registry_questionnaires(
     clinic_id: UUID,
-    appointment_date: Optional[date] = Query(default=None, alias="date"),
-    doctor_membership_id: Optional[UUID] = Query(default=None),
     registry_status_filter: Optional[RegistryStatusLiteral] = Query(
         default=None,
         alias="status",
@@ -195,11 +173,7 @@ async def list_registry_questionnaires(
     db: AsyncSession = Depends(get_db),
 ) -> list[RegistryQuestionnaireItem]:
     await get_clinic_or_404(db, clinic_id)
-    query = _base_query(clinic_id).where(
-        Questionnaire.appointment_date == (appointment_date or date.today()),
-    )
-    if doctor_membership_id is not None:
-        query = query.where(Questionnaire.doctor_membership_id == doctor_membership_id)
+    query = _base_query(clinic_id)
     if registry_status_filter is not None:
         query = query.where(_STATUS_FILTERS[registry_status_filter])
     if name and name.strip():
@@ -211,15 +185,9 @@ async def list_registry_questionnaires(
                 Questionnaire.patient_middle_name.ilike(pattern),
             ),
         )
-    query = query.order_by(
-        Questionnaire.appointment_time,
-        Questionnaire.patient_last_name,
-    )
+    query = query.order_by(Questionnaire.created_at.desc()).limit(LIST_LIMIT)
     result = await db.execute(query)
-    return [
-        RegistryQuestionnaireItem(**_item_fields(q, doctor))
-        for q, doctor in result.all()
-    ]
+    return [RegistryQuestionnaireItem(**_item_fields(q)) for q in result.scalars().all()]
 
 
 @router.get(
@@ -233,9 +201,9 @@ async def get_registry_questionnaire(
     _: ServiceUser = Depends(require_clinic_admin),
     db: AsyncSession = Depends(get_db),
 ) -> RegistryQuestionnaireDetail:
-    questionnaire, doctor = await _load(db, clinic_id, questionnaire_id)
+    questionnaire = await _load(db, clinic_id, questionnaire_id)
     return RegistryQuestionnaireDetail(
-        **_item_fields(questionnaire, doctor),
+        **_item_fields(questionnaire),
         structured=questionnaire.structured,
         gaps=questionnaire.gaps,
     )
@@ -253,7 +221,7 @@ async def regenerate_registry_link(
     _: ServiceUser = Depends(require_clinic_admin),
     db: AsyncSession = Depends(get_db),
 ) -> RegistryLink:
-    questionnaire, _doctor = await _load(db, clinic_id, questionnaire_id)
+    questionnaire = await _load(db, clinic_id, questionnaire_id)
     token = await regenerate_invite_token(db, questionnaire)
     return RegistryLink(url=invite_url(token))
 
@@ -264,7 +232,7 @@ async def _mark(
     questionnaire_id: UUID,
     field: str,
 ) -> RegistryQuestionnaireItem:
-    questionnaire, doctor = await _load(db, clinic_id, questionnaire_id)
+    questionnaire = await _load(db, clinic_id, questionnaire_id)
     _require_completed(questionnaire)
     now = datetime.now(timezone.utc)
     if getattr(questionnaire, field) is None:
@@ -272,7 +240,7 @@ async def _mark(
         questionnaire.updated_at = now
         await db.commit()
         await db.refresh(questionnaire)
-    return RegistryQuestionnaireItem(**_item_fields(questionnaire, doctor))
+    return RegistryQuestionnaireItem(**_item_fields(questionnaire))
 
 
 @router.post(

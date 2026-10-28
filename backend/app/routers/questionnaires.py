@@ -3,7 +3,7 @@ from typing import Any, List, Optional
 from uuid import UUID
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, status
-from sqlalchemy import or_, select
+from sqlalchemy import and_, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..db import get_db
@@ -11,6 +11,7 @@ from ..deps import get_active_doctor_membership, get_current_user
 from ..models.protocol import Protocol, ProtocolField
 from ..models.protocol_structure import ProtocolFieldMain, ProtocolStructure, ProtocolStructureField
 from ..models.questionnaire import Questionnaire, QuestionnaireAnswer
+from ..models.clinic_membership import ClinicMembership
 from ..models.service_user import ServiceUser
 from ..models.specialization import RefSpecialization
 from ..schemas.protocol import ProtocolRead
@@ -153,6 +154,28 @@ async def _build_doctor_detail(
     )
 
 
+def _visible_to(membership: ClinicMembership):
+    """Анкеты врача: свои общие и все стоматологические его клиники.
+
+    Стоматологическая анкета, как бумажная, не привязана к врачу.
+    """
+    return or_(
+        Questionnaire.doctor_membership_id == membership.id,
+        and_(
+            Questionnaire.kind == "dental",
+            Questionnaire.clinic_id == membership.clinic_id,
+        ),
+    )
+
+
+def _on_day(day: date):
+    """День анкеты: у общей — дата приёма, у стоматологической — день заполнения."""
+    return or_(
+        and_(Questionnaire.kind != "dental", Questionnaire.appointment_date == day),
+        and_(Questionnaire.kind == "dental", func.date(Questionnaire.completed_at) == day),
+    )
+
+
 @router.get(
     "",
     response_model=List[DoctorQuestionnaireListItem],
@@ -175,7 +198,7 @@ async def list_questionnaires(
             RefSpecialization.id == Questionnaire.specialization_id,
         )
         .where(
-            Questionnaire.doctor_membership_id == membership.id,
+            _visible_to(membership),
             Questionnaire.status == "completed",
         )
     )
@@ -184,10 +207,10 @@ async def list_questionnaires(
     if code:
         stmt = stmt.where(Questionnaire.code == code)
         if date_filter is not None:
-            stmt = stmt.where(Questionnaire.appointment_date == date_filter)
+            stmt = stmt.where(_on_day(date_filter))
     else:
         appt_date = date_filter if date_filter is not None else date.today()
-        stmt = stmt.where(Questionnaire.appointment_date == appt_date)
+        stmt = stmt.where(_on_day(appt_date))
 
     if visit_type:
         stmt = stmt.where(Questionnaire.visit_type == visit_type)
@@ -201,7 +224,10 @@ async def list_questionnaires(
             ),
         )
 
-    stmt = stmt.order_by(Questionnaire.appointment_time.asc().nulls_last())
+    stmt = stmt.order_by(
+        Questionnaire.appointment_time.asc().nulls_last(),
+        Questionnaire.completed_at.desc(),
+    )
     result = await db.execute(stmt)
     rows = result.all()
     return [
@@ -235,7 +261,7 @@ async def get_questionnaire(
     result = await db.execute(
         select(Questionnaire).where(
             Questionnaire.id == questionnaire_id,
-            Questionnaire.doctor_membership_id == membership.id,
+            _visible_to(membership),
             Questionnaire.status == "completed",
         ),
     )
@@ -270,7 +296,7 @@ async def process_questionnaire(
     result = await db.execute(
         select(Questionnaire).where(
             Questionnaire.id == questionnaire_id,
-            Questionnaire.doctor_membership_id == membership.id,
+            _visible_to(membership),
             Questionnaire.status == "completed",
         ),
     )
@@ -309,7 +335,7 @@ async def create_protocol_from_questionnaire(
         select(Questionnaire)
         .where(
             Questionnaire.id == questionnaire_id,
-            Questionnaire.doctor_membership_id == membership.id,
+            _visible_to(membership),
             Questionnaire.status == "completed",
         )
         .with_for_update(),

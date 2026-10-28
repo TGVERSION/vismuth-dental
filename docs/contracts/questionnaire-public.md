@@ -67,7 +67,7 @@ Timeout: `QUESTIONNAIRE_AI_TIMEOUT` (~20s). Ошибка → `ai_unavailable`, �
 
 - **Auth:** none — токен персональной ссылки
 - **Назначение:** открыть анкету, созданную регистратурой ([clinic-questionnaires.md](clinic-questionnaires.md))
-- **Ответ:** `questionnaire_id`, брендинг клиники, `doctor`, `patient_first_name`, `patient_middle_name`, `appointment_date`, `appointment_time`, `step`. Фамилию пациенту не отдаём
+- **Ответ:** `questionnaire_id`, брендинг клиники, `patient_first_name`, `patient_middle_name`, `step`. Фамилию пациенту не отдаём; врача и приёма у такой анкеты нет
 - **Блокировки:** `blocked=true` + `block_code`: `invite_expired` (срок ссылки истёк, анкета не заполнена), `subscription_expired` (подписка истекла, а пациент ещё не начинал). Заполненная анкета открывается всегда — шаг `done`
 - **Ошибки:** `404` `invite_not_found` (нет такой ссылки, выпущена новая или анкета удалена)
 - **Дальше:** `GET/POST /public/questionnaires/{questionnaire_id}/step|answer` с этим токеном в `X-Questionnaire-Token`. Первый ответ переводит `invited` → `in_progress`; после срока ссылки ответы — `410`

@@ -13,7 +13,6 @@ from ..models.clinic_membership import ClinicMembership
 from ..models.questionnaire import Questionnaire
 from ..models.service_user import ServiceUser
 from ..schemas.questionnaire import (
-    PublicInviteDoctor,
     PublicInviteResponse,
     PublicLinkDoctor,
     PublicLinkResponse,
@@ -463,7 +462,7 @@ async def post_answer(
     response_model=PublicInviteResponse,
     summary="Открыть персональную ссылку на анкету",
     description=(
-        "Без JWT: токен ссылки сам по себе. Приветствие (имя, приём, врач), "
+        "Без JWT: токен ссылки сам по себе. Приветствие по имени, "
         "брендинг и текущий шаг. Дальше — /public/questionnaires/{id}/step и "
         "/answer с этим же токеном в X-Questionnaire-Token. "
         "blocked + block_code: invite_expired | subscription_expired."
@@ -483,21 +482,6 @@ async def get_invite(
         await db.execute(select(Clinic).where(Clinic.id == questionnaire.clinic_id))
     ).scalar_one()
 
-    doctor = None
-    if questionnaire.doctor_membership_id is not None:
-        membership = (
-            await db.execute(
-                select(ClinicMembership).where(
-                    ClinicMembership.id == questionnaire.doctor_membership_id,
-                ),
-            )
-        ).scalar_one_or_none()
-        if membership is not None:
-            payload = await _doctor_payload(db, membership)
-            doctor = PublicInviteDoctor(**payload.model_dump(
-                include={"first_name", "last_name", "middle_name", "photo_url", "specializations"},
-            ))
-
     block_code, block_message = _invite_block(questionnaire, clinic)
     step = None
     if block_code is None:
@@ -508,11 +492,8 @@ async def get_invite(
         phone=clinic.phone,
         logo_url=clinic.logo_url,
         brand_color=clinic.brand_color,
-        doctor=doctor,
         patient_first_name=questionnaire.patient_first_name,
         patient_middle_name=questionnaire.patient_middle_name,
-        appointment_date=questionnaire.appointment_date,
-        appointment_time=questionnaire.appointment_time,
         blocked=block_code is not None,
         block_code=block_code,
         block_message=block_message,

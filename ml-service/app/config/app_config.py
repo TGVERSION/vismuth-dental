@@ -8,6 +8,7 @@ from pydantic import Field
 
 from .base_config import BaseConfig
 from .chroma_config import ClinrecChromaConfig, MKBChromaConfig
+from .dms_config import DmsConfig
 from .gigachat_config import GigaChatConfig
 from .log_config import LogSettings
 
@@ -19,6 +20,10 @@ class AppConfig(BaseConfig):
     clinrec_chroma: ClinrecChromaConfig = Field(
         default_factory=ClinrecChromaConfig,
         description="Векторное хранилище клинреков",
+    )
+    dms: DmsConfig = Field(
+        default_factory=DmsConfig,
+        description="Проверка назначений ДМС по клиническим рекомендациям",
     )
     log: LogSettings = Field(default_factory=LogSettings, description="Настройки логирования")
 

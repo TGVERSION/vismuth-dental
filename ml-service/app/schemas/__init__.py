@@ -2,6 +2,12 @@ from .autocomplete import CompletionRequest, CompletionResponse
 from .mkb_code import MKBRequest, MKBResponse
 from .protocol_fullness import FullnessRequest, FullnessResponse
 from .clinrec import ClinrecRequest, Finding, ClinrecResponse
+from .check_dms import (
+    AppointmentSegment,
+    CheckDmsRequest,
+    CheckDmsResponse,
+    GuidelineFragment,
+)
 from .chat_form import (
     AssistantMessage,
     ChatMessage,
@@ -47,4 +53,8 @@ __all__ = [
     "ClinrecRequest",
     "Finding",
     "ClinrecResponse",
+    "AppointmentSegment",
+    "CheckDmsRequest",
+    "CheckDmsResponse",
+    "GuidelineFragment",
 ]

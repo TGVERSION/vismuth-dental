@@ -70,3 +70,13 @@ class GigaChatConfig(BaseConfig):
     summarize_form_model: str = Field(default="GigaChat-3-Ultra", description="Модель для суммаризации формы")
     summarize_form_temperature: float = Field(default=0.1, description="Температура для суммаризации формы")
     summarize_form_max_tokens: int = Field(default=1200, description="Лимит токенов ответа для суммаризации формы")
+
+    # проверка назначений ДМС: разбиение строки назначений на позиции
+    dms_split_model: str = Field(default="GigaChat-3-Pro", description="Модель для разбиения назначений")
+    dms_split_temperature: float = Field(default=0.1, description="Температура для разбиения назначений")
+    dms_split_max_tokens: int = Field(default=500, description="Лимит токенов ответа для разбиения назначений")
+
+    # проверка назначений ДМС: вердикт по позициям (ultra endpoint)
+    dms_model: str = Field(default="GigaChat-3-Ultra", description="Модель для вердикта по назначениям")
+    dms_temperature: float = Field(default=0.1, description="Температура для вердикта по назначениям")
+    dms_max_tokens: int = Field(default=3000, description="Лимит токенов ответа для вердикта по назначениям")

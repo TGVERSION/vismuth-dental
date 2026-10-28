@@ -1015,7 +1015,12 @@ export interface MyClinicRead {
 // backend routers/clinic_questionnaires.py, описание —
 // docs/contracts/clinic-questionnaires.md.
 
-export type RegistryStatus = 'invited' | 'in_progress' | 'completed' | 'printed' | 'signed';
+export type RegistryStatus =
+  | 'invited'
+  | 'in_progress'
+  | 'completed'
+  | 'printed'
+  | 'signed';
 
 export interface RegistryQuestionnaireItem {
   id: string;

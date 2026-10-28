@@ -18,13 +18,19 @@ const Blank = ({ width = '30mm' }: { width?: string }) => (
 
 /** Вписанный ответ пациента или пустое место под него. */
 const Filled = ({ text, width }: { text: string; width?: string }) =>
-  text ? <span className="font-semibold">{text}</span> : <Blank width={width} />;
+  text ? (
+    <span className="font-semibold">{text}</span>
+  ) : (
+    <Blank width={width} />
+  );
 
 /** «ДА» / «НЕТ»: выбранное обведено, как ручкой на бланке. */
 const Mark = ({ isOn, children }: { isOn: boolean; children: string }) => (
   <span
     className={`inline-block rounded-full px-[1mm] leading-[2.9mm] ${
-      isOn ? 'border-[0.3mm] border-black font-bold' : 'border-[0.3mm] border-transparent text-[#666]'
+      isOn
+        ? 'border-[0.3mm] border-black font-bold'
+        : 'border-[0.3mm] border-transparent text-[#666]'
     }`}
   >
     {children}
@@ -59,7 +65,9 @@ const RowText = ({ row }: { row: DentalPaperRow }) => (
         {' '}
         {row.underline.map((item, index) => (
           <span key={item.text}>
-            <span className={item.selected ? 'font-bold underline' : ''}>{item.text}</span>
+            <span className={item.selected ? 'font-bold underline' : ''}>
+              {item.text}
+            </span>
             {index < row.underline.length - 1 ? ', ' : ''}
           </span>
         ))}{' '}
@@ -136,7 +144,9 @@ export const AnketaPrintSheet = ({ sheet }: AnketaPrintSheetProps) => {
         По решению Всемирной Организации Здравоохранения во всех медицинских
         учреждениях развитых стран введена анкета о здоровье пациента.
       </p>
-      <h1 className="mt-[1mm] text-center text-[12pt] font-bold">Анкета о здоровье</h1>
+      <h1 className="mt-[1mm] text-center text-[12pt] font-bold">
+        Анкета о здоровье
+      </h1>
       <p className="text-center text-[8.5pt] font-bold">Уважаемый пациент!</p>
       <p className="mt-[0.5mm] text-justify indent-[6mm] text-[7pt]">
         Врачу необходима информация о состоянии Вашего здоровья в целях
@@ -166,11 +176,14 @@ export const AnketaPrintSheet = ({ sheet }: AnketaPrintSheetProps) => {
         <Filled text={form.visit_clinic} width="40mm" />
       </p>
       <p className="mt-[0.5mm] text-[8pt]">
-        <b>Какую стоматологическую проблему вы хотели бы решить:</b> (нужное подчеркнуть){' '}
+        <b>Какую стоматологическую проблему вы хотели бы решить:</b> (нужное
+        подчеркнуть){' '}
         {form.problems.map((problem, index) => (
           <span key={problem.letter}>
             <b>{problem.letter})</b>{' '}
-            <span className={problem.selected ? 'font-bold underline' : ''}>{problem.text}</span>
+            <span className={problem.selected ? 'font-bold underline' : ''}>
+              {problem.text}
+            </span>
             {index < form.problems.length - 1 ? ', ' : ''}
           </span>
         ))}
@@ -193,7 +206,8 @@ export const AnketaPrintSheet = ({ sheet }: AnketaPrintSheetProps) => {
         </p>
         <div className="mt-[4mm] flex justify-between font-bold">
           <span>
-            «<Blank width="8mm" />» <Blank width="25mm" /> 20<Blank width="6mm" /> г.
+            «<Blank width="8mm" />» <Blank width="25mm" /> 20
+            <Blank width="6mm" /> г.
           </span>
           <span>
             Подпись пациента <Blank width="40mm" />

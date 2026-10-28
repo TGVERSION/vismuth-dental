@@ -63,6 +63,8 @@ describe('printSheet', () => {
   });
 
   it('does not put doctor warnings on the sheet the patient signs', () => {
-    expect(JSON.stringify(printSheet(detail()))).not.toContain('риск кровотечения');
+    expect(JSON.stringify(printSheet(detail()))).not.toContain(
+      'риск кровотечения',
+    );
   });
 });

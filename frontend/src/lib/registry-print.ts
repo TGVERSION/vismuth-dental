@@ -28,7 +28,10 @@ export const printSheet = (
   if (!form) return null;
   return {
     lastName: detail.patient_last_name?.trim() ?? '',
-    firstMiddle: joinName(detail.patient_first_name, detail.patient_middle_name),
+    firstMiddle: joinName(
+      detail.patient_first_name,
+      detail.patient_middle_name,
+    ),
     form,
   };
 };

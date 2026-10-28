@@ -152,8 +152,9 @@ export const AnketaPrintSheet = ({ sheet }: AnketaPrintSheetProps) =>
               </h2>
               <YesNoTable rows={sheet.health} />
 
+              {/* Раздел короткий — переносится на следующий лист целиком. */}
               {sheet.dentalHistory ? (
-                <>
+                <div className="break-inside-avoid">
                   <h2 className="mt-[4mm] break-after-avoid text-[11pt] font-bold">
                     Стоматологический анамнез
                   </h2>
@@ -170,7 +171,7 @@ export const AnketaPrintSheet = ({ sheet }: AnketaPrintSheetProps) =>
                     </span>{' '}
                     {sheet.dentalHistory.complications}
                   </p>
-                </>
+                </div>
               ) : null}
 
               {/* Согласие и подпись — одним блоком: при длинных ответах они не должны

@@ -102,14 +102,18 @@ def test_pain_groups_may_stay_empty():
     assert next_step == "dental_health"
 
 
-def test_health_step_is_checklist_of_nine_with_none():
+def test_health_step_is_checklist_like_paper_forms_with_none():
     step = dental_step("dental_health", EMPTY)
 
     assert step.step_type == "checklist"
     assert step.allow_none is True
-    assert len(step.items) == 9
-    assert step.items[1]["value"] == "anticoagulants"
-    assert "Кардиомагнил" in step.items[1]["hint"]
+    assert [item["value"] for item in step.items] == [
+        "allergy", "anesthesia_reaction", "anticoagulants", "bleeding", "heart",
+        "lungs", "diabetes", "thyroid", "liver_kidney", "pregnancy", "epilepsy",
+        "infections", "bone_onco", "other_meds",
+    ]
+    anticoagulants = step.items[2]
+    assert "Кардиомагнил" in anticoagulants["hint"]
 
 
 def test_health_none_completes_questionnaire():

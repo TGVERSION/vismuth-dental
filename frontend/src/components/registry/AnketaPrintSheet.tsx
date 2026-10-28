@@ -9,7 +9,7 @@ interface AnketaPrintSheetProps {
 
 const Answer = ({ isOn, children }: { isOn: boolean; children: string }) => (
   <span
-    className={`inline-flex h-[7mm] w-[11mm] items-center justify-center rounded-full ${
+    className={`inline-flex h-[5.5mm] w-[11mm] items-center justify-center rounded-full ${
       isOn ? 'border-[0.4mm] border-black font-bold' : 'text-[#777]'
     }`}
   >
@@ -71,11 +71,15 @@ export const AnketaPrintSheet = ({ sheet }: AnketaPrintSheetProps) =>
               <table className="mt-[3mm] w-full border-collapse">
                 <tbody>
                   <tr>
-                    <td className="w-[38mm] py-[1mm] text-[#555]">Ф. И. О. пациента</td>
+                    <td className="w-[38mm] py-[1mm] text-[#555]">
+                      Ф. И. О. пациента
+                    </td>
                     <td className="py-[1mm] font-medium">{sheet.patient}</td>
                   </tr>
                   <tr>
-                    <td className="w-[38mm] py-[1mm] align-bottom text-[#555]">Дата рождения</td>
+                    <td className="w-[38mm] py-[1mm] align-bottom text-[#555]">
+                      Дата рождения
+                    </td>
                     <td className="py-[1mm]">
                       <div className="h-[6mm] w-[45mm] border-b-[0.3mm] border-black" />
                     </td>
@@ -122,10 +126,13 @@ export const AnketaPrintSheet = ({ sheet }: AnketaPrintSheetProps) =>
                       key={row.label}
                       className="break-inside-avoid border-b-[0.2mm] border-[#999]"
                     >
-                      <td className="py-[1.2mm] pr-[3mm]">
+                      {/* Уточнение — в ту же строку: 14 строк здоровья и
+                          подпись должны уместиться на один лист. */}
+                      <td className="py-[0.7mm] pr-[3mm]">
                         {row.label}
                         {row.has && row.detail ? (
-                          <span className="block text-[9pt] italic">
+                          <span className="text-[9pt] italic">
+                            {' — '}
                             {row.detail}
                           </span>
                         ) : null}
@@ -150,26 +157,28 @@ export const AnketaPrintSheet = ({ sheet }: AnketaPrintSheetProps) =>
                   </span>
                   <div className="h-[5mm] flex-1 border-b-[0.3mm] border-black" />
                 </div>
-                <div className="mt-[1mm] h-[6mm] border-b-[0.3mm] border-black" />
-
                 <ul className="mt-[4mm] flex flex-col gap-[0.8mm] font-semibold">
                   {sheet.attestation.map((line) => (
                     <li key={line}>{line}</li>
                   ))}
                 </ul>
 
-                <div className="mt-[9mm] flex items-end gap-[8mm]">
+                <div className="mt-[7mm] flex items-end gap-[8mm]">
                   <div className="w-[40mm]">
                     <div className="h-[7mm] border-b-[0.3mm] border-black" />
                     <span className="text-[8pt] text-[#555]">Дата</span>
                   </div>
                   <div className="w-[40mm]">
                     <div className="h-[7mm] border-b-[0.3mm] border-black" />
-                    <span className="text-[8pt] text-[#555]">Подпись пациента</span>
+                    <span className="text-[8pt] text-[#555]">
+                      Подпись пациента
+                    </span>
                   </div>
                   <div className="flex-1">
                     <div className="h-[7mm] border-b-[0.3mm] border-black" />
-                    <span className="text-[8pt] text-[#555]">Ф. И. О. полностью</span>
+                    <span className="text-[8pt] text-[#555]">
+                      Ф. И. О. полностью
+                    </span>
                   </div>
                 </div>
               </div>

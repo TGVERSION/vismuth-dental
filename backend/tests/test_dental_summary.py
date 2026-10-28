@@ -50,7 +50,7 @@ def test_olga_health_marks_checked_and_negative_rows():
     summary, _ = build_dental_summary(OLGA)
 
     rows = {row["key"]: row for row in summary["health"]}
-    assert len(rows) == 9
+    assert len(rows) == 14
     assert rows["anticoagulants"]["has"] is True
     assert rows["anticoagulants"]["detail"] == "Эликвис; 5 мг, 2 раза в день"
     assert rows["diabetes"]["has"] is False
@@ -145,6 +145,68 @@ def test_chronic_conditions_go_to_life_anamnesis_and_important():
         "Беременность; 20 недель: учитывать при рентгене и выборе анестетика",
         "Лекарства от остеопороза: риск осложнений при удалении и имплантации",
     ]
+
+
+def test_bleeding_and_past_anesthesia_reaction_are_important():
+    answers = _answers(
+        ["anesthesia_reaction", "bleeding"],
+        reason={"selected": ["checkup"]},
+        anesthesia_reaction={"selected": ["fainting", "palpitations"]},
+        bleeding={"selected": ["long_bleeding"]},
+    )
+
+    summary, _ = build_dental_summary(answers)
+
+    assert summary["important"] == [
+        "Терял(а) сознание, сильно билось сердце: подобрать анестетик, наблюдать после укола",
+        "Долго идёт кровь после пореза или удаления зуба: "
+        "риск кровотечения при удалении и хирургии",
+    ]
+    assert summary["important_facts"] == [
+        "Терял(а) сознание, сильно билось сердце",
+        "Долго идёт кровь после пореза или удаления зуба",
+    ]
+    assert summary["life_anamnesis"] == (
+        "Плохо переносили обезболивание у стоматолога: терял(а) сознание, сильно билось сердце. "
+        "Кровоточивость или плохая свёртываемость крови: "
+        "долго идёт кровь после пореза или удаления зуба."
+    )
+
+
+def test_only_asthma_and_raised_thyroid_function_reach_important():
+    answers = _answers(
+        ["lungs", "thyroid", "liver_kidney"],
+        reason={"selected": ["checkup"]},
+        lungs={"selected": ["asthma", "copd"], "text": "Сальбутамол"},
+        thyroid={"selected": ["hyperthyroid"]},
+        liver_kidney={"selected": ["kidney"]},
+    )
+
+    summary, _ = build_dental_summary(answers)
+
+    assert summary["important"] == [
+        "Бронхиальная астма: риск приступа в кресле — ингалятор пациента под рукой",
+        "Повышенная функция (тиреотоксикоз): осторожно с анестетиком с адреналином",
+    ]
+    assert summary["life_anamnesis"] == (
+        "Астма или болезни лёгких: бронхиальная астма, хронический бронхит или ХОБЛ; Сальбутамол. "
+        "Болезни щитовидной железы: повышенная функция (тиреотоксикоз). "
+        "Болезни печени или почек: почки."
+    )
+
+
+def test_copd_and_low_thyroid_function_stay_in_anamnesis():
+    answers = _answers(
+        ["lungs", "thyroid"],
+        reason={"selected": ["checkup"]},
+        lungs={"selected": ["copd"]},
+        thyroid={"selected": ["hypothyroid"]},
+    )
+
+    summary, _ = build_dental_summary(answers)
+
+    assert summary["important"] == []
+    assert "Болезни щитовидной железы: пониженная функция (гипотиреоз)." in summary["life_anamnesis"]
 
 
 def _other_meds(text, **extra):

@@ -24,18 +24,30 @@ _PAIN_WHEN = {
     "spontaneous": "сама по себе",
     "night": "ночью",
 }
-_CHRONIC = ("heart", "diabetes", "pregnancy", "epilepsy", "infections", "bone_onco")
+# Строки «Здоровья», которые идут в анамнез жизни (аллергия и лекарства —
+# в свои разделы).
+_CHRONIC = (
+    "anesthesia_reaction", "bleeding", "heart", "lungs", "diabetes", "thyroid",
+    "liver_kidney", "pregnancy", "epilepsy", "infections", "bone_onco",
+)
+_BLEEDING_NOTE = "риск кровотечения при удалении и хирургии"
 _RISK_NOTES = {
+    "anesthesia_reaction": "подобрать анестетик, наблюдать после укола",
+    "bleeding": _BLEEDING_NOTE,
     "pregnancy": "учитывать при рентгене и выборе анестетика",
     "epilepsy": "риск приступа в кресле",
     "infections": "соблюдать меры инфекционной безопасности",
     "bone_onco": "риск осложнений при удалении и имплантации",
 }
-# Из «сердца и давления» в красное — только то, что меняет лечение в кресле;
-# одно повышенное давление остаётся в анамнезе.
-_SERIOUS_HEART = ("pacemaker", "heart_attack", "arrhythmia")
-_HEART_NOTE = "осторожно с анестетиком с адреналином"
+_ADRENALINE_NOTE = "осторожно с анестетиком с адреналином"
 _PACEMAKER_NOTE = "осторожно с анестетиком с адреналином и электроприборами"
+# Строки, где в красное идут только варианты, меняющие лечение в кресле:
+# одно повышенное давление, ХОБЛ или гипотиреоз остаются в анамнезе.
+_SERIOUS: dict[str, tuple[tuple[str, ...], str]] = {
+    "heart": (("pacemaker", "heart_attack", "arrhythmia"), _ADRENALINE_NOTE),
+    "lungs": (("asthma",), "риск приступа в кресле — ингалятор пациента под рукой"),
+    "thyroid": (("hyperthyroid",), _ADRENALINE_NOTE),
+}
 # Текст про аллергию не ищем: «аллергия на аспирин» — не приём аспирина.
 _NOT_MEDICATION_TEXT = ("allergy.substance", "allergy.reaction")
 _BLOOD_THINNER_FALLBACK = "препарат, разжижающий кровь"
@@ -143,23 +155,26 @@ def _mentioned_blood_thinners(answers: DentalAnswers) -> list[str]:
 ImportantItem = tuple[str, str | None]
 
 
-def _heart_item(answers: DentalAnswers) -> ImportantItem | None:
-    selected = _answer(answers, "heart").selected
-    labels = {o.value: o.label for o in _GROUPS["heart"].options}
-    serious = [labels[v] for v in _SERIOUS_HEART if v in selected]
+def _serious_item(answers: DentalAnswers, key: str) -> ImportantItem | None:
+    values, note = _SERIOUS[key]
+    selected = _answer(answers, key).selected
+    labels = {o.value: o.label for o in _GROUPS[key].options}
+    serious = [labels[v] for v in values if v in selected]
     if not serious:
         return None
-    note = _PACEMAKER_NOTE if "pacemaker" in selected else _HEART_NOTE
+    if "pacemaker" in selected:
+        note = _PACEMAKER_NOTE
     return ", ".join(serious), note
 
 
 def _risk_item(answers: DentalAnswers, item_value: str) -> ImportantItem | None:
-    if item_value == "heart":
-        return _heart_item(answers)
+    if item_value in _SERIOUS:
+        return _serious_item(answers, item_value)
     note = _RISK_NOTES.get(item_value)
     if note is None:
         return None
-    detail = _item_detail(answers, item_value, lower=False)
+    # Несколько вариантов — одна фраза: заглавная только у первого.
+    detail = _item_detail(answers, item_value, lower=True)
     label = next(i.label for i in HEALTH_ITEMS if i.value == item_value)
     return (_upper_first(detail) if detail else label), note
 
@@ -168,7 +183,7 @@ def _important_items(answers: DentalAnswers, health: list[str]) -> list[Importan
     items: list[ImportantItem] = []
     if "anticoagulants" in health:
         drug = _blood_thinner_text(answers) or _BLOOD_THINNER_FALLBACK
-        items.append((f"Принимает {drug}", "риск кровотечения при удалении и хирургии"))
+        items.append((f"Принимает {drug}", _BLEEDING_NOTE))
     if "allergy" in health:
         items.append((_allergy_line(answers), None))
     for item in HEALTH_ITEMS:

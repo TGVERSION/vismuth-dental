@@ -25,8 +25,6 @@ const PRINT_MODE_ATTR = 'data-print-mode';
 
 interface RegistryDetailProps {
   clinicId: string;
-  /** Название клиники — в шапке листа печати. */
-  clinicName: string;
   questionnaire: RegistryQuestionnaireDetail;
   /** Анкета изменилась на сервере: перечитать её и список. */
   onChanged: () => void;
@@ -61,7 +59,6 @@ const actionError = (error: unknown): { text: string; refresh: boolean } => {
 /** Открытая анкета у регистратуры: кто, к кому, статус, действия и карточка. */
 export const RegistryDetail = ({
   clinicId,
-  clinicName,
   questionnaire,
   onChanged,
   onDeleted,
@@ -106,6 +103,7 @@ export const RegistryDetail = ({
 
   const status = registryStatusView(questionnaire.status);
   const actions = registryActions(questionnaire.status);
+  const sheet = printSheet(questionnaire);
 
   const run = async (action: () => Promise<unknown>, after: () => void) => {
     // Защита от двойного клика: два перевыпуска ссылки подряд отменили бы
@@ -181,7 +179,7 @@ export const RegistryDetail = ({
       </header>
 
       <div className="flex flex-wrap gap-x-5 gap-y-2">
-        {actions.canPrint ? (
+        {actions.canPrint && sheet ? (
           <button
             type="button"
             onClick={print}
@@ -241,9 +239,7 @@ export const RegistryDetail = ({
         </p>
       )}
 
-      {isPrinting ? (
-        <AnketaPrintSheet sheet={printSheet(questionnaire, clinicName)} />
-      ) : null}
+      {isPrinting && sheet ? <AnketaPrintSheet sheet={sheet} /> : null}
 
       {newUrl ? (
         <ModalShell

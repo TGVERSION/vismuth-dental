@@ -57,9 +57,9 @@ OTHER_REASON = {"groups": {"reason": {"selected": ["other"], "text": "Шатае
 
 def test_nothing_to_clarify_completes_without_model(ml):
     calls, _ = ml
-    q = _questionnaire("dental_mouth", {"groups": {"reason": {"selected": ["checkup"]}}})
+    q = _questionnaire("dental_about", {"groups": {"reason": {"selected": ["checkup"]}}})
 
-    _answer(q, "dental_mouth")
+    _answer(q, "dental_about")
 
     assert q.status == "completed"
     assert calls == []
@@ -68,9 +68,9 @@ def test_nothing_to_clarify_completes_without_model(ml):
 def test_model_question_opens_clarify_step(ml):
     calls, replies = ml
     replies.append({"status": "question", "question": "Давно шатается?", "choices": ["Неделю", "Месяц"]})
-    q = _questionnaire("dental_mouth", OTHER_REASON)
+    q = _questionnaire("dental_about", OTHER_REASON)
 
-    _answer(q, "dental_mouth")
+    _answer(q, "dental_about")
 
     assert q.status == "in_progress"
     assert q.current_step == "dental_ai"
@@ -82,9 +82,9 @@ def test_model_question_opens_clarify_step(ml):
 def test_model_failure_completes_without_clarifications(ml):
     _, replies = ml
     replies.append(RuntimeError("model down"))
-    q = _questionnaire("dental_mouth", OTHER_REASON)
+    q = _questionnaire("dental_about", OTHER_REASON)
 
-    _answer(q, "dental_mouth")
+    _answer(q, "dental_about")
 
     assert q.status == "completed"
     assert q.ai_unavailable is True
@@ -97,9 +97,9 @@ def test_answer_then_model_done_completes_with_clarification(ml):
         {"status": "question", "question": "Давно шатается?", "choices": ["Неделю", "Месяц"]},
         {"status": "done"},
     ]
-    q = _questionnaire("dental_mouth", OTHER_REASON)
+    q = _questionnaire("dental_about", OTHER_REASON)
 
-    _answer(q, "dental_mouth")
+    _answer(q, "dental_about")
     _answer(q, "dental_ai", selections={"ai": ["1"]})
 
     assert q.status == "completed"
@@ -110,9 +110,9 @@ def test_no_more_than_the_limit_of_questions(ml, monkeypatch):
     calls, replies = ml
     monkeypatch.setattr(dq.settings, "questionnaire_dental_ai_max", 1)
     replies.append({"status": "question", "question": "Давно шатается?", "choices": []})
-    q = _questionnaire("dental_mouth", OTHER_REASON)
+    q = _questionnaire("dental_about", OTHER_REASON)
 
-    _answer(q, "dental_mouth")
+    _answer(q, "dental_about")
     _answer(q, "dental_ai", skip=True)
 
     assert q.status == "completed"

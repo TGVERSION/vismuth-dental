@@ -40,7 +40,17 @@ CHECKUP = _answers(reason={"selected": ["checkup"]})
             ),
             False,
         ),
-        (_answers(["other_meds"], reason={"selected": ["checkup"]}, other_meds={"text": "Конкор"}), True),
+        (_answers(["medications"], reason={"selected": ["checkup"]}, medications={"text": "Конкор"}), True),
+        # Дата рождения и последний визит — факты для шапки бланка, не повод спрашивать.
+        (
+            _answers(
+                reason={"selected": ["checkup"]},
+                about__birth_date={"text": "14.03.1985"},
+                about__visit_year={"text": "2024"},
+                about__visit_clinic={"text": "Улыбка"},
+            ),
+            False,
+        ),
     ],
 )
 def test_ask_only_when_there_is_something_to_clarify(answers, expected):

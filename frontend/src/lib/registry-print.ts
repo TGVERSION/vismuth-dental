@@ -1,91 +1,37 @@
-// Лист А4 анкеты для подписи пациента: что на нём напечатано.
+// Лист А4 для подписи пациента — бланк «Анкета о здоровье» (МК Дент),
+// заполненный его ответами и сжатый на одну страницу.
 //
-// Лист повторяет обычную стоматологическую «Анкету о состоянии здоровья»:
-// ФИО и дата рождения пациента, ответы, заявление и подпись с датой. Врача и
-// приёма на бумажной анкете нет — нет и здесь.
-//
-// На листе — только то, что ответил пациент: под ним пациент расписывается
-// «ответы верны». Поэтому «Самое важное» — факты без предупреждений врачу
-// (`important_facts`), а «Что доспросить» не идёт вовсе: это подсказки врачу.
+// Строки бланка, их формулировки и ответы собирает сервер (`paper_form`):
+// здесь только ФИО из анкеты. Пациент подписывает свои ответы, поэтому
+// ни «Самого важного», ни подсказок врачу на листе нет.
 
-import type { DentalHistory, RegistryQuestionnaireDetail } from '@/api';
-import { formatDateTime, patientFullName } from './registry';
-
-/** Заявление пациента над подписью — как в бумажных анкетах клиник. */
-export const ATTESTATION: readonly string[] = Object.freeze([
-  'Я ответил(а) на вопросы анкеты сам(а) и правдиво.',
-  'Мне известно, что результат лечения зависит от состояния моего здоровья.',
-  'Если состояние здоровья изменится или я начну принимать новые лекарства, я сообщу об этом врачу.',
-  'Мне известно, что при неполных или неверных сведениях о болезнях и операциях клиника не отвечает за последствия.',
-]);
-
-export interface PrintHealthRow {
-  label: string;
-  has: boolean;
-  detail: string;
-}
-
-/** Стоматологический анамнез, как в бумажном бланке. */
-export interface PrintDentalHistory {
-  lastVisit: string;
-  signs: PrintHealthRow[];
-  complications: string;
-}
+import type { DentalPaperForm, RegistryQuestionnaireDetail } from '@/api';
 
 export interface PrintSheet {
-  clinicName: string;
-  /** «Заполнена 12.10.2026 в 20:41»; пусто, если анкета не заполнена. */
-  filled: string;
-  patient: string;
-  important: string[];
-  complaints: string;
-  health: PrintHealthRow[];
-  /** Null — анкета заполнена до шага «Зубы и дёсны». */
-  dentalHistory: PrintDentalHistory | null;
-  /** Вопросы нейросети и ответы пациента дословно. */
-  clarifications: { question: string; answer: string }[];
-  attestation: readonly string[];
+  lastName: string;
+  /** «Ольга Сергеевна». */
+  firstMiddle: string;
+  form: DentalPaperForm;
 }
 
-const NO_ANSWER = 'Пациент не ответил';
+const joinName = (...parts: (string | null)[]): string =>
+  parts
+    .map((part) => part?.trim() ?? '')
+    .filter(Boolean)
+    .join(' ');
 
-const printDentalHistory = (
-  history: DentalHistory | undefined,
-): PrintDentalHistory | null =>
-  history
-    ? {
-        lastVisit: history.last_visit || 'Не указан',
-        signs: history.signs.map(({ label, has }) => ({ label, has, detail: '' })),
-        complications: history.complications || 'Не было',
-      }
-    : null;
-
+/** Null — анкета заполнена до бланка: печатать нечего. */
 export const printSheet = (
   detail: RegistryQuestionnaireDetail,
-  clinicName: string,
-  timeZone?: string,
-): PrintSheet => {
-  const structured = detail.structured;
+): PrintSheet | null => {
+  const form = detail.structured?.paper_form;
+  if (!form) return null;
   return {
-    clinicName,
-    filled: detail.completed_at
-      ? `Заполнена ${formatDateTime(detail.completed_at, timeZone)}`
-      : '',
-    patient: patientFullName(detail),
-    important: structured?.important_facts ?? [],
-    complaints: structured?.complaints ?? '',
-    health: (structured?.health ?? []).map(({ label, has, detail: text }) => ({
-      label,
-      has,
-      detail: text,
-    })),
-    dentalHistory: printDentalHistory(structured?.dental_history),
-    clarifications: (structured?.clarifications ?? []).map(
-      ({ question, answer }) => ({
-        question,
-        answer: answer || NO_ANSWER,
-      }),
-    ),
-    attestation: ATTESTATION,
+    lastName: detail.patient_last_name?.trim() ?? '',
+    firstMiddle: joinName(detail.patient_first_name, detail.patient_middle_name),
+    form,
   };
 };
+
+/** Последняя строка левого столбца — как конец первой страницы бумажного бланка. */
+export const FIRST_COLUMN_LAST_ROW = 25;

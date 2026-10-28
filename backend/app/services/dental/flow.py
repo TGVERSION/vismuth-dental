@@ -1,8 +1,9 @@
 """Сценарий стоматологической анкеты без базы данных.
 
 Шаги: повод → боль (только если «Болит зуб») → здоровье → уточнения по
-отмеченному → зубы и дёсны → готово. Модуль чистый: получает прежние ответы и ответ на шаг,
-возвращает новые ответы и следующий шаг. Сохранение — в `questionnaire_flow`.
+отмеченному (если им есть что уточнять) → о вас → готово. Модуль чистый:
+получает прежние ответы и ответ на шаг, возвращает новые ответы и следующий
+шаг. Сохранение — в `questionnaire_flow`.
 """
 
 from __future__ import annotations
@@ -13,9 +14,9 @@ from typing import Any
 from pydantic import BaseModel, ConfigDict, Field
 
 from .questions import (
+    ABOUT_GROUPS,
     HEALTH_BY_VALUE,
     HEALTH_ITEMS,
-    MOUTH_GROUPS,
     OTHER,
     PAIN_GROUPS,
     REASON,
@@ -26,7 +27,7 @@ STEP_REASON = "dental_reason"
 STEP_PAIN = "dental_pain"
 STEP_HEALTH = "dental_health"
 STEP_DETAILS = "dental_details"
-STEP_MOUTH = "dental_mouth"
+STEP_ABOUT = "dental_about"
 STEP_DONE = "done"
 FIRST_STEP = STEP_REASON
 
@@ -38,7 +39,7 @@ _STEP_TITLES = {
     STEP_PAIN: "Уточним про боль",
     STEP_HEALTH: "Что из этого у вас есть?",
     STEP_DETAILS: "Уточните, пожалуйста",
-    STEP_MOUTH: "Зубы и дёсны",
+    STEP_ABOUT: "Несколько слов о вас",
 }
 
 
@@ -102,17 +103,21 @@ def _groups_for(step: str, answers: DentalAnswers) -> tuple[Group, ...]:
         return (REASON,)
     if step == STEP_PAIN:
         return PAIN_GROUPS
-    if step == STEP_MOUTH:
-        return MOUTH_GROUPS
+    if step == STEP_ABOUT:
+        return ABOUT_GROUPS
     if step == STEP_DETAILS:
-        checked = answers.health or []
-        return tuple(
-            group
-            for item in HEALTH_ITEMS
-            if item.value in checked
-            for group in item.detail_groups
-        )
+        return _detail_groups(answers)
     raise DentalAnswerError(f"Unknown dental step {step}")
+
+
+def _detail_groups(answers: DentalAnswers) -> tuple[Group, ...]:
+    checked = answers.health or []
+    return tuple(
+        group
+        for item in HEALTH_ITEMS
+        if item.value in checked
+        for group in item.detail_groups
+    )
 
 
 def _group_descriptor(group: Group) -> dict[str, Any]:
@@ -233,9 +238,9 @@ def _next_step(step: str, answers: DentalAnswers) -> str:
     if step == STEP_PAIN:
         return STEP_HEALTH
     if step == STEP_HEALTH:
-        return STEP_DETAILS if answers.health else STEP_MOUTH
+        return STEP_DETAILS if _detail_groups(answers) else STEP_ABOUT
     if step == STEP_DETAILS:
-        return STEP_MOUTH
+        return STEP_ABOUT
     return STEP_DONE
 
 

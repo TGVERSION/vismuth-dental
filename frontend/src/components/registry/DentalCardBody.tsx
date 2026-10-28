@@ -4,15 +4,22 @@ import type { DoctorQuestionnaireStructured } from '@/api';
 import {
   DentalClarifications,
   DentalHealth,
-  DentalHistory,
   DentalImportant,
 } from '@/components/dental-card/DentalCardParts';
 import { gapQuestions } from '@/lib/doctor-questionnaires';
 
-const Section = ({ title, children }: { title: string; children: React.ReactNode }) => (
+const Section = ({
+  title,
+  children,
+}: {
+  title: string;
+  children: React.ReactNode;
+}) => (
   <section className="grid grid-cols-[150px_minmax(0,1fr)] gap-4 border-t border-[#EEF0F3] py-3 first:border-t-0">
     <h3 className="pt-0.5 text-sm font-medium text-[#6C757D]">{title}</h3>
-    <div className="flex min-w-0 flex-col gap-2 text-[15px] text-[#202020]">{children}</div>
+    <div className="flex min-w-0 flex-col gap-2 text-[15px] text-[#202020]">
+      {children}
+    </div>
   </section>
 );
 
@@ -44,9 +51,9 @@ export const DentalCardBody = ({ structured, gaps }: DentalCardBodyProps) => {
       <Section title="Здоровье">
         <DentalHealth health={structured.health ?? []} />
       </Section>
-      {structured.dental_history ? (
-        <Section title="Зубы и дёсны">
-          <DentalHistory history={structured.dental_history} />
+      {structured.about ? (
+        <Section title="О пациенте">
+          <p>{structured.about}</p>
         </Section>
       ) : null}
       <Section title="Препараты">

@@ -155,7 +155,6 @@ export const RegistryScreen = () => {
         <RegistryDetail
           key={detail.data.id}
           clinicId={clinicId}
-          clinicName={clinic?.clinic_name ?? ''}
           questionnaire={detail.data}
           onChanged={refreshAll}
           onDeleted={() => {

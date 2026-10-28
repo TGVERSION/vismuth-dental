@@ -43,7 +43,7 @@ const PROGRESS: Record<string, DentalProgress> = {
   dental_pain: { current: 1, total: 3, label: 'Зачем пришли' },
   dental_health: { current: 2, total: 3, label: 'Здоровье' },
   dental_details: { current: 2, total: 3, label: 'Уточнение' },
-  dental_mouth: { current: 3, total: 3, label: 'Зубы и дёсны' },
+  dental_about: { current: 3, total: 3, label: 'О вас' },
   dental_ai: { current: 3, total: 3, label: 'Уточнение' },
 };
 

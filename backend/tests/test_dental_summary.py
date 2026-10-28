@@ -1,4 +1,4 @@
-"""Карточка врача по ответам стоматологической анкеты: только правила, без ИИ."""
+"""Карточка врача и бланк «Анкета о здоровье» по ответам: только правила, без ИИ."""
 
 from app.services.dental.flow import DentalAnswers, GroupAnswer
 from app.services.dental.summary import build_dental_summary
@@ -16,17 +16,25 @@ def _answers(health, **groups):
 
 
 OLGA = _answers(
-    ["allergy", "anticoagulants"],
+    ["medications", "allergy"],
     reason={"selected": ["pain"]},
     pain__where={"selected": ["lower_right"]},
     pain__when={"selected": ["cold", "bite"]},
     pain__since={"selected": ["days"]},
     allergy__substance={"selected": ["antibiotics"], "text": "амоксициллин"},
-    allergy__reaction={"selected": ["rash"]},
-    anticoagulants={"selected": ["eliquis"], "text": "5 мг, 2 раза в день"},
+    allergy__reaction={"selected": ["itch"]},
+    medications={"selected": ["eliquis"], "text": "5 мг, 2 раза в день"},
 )
 
-IGOR = _answers([], reason={"selected": ["checkup", "cleaning"]})
+IGOR = _answers([], reason={"selected": ["checkup", "prosthetics"]})
+
+
+def _row(summary, number):
+    return summary["paper_form"]["rows"][number - 1]
+
+
+# ---------------------------------------------------------------------------
+# Карточка врача
 
 
 def test_olga_important_lists_blood_thinner_and_allergy():
@@ -34,7 +42,7 @@ def test_olga_important_lists_blood_thinner_and_allergy():
 
     assert summary["important"] == [
         "Принимает Эликвис, 5 мг, 2 раза в день: риск кровотечения при удалении и хирургии",
-        "Аллергия: антибиотики — амоксициллин; реакция: сыпь, зуд",
+        "Аллергия: антибиотики — амоксициллин; реакция: зуд и покраснение кожи",
     ]
 
 
@@ -46,13 +54,13 @@ def test_olga_complaint_is_built_from_buttons():
     )
 
 
-def test_olga_health_marks_checked_and_negative_rows():
+def test_olga_health_has_every_point_of_the_form():
     summary, _ = build_dental_summary(OLGA)
 
     rows = {row["key"]: row for row in summary["health"]}
-    assert len(rows) == 20
-    assert rows["anticoagulants"]["has"] is True
-    assert rows["anticoagulants"]["detail"] == "Эликвис; 5 мг, 2 раза в день"
+    assert len(rows) == 43
+    assert rows["medications"]["has"] is True
+    assert rows["medications"]["detail"] == "Эликвис; 5 мг, 2 раза в день"
     assert rows["diabetes"]["has"] is False
     assert rows["diabetes"]["detail"] == ""
 
@@ -61,7 +69,9 @@ def test_olga_protocol_fields():
     summary, _ = build_dental_summary(OLGA)
 
     assert summary["medications"] == "Эликвис, 5 мг, 2 раза в день"
-    assert summary["allergy_anamnesis"] == "Аллергия: антибиотики — амоксициллин; реакция: сыпь, зуд"
+    assert summary["allergy_anamnesis"] == (
+        "Аллергия: антибиотики — амоксициллин; реакция: зуд и покраснение кожи"
+    )
     assert summary["life_anamnesis"] == "Хронических заболеваний не отмечено."
 
 
@@ -75,251 +85,96 @@ def test_igor_has_nothing_important():
     summary, gaps = build_dental_summary(IGOR)
 
     assert summary["important"] == []
-    assert summary["complaints"] == "Профосмотр, чистка зубов."
+    assert summary["complaints"] == "Профосмотр или чистка, протезирование."
     assert summary["medications"] == "Постоянно не принимает."
     assert summary["allergy_anamnesis"] == "Аллергии нет."
+    assert summary["about"] == ""
     assert all(row["has"] is False for row in summary["health"])
     assert _questions(gaps) == []
 
 
-def test_blood_thinner_without_dose_asks_for_dose():
-    answers = _answers(["anticoagulants"], reason={"selected": ["checkup"]},
-                       anticoagulants={"selected": ["xarelto"]})
-
-    _, gaps = build_dental_summary(answers)
-
-    assert "Доза и схема приёма препарата, разжижающего кровь" in _questions(gaps)
-
-
-def test_blood_thinner_written_in_other_meds_is_flagged():
-    answers = _answers(["other_meds"], reason={"selected": ["checkup"]},
-                       other_meds={"text": "Кардиомагнил 75 мг утром, конкор"})
-
-    summary, gaps = build_dental_summary(answers)
-
-    assert summary["important"] == [
-        "Упомянут «Кардиомагнил» — разжижает кровь, а строка «разжижающие кровь» не отмечена",
-    ]
-    assert "Принимает ли Кардиомагнил сейчас и в какой дозе" in _questions(gaps)
-    assert summary["medications"] == "Кардиомагнил 75 мг утром, конкор"
-
-
-def test_incomplete_pain_asks_what_is_missing():
-    answers = _answers([], reason={"selected": ["pain"]},
-                       pain__where={"selected": ["upper_left"]})
-
-    summary, gaps = build_dental_summary(answers)
-
-    assert summary["complaints"] == "Болит зуб сверху слева."
-    assert _questions(gaps) == ["От чего возникает боль", "Как давно болит"]
-
-
-def test_other_reason_text_goes_to_complaint_and_gaps():
-    answers = _answers([], reason={"selected": ["gums", "other"], "text": "Хочу консультацию по брекетам"})
-
-    summary, gaps = build_dental_summary(answers)
-
-    assert summary["complaints"] == "Кровоточат дёсны. Другое: Хочу консультацию по брекетам."
-    assert _questions(gaps) == ["Уточнить повод визита: «Хочу консультацию по брекетам»"]
-
-
-def test_chronic_conditions_go_to_life_anamnesis_and_important():
+def test_risks_reach_important_with_patient_words_as_facts():
     answers = _answers(
-        ["heart", "diabetes", "pregnancy", "bone_onco"],
+        ["hepatitis", "radio_chemo", "heart_valve", "heart_attack", "pacemaker",
+         "seizures", "asthma", "bleeding", "pregnancy", "hiv"],
         reason={"selected": ["checkup"]},
-        heart={"selected": ["hypertension"]},
-        diabetes={"selected": ["type2"], "text": "метформин"},
+        hepatitis={"selected": ["c"], "text": "в 2010"},
+        radio_chemo={"selected": ["chemo"]},
+        heart_attack={"text": "в 2019"},
+        asthma={"text": "Сальбутамол"},
+        bleeding={"selected": ["bruises"]},
         pregnancy={"selected": ["pregnant"], "text": "20 недель"},
-        bone_onco={"selected": ["osteoporosis_drugs"]},
-    )
-
-    summary, _ = build_dental_summary(answers)
-
-    assert summary["life_anamnesis"] == (
-        "Болезни сердца или давление: повышенное давление. "
-        "Сахарный диабет: второго типа; метформин. "
-        "Онкология или лечение остеопороза: лекарства от остеопороза. "
-        "Беременность или кормление грудью: беременность; 20 недель."
-    )
-    assert summary["important"] == [
-        "Лекарства от остеопороза: риск осложнений при удалении и имплантации",
-        "Беременность; 20 недель: учитывать при рентгене и выборе анестетика",
-    ]
-
-
-def test_bleeding_and_past_anesthesia_reaction_are_important():
-    answers = _answers(
-        ["anesthesia_reaction", "bleeding"],
-        reason={"selected": ["checkup"]},
-        anesthesia_reaction={"selected": ["fainting", "palpitations"]},
-        bleeding={"selected": ["long_bleeding"]},
     )
 
     summary, _ = build_dental_summary(answers)
 
     assert summary["important"] == [
-        "Терял(а) сознание, сильно билось сердце: подобрать анестетик, наблюдать после укола",
-        "Долго идёт кровь после пореза или удаления зуба: "
-        "риск кровотечения при удалении и хирургии",
-    ]
-    assert summary["important_facts"] == [
-        "Терял(а) сознание, сильно билось сердце",
-        "Долго идёт кровь после пореза или удаления зуба",
-    ]
-    assert summary["life_anamnesis"] == (
-        "Плохо переносили обезболивание у стоматолога: терял(а) сознание, сильно билось сердце. "
-        "Кровоточивость или плохая свёртываемость крови: "
-        "долго идёт кровь после пореза или удаления зуба."
-    )
-
-
-def test_only_asthma_and_raised_thyroid_function_reach_important():
-    answers = _answers(
-        ["lungs", "thyroid", "liver_kidney"],
-        reason={"selected": ["checkup"]},
-        lungs={"selected": ["asthma", "copd"], "text": "Сальбутамол"},
-        thyroid={"selected": ["hyperthyroid"]},
-        liver_kidney={"selected": ["kidney"]},
-    )
-
-    summary, _ = build_dental_summary(answers)
-
-    assert summary["important"] == [
-        "Бронхиальная астма: риск приступа в кресле — ингалятор пациента под рукой",
-        "Повышенная функция (тиреотоксикоз): осторожно с анестетиком с адреналином",
-    ]
-    assert summary["life_anamnesis"] == (
-        "Астма или болезни лёгких: бронхиальная астма, хронический бронхит или ХОБЛ; Сальбутамол. "
-        "Болезни щитовидной железы: повышенная функция (тиреотоксикоз). "
-        "Болезни печени или почек: почки."
-    )
-
-
-def test_copd_and_low_thyroid_function_stay_in_anamnesis():
-    answers = _answers(
-        ["lungs", "thyroid"],
-        reason={"selected": ["checkup"]},
-        lungs={"selected": ["copd"]},
-        thyroid={"selected": ["hypothyroid"]},
-    )
-
-    summary, _ = build_dental_summary(answers)
-
-    assert summary["important"] == []
-    assert "Болезни щитовидной железы: пониженная функция (гипотиреоз)." in summary["life_anamnesis"]
-
-
-def test_paper_form_diseases_go_to_life_anamnesis():
-    answers = _answers(
-        ["stomach", "ent", "bones_skin", "lymph", "transfusion", "other_diseases"],
-        reason={"selected": ["checkup"]},
-        stomach={"selected": ["ulcer"]},
-        ent={"selected": ["sinusitis"]},
-        bones_skin={"selected": ["bones"]},
-        lymph={"text": "на шее, полгода"},
-        transfusion={"text": "в 2015 году"},
-        other_diseases={"text": "Удаление аппендицита в 2010"},
-    )
-
-    summary, _ = build_dental_summary(answers)
-
-    assert summary["important"] == []
-    assert summary["life_anamnesis"] == (
-        "Болезни желудка или кишечника: язва или гастрит. "
-        "Болезни уха, горла, носа или гайморит: гайморит. "
-        "Болезни костей, суставов или кожи: кости или суставы. "
-        "Постоянно увеличены лимфоузлы: на шее, полгода. "
-        "Было переливание крови: в 2015 году. "
-        "Другие болезни, операции или травмы: Удаление аппендицита в 2010."
-    )
-
-
-def test_strong_gag_reflex_is_important():
-    answers = _answers(["stomach"], reason={"selected": ["checkup"]},
-                       stomach={"selected": ["gag"]})
-
-    summary, _ = build_dental_summary(answers)
-
-    assert summary["important"] == [
-        "Сильный рвотный рефлекс: учитывать при слепках и снимках",
-    ]
-
-
-def test_dental_history_lists_every_sign_with_yes_or_no():
-    answers = _answers(
-        [],
-        reason={"selected": ["checkup"]},
-        mouth__last_visit={"selected": ["over_year"]},
-        mouth__signs={"selected": ["gums_bleed", "bruxism"]},
-        mouth__complications={"selected": ["long_bleeding", "other"], "text": "болела десна неделю"},
-    )
-
-    summary, _ = build_dental_summary(answers)
-
-    history = summary["dental_history"]
-    assert history["last_visit"] == "Больше года назад"
-    assert [(row["key"], row["has"]) for row in history["signs"]] == [
-        ("tmj", False), ("bruxism", True), ("gums_bleed", True),
-        ("herpes", False), ("dry_mouth", False), ("bad_breath", False),
-    ]
-    assert history["complications"] == "Долго шла кровь; болела десна неделю"
-    assert summary["dental_anamnesis"] == (
-        "Последний визит к стоматологу: больше года назад. "
-        "Бывает: скрежет зубами (бруксизм), кровоточат дёсны при чистке. "
-        "Осложнения при прошлом лечении: долго шла кровь; болела десна неделю."
-    )
-
-
-def test_empty_dental_history_says_nothing_noted():
-    summary, _ = build_dental_summary(IGOR)
-
-    assert summary["dental_history"]["last_visit"] == ""
-    assert summary["dental_history"]["complications"] == ""
-    assert summary["dental_anamnesis"] == "Жалоб на дёсны, челюсть и прошлое лечение не отмечено."
-
-
-def _other_meds(text, **extra):
-    return _answers(["other_meds"], reason={"selected": ["checkup"]},
-                    other_meds={"text": text}, **extra)
-
-
-def test_pacemaker_and_infection_are_important():
-    answers = _answers(
-        ["heart", "infections"],
-        reason={"selected": ["checkup"]},
-        heart={"selected": ["pacemaker"]},
-        infections={"selected": ["hepatitis_c"]},
-    )
-
-    summary, _ = build_dental_summary(answers)
-
-    assert summary["important"] == [
+        "Гепатит C; в 2010: соблюдать меры инфекционной безопасности",
+        "Химиотерапия или бифосфонаты: риск осложнений при удалении и имплантации",
+        "Искусственный клапан сердца: уточнить, нужна ли профилактика антибиотиком",
+        "Был инфаркт; в 2019: осторожно с анестетиком с адреналином",
         "Кардиостимулятор: осторожно с анестетиком с адреналином и электроприборами",
-        "Гепатит C: соблюдать меры инфекционной безопасности",
+        "Бывает потеря сознания или судороги: риск приступа в кресле",
+        "Бронхиальная астма; Сальбутамол: риск приступа в кресле — ингалятор пациента под рукой",
+        "Легко появляются синяки: риск кровотечения при удалении и хирургии",
+        "Беременность; 20 недель: учитывать при рентгене и выборе анестетика",
+        "ВИЧ или СПИД: соблюдать меры инфекционной безопасности",
     ]
+    assert summary["important_facts"][0] == "Гепатит C; в 2010"
 
 
-def test_latin_brand_name_is_recognised():
-    summary, gaps = build_dental_summary(_other_meds("Xarelto 20 mg"))
+def test_other_diseases_go_to_life_anamnesis_only():
+    answers = _answers(
+        ["transfusion", "smoking", "pressure", "liver"],
+        reason={"selected": ["checkup"]},
+        transfusion={"text": "в 2015 году"},
+        smoking={"text": "10 лет"},
+        pressure={"selected": ["high"], "text": "130/85"},
+    )
 
-    assert summary["important"] == [
-        "Упомянут «Ксарелто» — разжижает кровь, а строка «разжижающие кровь» не отмечена",
-    ]
-    assert _questions(gaps) == ["Принимает ли Ксарелто сейчас и в какой дозе"]
+    summary, _ = build_dental_summary(answers)
+
+    assert summary["important"] == []
+    assert summary["life_anamnesis"] == (
+        "Было переливание крови: в 2015 году. "
+        "Курю: 10 лет. "
+        "Сильно меняется давление: повышенное; 130/85. "
+        "Болезни печени."
+    )
+
+
+def _medications(text, selected=()):
+    return _answers(["medications"], reason={"selected": ["checkup"]},
+                    medications={"selected": list(selected), "text": text})
+
+
+def test_blood_thinner_written_only_in_text_is_flagged_for_doctor():
+    summary, gaps = build_dental_summary(_medications("Xarelto 20 mg"))
+
+    assert summary["important"] == ["Упомянут «Ксарелто» — разжижает кровь"]
+    assert summary["important_facts"] == []
+    assert "Принимает ли Ксарелто сейчас и в какой дозе" in _questions(gaps)
 
 
 def test_hyphenated_brand_name_is_recognised():
-    summary, _ = build_dental_summary(_other_meds("Тромбо-АСС 100"))
+    summary, _ = build_dental_summary(_medications("Тромбо-АСС 100"))
 
-    assert summary["important"] == [
-        "Упомянут «Аспирин» — разжижает кровь, а строка «разжижающие кровь» не отмечена",
-    ]
+    assert summary["important"] == ["Упомянут «Аспирин» — разжижает кровь"]
 
 
 def test_same_drug_named_twice_gives_one_line():
-    summary, _ = build_dental_summary(_other_meds("ацетилсалициловая кислота (аспирин)"))
+    summary, _ = build_dental_summary(_medications("ацетилсалициловая кислота (аспирин)"))
 
     assert len(summary["important"]) == 1
+
+
+def test_chosen_blood_thinner_is_not_flagged_twice():
+    summary, _ = build_dental_summary(_medications("Кардиомагнил 75 мг", ["cardiomagnil"]))
+
+    assert summary["important"] == [
+        "Принимает Кардиомагнил или аспирин, Кардиомагнил 75 мг: "
+        "риск кровотечения при удалении и хирургии",
+    ]
 
 
 def test_allergy_to_aspirin_is_not_taken_as_blood_thinner():
@@ -331,8 +186,17 @@ def test_allergy_to_aspirin_is_not_taken_as_blood_thinner():
 
     summary, gaps = build_dental_summary(answers)
 
-    assert summary["important"] == ["Аллергия: таблетки от боли — аспирин"]
-    assert all("разжижает" not in line for line in summary["important"])
+    assert summary["important"] == ["Аллергия: обезболивающие (анальгин, аспирин) — аспирин"]
+    assert "Как проявлялась аллергия" in _questions(gaps)
+
+
+def test_other_label_never_appears_in_text():
+    answers = _answers(["allergy"], reason={"selected": ["checkup"]},
+                       allergy__substance={"selected": ["other"], "text": "латекс"})
+
+    summary, _ = build_dental_summary(answers)
+
+    assert summary["allergy_anamnesis"] == "Аллергия: латекс"
 
 
 def test_unknown_stored_value_does_not_break_the_card():
@@ -344,61 +208,137 @@ def test_unknown_stored_value_does_not_break_the_card():
     assert summary["complaints"].startswith("Болит зуб")
 
 
-def test_signed_sheet_gets_facts_without_doctor_warnings():
-    summary, _ = build_dental_summary(OLGA)
+def test_incomplete_pain_and_other_reason_go_to_gaps():
+    answers = _answers([], reason={"selected": ["pain", "other"], "text": "Шатается зуб"},
+                       pain__where={"selected": ["upper_left"]})
 
-    assert summary["important_facts"] == [
-        "Принимает Эликвис, 5 мг, 2 раза в день",
-        "Аллергия: антибиотики — амоксициллин; реакция: сыпь, зуд",
-    ]
+    summary, gaps = build_dental_summary(answers)
 
-
-def test_dictionary_hits_are_not_patient_facts():
-    summary, _ = build_dental_summary(_other_meds("Кардиомагнил 75 мг"))
-
-    assert summary["important"] != []
-    assert summary["important_facts"] == []
-
-
-def test_risk_facts_keep_patient_words_only():
-    answers = _answers(
-        ["heart", "pregnancy"],
-        reason={"selected": ["checkup"]},
-        heart={"selected": ["pacemaker"]},
-        pregnancy={"selected": ["pregnant"], "text": "20 недель"},
-    )
-
-    summary, _ = build_dental_summary(answers)
-
-    assert summary["important_facts"] == ["Кардиостимулятор", "Беременность; 20 недель"]
-
-
-def test_other_label_never_appears_in_text():
-    answers = _answers(
-        ["anticoagulants"],
-        reason={"selected": ["checkup"]},
-        anticoagulants={"selected": ["warfarin", "other"], "text": "Синкумар"},
-    )
-
-    summary, _ = build_dental_summary(answers)
-
-    assert summary["important_facts"] == ["Принимает Варфарин, Синкумар"]
-    assert "Другое" not in summary["medications"]
-
-
-def test_gaps_are_attached_to_doctor_card_sections():
-    answers = _answers(
-        ["anticoagulants", "allergy"],
-        reason={"selected": ["pain", "other"], "text": "Шатается зуб"},
-        anticoagulants={"selected": ["xarelto"]},
-    )
-
-    _, gaps = build_dental_summary(answers)
-
-    assert {(gap["section"], gap["question"]) for gap in gaps} >= {
+    assert summary["complaints"] == "Болит зуб сверху слева. Другое: Шатается зуб."
+    assert {(gap["section"], gap["question"]) for gap in gaps} == {
         ("complaints", "Уточнить повод визита: «Шатается зуб»"),
+        ("complaints", "От чего возникает боль"),
         ("complaints", "Как давно болит"),
-        ("medications", "Доза и схема приёма препарата, разжижающего кровь"),
-        ("medications", "По какому поводу назначен Ксарелто"),
-        ("allergy_anamnesis", "На что аллергия"),
     }
+
+
+def test_about_patient_line():
+    answers = _answers(
+        [],
+        reason={"selected": ["checkup"]},
+        about__birth_date={"text": "14.03.1985"},
+        about__visit_year={"text": "2024"},
+        about__visit_clinic={"text": "Улыбка"},
+        about__more={"text": "Боюсь уколов"},
+    )
+
+    summary, _ = build_dental_summary(answers)
+
+    assert summary["about"] == (
+        "Дата рождения: 14.03.1985. Последний визит к стоматологу: 2024, клиника «Улыбка». "
+        "Дополнительно: Боюсь уколов."
+    )
+
+
+# ---------------------------------------------------------------------------
+# Бланк «Анкета о здоровье» для подписи
+
+
+FULL = _answers(
+    ["hepatitis", "radio_chemo", "pressure", "bleeding", "medications", "allergy", "pregnancy"],
+    reason={"selected": ["pain", "implant"]},
+    hepatitis={"selected": ["c"], "text": "в 2010"},
+    radio_chemo={"selected": ["chemo"]},
+    pressure={"selected": ["high"], "text": "130/85"},
+    bleeding={"selected": ["bruises"]},
+    medications={"selected": ["cardiomagnil"], "text": "75 мг утром"},
+    allergy__substance={"selected": ["local_anesthesia", "other"], "text": "латекс"},
+    allergy__reaction={"selected": ["urticaria"]},
+    pregnancy={"selected": ["pregnant"], "text": "20 недель"},
+    about__birth_date={"text": "14.03.1985"},
+    about__visit_year={"text": "2024"},
+    about__visit_clinic={"text": "Улыбка"},
+    about__more={"text": "Боюсь уколов"},
+)
+
+
+def test_form_header_is_filled_from_answers():
+    form = build_dental_summary(FULL)[0]["paper_form"]
+
+    assert form["birth_date"] == "14.03.1985"
+    assert form["visit_year"] == "2024"
+    assert form["visit_clinic"] == "Улыбка"
+    assert form["more"] == "Боюсь уколов"
+    assert [(p["letter"], p["selected"]) for p in form["problems"]] == [
+        ("а", True), ("б", False), ("в", False), ("г", False),
+        ("д", True), ("е", False), ("ж", False),
+    ]
+    assert form["problems"][0]["text"] == "лечение зубов"
+
+
+def test_form_has_all_43_points_in_order_with_paper_wording():
+    form = build_dental_summary(FULL)[0]["paper_form"]
+
+    assert [row["number"] for row in form["rows"]] == list(range(1, 44))
+    assert form["rows"][3]["text"] == "Проводились ли Вам инъекции за последние 6 месяцев"
+    assert form["rows"][42]["text"] == "СПИД, ВиЧ"
+
+
+def test_form_row_with_note():
+    summary, _ = build_dental_summary(FULL)
+
+    assert _row(summary, 1) == {
+        "number": 1,
+        "text": "Вирусный гепатит",
+        "answer": True,
+        "note_label": "Если да, то какого типа и когда",
+        "note": "Гепатит C; в 2010",
+        "underline": [],
+        "subs": [],
+    }
+    assert _row(summary, 2)["answer"] is False
+    assert _row(summary, 40)["note"] == "Кардиомагнил или аспирин; 75 мг утром"
+
+
+def test_form_rows_without_own_answer_mark_sub_points():
+    summary, _ = build_dental_summary(FULL)
+
+    radio_chemo = _row(summary, 15)
+    assert radio_chemo["answer"] is None
+    assert [(s["text"], s["answer"]) for s in radio_chemo["subs"]] == [
+        ("лучевую терапию за последние 10 лет", False),
+        ("химиотерапию (принимаете бифосфонаты) за последние 10 лет", True),
+    ]
+    pressure = _row(summary, 33)
+    assert [s["answer"] for s in pressure["subs"]] == [True, False]
+    assert pressure["note_label"] == "каковы цифры обычного для Вас артериального давления"
+    assert pressure["note"] == "130/85"
+    assert [s["answer"] for s in _row(summary, 42)["subs"]] == [True, False]
+
+
+def test_form_bleeding_has_own_answer_and_sub_points():
+    bleeding = _row(build_dental_summary(FULL)[0], 39)
+
+    assert bleeding["answer"] is True
+    assert [s["answer"] for s in bleeding["subs"]] == [False, True, False]
+
+
+def test_form_allergy_underlines_reaction_and_fills_other_allergen():
+    allergy = _row(build_dental_summary(FULL)[0], 41)
+
+    assert allergy["answer"] is None
+    assert [u["text"] for u in allergy["underline"] if u["selected"]] == ["крапивницы"]
+    assert len(allergy["subs"]) == 11
+    assert allergy["subs"][0] == {"text": "местные анестетики", "answer": True, "note": ""}
+    assert allergy["subs"][-1] == {
+        "text": "другие аллергены (указать конкретно)", "answer": True, "note": "латекс",
+    }
+    assert allergy["note"] == ""
+
+
+def test_form_of_healthy_patient_says_no_everywhere():
+    form = build_dental_summary(IGOR)[0]["paper_form"]
+
+    assert all(row["answer"] in (False, None) for row in form["rows"])
+    assert all(sub["answer"] is False for row in form["rows"] for sub in row["subs"])
+    assert form["birth_date"] == ""

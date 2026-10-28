@@ -853,12 +853,12 @@ export interface DoctorQuestionnaireStructured {
   important_facts?: string[];
   /** Стоматологическая анкета: все строки здоровья, «да» и «нет». */
   health?: DentalHealthRow[];
-  /** Стоматологический анамнез бумажной анкеты: шаг «Зубы и дёсны». */
-  dental_history?: DentalHistory;
-  /** То же одной фразой — врачу. */
-  dental_anamnesis?: string | null;
+  /** Дата рождения, последний визит, «дополнительно» — одной строкой врачу. */
+  about?: string | null;
   /** Вопросы нейросети и ответы пациента дословно; пустой ответ — пропустил. */
   clarifications?: DentalClarification[];
+  /** Бланк «Анкета о здоровье» с ответами — лист для подписи пациента. */
+  paper_form?: DentalPaperForm;
 }
 
 export interface DentalClarification {
@@ -866,13 +866,34 @@ export interface DentalClarification {
   answer: string;
 }
 
-export interface DentalHistory {
-  /** «Больше года назад»; пусто — пациент не ответил. */
-  last_visit: string;
-  /** Все признаки бланка: невыбранный — «нет». */
-  signs: { key: string; label: string; has: boolean }[];
-  /** Осложнения при прошлом лечении; пусто — не было. */
-  complications: string;
+/**
+ * Бланк «Анкета о здоровье» (МК Дент), заполненный ответами пациента.
+ * Формулировки — бланковые, с сервера: экран их только расставляет.
+ */
+export interface DentalPaperForm {
+  /** Пусто — пациент не ответил, впишет от руки. */
+  birth_date: string;
+  visit_year: string;
+  visit_clinic: string;
+  /** «Дополнительно хочу сообщить о состоянии здоровья». */
+  more: string;
+  /** «Какую стоматологическую проблему вы хотели бы решить»: а) … ж). */
+  problems: { letter: string; text: string; selected: boolean }[];
+  /** 43 строки бланка по порядку. */
+  rows: DentalPaperRow[];
+}
+
+export interface DentalPaperRow {
+  number: number;
+  text: string;
+  /** Да / Нет строки; null — у строки только подпункты. */
+  answer: boolean | null;
+  /** «Если да, то когда …»; null — вписывать нечего. */
+  note_label: string | null;
+  note: string;
+  /** «Нужное подчеркнуть». */
+  underline: { text: string; selected: boolean }[];
+  subs: { text: string; answer: boolean; note: string }[];
 }
 
 export interface DentalHealthRow {

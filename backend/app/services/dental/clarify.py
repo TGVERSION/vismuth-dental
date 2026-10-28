@@ -14,11 +14,15 @@ from .summary import build_dental_summary
 AI_STEP = "dental_ai"
 AI_GROUP = "ai"
 _PAIN_KEYS = ("pain.where", "pain.when", "pain.since")
+# Шапка бланка: факты, а не повод спрашивать.
+_FACT_KEYS = ("about.birth_date", "about.visit_year", "about.visit_clinic")
 
 
 def needs_clarification(answers: DentalAnswers) -> bool:
     """Есть ли что уточнять: свой текст пациента или неполная боль."""
-    if any(answer.text for answer in answers.groups.values()):
+    if any(
+        answer.text for key, answer in answers.groups.items() if key not in _FACT_KEYS
+    ):
         return True
     if has_pain(answers):
         return any(
@@ -109,7 +113,6 @@ def clarify_request(answers: DentalAnswers) -> dict:
         lines.append("Нет: " + ", ".join(has_not))
     lines.append(f"Препараты: {summary['medications']}")
     lines.append(f"Аллергия: {summary['allergy_anamnesis']}")
-    lines.append(f"Зубы и дёсны: {summary['dental_anamnesis']}")
     return {
         "answers": "\n".join(lines),
         "history": [

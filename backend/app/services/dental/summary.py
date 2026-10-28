@@ -10,10 +10,11 @@ import re
 from typing import Any
 
 from .flow import DentalAnswers, GroupAnswer, has_pain
+from .paper_form import build_paper_form
 from .questions import (
+    BLOOD_THINNER_OPTIONS,
     BLOOD_THINNERS,
     HEALTH_ITEMS,
-    MOUTH_GROUPS,
     OTHER,
     PAIN_GROUPS,
     REASON,
@@ -25,7 +26,6 @@ _GROUPS: dict[str, Group] = {
     for g in (
         REASON,
         *PAIN_GROUPS,
-        *MOUTH_GROUPS,
         *(dg for item in HEALTH_ITEMS for dg in item.detail_groups),
     )
 }
@@ -37,35 +37,33 @@ _PAIN_WHEN = {
     "spontaneous": "сама по себе",
     "night": "ночью",
 }
-# Строки «Здоровья», которые идут в анамнез жизни (аллергия и лекарства —
-# в свои разделы).
-_NOT_CHRONIC = ("allergy", "anticoagulants", "other_meds")
+# Аллергия и лекарства — в своих разделах карточки, остальное — анамнез жизни.
+_NOT_CHRONIC = ("allergy", "medications")
 _CHRONIC = tuple(item.value for item in HEALTH_ITEMS if item.value not in _NOT_CHRONIC)
+
 _BLEEDING_NOTE = "риск кровотечения при удалении и хирургии"
+_ADRENALINE_NOTE = "осторожно с анестетиком с адреналином"
+_INFECTION_NOTE = "соблюдать меры инфекционной безопасности"
+_PROPHYLAXIS_NOTE = "уточнить, нужна ли профилактика антибиотиком"
+# Что меняет лечение в кресле — в красное «Самое важное». Остальное (давление,
+# диабет, болезни органов) — в анамнезе.
 _RISK_NOTES = {
-    "anesthesia_reaction": "подобрать анестетик, наблюдать после укола",
+    "hepatitis": _INFECTION_NOTE,
+    "tuberculosis": _INFECTION_NOTE,
+    "radio_chemo": "риск осложнений при удалении и имплантации",
+    "heart_defect": _PROPHYLAXIS_NOTE,
+    "heart_valve": _PROPHYLAXIS_NOTE,
+    "ischemia": _ADRENALINE_NOTE,
+    "heart_attack": _ADRENALINE_NOTE,
+    "pacemaker": "осторожно с анестетиком с адреналином и электроприборами",
+    "seizures": "риск приступа в кресле",
+    "asthma": "риск приступа в кресле — ингалятор пациента под рукой",
     "bleeding": _BLEEDING_NOTE,
     "pregnancy": "учитывать при рентгене и выборе анестетика",
-    "infections": "соблюдать меры инфекционной безопасности",
-    "bone_onco": "риск осложнений при удалении и имплантации",
-}
-_ADRENALINE_NOTE = "осторожно с анестетиком с адреналином"
-_PACEMAKER_NOTE = "осторожно с анестетиком с адреналином и электроприборами"
-# Строки, где в красное идут только варианты, меняющие лечение в кресле:
-# давление, ХОБЛ, гипотиреоз или гастрит остаются в анамнезе.
-_SERIOUS: dict[str, tuple[tuple[str, ...], str]] = {
-    "heart": (
-        ("pacemaker", "heart_attack", "stroke", "angina", "arrhythmia"),
-        _ADRENALINE_NOTE,
-    ),
-    "lungs": (("asthma",), "риск приступа в кресле — ингалятор пациента под рукой"),
-    "thyroid": (("hyperthyroid",), _ADRENALINE_NOTE),
-    "stomach": (("gag",), "учитывать при слепках и снимках"),
-    "epilepsy": (("epilepsy", "fainting"), "риск приступа в кресле"),
+    "hiv": _INFECTION_NOTE,
 }
 # Текст про аллергию не ищем: «аллергия на аспирин» — не приём аспирина.
 _NOT_MEDICATION_TEXT = ("allergy.substance", "allergy.reaction")
-_BLOOD_THINNER_FALLBACK = "препарат, разжижающий кровь"
 
 
 def _lower_first(text: str) -> str:
@@ -98,9 +96,12 @@ def _group_detail(answers: DentalAnswers, key: str, *, lower: bool) -> str:
     return "; ".join(part for part in parts if part)
 
 
+def _item(item_value: str):
+    return next(i for i in HEALTH_ITEMS if i.value == item_value)
+
+
 def _item_detail(answers: DentalAnswers, item_value: str, *, lower: bool) -> str:
-    item = next(i for i in HEALTH_ITEMS if i.value == item_value)
-    parts = [_group_detail(answers, g.key, lower=lower) for g in item.detail_groups]
+    parts = [_group_detail(answers, g.key, lower=lower) for g in _item(item_value).detail_groups]
     return "; ".join(part for part in parts if part)
 
 
@@ -134,9 +135,20 @@ def _complaints(answers: DentalAnswers) -> str:
     return " ".join(sentences)
 
 
-def _blood_thinner_text(answers: DentalAnswers) -> str:
-    parts = [*_labels(answers, "anticoagulants"), _answer(answers, "anticoagulants").text]
-    return ", ".join(part for part in parts if part)
+def _thinner_labels(answers: DentalAnswers, health: list[str]) -> list[str]:
+    """Разжижающие кровь, отмеченные кнопками в «Постоянно принимаю лекарства»."""
+    if "medications" not in health:
+        return []
+    labels = {o.value: o.label for o in _GROUPS["medications"].options}
+    selected = _answer(answers, "medications").selected
+    return [labels[v] for v in BLOOD_THINNER_OPTIONS if v in selected]
+
+
+def _medications(answers: DentalAnswers, health: list[str]) -> str:
+    if "medications" not in health:
+        return "Постоянно не принимает."
+    parts = [*_labels(answers, "medications"), _answer(answers, "medications").text]
+    return ", ".join(part for part in parts if part) or "Постоянно не принимает."
 
 
 def _allergy_line(answers: DentalAnswers) -> str:
@@ -170,41 +182,29 @@ def _mentioned_blood_thinners(answers: DentalAnswers) -> list[str]:
 ImportantItem = tuple[str, str | None]
 
 
-def _serious_item(answers: DentalAnswers, key: str) -> ImportantItem | None:
-    values, note = _SERIOUS[key]
-    selected = _answer(answers, key).selected
-    labels = {o.value: o.label for o in _GROUPS[key].options}
-    serious = [labels[v] for v in values if v in selected]
-    if not serious:
-        return None
-    if "pacemaker" in selected:
-        note = _PACEMAKER_NOTE
-    return ", ".join(serious), note
-
-
-def _risk_item(answers: DentalAnswers, item_value: str) -> ImportantItem | None:
-    if item_value in _SERIOUS:
-        return _serious_item(answers, item_value)
-    note = _RISK_NOTES.get(item_value)
-    if note is None:
-        return None
-    # Несколько вариантов — одна фраза: заглавная только у первого.
-    detail = _item_detail(answers, item_value, lower=True)
-    label = next(i.label for i in HEALTH_ITEMS if i.value == item_value)
-    return (_upper_first(detail) if detail else label), note
+def _fact(answers: DentalAnswers, item_value: str) -> str:
+    """Факт словами пациента: выбранные варианты, иначе строка списка и его текст."""
+    item = _item(item_value)
+    if any(_labels(answers, g.key) for g in item.detail_groups):
+        return _upper_first(_item_detail(answers, item_value, lower=True))
+    texts = [_answer(answers, g.key).text for g in item.detail_groups]
+    return "; ".join(part for part in (item.label, *texts) if part)
 
 
 def _important_items(answers: DentalAnswers, health: list[str]) -> list[ImportantItem]:
     items: list[ImportantItem] = []
-    if "anticoagulants" in health:
-        drug = _blood_thinner_text(answers) or _BLOOD_THINNER_FALLBACK
+    thinners = _thinner_labels(answers, health)
+    if thinners:
+        parts = [*thinners, _answer(answers, "medications").text]
+        drug = ", ".join(part for part in parts if part)
         items.append((f"Принимает {drug}", _BLEEDING_NOTE))
     if "allergy" in health:
         items.append((_allergy_line(answers), None))
-    for item in HEALTH_ITEMS:
-        risk = _risk_item(answers, item.value) if item.value in health else None
-        if risk:
-            items.append(risk)
+    items.extend(
+        (_fact(answers, item.value), _RISK_NOTES[item.value])
+        for item in HEALTH_ITEMS
+        if item.value in health and item.value in _RISK_NOTES
+    )
     return items
 
 
@@ -213,10 +213,10 @@ def _important(answers: DentalAnswers, health: list[str]) -> list[str]:
         f"{fact}: {note}" if note else fact
         for fact, note in _important_items(answers, health)
     ]
-    if "anticoagulants" not in health:
+    if not _thinner_labels(answers, health):
         # Вывод системы по словарю, а не ответ пациента: только врачу.
         lines.extend(
-            f"Упомянут «{name}» — разжижает кровь, а строка «разжижающие кровь» не отмечена"
+            f"Упомянут «{name}» — разжижает кровь"
             for name in _mentioned_blood_thinners(answers)
         )
     return lines
@@ -232,46 +232,21 @@ def _life_anamnesis(answers: DentalAnswers, health: list[str]) -> str:
     return " ".join(sentences) or "Хронических заболеваний не отмечено."
 
 
-_SIGNS = next(g for g in MOUTH_GROUPS if g.key == "mouth.signs")
-
-
-def _dental_history(answers: DentalAnswers) -> dict[str, Any]:
-    """Стоматологический анамнез для листа: каждый признак — «да» или «нет»."""
-    last_visit = _labels(answers, "mouth.last_visit")
-    selected = _answer(answers, _SIGNS.key).selected
-    return {
-        "last_visit": last_visit[0] if last_visit else "",
-        "signs": [
-            {"key": o.value, "label": o.label, "has": o.value in selected}
-            for o in _SIGNS.options
-        ],
-        "complications": _group_detail(answers, "mouth.complications", lower=False),
-    }
-
-
-def _dental_anamnesis(answers: DentalAnswers) -> str:
+def _about(answers: DentalAnswers) -> str:
+    """Шапка бланка одной строкой для врача: дата рождения, последний визит."""
+    birth = _answer(answers, "about.birth_date").text
+    year = _answer(answers, "about.visit_year").text
+    clinic = _answer(answers, "about.visit_clinic").text
+    more = _answer(answers, "about.more").text
     sentences = []
-    last_visit = _group_detail(answers, "mouth.last_visit", lower=True)
-    if last_visit:
-        sentences.append(f"Последний визит к стоматологу: {last_visit}.")
-    selected = _answer(answers, _SIGNS.key).selected
-    # В порядке бланка, а не в порядке нажатия.
-    signs = ", ".join(_lower_first(o.label) for o in _SIGNS.options if o.value in selected)
-    if signs:
-        sentences.append(f"Бывает: {signs}.")
-    complications = _group_detail(answers, "mouth.complications", lower=True)
-    if complications:
-        sentences.append(f"Осложнения при прошлом лечении: {complications}.")
-    return " ".join(sentences) or "Жалоб на дёсны, челюсть и прошлое лечение не отмечено."
-
-
-def _medications(answers: DentalAnswers, health: list[str]) -> str:
-    parts = []
-    if "anticoagulants" in health:
-        parts.append(_blood_thinner_text(answers) or _BLOOD_THINNER_FALLBACK)
-    if "other_meds" in health:
-        parts.append(_answer(answers, "other_meds").text)
-    return "; ".join(p for p in parts if p) or "Постоянно не принимает."
+    if birth:
+        sentences.append(f"Дата рождения: {birth}.")
+    visit = ", ".join(part for part in (year, f"клиника «{clinic}»" if clinic else "") if part)
+    if visit:
+        sentences.append(f"Последний визит к стоматологу: {visit}.")
+    if more:
+        sentences.append(f"Дополнительно: {more}.")
+    return " ".join(sentences)
 
 
 # Раздел карточки врача, под которым показывается вопрос «Что доспросить»:
@@ -298,22 +273,16 @@ def _gaps(answers: DentalAnswers, health: list[str]) -> list[dict[str, str]]:
         ):
             if not _answer(answers, key).selected:
                 gaps.append(_gap(COMPLAINTS, question))
-    if "anticoagulants" in health:
-        if not _answer(answers, "anticoagulants").text:
-            gaps.append(_gap(MEDICATIONS, "Доза и схема приёма препарата, разжижающего кровь"))
-        drugs = ", ".join(_labels(answers, "anticoagulants")) or _BLOOD_THINNER_FALLBACK
-        gaps.append(_gap(MEDICATIONS, f"По какому поводу назначен {drugs}"))
-    if "allergy" in health:
-        substance = _answer(answers, "allergy.substance")
-        if not substance.selected and not substance.text:
-            gaps.append(_gap(ALLERGY, "На что аллергия"))
-        if not _answer(answers, "allergy.reaction").selected:
-            gaps.append(_gap(ALLERGY, "Как проявлялась аллергия"))
-    if "anticoagulants" not in health:
+    thinners = _thinner_labels(answers, health)
+    if thinners:
+        gaps.append(_gap(MEDICATIONS, f"По какому поводу назначен {', '.join(thinners)}"))
+    else:
         gaps.extend(
             _gap(MEDICATIONS, f"Принимает ли {name} сейчас и в какой дозе")
             for name in _mentioned_blood_thinners(answers)
         )
+    if "allergy" in health and not _answer(answers, "allergy.reaction").selected:
+        gaps.append(_gap(ALLERGY, "Как проявлялась аллергия"))
     # Пропущенный вопрос нейросети — врач задаст его сам.
     gaps.extend(_gap(COMPLAINTS, turn.question) for turn in answers.ai if turn.skipped)
     return gaps
@@ -322,7 +291,7 @@ def _gaps(answers: DentalAnswers, health: list[str]) -> list[dict[str, str]]:
 def build_dental_summary(
     answers: DentalAnswers,
 ) -> tuple[dict[str, Any], list[dict[str, str]]]:
-    """Карточка врача и список «Что доспросить».
+    """Карточка врача, бланк для подписи и список «Что доспросить».
 
     Ключи `complaints`, `medications`, `allergy_anamnesis`, `life_anamnesis`
     совпадают с общей анкетой: по ним создаётся протокол.
@@ -347,13 +316,13 @@ def build_dental_summary(
         "medications": _medications(answers, health),
         "allergy_anamnesis": _allergy_line(answers) if "allergy" in health else "Аллергии нет.",
         "life_anamnesis": _life_anamnesis(answers, health),
-        "dental_history": _dental_history(answers),
-        "dental_anamnesis": _dental_anamnesis(answers),
+        "about": _about(answers),
         # Вопросы нейросети и ответы пациента дословно; пусто — пропустил.
         "clarifications": [
             {"question": turn.question, "answer": turn.answer}
             for turn in answers.ai
             if turn.is_closed
         ],
+        "paper_form": build_paper_form(answers),
     }
     return structured, _gaps(answers, health)

@@ -283,13 +283,17 @@ describe('checklist', () => {
 
 describe('dentalProgress', () => {
   it('maps steps to «step N of 3»', () => {
-    const at = (current: number, label: string) => ({ current, total: 3, label });
+    const at = (current: number, label: string) => ({
+      current,
+      total: 3,
+      label,
+    });
 
     expect(dentalProgress('dental_reason')).toEqual(at(1, 'Зачем пришли'));
     expect(dentalProgress('dental_pain')).toEqual(at(1, 'Зачем пришли'));
     expect(dentalProgress('dental_health')).toEqual(at(2, 'Здоровье'));
     expect(dentalProgress('dental_details')).toEqual(at(2, 'Уточнение'));
-    expect(dentalProgress('dental_mouth')).toEqual(at(3, 'Зубы и дёсны'));
+    expect(dentalProgress('dental_about')).toEqual(at(3, 'О вас'));
     expect(dentalProgress('dental_ai')).toEqual(at(3, 'Уточнение'));
     expect(dentalProgress('done')).toBeNull();
   });

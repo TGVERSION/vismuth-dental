@@ -5,18 +5,28 @@ import type { DoctorQuestionnaireStructured } from '@/api';
 import {
   DentalClarifications,
   DentalHealth,
-  DentalHistory,
   DentalImportant,
 } from '@/components/dental-card/DentalCardParts';
 
-const Block = ({ title, children }: { title: string; children: React.ReactNode }) => {
+const Block = ({
+  title,
+  children,
+}: {
+  title: string;
+  children: React.ReactNode;
+}) => {
   const headingId = useId();
   return (
     <section aria-labelledby={headingId} className="flex flex-col gap-4">
-      <h2 id={headingId} className="pl-6 text-[32px] font-medium text-[#202020]">
+      <h2
+        id={headingId}
+        className="pl-6 text-[32px] font-medium text-[#202020]"
+      >
         {title}
       </h2>
-      <div className="flex flex-col gap-2 pl-8 text-base text-[#202020]">{children}</div>
+      <div className="flex flex-col gap-2 pl-8 text-base text-[#202020]">
+        {children}
+      </div>
     </section>
   );
 };
@@ -38,10 +48,9 @@ export const DentalDoctorSummary = ({
     <Block title="Здоровье">
       <DentalHealth health={structured.health ?? []} />
     </Block>
-    {/* Анкеты до шага «Зубы и дёсны» хранятся без него. */}
-    {structured.dental_history ? (
-      <Block title="Зубы и дёсны">
-        <DentalHistory history={structured.dental_history} />
+    {structured.about ? (
+      <Block title="О пациенте">
+        <p>{structured.about}</p>
       </Block>
     ) : null}
     {structured.clarifications && structured.clarifications.length > 0 ? (

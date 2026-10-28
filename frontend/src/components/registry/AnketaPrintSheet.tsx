@@ -23,7 +23,7 @@ const Filled = ({ text, width }: { text: string; width?: string }) =>
 /** «ДА» / «НЕТ»: выбранное обведено, как ручкой на бланке. */
 const Mark = ({ isOn, children }: { isOn: boolean; children: string }) => (
   <span
-    className={`inline-block rounded-full px-[1mm] leading-[3.4mm] ${
+    className={`inline-block rounded-full px-[1mm] leading-[2.9mm] ${
       isOn ? 'border-[0.3mm] border-black font-bold' : 'border-[0.3mm] border-transparent text-[#666]'
     }`}
   >
@@ -42,7 +42,14 @@ const YesNo = ({ answer }: { answer: boolean | null }) => (
   </>
 );
 
-const CELL = 'border-[0.2mm] border-black px-[1mm] py-[0.3mm] align-top';
+const CELL = 'border-[0.2mm] border-black px-[1mm] py-[0.1mm] align-top';
+
+/** «Если да, то когда: …» — вписанный ответ или пустое место под него. */
+const Note = ({ row }: { row: DentalPaperRow }) => (
+  <span className="block">
+    {row.note_label}: <Filled text={row.note} width="35mm" />
+  </span>
+);
 
 const RowText = ({ row }: { row: DentalPaperRow }) => (
   <>
@@ -59,11 +66,8 @@ const RowText = ({ row }: { row: DentalPaperRow }) => (
         <i>(нужное подчеркнуть)</i> на:
       </>
     ) : null}
-    {row.note_label ? (
-      <span className="block">
-        {row.note_label}: <Filled text={row.note} width="35mm" />
-      </span>
-    ) : null}
+    {/* У строки с подпунктами вписанное идёт после них, как в бланке (33). */}
+    {row.note_label && row.subs.length === 0 ? <Note row={row} /> : null}
   </>
 );
 
@@ -92,6 +96,17 @@ const FormRows = ({ rows }: { rows: DentalPaperRow[] }) => (
             <YesNo answer={sub.answer} />
           </tr>
         )),
+        ...(row.note_label && row.subs.length > 0
+          ? [
+              <tr key={`${row.number}-note`}>
+                <td className={CELL} />
+                <td className={`${CELL} pl-[3mm]`}>
+                  <Note row={row} />
+                </td>
+                <YesNo answer={null} />
+              </tr>,
+            ]
+          : []),
       ])}
     </tbody>
   </table>
@@ -115,7 +130,7 @@ export const AnketaPrintSheet = ({ sheet }: AnketaPrintSheetProps) => {
     <div
       data-print-anketa-sheet
       aria-hidden="true"
-      className="text-[7.5pt] leading-[1.25] text-black"
+      className="text-[7.5pt] leading-[1.15] text-black"
     >
       <p className="text-center text-[6.5pt] font-bold">
         По решению Всемирной Организации Здравоохранения во всех медицинских

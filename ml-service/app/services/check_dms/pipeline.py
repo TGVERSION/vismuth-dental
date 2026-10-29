@@ -1,6 +1,6 @@
 """Оркестрация проверки назначений ДМС.
 
-Порядок: скачать PDF -> проверить хэш -> разбить назначения ->
+Порядок: прочитать PDF из запроса -> проверить хэш -> разбить назначения ->
 найти фрагменты -> получить вердикт -> разметить исходный текст.
 """
 
@@ -11,7 +11,7 @@ import time
 from app.config import DmsConfig
 from app.schemas import (
     AppointmentSegment,
-    CheckDmsRequest,
+    CheckDmsForm,
     CheckDmsResponse,
     GuidelineFragment,
 )
@@ -20,7 +20,6 @@ from .indexer import index_document
 from .parser import extract_pages
 from .retrieval import retrieve_for_items
 from .segments import build_segments
-from .source import download_pdf, save_pdf
 from .split import split_appointments
 from .verdict import judge
 
@@ -48,23 +47,22 @@ def _fragments(found: list[dict], limit: int) -> list[GuidelineFragment]:
 
 
 async def verify_appointments(
-    request: CheckDmsRequest,
+    pdf: bytes,
+    file_hash: str,
+    form: CheckDmsForm,
     config: DmsConfig,
 ) -> CheckDmsResponse:
-    """Проверяет назначения по PDF клинрека и размечает исходный текст."""
+    """Проверяет назначения по содержимому PDF и размечает исходный текст."""
     started = time.perf_counter()
 
-    content, file_hash = await download_pdf(request.pdf_url, config)
-    path = save_pdf(content, file_hash, config)
-
-    pages = await asyncio.to_thread(extract_pages, path)
+    pages = await asyncio.to_thread(extract_pages, pdf)
     indexed = await asyncio.to_thread(index_document, pages, file_hash, config)
 
-    items = await asyncio.to_thread(split_appointments, request.appointments)
+    items = await asyncio.to_thread(split_appointments, form.appointments)
     found = await asyncio.to_thread(retrieve_for_items, items, file_hash, config)
-    unnecessary = await asyncio.to_thread(judge, request.mkb, items, found)
+    unnecessary = await asyncio.to_thread(judge, form.mkb, items, found)
 
-    segments = build_segments(request.appointments, items, unnecessary)
+    segments = build_segments(form.appointments, items, unnecessary)
 
     logger.info(
         "dms check done sha256=%s indexed=%s items=%s fragments=%s unnecessary=%s ms=%.0f",

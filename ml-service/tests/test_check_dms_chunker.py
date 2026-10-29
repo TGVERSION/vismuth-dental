@@ -79,7 +79,7 @@ def test_table_rows_become_chunks() -> None:
 def test_real_pdf_is_parsed() -> None:
     from app.services.check_dms.parser import extract_pages
 
-    pages = extract_pages(REAL_PDF)
+    pages = extract_pages(REAL_PDF.read_bytes())
     total = sum(len(page.text) for page in pages)
 
     assert total > 100_000

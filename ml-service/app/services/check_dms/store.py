@@ -16,7 +16,7 @@ from .chunker import Chunk
 
 logger = logging.getLogger(__name__)
 
-EMBEDDING_DIM = 1024
+EMBEDDING_DIM = 2560
 _HASH_FIELD = "file_hash"
 
 _client: QdrantClient | None = None

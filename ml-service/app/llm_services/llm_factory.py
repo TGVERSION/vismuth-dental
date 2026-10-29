@@ -90,11 +90,14 @@ class LLMFactory:
                     scope=config.ultra_scope,
                 )
             case LLMRole.DMS_SPLIT:
+                # GigaChat-3-Pro живёт только на ultra endpoint
                 return self._build(
                     role=role,
                     model=config.dms_split_model,
                     temperature=config.dms_split_temperature,
                     max_tokens=config.dms_split_max_tokens,
+                    base_url=config.ultra_base_url,
+                    scope=config.ultra_scope,
                 )
             case LLMRole.DMS:
                 return self._build(

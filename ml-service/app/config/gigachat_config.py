@@ -80,3 +80,15 @@ class GigaChatConfig(BaseConfig):
     dms_model: str = Field(default="GigaChat-3-Ultra", description="Модель для вердикта по назначениям")
     dms_temperature: float = Field(default=0.1, description="Температура для вердикта по назначениям")
     dms_max_tokens: int = Field(default=3000, description="Лимит токенов ответа для вердикта по назначениям")
+
+    # проверка назначений ДМС: эмбеддинги через API, модель отдаёт 2560 измерений
+    dms_embedding_model: str = Field(
+        default="EmbeddingsGigaR",
+        description="Модель эмбеддингов GigaChat для фрагментов клинреков",
+    )
+    dms_embedding_batch: int = Field(
+        default=64,
+        ge=1,
+        le=64,
+        description="Сколько текстов отправлять в одном запросе эмбеддингов",
+    )

@@ -5,54 +5,46 @@ from pydantic import ValidationError
 
 from app.schemas import (
     AppointmentSegment,
-    CheckDmsRequest,
+    CheckDmsForm,
     CheckDmsResponse,
     GuidelineFragment,
 )
 
 VALID = {
-    "pdf_url": "http://127.0.0.1:9000/vismuth-clinrec/guidelines/62/3/source.pdf?X-Amz-Signature=abc",
     "mkb": "I10 Эссенциальная [первичная] гипертензия",
     "appointments": "Амлодипин 5 мг 1 раз в сутки; ЭКГ покоя; Плазмаферез",
 }
 
 
-def test_request_accepts_valid_payload() -> None:
-    request = CheckDmsRequest(**VALID)
+def test_form_accepts_valid_payload() -> None:
+    form = CheckDmsForm(**VALID)
 
-    assert request.pdf_url == VALID["pdf_url"]
+    assert form.mkb == VALID["mkb"]
 
 
-@pytest.mark.parametrize("missing", ["pdf_url", "mkb", "appointments"])
-def test_request_requires_every_field(missing: str) -> None:
+@pytest.mark.parametrize("missing", ["mkb", "appointments"])
+def test_form_requires_every_field(missing: str) -> None:
     payload = {key: value for key, value in VALID.items() if key != missing}
 
     with pytest.raises(ValidationError):
-        CheckDmsRequest(**payload)
+        CheckDmsForm(**payload)
 
 
-@pytest.mark.parametrize("field", ["pdf_url", "mkb", "appointments"])
-def test_request_rejects_blank_values(field: str) -> None:
-    payload = {**VALID, field: "   "}
-
+@pytest.mark.parametrize("field", ["mkb", "appointments"])
+def test_form_rejects_blank_values(field: str) -> None:
     with pytest.raises(ValidationError):
-        CheckDmsRequest(**payload)
+        CheckDmsForm(**{**VALID, field: "   "})
 
 
-def test_request_rejects_non_http_url() -> None:
+def test_form_strips_appointments() -> None:
+    form = CheckDmsForm(**{**VALID, "appointments": "  Амлодипин  "})
+
+    assert form.appointments == "Амлодипин"
+
+
+def test_form_rejects_too_long_appointments() -> None:
     with pytest.raises(ValidationError):
-        CheckDmsRequest(**{**VALID, "pdf_url": "file:///tmp/source.pdf"})
-
-
-def test_request_strips_appointments() -> None:
-    request = CheckDmsRequest(**{**VALID, "appointments": "  Амлодипин  "})
-
-    assert request.appointments == "Амлодипин"
-
-
-def test_request_rejects_too_long_appointments() -> None:
-    with pytest.raises(ValidationError):
-        CheckDmsRequest(**{**VALID, "appointments": "а" * 4001})
+        CheckDmsForm(**{**VALID, "appointments": "а" * 4001})
 
 
 def test_response_serializes_to_contract() -> None:

@@ -1,20 +1,23 @@
-"""Сквозная проверка на реальном PDF с замоканными LLM и эмбеддингами."""
+"""Сквозная проверка через multipart на реальном PDF с замоканными LLM."""
 
-import asyncio
-import time
+import hashlib
+import types
 import uuid
 from pathlib import Path
 
 import pytest
+from fastapi.testclient import TestClient
 from qdrant_client import QdrantClient
 
+import app.routers.check_dms as check_dms_endpoint
 from app.config import DmsConfig
-from app.schemas import CheckDmsRequest
+from app.routers import app
 from app.services.check_dms import indexer, pipeline, retrieval, store
 from app.services.check_dms.store import EMBEDDING_DIM, count_by_hash
 
 REAL_PDF = Path("КР62_3.pdf")
 TEXT = "Амлодипин 5 мг 1 раз в сутки; Денервация почечных артерий; Плазмаферез"
+CLIENT = TestClient(app)
 
 
 def _fake_embed(texts: list[str]) -> list[list[float]]:
@@ -22,60 +25,50 @@ def _fake_embed(texts: list[str]) -> list[list[float]]:
 
 
 @pytest.mark.skipif(not REAL_PDF.exists(), reason="нет тестового PDF клинрека")
-def test_end_to_end_with_mocked_llm(monkeypatch) -> None:
+def test_multipart_end_to_end_with_mocked_llm(monkeypatch) -> None:
+    pdf = REAL_PDF.read_bytes()
+    file_hash = hashlib.sha256(pdf).hexdigest()
     path = Path("storage/test-qdrant") / uuid.uuid4().hex
-    client = QdrantClient(path=str(path))
-    file_hash = uuid.uuid5(uuid.NAMESPACE_URL, "kr62").hex
-
-    monkeypatch.setattr(store, "_client", client)
-    monkeypatch.setattr(indexer, "embed", _fake_embed)
-    monkeypatch.setattr(retrieval, "embed", _fake_embed)
-    monkeypatch.setattr(
-        pipeline,
-        "download_pdf",
-        lambda url, config: asyncio.sleep(0, result=(REAL_PDF.read_bytes(), file_hash)),
-    )
-    monkeypatch.setattr(pipeline, "save_pdf", lambda content, digest, config: REAL_PDF)
-    monkeypatch.setattr(
-        pipeline,
-        "split_appointments",
-        lambda text: ["Амлодипин 5 мг 1 раз в сутки", "Денервация почечных артерий", "Плазмаферез"],
-    )
-    monkeypatch.setattr(pipeline, "judge", lambda mkb, items, found: {2})
-
-    parsed: dict[str, list] = {}
-    real_extract = pipeline.extract_pages
-    monkeypatch.setattr(
-        pipeline,
-        "extract_pages",
-        lambda path: parsed.setdefault("pages", real_extract(path)),
-    )
+    qdrant = QdrantClient(path=str(path))
 
     config = DmsConfig(
         qdrant_path=str(path),
         collection="test_e2e",
         retrieval_max_chunks=10,
     )
-    request = CheckDmsRequest(
-        pdf_url="https://s3.local/source.pdf",
-        mkb="I10 Эссенциальная гипертензия",
-        appointments=TEXT,
+
+    monkeypatch.setattr(store, "_client", qdrant)
+    monkeypatch.setattr(indexer, "embed", _fake_embed)
+    monkeypatch.setattr(retrieval, "embed", _fake_embed)
+    monkeypatch.setattr(
+        pipeline,
+        "split_appointments",
+        lambda text: ["Амлодипин 5 мг 1 раз в сутки", "Денервация почечных артерий", "Плазмаферез"],
+    )
+    monkeypatch.setattr(pipeline, "judge", lambda mkb, items, found: {2})
+    monkeypatch.setattr(
+        check_dms_endpoint,
+        "settings",
+        types.SimpleNamespace(dms=config),
     )
 
-    response = asyncio.run(pipeline.verify_appointments(request, config))
+    request = {"files": {"file": ("kr.pdf", pdf, "application/pdf")}, "data": {"mkb": "I10", "appointments": TEXT}}
 
-    assert "".join(segment.text for segment in response.appointments) == TEXT
-    assert response.appointments[-1].unnecessary is True
-    assert response.fragments
-    assert response.fragments[0].section.startswith(("1", "2", "3", "4", "5", "6", "7"))
+    first = CLIENT.post("/check_dms", **request)
 
-    first_count = count_by_hash(client, config.collection, file_hash)
-    started = time.perf_counter()
-    second = indexer.index_document(parsed["pages"], file_hash, config)
-    elapsed = time.perf_counter() - started
+    assert first.status_code == 200
+    payload = first.json()
+    assert "".join(segment["text"] for segment in payload["appointments"]) == TEXT
+    assert payload["appointments"][-1]["unnecessary"] is True
+    assert payload["fragments"]
+    assert payload["fragments"][0]["section"].startswith(("1", "2", "3", "4", "5", "6", "7"))
 
-    assert second is False
-    assert count_by_hash(client, config.collection, file_hash) == first_count
-    assert elapsed < 30
+    chunks_after_first = count_by_hash(qdrant, config.collection, file_hash)
+    assert chunks_after_first > 0
 
-    client.close()
+    second = CLIENT.post("/check_dms", **request)
+
+    assert second.status_code == 200
+    assert count_by_hash(qdrant, config.collection, file_hash) == chunks_after_first
+
+    qdrant.close()

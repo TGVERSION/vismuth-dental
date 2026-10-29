@@ -16,23 +16,14 @@ class DmsConfig(BaseConfig):
         default="./storage/qdrant",
         description="Каталог локальной БД Qdrant",
     )
-    pdf_dir: str = Field(
-        default="./storage/pdfs",
-        description="Каталог скачанных PDF клинреков",
-    )
     collection: str = Field(
         default="clinrec_dms",
         description="Имя коллекции фрагментов клинреков в Qdrant",
     )
     max_pdf_bytes: int = Field(
-        default=50 * 1024 * 1024,
+        default=30 * 1024 * 1024,
         ge=1024,
-        description="Максимальный размер PDF, байт",
-    )
-    download_timeout: float = Field(
-        default=30.0,
-        gt=0,
-        description="Таймаут скачивания PDF, секунд",
+        description="Максимальный размер загружаемого PDF, байт",
     )
     chunk_size: int = Field(
         default=1000,

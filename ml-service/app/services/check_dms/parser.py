@@ -4,9 +4,9 @@
 отдельно и превращаются в строки «ячейка | ячейка | …».
 """
 
+import io
 import logging
 from dataclasses import dataclass
-from pathlib import Path
 
 import pdfplumber
 
@@ -39,11 +39,11 @@ def _table_rows(page: pdfplumber.page.Page) -> tuple[str, ...]:
     return tuple(rows)
 
 
-def extract_pages(path: Path) -> list[PageText]:
-    """Читает PDF постранично; пустой документ считается ошибкой."""
+def extract_pages(content: bytes) -> list[PageText]:
+    """Читает PDF из памяти постранично; пустой документ считается ошибкой."""
     pages: list[PageText] = []
     try:
-        with pdfplumber.open(path) as pdf:
+        with pdfplumber.open(io.BytesIO(content)) as pdf:
             for index, page in enumerate(pdf.pages, start=1):
                 text = (page.extract_text() or "").replace(_PDF_WHITESPACE, " ")
                 pages.append(

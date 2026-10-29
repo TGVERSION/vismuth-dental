@@ -2,16 +2,10 @@
 
 from pydantic import BaseModel, Field, field_validator
 
-_URL_PREFIXES = ("http://", "https://")
 
+class CheckDmsForm(BaseModel):
+    """Текстовые поля multipart-запроса; PDF приходит отдельным файлом."""
 
-class CheckDmsRequest(BaseModel):
-    """Вход проверки: PDF клинрека, код МКБ и текст назначений."""
-
-    pdf_url: str = Field(
-        max_length=2048,
-        description="Presigned-ссылка на PDF клинического рекомендации",
-    )
     mkb: str = Field(
         max_length=255,
         description="Код МКБ и справочное название диагноза одной строкой",
@@ -20,16 +14,6 @@ class CheckDmsRequest(BaseModel):
         max_length=4000,
         description="Назначения врача свободным текстом: препараты и процедуры",
     )
-
-    @field_validator("pdf_url")
-    @classmethod
-    def _validate_pdf_url(cls, value: str) -> str:
-        cleaned = value.strip()
-        if not cleaned:
-            raise ValueError("pdf_url must not be empty")
-        if not cleaned.startswith(_URL_PREFIXES):
-            raise ValueError("pdf_url must be an http(s) URL")
-        return cleaned
 
     @field_validator("mkb", "appointments")
     @classmethod

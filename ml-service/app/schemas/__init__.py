@@ -4,7 +4,7 @@ from .protocol_fullness import FullnessRequest, FullnessResponse
 from .clinrec import ClinrecRequest, Finding, ClinrecResponse
 from .check_dms import (
     AppointmentSegment,
-    CheckDmsRequest,
+    CheckDmsForm,
     CheckDmsResponse,
     GuidelineFragment,
 )
@@ -54,7 +54,7 @@ __all__ = [
     "Finding",
     "ClinrecResponse",
     "AppointmentSegment",
-    "CheckDmsRequest",
+    "CheckDmsForm",
     "CheckDmsResponse",
     "GuidelineFragment",
 ]

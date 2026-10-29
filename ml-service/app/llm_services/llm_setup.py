@@ -57,6 +57,8 @@ llm_factory = LLMFactory(gc)
 llm_mkb = llm_factory.get_chat(LLMRole.MKB)
 llm_fullness = llm_factory.get_chat(LLMRole.FULLNESS)
 llm_clinrec = llm_factory.get_chat(LLMRole.CLINREC)
+llm_dms_split = llm_factory.get_chat(LLMRole.DMS_SPLIT)
+llm_dms = llm_factory.get_chat(LLMRole.DMS)
 
 mkb_chroma = settings.mkb_chroma
 mkb_emb_model = _load_embedding_model(mkb_chroma.embedding_model)

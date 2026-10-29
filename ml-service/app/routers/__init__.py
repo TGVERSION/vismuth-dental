@@ -2,7 +2,10 @@
 import logging
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
+from fastapi.encoders import jsonable_encoder
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import JSONResponse
 
 from app.config import settings, setup_logging
 
@@ -15,6 +18,7 @@ setup_logging(settings.log)
 from app.middleware import RequestLogMiddleware  # noqa: E402
 from app.llm_services.llm_setup import log_available_models
 from .autocomplete import router as autocomplete_router
+from .check_dms import router as check_dms_router
 from .clinrec import router as clinrec_router
 from .collect_form import router as collect_form_router
 from .mkb_code import router as mkb_router
@@ -36,8 +40,24 @@ app.include_router(autocomplete_router)
 app.include_router(mkb_router)
 app.include_router(protocol_fullness_router)
 app.include_router(clinrec_router)
+app.include_router(check_dms_router)
 app.include_router(collect_form_router)
 app.include_router(summarize_form_router)
+
+
+@app.exception_handler(RequestValidationError)
+async def validation_error_handler(request: Request, exc: RequestValidationError) -> JSONResponse:
+    """Для /check_dms отдаём 400 с машинным кодом, остальным — прежний 422.
+
+    Контракт проверки ДМС требует 400 на некорректный запрос; legacy-роутам
+    менять поведение нельзя.
+    """
+    if request.url.path == "/check_dms":
+        return JSONResponse(
+            status_code=400,
+            content={"detail": {"code": "invalid_request", "message": "Некорректный запрос проверки"}},
+        )
+    return JSONResponse(status_code=422, content={"detail": jsonable_encoder(exc.errors())})
 
 
 @app.get("/health", tags=["system"])

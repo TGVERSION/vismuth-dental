@@ -24,6 +24,8 @@ class LLMRole(StrEnum):
     CLINREC = "clinrec"
     COLLECT_FORM = "collect_form"
     SUMMARIZE_FORM = "summarize_form"
+    DMS_SPLIT = "dms_split"
+    DMS = "dms"
 
 
 class LLMFactory:
@@ -84,6 +86,25 @@ class LLMFactory:
                     model=config.summarize_form_model,
                     temperature=config.summarize_form_temperature,
                     max_tokens=config.summarize_form_max_tokens,
+                    base_url=config.ultra_base_url,
+                    scope=config.ultra_scope,
+                )
+            case LLMRole.DMS_SPLIT:
+                # GigaChat-3-Pro живёт только на ultra endpoint
+                return self._build(
+                    role=role,
+                    model=config.dms_split_model,
+                    temperature=config.dms_split_temperature,
+                    max_tokens=config.dms_split_max_tokens,
+                    base_url=config.ultra_base_url,
+                    scope=config.ultra_scope,
+                )
+            case LLMRole.DMS:
+                return self._build(
+                    role=role,
+                    model=config.dms_model,
+                    temperature=config.dms_temperature,
+                    max_tokens=config.dms_max_tokens,
                     base_url=config.ultra_base_url,
                     scope=config.ultra_scope,
                 )

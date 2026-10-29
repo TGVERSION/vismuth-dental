@@ -94,16 +94,12 @@ const MOCK_REWRITES: Record<
       destination: '/api/doctor-questionnaires-mock/:path*',
     },
   ],
-  // Обоснование для ДМС: эндпоинта в backend нет, контракт ждёт
-  // согласования (PL-314, E-5). Когда удалять — в
-  // src/app/api/dms-mock/_mock/guard.ts.
-  dms: [
-    {
-      source: '/api/main/ml_clinrec_dms',
-      destination: '/api/dms-mock',
-    },
-  ],
 };
+
+// Прокси к backend по умолчанию обрывает запрос через 30 с. Проверку для ДМС
+// backend ждёт до 600 с (CLINREC_DMS_TIMEOUT), остальные ML-запросы — до
+// 180 с; свой таймаут у каждого клиента в src/api/main-api.ts.
+const PROXY_TIMEOUT_MS = 610_000;
 
 if (ALLOWED_ORIGIN === '*') {
   throw new Error(
@@ -141,6 +137,9 @@ const corsHeaders = ALLOWED_ORIGIN
 
 const nextConfig: NextConfig = {
   output: 'standalone',
+  experimental: {
+    proxyTimeout: PROXY_TIMEOUT_MS,
+  },
   // Набор заглушек — в код маршрутов заглушек и серверных запросов
   // (src/lib/mocks.ts). Вшивается при сборке, как и правила ниже.
   env: {

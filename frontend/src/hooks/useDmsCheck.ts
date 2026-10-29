@@ -1,11 +1,12 @@
 'use client';
 
-// Состояние помощника «Обоснование для ДМС» на экране протокола: запрос,
-// ожидание, предложения по разделам и отказы. Решения о том, что отправить и
-// как читать ответ, — в src/lib/dms-justification.ts.
+// Состояние помощника «Проверка для ДМС» на экране протокола: запросы,
+// ожидание, отметки по разделам и отказы. Решения о том, что отправить и
+// как читать ответ, — в src/lib/dms-check.ts.
 //
-// Предложение живёт здесь, отдельно от разделов формы: пока врач не нажал
-// «Принять», текст помощника не попадает ни в форму, ни в автосохранение.
+// Отметки живут здесь, отдельно от разделов формы: пока врач не нажал
+// «Убрать отмеченное», текст раздела не меняется ни в форме, ни в
+// автосохранении.
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { toast } from 'react-toastify';
@@ -14,17 +15,21 @@ import { ApiError, isAbortError } from '@/api/base-client';
 import { logError } from '@/lib/logger';
 import type { DraftSection } from '@/lib/protocol-draft';
 import {
-  buildDmsRequest,
+  buildDmsPlan,
   classifyDmsError,
-  DMS_NOTHING_TO_ADD_MESSAGE,
+  DMS_ALL_CONFIRMED_MESSAGE,
   DMS_STEPS,
+  dmsRequestFor,
   dmsStepAt,
   extractMkbCode,
+  findTooLongTarget,
   mapDmsResponse,
   noGuidelineText,
+  tooLongMessage,
   type DmsFailure,
+  type DmsFinding,
   type DmsNoGuidelineText,
-} from '@/lib/dms-justification';
+} from '@/lib/dms-check';
 
 export type DmsPhase =
   | 'idle'
@@ -34,24 +39,14 @@ export type DmsPhase =
   | 'nofound'
   | 'unavailable';
 
-export interface DmsReviewItem {
-  sectionId: number;
-  /** Текст раздела в момент запуска — «Было». */
-  original: string;
-  /** Ответ помощника без правок врача. */
-  proposal: string;
-  /** Текст, который врач видит и правит; его записывает «Принять». */
-  draft: string;
-}
-
 interface DmsState {
   phase: DmsPhase;
   step: number;
   diagnosisCode: string | null;
-  /** Разделы, отправленные помощнику: у них ожидание и ошибка. */
+  /** Разделы, отправленные на проверку: у них ожидание и ошибка. */
   targetIds: number[];
-  /** Разделы, ждущие решения врача. */
-  items: Record<number, DmsReviewItem>;
+  /** Разделы с отмеченными назначениями, ждущие решения врача. */
+  items: Record<number, DmsFinding>;
   failure: Extract<DmsFailure, { kind: 'error' | 'unavailable' }> | null;
   noGuideline: DmsNoGuidelineText | null;
 }
@@ -75,12 +70,12 @@ interface Run {
   timer: ReturnType<typeof setInterval> | null;
 }
 
-export const useDmsJustification = (protocolId: string | null) => {
+export const useDmsCheck = (protocolId: string | null) => {
   const [state, setState] = useState<DmsState>(IDLE);
 
-  // Предложения относятся к одному протоколу. При переходе к другому
-  // состояние сбрасывается сразу, в рендере, — иначе на мгновение мелькнуло
-  // бы чужое предложение, а возврат к прежнему протоколу его бы воскресил.
+  // Отметки относятся к одному протоколу. При переходе к другому состояние
+  // сбрасывается сразу, в рендере, — иначе на мгновение мелькнули бы чужие
+  // отметки, а возврат к прежнему протоколу их бы воскресил.
   const [stateProtocolId, setStateProtocolId] = useState(protocolId);
   if (stateProtocolId !== protocolId) {
     setStateProtocolId(protocolId);
@@ -103,26 +98,40 @@ export const useDmsJustification = (protocolId: string | null) => {
   }, [protocolId]);
 
   /**
-   * Запуск. Возвращает фазу, в которой закончился запрос, или `null`, если
-   * запуска не было или его отменили.
+   * Запуск. Возвращает фазу, в которой закончилась проверка, или `null`,
+   * если запуска не было или его отменили.
    */
   const start = useCallback(
     async (sections: DraftSection[]): Promise<DmsPhase | null> => {
       const run = runRef.current;
       if (run.controller) return null;
 
-      const request = buildDmsRequest(sections);
-      if (!request) return null;
+      const plan = buildDmsPlan(sections);
+      if (!plan) return null;
+
+      const tooLong = findTooLongTarget(plan);
+      if (tooLong) {
+        setState({
+          ...IDLE,
+          phase: 'unavailable',
+          targetIds: [tooLong.sectionId],
+          failure: {
+            kind: 'unavailable',
+            message: tooLongMessage(tooLong.label),
+          },
+        });
+        return 'unavailable';
+      }
 
       const id = ++run.id;
       const controller = new AbortController();
       run.controller = controller;
-      const targetIds = request.sections.map((section) => Number(section.key));
+      const targetIds = plan.targets.map((target) => target.sectionId);
 
       setState({
         ...IDLE,
         phase: 'loading',
-        diagnosisCode: extractMkbCode(request.main_diagnosis),
+        diagnosisCode: extractMkbCode(plan.mkb),
         targetIds,
       });
 
@@ -134,16 +143,23 @@ export const useDmsJustification = (protocolId: string | null) => {
       }, STEP_TICK_MS);
 
       try {
-        const response = await mainApi.ml_handlers.ml_clinrec_dms(request, {
-          signal: controller.signal,
-        });
-        if (run.id !== id) return null;
+        // Разделы проверяются по очереди: backend принимает один текст
+        // назначений, а клинрек после первого запроса уже разобран.
+        const findings: DmsFinding[] = [];
+        for (const target of plan.targets) {
+          const response = await mainApi.ml_handlers.check_dms(
+            dmsRequestFor(plan, target),
+            { signal: controller.signal },
+          );
+          if (run.id !== id) return null;
+          const finding = mapDmsResponse(target, response);
+          if (finding) findings.push(finding);
+        }
 
-        const proposals = mapDmsResponse(request, response);
-        if (proposals.length === 0) {
+        if (findings.length === 0) {
           setState(IDLE);
-          toast.info(DMS_NOTHING_TO_ADD_MESSAGE, {
-            toastId: 'dms-nothing-to-add',
+          toast.info(DMS_ALL_CONFIRMED_MESSAGE, {
+            toastId: 'dms-all-confirmed',
           });
           return 'idle';
         }
@@ -153,10 +169,7 @@ export const useDmsJustification = (protocolId: string | null) => {
           phase: 'review',
           targetIds,
           items: Object.fromEntries(
-            proposals.map((proposal) => [
-              proposal.sectionId,
-              { ...proposal, draft: proposal.proposal },
-            ]),
+            findings.map((finding) => [finding.sectionId, finding]),
           ),
         });
         return 'review';
@@ -170,17 +183,14 @@ export const useDmsJustification = (protocolId: string | null) => {
           error instanceof ApiError
             ? { status: error.status, code: error.code }
             : null;
-        logError('Обоснование для ДМС: запрос не выполнен', info);
+        logError('Проверка для ДМС: запрос не выполнен', info);
 
         const failure = classifyDmsError(info);
         if (failure.kind === 'nofound') {
           setState({
             ...IDLE,
             phase: 'nofound',
-            noGuideline: noGuidelineText(
-              failure.reason,
-              request.main_diagnosis,
-            ),
+            noGuideline: noGuidelineText(failure.reason, plan.mkb),
           });
           return 'nofound';
         }
@@ -207,27 +217,16 @@ export const useDmsJustification = (protocolId: string | null) => {
     });
   }, []);
 
-  const setDraft = useCallback((sectionId: number, draft: string) => {
-    setState((prev) => {
-      const item = prev.items[sectionId];
-      if (!item) return prev;
-      return {
-        ...prev,
-        items: { ...prev.items, [sectionId]: { ...item, draft } },
-      };
-    });
-  }, []);
-
   /**
-   * Принять предложение. Возвращает текст для раздела или `null`, если
-   * принимать нечего: пустой текст стёр бы раздел одним нажатием.
+   * «Убрать отмеченное». Возвращает новый текст раздела или `null`, если
+   * для раздела нет отметок.
    */
   const accept = useCallback(
     (sectionId: number): string | null => {
       const item = state.items[sectionId];
-      if (!item || !item.draft.trim()) return null;
+      if (!item) return null;
       finishItem(sectionId);
-      return item.draft;
+      return item.cleaned;
     },
     [state.items, finishItem],
   );
@@ -255,12 +254,11 @@ export const useDmsJustification = (protocolId: string | null) => {
     items: state.items,
     failure: state.failure,
     noGuideline: state.noGuideline,
-    /** Пока помощник работает, протокол не редактируется. */
+    /** Пока идёт проверка, протокол не редактируется. */
     isLocked: state.phase === 'loading',
     /** Есть разделы, ждущие решения врача. */
     hasPendingReview: Object.keys(state.items).length > 0,
     start,
-    setDraft,
     accept,
     keep,
     dismissNoGuideline,

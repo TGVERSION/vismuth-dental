@@ -28,8 +28,8 @@ import {
   findMainDiagnosisSection,
   findMainDiagnosisValue,
 } from '@/lib/protocol-fields';
-import { buildDmsRequest } from '@/lib/dms-justification';
-import { useDmsJustification } from '@/hooks/useDmsJustification';
+import { buildDmsPlan } from '@/lib/dms-check';
+import { useDmsCheck } from '@/hooks/useDmsCheck';
 import { DmsReviewBlock } from '@/components/dms/DmsReviewBlock';
 import {
   DmsFieldError,
@@ -490,13 +490,13 @@ export default function Home() {
     onCompleted: watchTranscription,
   });
 
-  // Обоснование для ДМС: предложения помощника живут в хуке, а не в форме,
-  // пока врач их не принял.
-  const dms = useDmsJustification(protocolId);
+  // Проверка для ДМС: отметки помощника живут в хуке, а не в форме, пока
+  // врач не решил, убрать ли отмеченное.
+  const dms = useDmsCheck(protocolId);
   const mainDiagnosisSection = findMainDiagnosisSection(sections);
   // Кнопка показывается, когда есть диагноз и непустые «Рекомендации» или
   // «Назначения» — ровно тогда, когда помощнику есть что отправить.
-  const canJustifyDms = dmsEnabled && buildDmsRequest(sections) !== null;
+  const canCheckDms = dmsEnabled && buildDmsPlan(sections) !== null;
   // Помощник не запускается, пока идёт запись: расшифровка поменяла бы
   // разделы, по которым строится предложение. `unsupported` и `error` —
   // не запись: в браузере без микрофона помощник должен работать.
@@ -517,7 +517,7 @@ export default function Home() {
     : !hasStructureFields
       ? 'У протокола нет структуры: результат записи некуда разложить'
       : isDmsBusy
-        ? 'Сначала завершите обоснование для ДМС'
+        ? 'Сначала завершите проверку для ДМС'
         : null;
 
   // Срок access-токена перед записью не проверяется: сессию продлевает
@@ -756,7 +756,7 @@ export default function Home() {
     });
   };
 
-  const handleDmsAccept = (sectionId: number) => {
+  const handleDmsRemove = (sectionId: number) => {
     const text = dms.accept(sectionId);
     // Тот же путь, что ручной ввод: автосохранение и снятие подсветки записи.
     if (text !== null) handleValueChange(sectionId, text);
@@ -1021,7 +1021,7 @@ export default function Home() {
               className="mx-6.25 mt-2 bg-white border-b border-b-[#E9ECEF]"
             >
               <div className="mx-auto mb-2 flex flex-row items-center justify-center gap-6">
-                {dmsEnabled && (canJustifyDms || dms.phase !== 'idle') && (
+                {dmsEnabled && (canCheckDms || dms.phase !== 'idle') && (
                   <button
                     type="button"
                     onClick={handleDmsStart}
@@ -1030,7 +1030,7 @@ export default function Home() {
                       dms.isLocked
                         ? 'Помощник работает'
                         : dms.hasPendingReview
-                          ? 'Сначала примите или оставьте предложения в разделах'
+                          ? 'Сначала уберите или оставьте отмеченное в разделах'
                           : isRecorderActive || isTranscribing
                             ? 'Дождитесь окончания записи приёма'
                             : undefined
@@ -1042,7 +1042,7 @@ export default function Home() {
                     }`}
                   >
                     <Image alt="" src="/check-all.svg" width={20} height={20} />
-                    Обосновать для ДМС
+                    Проверить для ДМС
                   </button>
                 )}
                 {!showClinRecPanel && findMainDiagnosisValue(sections) && (
@@ -1136,7 +1136,7 @@ export default function Home() {
                         disabled={isDmsBusy}
                         title={
                           isDmsBusy
-                            ? 'Сначала завершите обоснование для ДМС'
+                            ? 'Сначала завершите проверку для ДМС'
                             : undefined
                         }
                         className="hover:bg-[#F0F5FF] text-[14px] w-ful rounded-md h-8.25 cursor-pointer px-2.5 py-1.5 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
@@ -1180,7 +1180,7 @@ export default function Home() {
                   {templateTitle}
                 </div>
 
-                {/* Ход обоснования для ДМС объявляется отсюда: протокол
+                {/* Ход проверки для ДМС объявляется отсюда: протокол
                     ниже на это время инертен, а инертное содержимое скрыто
                     от экранного диктора. */}
                 <p className="sr-only" role="status">
@@ -1242,19 +1242,13 @@ export default function Home() {
                               </div>
                               <div className="ml-7 mt-1">
                                 <DmsReviewBlock
-                                  sectionId={section.id}
                                   label={section.label}
-                                  original={dmsItem.original}
-                                  draft={dmsItem.draft}
-                                  onDraftChange={(draft) =>
-                                    dms.setDraft(section.id, draft)
-                                  }
-                                  onAccept={() => handleDmsAccept(section.id)}
+                                  finding={dmsItem}
+                                  onRemove={() => handleDmsRemove(section.id)}
                                   onKeep={() => dms.keep(section.id)}
-                                  scrollContainer={sectionContainerEl}
                                 />
                                 {/* На печать — текущий текст раздела, без
-                                  предложения и кнопок. */}
+                                  отметок и кнопок. */}
                                 <div className="hidden print:block whitespace-pre-wrap text-[16px] text-[#202020]">
                                   {section.value}
                                 </div>

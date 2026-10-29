@@ -55,8 +55,8 @@ import type {
   UserSettingsPatch,
   ClinrecCheck,
   ClinrecCheckResponse,
-  DmsJustifyRequest,
-  DmsJustifyResponse,
+  CheckDmsRequest,
+  CheckDmsResponse,
   DictionaryNames,
   RefSearchResponse,
   AutocompleteRequest,
@@ -106,6 +106,16 @@ const ML_TIMEOUT_MS = 200000;
 const mlLongRunningApiClient = new ApiClient({
   baseUrl: '/api/main',
   timeout: ML_TIMEOUT_MS,
+  retries: 0,
+});
+
+// Проверку для ДМС backend ждёт до 600 с (CLINREC_DMS_TIMEOUT): первый
+// запрос по клинреку разбирает и индексирует PDF.
+const DMS_TIMEOUT_MS = 610000;
+
+const dmsApiClient = new ApiClient({
+  baseUrl: '/api/main',
+  timeout: DMS_TIMEOUT_MS,
   retries: 0,
 });
 
@@ -341,12 +351,11 @@ export const mainApi = {
         options,
       ),
 
-    // Обоснование назначений для ДМС. Эндпоинта в backend пока нет — в
-    // разработке и на демо-контуре запрос перехватывает заглушка `dms`
-    // (src/lib/mocks.ts). Долгий и неидемпотентный: клиент без повторов.
-    ml_clinrec_dms: (data: DmsJustifyRequest, options?: RequestOptions) =>
-      mlLongRunningApiClient.post<DmsJustifyResponse>(
-        '/ml_clinrec_dms',
+    // Проверка назначений для ДМС по клиническим рекомендациям. Долгая:
+    // клиент без повторов.
+    check_dms: (data: CheckDmsRequest, options?: RequestOptions) =>
+      dmsApiClient.post<CheckDmsResponse>(
+        '/check_dms',
         data,
         undefined,
         options,

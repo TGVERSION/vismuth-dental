@@ -1,8 +1,8 @@
 'use client';
 
-import type { DmsNoGuidelineText } from '@/lib/dms-justification';
+import type { DmsNoGuidelineText } from '@/lib/dms-check';
 
-// Сообщения помощника «Обоснование для ДМС» у полей протокола: ожидание,
+// Сообщения помощника «Проверка для ДМС» у полей протокола: ожидание,
 // ошибка у разделов помощника и «нет клинических рекомендаций» у диагноза.
 
 /**
@@ -21,7 +21,8 @@ export const DmsLoadingNotice: React.FC<{ stepText: string }> = ({
     <div className="flex min-w-0 flex-col gap-0.5">
       <p className="text-[16px] text-[#202020]">{stepText}…</p>
       <p className="text-[13px] text-[#909090]">
-        Обычно до минуты. Пока идёт обоснование, протокол нельзя изменить.
+        Обычно до минуты, первый раз по диагнозу — дольше. Пока идёт проверка,
+        протокол нельзя изменить.
       </p>
     </div>
   </div>

@@ -545,42 +545,33 @@ export interface ClinicalFinding {
   guideline_quote: string;
 }
 
-/**
- * Раздел протокола, который помощник «Обоснование для ДМС» дополняет
- * обоснованием по клиническим рекомендациям.
- *
- * Контракт предварительный: эндпоинта в backend ещё нет, фронтенд работает
- * на заглушке (src/app/api/dms-mock). Согласование — задача PL-314, E-5.
- */
-export interface DmsJustifySection {
-  /** Непрозрачный ключ раздела в форме; backend возвращает его как есть. */
-  key: string;
-  /** UUID поля структуры протокола, если поле есть в структуре. */
-  field_id?: string;
-  label: string;
-  value: string;
+/** Проверка назначений для ДМС: docs/contracts/check-dms.md. */
+export interface CheckDmsRequest {
+  /** Код МКБ или «код + название»: по нему backend подбирает клинрек. */
+  mkb: string;
+  /** Назначения свободным текстом, до 4000 знаков. */
+  appointments: string;
 }
 
-export interface DmsJustifyRequest {
-  /** Строка диагноза с ведущим кодом МКБ, как у `ml_clinrec_check`. */
-  main_diagnosis: string;
-  sections: DmsJustifySection[];
+/** Часть исходного текста назначений; склейка частей равна тексту. */
+export interface CheckDmsSegment {
+  text: string;
+  /** Назначение не подтверждается клиническими рекомендациями. */
+  unnecessary: boolean;
 }
 
-export interface DmsJustifiedSection {
-  key: string;
-  /** Новый текст раздела целиком. Без квадратных скобок. */
-  adapted_text: string;
+export interface CheckDmsFragment {
+  /** Номер и заголовок раздела клинрека. */
+  section: string;
+  text: string;
 }
 
-export interface DmsJustifyResponse {
-  guideline_code: string | null;
-  guideline_title: string | null;
-  /** Только разделы, которые помощник изменил. */
-  sections: DmsJustifiedSection[];
-  items_total: number | null;
-  items_justified: number | null;
-  error: string | null;
+export interface CheckDmsResponse {
+  appointments: CheckDmsSegment[];
+  /** Фрагменты клинрека, на которые опирался вердикт. */
+  fragments: CheckDmsFragment[];
+  guideline_code?: string | null;
+  guideline_title?: string | null;
 }
 
 export interface DictionaryNames {

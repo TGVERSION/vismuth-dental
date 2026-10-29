@@ -50,7 +50,9 @@ export const DentalCardBody = ({ structured, gaps }: DentalCardBodyProps) => {
       {/* «Что доспросить» — как подсказка под разделом анкеты у врача. */}
       {questions.length > 0 ? (
         <div className="ml-8 w-fit max-w-full rounded-[15px] bg-[#F3F4F8] px-3 py-2.5">
-          <p className="text-[14px] font-medium text-[#5D8CF1]">Что доспросить</p>
+          <p className="text-[14px] font-medium text-[#5D8CF1]">
+            Что доспросить
+          </p>
           <ul className="mt-1 list-disc pl-5 text-[13px] text-[#6C757D] marker:text-[#8B8B8B]">
             {questions.map((question) => (
               <li key={question}>{question}</li>

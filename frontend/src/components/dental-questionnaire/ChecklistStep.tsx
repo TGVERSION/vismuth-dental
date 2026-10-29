@@ -14,7 +14,10 @@ interface ChecklistStepProps {
   isSubmitting: boolean;
   error: string | null;
   onSubmit: (answer: QuestionnaireStepAnswer) => void;
-  renderShell: (body: React.ReactNode, footer: React.ReactNode) => React.ReactNode;
+  renderShell: (
+    body: React.ReactNode,
+    footer: React.ReactNode,
+  ) => React.ReactNode;
 }
 
 /**
@@ -33,7 +36,10 @@ export const ChecklistStep = ({
 
   const body = (
     <>
-      <h2 id="health-question" className="text-[23px] leading-tight font-semibold">
+      <h2
+        id="health-question"
+        className="text-[23px] leading-tight font-semibold"
+      >
         {step.title ?? 'Что из этого у вас есть?'}
       </h2>
       <p className="-mt-3 text-[15px] text-[var(--q-muted)]">
@@ -47,22 +53,33 @@ export const ChecklistStep = ({
         {items.map((item) => {
           const isOn = checked.includes(item.value);
           return (
-            <li key={item.value} className="border-t border-[var(--q-bg)] first:border-t-0">
+            <li
+              key={item.value}
+              className="border-t border-[var(--q-bg)] first:border-t-0"
+            >
               <label
                 className={`flex min-h-[52px] cursor-pointer items-center gap-3 px-4 py-2.5 ${
-                  isOn ? 'bg-[color-mix(in_srgb,var(--q-brand)_12%,var(--q-surface))]' : ''
+                  isOn
+                    ? 'bg-[color-mix(in_srgb,var(--q-brand)_12%,var(--q-surface))]'
+                    : ''
                 }`}
               >
                 <input
                   type="checkbox"
                   checked={isOn}
-                  onChange={() => setChecked((current) => toggleChecklist(current, item.value))}
+                  onChange={() =>
+                    setChecked((current) =>
+                      toggleChecklist(current, item.value),
+                    )
+                  }
                   className="h-[22px] w-[22px] shrink-0 accent-[var(--q-brand)]"
                 />
                 <span className="text-[15px] leading-snug">
                   {item.label}
                   {item.hint ? (
-                    <span className="block text-[13px] text-[var(--q-muted)]">{item.hint}</span>
+                    <span className="block text-[13px] text-[var(--q-muted)]">
+                      {item.hint}
+                    </span>
                   ) : null}
                 </span>
               </label>

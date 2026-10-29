@@ -24,7 +24,12 @@ interface DentalShellProps {
  * заголовок шага: иначе новый шаг открылся бы с середины, а экранный диктор
  * не узнал бы, что шаг сменился.
  */
-export const DentalShell = ({ clinic, progress, children, footer }: DentalShellProps) => {
+export const DentalShell = ({
+  clinic,
+  progress,
+  children,
+  footer,
+}: DentalShellProps) => {
   const headingRef = useRef<HTMLHeadingElement>(null);
 
   useEffect(() => {
@@ -54,7 +59,9 @@ export const DentalShell = ({ clinic, progress, children, footer }: DentalShellP
         </div>
       ) : null}
 
-      <main className="flex flex-1 flex-col gap-5 px-5 pt-4 pb-6">{children}</main>
+      <main className="flex flex-1 flex-col gap-5 px-5 pt-4 pb-6">
+        {children}
+      </main>
 
       {footer ? (
         <div className="sticky bottom-0 flex flex-col gap-2 border-t border-[var(--q-surface)] bg-[var(--q-bg)] px-5 pt-3 pb-[calc(env(safe-area-inset-bottom)+20px)]">

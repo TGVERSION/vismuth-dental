@@ -32,7 +32,10 @@ interface ChipGroupsStepProps {
   onSkip?: () => void;
   /** Над первым вопросом: приветствие и время приёма. */
   intro?: React.ReactNode;
-  renderShell: (body: React.ReactNode, footer: React.ReactNode) => React.ReactNode;
+  renderShell: (
+    body: React.ReactNode,
+    footer: React.ReactNode,
+  ) => React.ReactNode;
 }
 
 interface ChipGroupProps {
@@ -84,16 +87,24 @@ const ChipGroup = ({
       className="flex flex-col gap-3"
     >
       {group.title ? (
-        <p className="text-[13px] font-semibold text-[var(--q-muted)]">{group.title}</p>
+        <p className="text-[13px] font-semibold text-[var(--q-muted)]">
+          {group.title}
+        </p>
       ) : null}
       <h2
         id={questionId}
-        className={isFirst ? 'text-[23px] leading-tight font-semibold' : 'text-base font-semibold'}
+        className={
+          isFirst
+            ? 'text-[23px] leading-tight font-semibold'
+            : 'text-base font-semibold'
+        }
       >
         {group.question}
       </h2>
       {group.multiple && group.options.length > 1 ? (
-        <p className="-mt-2 text-sm text-[var(--q-muted)]">Можно выбрать несколько</p>
+        <p className="-mt-2 text-sm text-[var(--q-muted)]">
+          Можно выбрать несколько
+        </p>
       ) : null}
 
       {group.options.length > 0 ? (
@@ -115,7 +126,17 @@ const ChipGroup = ({
               >
                 {/* Галочка: выбор виден не только по цвету. */}
                 {isOn ? (
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <svg
+                    width="14"
+                    height="14"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="3"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    aria-hidden="true"
+                  >
                     <path d="M20 6 9 17l-5-5" />
                   </svg>
                 ) : null}
@@ -169,7 +190,8 @@ export const ChipGroupsStep = ({
       const first = groups.find((group) => groupProblem(group, draft) !== null);
       const problem = first ? groupProblem(first, draft) : null;
       // После отрисовки: поле текста могло ещё не появиться.
-      if (first && problem) requestAnimationFrame(() => revealProblem(first.key, problem));
+      if (first && problem)
+        requestAnimationFrame(() => revealProblem(first.key, problem));
       return;
     }
     onSubmit(buildGroupsAnswer(step.step_key, groups, draft));
@@ -187,8 +209,12 @@ export const ChipGroupsStep = ({
           showText={isTextVisible(group, draft)}
           problem={showProblems ? groupProblem(group, draft) : null}
           isFirst={index === 0}
-          onToggle={(value) => setDraft((current) => toggleOption(current, group, value))}
-          onText={(text) => setDraft((current) => setGroupText(current, group.key, text))}
+          onToggle={(value) =>
+            setDraft((current) => toggleOption(current, group, value))
+          }
+          onText={(text) =>
+            setDraft((current) => setGroupText(current, group.key, text))
+          }
         />
       ))}
     </>

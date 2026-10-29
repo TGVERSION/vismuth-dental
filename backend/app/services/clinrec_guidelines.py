@@ -8,7 +8,7 @@ from typing import Optional
 from uuid import UUID
 
 from fastapi import HTTPException, status
-from sqlalchemy import select
+from sqlalchemy import delete, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -121,13 +121,17 @@ async def get_guideline_by_code(
     return result.scalar_one_or_none()
 
 
-async def resolve_active_guideline(
+_DMS_RESOLVE_STATUSES = frozenset({"uploaded", "active", "failed"})
+
+
+async def resolve_guideline_by_mkb(
     db: AsyncSession,
     *,
     mkb: Optional[str] = None,
     diagnosis: Optional[str] = None,
+    statuses: frozenset[str] = frozenset({"active"}),
 ) -> ClinrecGuideline:
-    """Longest matching mkb_prefix among active guidelines."""
+    """Longest matching mkb_prefix among guidelines with given statuses."""
     code: Optional[str] = None
     if mkb:
         code = extract_mkb_code(mkb) or mkb.strip().upper().replace(" ", "")
@@ -149,7 +153,7 @@ async def resolve_active_guideline(
             ClinrecGuideline,
             ClinrecGuideline.id == ClinrecGuidelineMkb.guideline_id,
         )
-        .where(ClinrecGuideline.status == "active")
+        .where(ClinrecGuideline.status.in_(statuses))
         .options(selectinload(ClinrecGuideline.mkb_prefixes)),
     )
     rows = result.all()
@@ -167,23 +171,57 @@ async def resolve_active_guideline(
             status_code=status.HTTP_404_NOT_FOUND,
             detail={
                 "code": "guideline_not_found",
-                "message": f"No active guideline for MKB '{code}'",
+                "message": f"No guideline for MKB '{code}'",
             },
         )
     return best
 
 
-def replace_mkb_prefixes(
+async def resolve_active_guideline(
+    db: AsyncSession,
+    *,
+    mkb: Optional[str] = None,
+    diagnosis: Optional[str] = None,
+) -> ClinrecGuideline:
+    """Longest matching mkb_prefix among active guidelines."""
+    return await resolve_guideline_by_mkb(
+        db,
+        mkb=mkb,
+        diagnosis=diagnosis,
+        statuses=frozenset({"active"}),
+    )
+
+
+async def resolve_dms_guideline(
+    db: AsyncSession,
+    *,
+    mkb: str,
+) -> ClinrecGuideline:
+    """Resolve for DMS: PDF in S3 matters, Chroma index does not."""
+    return await resolve_guideline_by_mkb(
+        db,
+        mkb=mkb,
+        statuses=_DMS_RESOLVE_STATUSES,
+    )
+
+
+async def replace_mkb_prefixes(
+    db: AsyncSession,
     guideline: ClinrecGuideline,
     prefixes: list[str],
 ) -> None:
-    guideline.mkb_prefixes.clear()
+    """Replace MKB prefixes without lazy-loading the relationship (async-safe)."""
+    await db.execute(
+        delete(ClinrecGuidelineMkb).where(
+            ClinrecGuidelineMkb.guideline_id == guideline.id,
+        ),
+    )
     for prefix in prefixes:
-        guideline.mkb_prefixes.append(
+        db.add(
             ClinrecGuidelineMkb(
                 guideline_id=guideline.id,
                 mkb_prefix=prefix,
-            )
+            ),
         )
 
 

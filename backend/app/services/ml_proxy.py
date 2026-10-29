@@ -207,3 +207,91 @@ async def proxy_delete_to_ml(
         timeout=timeout,
         log_context=log_context,
     )
+
+
+async def proxy_post_multipart_to_ml(
+    path: str,
+    *,
+    data: dict[str, str],
+    files: dict[str, tuple[str, bytes, str]],
+    timeout: float = 180.0,
+    log_context: MlProxyLogContext | None = None,
+) -> dict:
+    """POST multipart/form-data to ml-service (file + form fields)."""
+    async with httpx.AsyncClient(timeout=timeout) as client:
+        try:
+            response = await client.post(
+                f"{settings.ml_service_url}{path}",
+                data=data,
+                files=files,
+            )
+            response.raise_for_status()
+        except httpx.TimeoutException as exc:
+            await _publish_ml_response_log(
+                log_context=log_context,
+                ml_path=path,
+                response_status="timeout",
+                response_comment="ml-service timeout",
+            )
+            raise HTTPException(
+                status_code=status.HTTP_504_GATEWAY_TIMEOUT,
+                detail="ml-service timeout",
+            ) from exc
+        except httpx.HTTPStatusError as exc:
+            detail = extract_ml_error_detail(exc.response)
+            await _publish_ml_response_log(
+                log_context=log_context,
+                ml_path=path,
+                http_status_code=exc.response.status_code,
+                response_status="http_error",
+                response_comment=_normalize_response_comment(detail),
+                response_payload=_extract_response_payload(exc.response),
+            )
+            raise HTTPException(
+                status_code=status.HTTP_502_BAD_GATEWAY,
+                detail=detail,
+            ) from exc
+        except httpx.HTTPError as exc:
+            await _publish_ml_response_log(
+                log_context=log_context,
+                ml_path=path,
+                response_status="unavailable",
+                response_comment="ml-service unavailable",
+            )
+            raise HTTPException(
+                status_code=status.HTTP_502_BAD_GATEWAY,
+                detail="ml-service unavailable",
+            ) from exc
+
+    if response.status_code == status.HTTP_204_NO_CONTENT or not response.content:
+        await _publish_ml_response_log(
+            log_context=log_context,
+            ml_path=path,
+            http_status_code=response.status_code,
+            response_status="success",
+        )
+        return {}
+
+    try:
+        response_body = response.json()
+    except (ValueError, TypeError):
+        await _publish_ml_response_log(
+            log_context=log_context,
+            ml_path=path,
+            http_status_code=response.status_code,
+            response_status="success",
+            response_comment="invalid JSON response",
+        )
+        raise
+
+    await _publish_ml_response_log(
+        log_context=log_context,
+        ml_path=path,
+        http_status_code=response.status_code,
+        response_status="success",
+        response_comment=_extract_success_comment(response_body),
+        response_payload=(
+            response_body if isinstance(response_body, (dict, list)) else None
+        ),
+    )
+    return response_body if isinstance(response_body, dict) else {"data": response_body}

@@ -63,3 +63,5 @@
 - **Поведение:** статусы `uploaded`\|`failed`\|`active`; S3 `head_object` + presigned GET → `POST {ML}/clinrec/index`; успех → `active`; ошибка → `failed` + `index_error`. **Пока ml-service не реализует `/clinrec/index` — будет 502.** Контракт тела готов в `clinrec_ml.build_index_payload`.
 - **Ответ:** `{ id, code, status, version, chunks?, index_error? }`
 - **Код:** `index_guideline`
+
+ДМС-проверка назначений (PDF из S3 → multipart ML): [check-dms.md](check-dms.md).

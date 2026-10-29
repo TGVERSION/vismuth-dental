@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import type { QuestionnaireStep, QuestionnaireStepAnswer } from '@/api';
+import { FIELD_CLASS } from '@/components/questionnaire/field-styles';
 import { ANSWER_MAX_LENGTH } from '@/lib/questionnaire';
 import {
   EMPTY_DRAFT,
@@ -105,10 +106,11 @@ const ChipGroup = ({
                 type="button"
                 aria-pressed={isOn}
                 onClick={() => onToggle(option.value)}
-                className={`inline-flex min-h-[44px] items-center gap-1.5 rounded-full border px-4 py-2 text-[15px] leading-tight transition-colors ${
+                // Кнопка-вариант — как быстрые ответы в чате общей анкеты.
+                className={`inline-flex min-h-[44px] items-center gap-1.5 rounded-full border border-[var(--q-brand)] px-4 py-2 text-base leading-tight transition-colors ${
                   isOn
-                    ? 'border-[1.5px] border-[var(--q-brand)] bg-[color-mix(in_srgb,var(--q-brand)_14%,white)] font-medium text-[var(--q-brand)]'
-                    : 'border-[#D9DEE5] bg-white'
+                    ? 'bg-[var(--q-brand)] text-[var(--q-brand-contrast)]'
+                    : 'bg-[var(--q-bg)] text-[var(--q-brand)]'
                 }`}
               >
                 {/* Галочка: выбор виден не только по цвету. */}
@@ -134,7 +136,7 @@ const ChipGroup = ({
           maxLength={ANSWER_MAX_LENGTH}
           placeholder={group.text.placeholder}
           onChange={(event) => onText(event.target.value)}
-          className="min-h-[52px] w-full resize-none rounded-xl border border-[#D9DEE5] bg-white px-4 py-3 text-base outline-none focus:border-[var(--q-brand)]"
+          className={`${FIELD_CLASS} w-full resize-none py-3 focus:ring-2 focus:ring-[var(--q-brand)]`}
         />
       ) : null}
 

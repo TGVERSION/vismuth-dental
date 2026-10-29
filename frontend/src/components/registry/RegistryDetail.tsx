@@ -13,12 +13,12 @@ import {
   inviteLinkItem,
   patientFullName,
   registryActions,
-  registryStatusView,
   registryWhenLine,
 } from '@/lib/registry';
 import { printSheet } from '@/lib/registry-print';
 import { AnketaPrintSheet } from './AnketaPrintSheet';
 import { DentalCardBody } from './DentalCardBody';
+import { RegistryStatusBadge } from './RegistryStatusBadge';
 
 /** Режим печати анкеты: правила в globals.css действуют только под ним. */
 const PRINT_MODE_ATTR = 'data-print-mode';
@@ -101,7 +101,6 @@ export const RegistryDetail = ({
     };
   }, []);
 
-  const status = registryStatusView(questionnaire.status);
   const actions = registryActions(questionnaire.status);
   const sheet = printSheet(questionnaire);
 
@@ -161,30 +160,25 @@ export const RegistryDetail = ({
     );
 
   return (
-    <article className="flex flex-col gap-5">
-      <header className="flex flex-wrap items-start justify-between gap-3">
-        <div className="min-w-0">
-          <h2 className="text-xl font-semibold text-[#202020]">
-            {patientFullName(questionnaire)}
-          </h2>
-          <p className="mt-1 text-sm text-[#6C757D]">
-            {registryWhenLine(questionnaire)}
-          </p>
-        </div>
-        <span
-          className={`rounded-full px-3 py-1 text-sm font-medium ${status.className}`}
-        >
-          {status.label}
+    <article className="flex flex-col gap-9">
+      {/* Шапка — как у карточки анкеты врача. */}
+      <header className="flex flex-wrap items-baseline gap-x-9 gap-y-2 text-[#6C757D]">
+        <h2 className="min-w-0 flex-1 truncate text-[20px] font-normal">
+          {patientFullName(questionnaire)}
+        </h2>
+        <span className="shrink-0 text-[14px]">
+          {registryWhenLine(questionnaire)}
         </span>
+        <RegistryStatusBadge status={questionnaire.status} />
       </header>
 
-      <div className="flex flex-wrap gap-x-5 gap-y-2">
+      <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
         {actions.canPrint && sheet ? (
           <button
             type="button"
             onClick={print}
             disabled={isBusy}
-            className="h-9 rounded-xl bg-[#5D8CF1] px-4 text-sm font-medium text-white hover:bg-[#769CEF] disabled:opacity-60"
+            className="flex h-13 cursor-pointer items-center justify-center rounded-xl bg-[#DCE7FF] px-6 text-[#5D8CF1] transition-colors hover:bg-[#F0F5FF] disabled:cursor-not-allowed disabled:opacity-60"
           >
             Распечатать
           </button>
@@ -232,7 +226,7 @@ export const RegistryDetail = ({
           gaps={questionnaire.gaps}
         />
       ) : (
-        <p className="rounded-xl bg-[#F7F9FB] px-4 py-6 text-center text-[#6C757D]">
+        <p className="py-10 text-center text-[#8B8B8B]">
           {questionnaire.status === 'invited'
             ? 'Пациент ещё не открывал ссылку'
             : 'Пациент заполняет анкету'}

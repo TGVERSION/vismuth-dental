@@ -1,22 +1,19 @@
 'use client';
 
+import Image from 'next/image';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import type { RegistryStatus } from '@/api';
-import {
-  ErrorState,
-  INPUT_CLASS,
-  Spinner,
-} from '@/components/settings/clinics/fields';
+import { CustomDropdown } from '@/components/CustomDropdown';
+import { ErrorState, Spinner } from '@/components/settings/clinics/fields';
 import { useMyClinic } from '@/hooks/useMyClinic';
 import { useRegistryDetail, useRegistryList } from '@/hooks/useRegistry';
 import { canUseRegistry } from '@/lib/app-nav';
+import { fieldFillClass } from '@/lib/field-fill';
 import { REGISTRY_STATUS_OPTIONS } from '@/lib/registry';
 import { NewLinkModal } from './NewLinkModal';
 import { RegistryDetail } from './RegistryDetail';
 import { RegistryList } from './RegistryList';
-
-const FIELD = `${INPUT_CLASS} bg-white`;
 
 /** Поиск по ФИО уходит на сервер после паузы в наборе, а не на каждую букву. */
 const SEARCH_DEBOUNCE_MS = 300;
@@ -119,7 +116,7 @@ export const RegistryScreen = () => {
     if (list.items.length === 0) {
       const isFiltered = Boolean(status || searchName);
       return (
-        <p className="px-4 py-8 text-center text-sm text-[#8B8B8B]">
+        <p className="px-4 py-8 text-center text-sm text-gray-500">
           {isFiltered
             ? 'Ничего не найдено'
             : 'Анкет пока нет — создайте ссылку для пациента'}
@@ -175,40 +172,66 @@ export const RegistryScreen = () => {
     <>
       <h1 className="sr-only">Анкеты пациентов</h1>
 
+      {/* Колонка — как в разделе «Анкеты» у врача: кнопка, белая карточка
+          фильтров, заголовок списка. */}
       <aside
         aria-label="Анкеты пациентов"
-        className="custom-height fixed top-20 left-0 ml-3 mr-5 flex w-85.75 flex-col gap-3 bg-[#F3F4F8]"
+        className="custom-height fixed top-20 left-0 ml-3 mr-5 flex w-85.75 flex-col bg-[#F3F4F8]"
       >
         <button
           type="button"
+          aria-haspopup="dialog"
           onClick={() => setIsCreating(true)}
-          className="h-11 rounded-xl bg-[#5D8CF1] text-sm font-medium text-white hover:bg-[#769CEF]"
+          className="h-13 w-full shrink-0 cursor-pointer rounded-xl bg-white px-6 text-[#5D8CF1] transition-colors hover:bg-[#F0F5FF]"
         >
           Новая ссылка
         </button>
-        <select
-          aria-label="Статус"
-          className={FIELD}
-          value={status}
-          onChange={(event) =>
-            setStatus(event.target.value as RegistryStatus | '')
-          }
-        >
-          {REGISTRY_STATUS_OPTIONS.map((option) => (
-            <option key={option.value} value={option.value}>
-              {option.label}
-            </option>
-          ))}
-        </select>
-        <input
-          type="search"
-          aria-label="Поиск по ФИО"
-          placeholder="Поиск по ФИО"
-          className={FIELD}
-          value={name}
-          onChange={(event) => setName(event.target.value)}
-        />
-        <div className="custom-scrollbar flex-1 overflow-x-hidden overflow-y-auto">
+
+        <div className="mt-6 flex shrink-0 flex-col gap-3 rounded-[15px] bg-white p-3">
+          <label className="relative block">
+            <span className="sr-only">Фамилия или имя пациента</span>
+            <Image
+              src="/search.svg"
+              alt=""
+              width={18}
+              height={18}
+              className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2"
+            />
+            <input
+              type="search"
+              value={name}
+              onChange={(event) => setName(event.target.value)}
+              placeholder="Фамилия или имя пациента"
+              autoComplete="off"
+              maxLength={100}
+              className={`h-10 w-full rounded-xl ${fieldFillClass(name)} pr-3 pl-10 text-sm text-[#202020] placeholder:text-[#A0A7B0] focus:ring-2 focus:ring-[#5D8CF1] focus:outline-none`}
+            />
+          </label>
+          <CustomDropdown<RegistryStatus | ''>
+            options={REGISTRY_STATUS_OPTIONS}
+            value={status}
+            onChange={setStatus}
+            placeholder="Статус"
+            aria-label="Статус"
+            triggerClassName={fieldFillClass(status)}
+            // «Все статусы» выбраны при пустом значении — в поле заглушка.
+            renderTrigger={(option) => {
+              const selected = Array.isArray(option) ? option[0] : option;
+              return selected?.value ? (
+                <span className="truncate text-sm text-[#202020]">
+                  {selected.label}
+                </span>
+              ) : (
+                <span className="truncate text-sm text-[#A0A7B0]">Статус</span>
+              );
+            }}
+          />
+        </div>
+
+        <div className="custom-scrollbar mt-6 flex-1 overflow-x-hidden overflow-y-auto">
+          <h2 className="px-0 py-2.25 text-[14px] font-medium">
+            Анкеты пациентов
+          </h2>
           {renderList()}
         </div>
       </aside>

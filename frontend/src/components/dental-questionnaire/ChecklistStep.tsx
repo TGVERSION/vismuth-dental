@@ -42,15 +42,15 @@ export const ChecklistStep = ({
       <ul
         role="group"
         aria-labelledby="health-question"
-        className="flex flex-col overflow-hidden rounded-2xl border border-[#D9DEE5]"
+        className="flex flex-col overflow-hidden rounded-2xl bg-[var(--q-surface)]"
       >
         {items.map((item) => {
           const isOn = checked.includes(item.value);
           return (
-            <li key={item.value} className="border-t border-[#EEF0F3] first:border-t-0">
+            <li key={item.value} className="border-t border-[var(--q-bg)] first:border-t-0">
               <label
                 className={`flex min-h-[52px] cursor-pointer items-center gap-3 px-4 py-2.5 ${
-                  isOn ? 'bg-[color-mix(in_srgb,var(--q-brand)_10%,white)]' : 'bg-white'
+                  isOn ? 'bg-[color-mix(in_srgb,var(--q-brand)_12%,var(--q-surface))]' : ''
                 }`}
               >
                 <input

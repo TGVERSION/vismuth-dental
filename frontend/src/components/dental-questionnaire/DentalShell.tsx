@@ -3,6 +3,7 @@
 import { useEffect, useRef } from 'react';
 import type { DentalProgress } from '@/lib/dental-questionnaire';
 import type { ClinicBranding } from '@/lib/questionnaire';
+import { ChatProgress } from '@/components/questionnaire/ChatProgress';
 import { ClinicLogo } from '@/components/questionnaire/ClinicLogo';
 
 interface DentalShellProps {
@@ -44,18 +45,10 @@ export const DentalShell = ({ clinic, progress, children, footer }: DentalShellP
       </h1>
 
       {progress ? (
-        <div className="flex flex-col gap-1.5 px-5" aria-hidden="true">
-          <div className="flex gap-1.5">
-            {Array.from({ length: progress.total }, (_, index) => (
-              <span
-                key={index}
-                className={`h-1 flex-1 rounded-full ${
-                  index < progress.current ? 'bg-[var(--q-brand)]' : 'bg-[var(--q-surface)]'
-                }`}
-              />
-            ))}
-          </div>
-          <p className="text-[13px] text-[var(--q-muted)]">
+        <div className="flex flex-col gap-1.5 px-5">
+          {/* Тот же индикатор, что в чате общей анкеты. */}
+          <ChatProgress value={progress.current / progress.total} />
+          <p className="text-[13px] text-[var(--q-muted)]" aria-hidden="true">
             Шаг {progress.current} из {progress.total} · {progress.label}
           </p>
         </div>
@@ -95,7 +88,7 @@ export const DentalButton = ({
     className={`flex min-h-[52px] w-full items-center justify-center rounded-xl px-4 text-base font-semibold disabled:opacity-60 ${
       variant === 'primary'
         ? 'bg-[var(--q-brand)] text-[var(--q-brand-contrast)]'
-        : 'bg-[color-mix(in_srgb,var(--q-brand)_12%,white)] text-[var(--q-brand)]'
+        : 'bg-[var(--q-surface)] text-[var(--q-brand)]'
     }`}
   >
     {isBusy ? (

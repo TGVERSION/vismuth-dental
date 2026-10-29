@@ -54,24 +54,18 @@ export const registryWhenLine = (
 // ---------------------------------------------------------------------------
 // Статус
 
+// Цвета плашки — в `components/registry/RegistryStatusBadge.tsx`: папка
+// `lib/` в .gitignore, и Tailwind не собирает классы из её файлов.
 export interface RegistryStatusView {
   label: string;
-  /** Классы плашки статуса. */
-  className: string;
 }
 
 const STATUS_VIEW: Record<RegistryStatus, RegistryStatusView> = {
-  invited: {
-    label: 'Ссылка отправлена',
-    className: 'bg-[#F1F2F6] text-[#6C757D]',
-  },
-  in_progress: {
-    label: 'Заполняется',
-    className: 'bg-[#FFF4DB] text-[#8A5A00]',
-  },
-  completed: { label: 'Заполнена', className: 'bg-[#EAF0FB] text-[#2A5AB0]' },
-  printed: { label: 'Распечатана', className: 'bg-[#F3ECFC] text-[#6A3FA6]' },
-  signed: { label: 'Подписана', className: 'bg-[#E6F4EC] text-[#14603B]' },
+  invited: { label: 'Ссылка отправлена' },
+  in_progress: { label: 'Заполняется' },
+  completed: { label: 'Заполнена' },
+  printed: { label: 'Распечатана' },
+  signed: { label: 'Подписана' },
 };
 
 export const registryStatusView = (

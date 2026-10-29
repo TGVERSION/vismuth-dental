@@ -1,8 +1,33 @@
 'use client';
 
+import { useId } from 'react';
 import type { DentalClarification, DentalHealthRow } from '@/api';
 
 // Части карточки стоматологической анкеты, общие для врача и регистратуры.
+
+/** Раздел карточки — как раздел анкеты у врача (`QuestionnaireSection`). */
+export const DentalBlock = ({
+  title,
+  children,
+}: {
+  title: string;
+  children: React.ReactNode;
+}) => {
+  const headingId = useId();
+  return (
+    <section aria-labelledby={headingId} className="flex flex-col gap-4">
+      <h2
+        id={headingId}
+        className="pl-6 text-[32px] font-medium text-[#202020]"
+      >
+        {title}
+      </h2>
+      <div className="flex flex-col gap-2 pl-8 text-base text-[#202020]">
+        {children}
+      </div>
+    </section>
+  );
+};
 
 /** Только первая буква: «Гепатит, ВИЧ…» → «гепатит, ВИЧ…», аббревиатуры целы. */
 const lowerFirst = (text: string): string =>
@@ -15,14 +40,14 @@ export const DentalImportant = ({ important }: { important: string[] }) =>
       {important.map((line) => (
         <li
           key={line}
-          className="rounded-lg bg-[#FDECEC] px-3 py-2 text-sm text-[#8E1F1F]"
+          className="rounded-[15px] bg-[#FDECEC] px-3 py-2.5 text-[14px] text-[#D91528]"
         >
           {line}
         </li>
       ))}
     </ul>
   ) : (
-    <p className="rounded-lg bg-[#E6F4EC] px-3 py-2 text-sm text-[#14603B]">
+    <p className="w-fit rounded-[15px] bg-[#F3F4F8] px-3 py-2.5 text-[14px] text-[#6C757D]">
       Ничего опасного для лечения не отмечено
     </p>
   );

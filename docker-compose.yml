@@ -98,6 +98,7 @@ services:
       - "./ml-service/ru-en-RoSBERTa:/app/ru-en-RoSBERTa"
       - "./ml-service/chroma_qwen_md_3/:/app/chroma_qwen_md_3"
       - "./ml-service/Qwen3-Embedding-0.6B/:/app/Qwen3-Embedding-0.6B"
+      - "./ml-service/storage:/app/storage"
     networks:
       - vismuth-net
 

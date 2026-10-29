@@ -1,4 +1,8 @@
 @import 'tailwindcss';
+/* Корневой .gitignore закрывает `lib/`, а Tailwind не смотрит в такие файлы.
+   Без этой строки классы из frontend/src/lib (фон полей в field-fill.ts) не
+   собираются, и поля на белом фоне становятся невидимыми. */
+@source '../lib';
 
 :root {
   --background: #f3f4f8;

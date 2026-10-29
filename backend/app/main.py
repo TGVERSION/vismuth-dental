@@ -24,6 +24,7 @@ from .routers.clinic_questionnaires import router as clinic_questionnaires_route
 from .routers.public_questionnaire import router as public_questionnaire_router
 from .routers.questionnaires import router as questionnaires_router
 from .routers.clinrec_guidelines import router as clinrec_guidelines_router
+from .routers.check_dms import router as check_dms_router
 
 
 app = FastAPI(
@@ -113,6 +114,10 @@ app = FastAPI(
             "description": "Каталог клинических рекомендаций: CRUD, resolve, индексация.",
         },
         {
+            "name": "check_dms",
+            "description": "ДМС: проверка назначений по КР (S3 PDF → multipart ML).",
+        },
+        {
             "name": "ml_clinrec_check",
             "description": "ML-proxy: проверка соответствия клиническим рекомендациям.",
         },
@@ -150,6 +155,7 @@ app.include_router(clinic_questionnaires_router)
 app.include_router(public_questionnaire_router)
 app.include_router(questionnaires_router)
 app.include_router(clinrec_guidelines_router)
+app.include_router(check_dms_router)
 
 
 @app.get("/health", tags=["system"], summary="Health check")

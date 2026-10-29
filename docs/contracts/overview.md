@@ -75,6 +75,7 @@ Access JWT короткий (~15 мин). Длинная сессия — чер
 | [template-groups.md](template-groups.md) | `/template-groups` |
 | [dictionaries.md](dictionaries.md) | `/dictionary`, `/ref`, `/mkb10` |
 | [clinrec.md](clinrec.md) | `/clinrec/guidelines` каталог КР, resolve, index |
+| [check-dms.md](check-dms.md) | `POST /check_dms` — ДМС-проверка назначений |
 | [ml.md](ml.md) | ML proxy и dict-autocomplete |
 
 Системный: `GET /health` — без auth, `{ status: "ok" }`.

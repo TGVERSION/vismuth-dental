@@ -9,6 +9,7 @@ from pydantic import Field
 from .base_config import BaseConfig
 from .chroma_config import ClinrecChromaConfig, MKBChromaConfig
 from .dental_llm_config import DentalLLMConfig
+from .dms_config import DmsConfig
 from .gigachat_config import GigaChatConfig
 from .log_config import LogSettings
 
@@ -24,6 +25,10 @@ class AppConfig(BaseConfig):
     dental_llm: DentalLLMConfig = Field(
         default_factory=DentalLLMConfig,
         description="Модель уточнений стоматологической анкеты",
+    )
+    dms: DmsConfig = Field(
+        default_factory=DmsConfig,
+        description="Проверка назначений ДМС по клиническим рекомендациям",
     )
     log: LogSettings = Field(default_factory=LogSettings, description="Настройки логирования")
 

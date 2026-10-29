@@ -113,3 +113,45 @@ def generate_presigned_get(*, bucket: str, key: str) -> str:
                 "message": "Failed to generate presigned GET URL",
             },
         ) from exc
+
+
+_PDF_MAGIC = b"%PDF"
+
+
+def get_object_bytes(*, bucket: str, key: str) -> bytes:
+    """Download object bytes; require PDF magic header."""
+    client = get_s3_client()
+    try:
+        response = client.get_object(Bucket=bucket, Key=key)
+        body = response["Body"].read()
+    except ClientError as exc:
+        error_code = (exc.response.get("Error") or {}).get("Code", "")
+        http_status = (exc.response.get("ResponseMetadata") or {}).get(
+            "HTTPStatusCode",
+        )
+        if error_code in {"404", "NoSuchKey", "NotFound"} or http_status == 404:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail={
+                    "code": "s3_object_not_found",
+                    "message": f"S3 object not found: s3://{bucket}/{key}",
+                },
+            ) from exc
+        logger.exception("S3 get_object failed bucket=%s key=%s", bucket, key)
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail={
+                "code": "s3_error",
+                "message": f"S3 get_object failed: {error_code or str(exc)}",
+            },
+        ) from exc
+
+    if not body.startswith(_PDF_MAGIC):
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail={
+                "code": "pdf_invalid",
+                "message": f"Object s3://{bucket}/{key} is not a PDF",
+            },
+        )
+    return body

@@ -78,6 +78,8 @@ docker compose up -d --build backend backend-worker questionnaire-worker
 1. `docker compose up -d` из корня `vismuth/`.
 2. Открыть `smoke_test/test_endpoints.ipynb`, cwd kernel = `backend/smoke_test/` (или `backend/`).
 3. Задать `email`/`password` в ячейке setup → `login(ctx)` (или register → код с почты → confirm).
-4. Гонять секции по одной (`groups.protocols.run_all(ctx)`, `questionnaire.run_setup_clinic_with_doctor(ctx)`, …) или подряд сверху вниз.
+4. Гонять секции по одной (`groups.protocols.run_all(ctx)`, `questionnaire.run_setup_clinic_with_doctor(ctx)`, `check_dms.run_all(ctx)`, …) или подряд сверху вниз.
+
+ДМС (`groups/check_dms.py`): JWT `super_admin`, PDF по умолчанию `guidelines/62/3/source.pdf`. `run_all`: setup → `check_dms` → `prove_pdf_file_sent` (нет объекта → `422 s3_object_not_found`; есть → `200`/`502`) → cleanup. Пока ML без multipart — `502` нормален.
 
 Секция анкеты (в notebook) требует JWT `super_admin` на setup; дальше ctx переключается на врача. После primary: `run_doctor_list` (poll `processing_status`) → `run_process` → `run_create_protocol`. Для протокола заранее создайте structure (`protocol_structures.run_crud(..., delete=False)`).

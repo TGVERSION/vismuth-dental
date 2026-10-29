@@ -79,11 +79,9 @@ async def proxy_ml_clinrec_check(
     current_user: ServiceUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> MlClinrecCheckResponse:
-    """Resolve каталога + proxy в ML.
+    """Resolve каталога + legacy proxy в ML (только ``protocol_text``).
 
-    Сейчас в ML уходит только ``protocol_text`` (legacy). Когда ml-service
-    примет guideline+presigned — включить ``use_guideline_source=True`` в
-    ``request_check`` ([services/clinrec_ml.py](../services/clinrec_ml.py)).
+    ДМС-проверка назначений — отдельный ``POST /check_dms``.
     """
     await ensure_user_clinic_subscription_active(db, current_user)
 
@@ -93,7 +91,6 @@ async def proxy_ml_clinrec_check(
         protocol_text=payload.protocol_text,
         guideline=guideline,
         user_id=current_user.id,
-        use_guideline_source=False,
     )
 
     response = MlClinrecCheckResponse(**body)

@@ -28,6 +28,19 @@ DEFAULT_APPOINTMENTS = (
 _S3_FAIL_CODES = frozenset({"s3_object_not_found", "pdf_invalid", "s3_error"})
 
 
+def _unique_mkb_prefix(letter: str) -> str:
+    """Код, который resolve забирает целиком.
+
+    ``extract_mkb_code`` оставляет только ``[A-Z]\\d{2}(\\.\\d{1,4})?``.
+    Префикс вида ``Y78AB`` в каталоге ищется как ``Y78`` и даёт 422
+    ``guideline_not_found``.
+    """
+    n = uuid.uuid4().int
+    major = 10 + (n % 90)
+    minor = (n // 90) % 10_000
+    return f"{letter}{major}.{minor:04d}"
+
+
 def _require_super_admin(ctx: SmokeContext) -> bool:
     if not ctx.require_token():
         return False
@@ -58,13 +71,28 @@ def _detail_code(resp) -> str | None:
     return None
 
 
+def _find_guideline_by_source_id(
+    ctx: SmokeContext,
+    source_id: int,
+) -> dict[str, Any] | None:
+    listing = ctx.get("/clinrec/guidelines")
+    if not listing.ok:
+        print_response(listing)
+        return None
+    for item in listing.json() or []:
+        if item.get("source_id") == source_id:
+            return item
+    return None
+
+
 def _create_guideline(
     ctx: SmokeContext,
     *,
     source_id: int,
     version: str,
     mkb_prefix: str,
-) -> dict[str, Any] | None:
+) -> tuple[dict[str, Any] | None, bool]:
+    """Returns (body, created_new). created_new=False → не удалять в cleanup."""
     suffix = uuid.uuid4().hex[:8]
     code = f"smoke-dms-{suffix}"
     s3_key = f"guidelines/{source_id}/{version}/source.pdf"
@@ -83,14 +111,36 @@ def _create_guideline(
         },
     )
     print_response(resp)
-    if not resp.ok:
-        print(
-            "Создание guideline не удалось. "
-            "Проверьте S3 и уникальность source_id. "
-            f"Ожидаемый ключ: {s3_key}"
-        )
-        return None
-    return resp.json()
+    if resp.ok:
+        return resp.json(), True
+
+    # source_id UNIQUE — переиспользуем уже существующую запись (после прошлых smoke).
+    if resp.status_code in {409, 500}:
+        existing = _find_guideline_by_source_id(ctx, source_id)
+        if existing:
+            gid = existing["id"]
+            print(
+                f"source_id={source_id} уже в каталоге → reuse id={gid}, "
+                f"PATCH mkb_prefixes+=[{mkb_prefix}]"
+            )
+            prefixes = list(existing.get("mkb_prefixes") or [])
+            if mkb_prefix not in prefixes:
+                prefixes.append(mkb_prefix)
+            patch = ctx.patch(
+                f"/clinrec/guidelines/{gid}",
+                json={"mkb_prefixes": prefixes, "version": version, "s3_key": s3_key},
+            )
+            print_response(patch)
+            if patch.ok:
+                return patch.json(), False
+            return existing, False
+
+    print(
+        "Создание guideline не удалось. "
+        "Проверьте S3 и уникальность source_id. "
+        f"Ожидаемый ключ: {s3_key}"
+    )
+    return None, False
 
 
 def _resolve_pdf_ref(ctx: SmokeContext) -> tuple[int, str]:
@@ -112,7 +162,7 @@ def run_setup_guideline(ctx: SmokeContext) -> None:
     mkb_prefix = str(ctx.ids.get("dms_mkb_prefix", DEFAULT_MKB)).upper()
     print(f"PDF ref: guidelines/{source_id}/{version}/source.pdf")
 
-    body = _create_guideline(
+    body, created_new = _create_guideline(
         ctx,
         source_id=source_id,
         version=version,
@@ -124,7 +174,15 @@ def run_setup_guideline(ctx: SmokeContext) -> None:
     ctx.ids["dms_guideline_id"] = body["id"]
     ctx.ids["dms_guideline_code"] = body["code"]
     ctx.ids["dms_mkb"] = f"{mkb_prefix} Эссенциальная гипертензия"
-    print("guideline id=", body["id"], "status=", body.get("status"))
+    ctx.ids["dms_reuse_existing"] = not created_new
+    print(
+        "guideline id=",
+        body["id"],
+        "status=",
+        body.get("status"),
+        "created_new=",
+        created_new,
+    )
 
 
 def run_check_dms(ctx: SmokeContext) -> None:
@@ -163,8 +221,8 @@ def run_check_dms(ctx: SmokeContext) -> None:
     if resp.status_code in {502, 504}:
         print(
             "OK: PDF прочитан из S3 и отправлен в ML multipart "
-            f"(file + mkb + appointments). Upstream ответил {resp.status_code} — "
-            "ожидаемо, пока на ml-service нет /check_dms или ещё json/pdf_url."
+            f"(file + mkb + appointments). Upstream ответил {resp.status_code} "
+            "(ошибка ML/таймаут — смотри логи ml-service)."
         )
         return
 
@@ -191,7 +249,7 @@ def run_prove_pdf_file_sent(ctx: SmokeContext) -> None:
     if not _require_super_admin(ctx):
         return
 
-    mkb_prefix = f"Z{uuid.uuid4().hex[:4].upper()}"
+    mkb_prefix = _unique_mkb_prefix("Z")
     timeout = int(ctx.ids.get("dms_timeout", 600))
     created_ids: list[str] = []
 
@@ -199,7 +257,7 @@ def run_prove_pdf_file_sent(ctx: SmokeContext) -> None:
         # --- negative: нет объекта в S3 ---
         missing_source = int(ctx.ids.get("dms_missing_source_id", 999001))
         missing_version = "1"
-        missing = _create_guideline(
+        missing, missing_created = _create_guideline(
             ctx,
             source_id=missing_source,
             version=missing_version,
@@ -207,7 +265,8 @@ def run_prove_pdf_file_sent(ctx: SmokeContext) -> None:
         )
         if missing is None:
             return
-        created_ids.append(missing["id"])
+        if missing_created:
+            created_ids.append(missing["id"])
 
         print("=== POST /check_dms (ожидаем 422 s3_object_not_found) ===")
         bad = ctx.post(
@@ -226,9 +285,9 @@ def run_prove_pdf_file_sent(ctx: SmokeContext) -> None:
         print("OK: без PDF в S3 запрос падает на get_object (файл не подставляется «из воздуха»).")
 
         # --- positive: реальный PDF 62/3 ---
-        real_prefix = f"Y{uuid.uuid4().hex[:4].upper()}"
+        real_prefix = _unique_mkb_prefix("Y")
         source_id, version = _resolve_pdf_ref(ctx)
-        real = _create_guideline(
+        real, real_created = _create_guideline(
             ctx,
             source_id=source_id,
             version=version,
@@ -240,7 +299,8 @@ def run_prove_pdf_file_sent(ctx: SmokeContext) -> None:
                 "проверьте бакет."
             )
             return
-        created_ids.append(real["id"])
+        if real_created:
+            created_ids.append(real["id"])
 
         print(
             f"=== POST /check_dms (реальный PDF guidelines/{source_id}/{version}/source.pdf) ==="
@@ -261,7 +321,7 @@ def run_prove_pdf_file_sent(ctx: SmokeContext) -> None:
         )
         assert good.status_code in {200, 502, 504}, (
             f"ожидали 200 (ML ok) или 502/504 (ML ещё без multipart), "
-            f"получили {good.status_code}"
+            f"получили {good.status_code} code={code}"
         )
 
         if good.status_code == 200:
@@ -285,10 +345,16 @@ def run_prove_pdf_file_sent(ctx: SmokeContext) -> None:
 
 
 def run_cleanup_guideline(ctx: SmokeContext) -> None:
-    """Удалить smoke-guideline (super_admin)."""
+    """Удалить smoke-guideline (super_admin). Чужой reuse не трогаем."""
     guideline_id = ctx.ids.get("dms_guideline_id")
     if not guideline_id:
         print("=== cleanup skip (нет dms_guideline_id) ===")
+        return
+    if ctx.ids.get("dms_reuse_existing"):
+        print("=== cleanup skip (переиспользовали существующий guideline) ===")
+        ctx.ids.pop("dms_guideline_id", None)
+        ctx.ids.pop("dms_guideline_code", None)
+        ctx.ids.pop("dms_reuse_existing", None)
         return
     if not _require_super_admin(ctx):
         return
@@ -313,6 +379,7 @@ def run_all(ctx: SmokeContext, *, cleanup: bool = True) -> None:
         "dms_guideline_id",
         "dms_guideline_code",
         "dms_mkb",
+        "dms_reuse_existing",
     ):
         ctx.ids.pop(key, None)
     print(

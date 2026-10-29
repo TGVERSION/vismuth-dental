@@ -65,9 +65,9 @@ async def create_guideline(
         created_at=now,
     )
     db.add(guideline)
-    await db.flush()
-    await replace_mkb_prefixes(db, guideline, payload.mkb_prefixes)
     try:
+        await db.flush()
+        await replace_mkb_prefixes(db, guideline, payload.mkb_prefixes)
         await db.commit()
     except IntegrityError as exc:
         await db.rollback()

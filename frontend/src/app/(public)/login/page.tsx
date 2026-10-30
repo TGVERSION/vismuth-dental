@@ -17,6 +17,12 @@ export default function AuthForms() {
     login: '',
     password: '',
   });
+  // Почта и пароль, на которые ушёл код: шаг подтверждения не зависит от
+  // поля формы, которое может сбросить автозаполнение браузера.
+  const [pendingRegistration, setPendingRegistration] = useState<LoginRequest>({
+    login: '',
+    password: '',
+  });
   const [code, setCode] = useState(['', '', '', '']);
   const [timer, setTimer] = useState(300);
   const [loading, setLoading] = useState(false);
@@ -136,9 +142,11 @@ export default function AuthForms() {
     e.preventDefault();
     setLoading(true);
 
-    const result = await handleRegister(userData);
+    const credentials = { ...userData, login: userData.login.trim() };
+    const result = await handleRegister(credentials);
 
     if (result.success) {
+      setPendingRegistration(credentials);
       setMode('verify');
       setTimer(300);
     }
@@ -156,7 +164,7 @@ export default function AuthForms() {
 
     setLoading(true);
 
-    const result = await handleConfirmRegistration(userData.login, fullCode);
+    const result = await handleConfirmRegistration(pendingRegistration.login, fullCode);
 
     if (result.success) {
       setCode(['', '', '', '']);
@@ -169,7 +177,7 @@ export default function AuthForms() {
     setLoading(true);
 
     try {
-      await mainApi.serviceUsers.register(userData);
+      await mainApi.serviceUsers.register(pendingRegistration);
       toast.info('Код отправлен повторно');
       setTimer(300);
       setCode(['', '', '', '']);
@@ -220,7 +228,7 @@ export default function AuthForms() {
                   type="email"
                   value={userData.login}
                   onChange={(e) =>
-                    setUserData({ ...userData, login: e.target.value })
+                    setUserData((prev) => ({ ...prev, login: e.target.value }))
                   }
                   placeholder="Введите..."
                   className="w-full px-3 py-2 bg-[#F3F4F8] border-0 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#5D8CF1] transition-all"
@@ -238,7 +246,7 @@ export default function AuthForms() {
                     value={userData.password}
                     minLength={8}
                     onChange={(e) =>
-                      setUserData({ ...userData, password: e.target.value })
+                      setUserData((prev) => ({ ...prev, password: e.target.value }))
                     }
                     placeholder="Введите..."
                     className="w-full px-3 py-2 pr-10 bg-[#F3F4F8] border-0 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#5D8CF1] transition-all"
@@ -315,7 +323,7 @@ export default function AuthForms() {
                   type="email"
                   value={userData.login}
                   onChange={(e) =>
-                    setUserData({ ...userData, login: e.target.value })
+                    setUserData((prev) => ({ ...prev, login: e.target.value }))
                   }
                   placeholder="Введите..."
                   className="w-full px-3 py-2 bg-[#F3F4F8] border-0 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#5D8CF1] transition-all"
@@ -333,7 +341,7 @@ export default function AuthForms() {
                     value={userData.password}
                     minLength={8}
                     onChange={(e) =>
-                      setUserData({ ...userData, password: e.target.value })
+                      setUserData((prev) => ({ ...prev, password: e.target.value }))
                     }
                     placeholder="Введите..."
                     className="w-full px-3 py-2 pr-10 bg-[#F3F4F8] border-0 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#5D8CF1] transition-all"
@@ -413,10 +421,10 @@ export default function AuthForms() {
               <p
                 className="text-lg w-fit text-[#5D8CF1] hover:text-[#769CEF] font-bold cursor-pointer"
                 onClick={() => {
-                  handleClickEmail(userData.login);
+                  handleClickEmail(pendingRegistration.login);
                 }}
               >
-                {userData.login}
+                {pendingRegistration.login}
               </p>
             </div>
 

@@ -41,6 +41,7 @@ from ..services.questionnaire_limits import (
 )
 from ..services.questionnaire_invites import find_by_invite_token, is_invite_expired
 from ..services.questionnaire_process import schedule_processing
+from ..services.gastro_questionnaire import run_gastro_clarification
 
 router = APIRouter(prefix="/public", tags=["public-questionnaire"])
 
@@ -85,6 +86,7 @@ def _step_response(descriptor) -> StepDescriptorResponse:
         completed=descriptor.completed,
         truncated=descriptor.truncated,
         ai_unavailable=descriptor.ai_unavailable,
+        gastro=descriptor.gastro,
     )
 
 
@@ -363,15 +365,17 @@ async def _load_questionnaire_for_token(
     db: AsyncSession,
     questionnaire_id: UUID,
     token: str | None,
+    *, lock: bool = False,
 ) -> Questionnaire:
     if not token:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="X-Questionnaire-Token required",
         )
-    result = await db.execute(
-        select(Questionnaire).where(Questionnaire.id == questionnaire_id),
-    )
+    statement = select(Questionnaire).where(Questionnaire.id == questionnaire_id)
+    if lock:
+        statement = statement.with_for_update()
+    result = await db.execute(statement)
     questionnaire = result.scalar_one_or_none()
     if questionnaire is None:
         raise HTTPException(
@@ -434,6 +438,7 @@ async def post_answer(
         db,
         questionnaire_id,
         x_questionnaire_token,
+        lock=True,
     )
     descriptor, _, should_process = await apply_answer(
         db,
@@ -451,9 +456,12 @@ async def post_answer(
         none_answer=payload.none,
         selections=payload.selections,
         texts=payload.texts,
+        revision=payload.revision,
     )
     if should_process:
         schedule_processing(background_tasks, questionnaire_id)
+    if questionnaire.kind == "gastro" and questionnaire.current_step == "gastro_ai_wait":
+        background_tasks.add_task(run_gastro_clarification, questionnaire_id, questionnaire.gastro_answers["revision"])
     return _step_response(descriptor)
 
 

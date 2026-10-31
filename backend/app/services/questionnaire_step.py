@@ -24,3 +24,4 @@ class StepDescriptor:
     completed: bool = False
     truncated: bool = False
     ai_unavailable: bool = False
+    gastro: dict[str, Any] | None = None

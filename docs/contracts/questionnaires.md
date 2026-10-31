@@ -4,6 +4,8 @@ JWT + активный `clinic_membership` с `is_doctor`. Видны тольк
 
 Код: `routers/questionnaires.py`. Фоновая обработка: `services/questionnaire_process.py` → `POST {ML_SERVICE_URL}/summarize_form`.
 
+Для `kind=gastro` сводка и повторная обработка собираются правилами, без `summarize_form`. Подробности: [гастроанкета](gastro-questionnaire.md).
+
 ## GET /questionnaires
 
 - **Auth:** JWT (doctor membership)
@@ -19,6 +21,8 @@ JWT + активный `clinic_membership` с `is_doctor`. Видны тольк
 - **Назначение:** карточка: исходные ответы, `ai_unavailable`, `structured` / `gaps` / `processing_status`, `protocol_id`
 - **Поля обработки:** `processing_status` — `pending` | `done` | `failed` (или null у старых анкет); `structured` — `{complaints, medications, allergy_anamnesis, life_anamnesis}` после успешного summarize; `gaps` — список пробелов, если ML вернул ключ (сейчас обычно `[]`)
 - **Код:** `get_questionnaire`
+
+Гастрокарточка дополнительно содержит `important[]`, `safety`, `history` (дословный `raw`, факты `chronology` с исходными периодами), `clarifications`, `raw_answers`, отдельный упорядоченный `patient_questions[]`. Неотмеченные признаки не считаются отрицаниями. Даже при отсутствии сохранённого `structured` карточка и перенос в протокол пересобираются из `gastro_answers`. Вопросы пациента не включаются в поля протокола; история сохраняется в `life_anamnesis`. Анкеты без времени сортируются в пределах дня по времени завершения, новые выше.
 
 ## POST /questionnaires/{id}/process
 

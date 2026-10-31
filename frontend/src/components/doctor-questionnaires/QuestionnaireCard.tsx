@@ -10,6 +10,7 @@ import {
 import { DentalDoctorSummary } from './DentalDoctorSummary';
 import { ProtocolActionButton } from './ProtocolActionButton';
 import { QuestionnaireSection } from './QuestionnaireSection';
+import { GastroDoctorHighlights, GastroDoctorHistory, GastroPatientQuestions } from './GastroDoctorSummary';
 
 interface QuestionnaireCardProps {
   questionnaire: DoctorQuestionnaireDetail;
@@ -47,9 +48,17 @@ export const QuestionnaireCard = ({
           {questionnaire.kind === 'dental' && questionnaire.structured ? (
             <DentalDoctorSummary structured={questionnaire.structured} />
           ) : null}
-          {buildSections(questionnaire).map((section) => (
-            <QuestionnaireSection key={section.key} section={section} />
-          ))}
+          {questionnaire.kind === 'gastro' && questionnaire.structured ? <GastroDoctorHighlights structured={questionnaire.structured} /> : null}
+          {buildSections(questionnaire).map((section) => questionnaire.kind === 'gastro' && section.text.length > 3000 ? (
+            <details key={section.key} className="rounded-xl border border-[#D7DCE3] p-4">
+              <summary className="cursor-pointer py-2 font-medium">{section.title} — полный текст</summary>
+              <div className="mt-4"><QuestionnaireSection section={section} /></div>
+            </details>
+          ) : <QuestionnaireSection key={section.key} section={section} />)}
+          {questionnaire.kind === 'gastro' && questionnaire.structured ? <>
+            <GastroDoctorHistory structured={questionnaire.structured} />
+            <GastroPatientQuestions structured={questionnaire.structured} />
+          </> : null}
           <ProtocolActionButton
             questionnaireId={questionnaire.id}
             protocolId={questionnaire.protocol_id}

@@ -35,6 +35,7 @@ import {
   type StoredQuestionnaire,
 } from '@/lib/questionnaire-storage';
 import { logError } from '@/lib/logger';
+import { gastroMeta } from '@/lib/gastro-questionnaire';
 
 const START_ERROR = 'Не удалось начать анкету. Попробуйте ещё раз.';
 const LINK_NOT_FOUND_ERROR = 'Ссылка недействительна. Уточните её в клинике.';
@@ -182,6 +183,32 @@ export const useQuestionnaireFlow = (
     setSubmitError(null);
     setStartError(EXPIRED_ERROR);
   }, [slug]);
+
+  // Модель работает в фоне. Ожидание не блокирует «Закончить без уточнений».
+  useEffect(() => {
+    if (!step || gastroMeta(step)?.screen !== 'ai_wait') return;
+    const active = questionnaireRef.current;
+    if (!active) return;
+    const revision = gastroMeta(step)?.revision;
+    const controller = new AbortController();
+    let timer: ReturnType<typeof setTimeout>;
+    const poll = async () => {
+      try {
+        const fresh = await mainApi.questionnaire.getStep(active.id, active.token, { signal: controller.signal });
+        const current = stepRef.current;
+        if (controller.signal.aborted || questionnaireRef.current?.id !== active.id || !current) return;
+        // Параллельная отправка/возврат имеет приоритет над старым ответом polling.
+        if (!isSubmittingRef.current && gastroMeta(current)?.screen === 'ai_wait'
+          && gastroMeta(current)?.revision === revision && !isSameStep(current, fresh)) applyStep(fresh);
+      } catch (caught) {
+        if (!controller.signal.aborted && isExpired(caught)) expire();
+        // Временная ошибка polling не мешает закончить анкету без модели.
+      }
+      if (!controller.signal.aborted) timer = setTimeout(poll, 1200);
+    };
+    timer = setTimeout(poll, 700);
+    return () => { controller.abort(); clearTimeout(timer); };
+  }, [step, applyStep, expire]);
 
   const resume = useCallback(
     async (

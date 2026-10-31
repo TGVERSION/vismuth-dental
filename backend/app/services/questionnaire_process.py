@@ -16,6 +16,7 @@ from ..db import AsyncSessionLocal
 from ..models.questionnaire import Questionnaire, QuestionnaireAnswer
 from .dental.flow import DentalAnswers
 from .dental.summary import build_dental_summary
+from .gastro.summary import build_summary as build_gastro_summary
 from .ml_proxy import proxy_post_to_ml
 from .questionnaire_flow import load_answers, specialization_name
 
@@ -111,6 +112,12 @@ async def run_questionnaire_processing(questionnaire_id: UUID) -> None:
 
             if questionnaire.kind == "dental":
                 await _rebuild_dental_summary(db, questionnaire)
+                return
+            if questionnaire.kind == "gastro":
+                questionnaire.structured, questionnaire.gaps = build_gastro_summary(questionnaire.gastro_answers or {})
+                questionnaire.processing_status = "done"
+                questionnaire.updated_at = datetime.now(timezone.utc)
+                await db.commit()
                 return
 
             answers = await load_answers(db, questionnaire.id)

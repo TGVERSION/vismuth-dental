@@ -97,6 +97,7 @@ class StepDescriptorResponse(BaseModel):
         default=False,
         description="True — ML недоступен; идут фиксированные вопросы без AI.",
     )
+    gastro: Optional[dict[str, Any]] = None
 
 
 class QuestionnaireCreateResponse(BaseModel):
@@ -172,7 +173,8 @@ class QuestionnaireAnswerRequest(BaseModel):
             "(chip_groups) или {\"health\": [...]} (checklist)."
         ),
     )
-    texts: Optional[dict[str, Annotated[str, Field(max_length=5000)]]] = Field(
+    revision: Optional[int] = Field(default=None, ge=0)
+    texts: Optional[dict[str, Annotated[str, Field(max_length=20000)]]] = Field(
         default=None,
         max_length=20,
         description="Стоматологическая анкета: свой текст по ключу группы.",
@@ -212,7 +214,7 @@ class DoctorQuestionnaireDetail(BaseModel):
     """Детали завершенной анкеты для врача (ответы + результат ML)."""
 
     id: UUID
-    kind: Literal["general", "dental"] = Field(
+    kind: Literal["general", "dental", "gastro"] = Field(
         default="general",
         description="dental — structured собран правилами: important, health и др.",
     )

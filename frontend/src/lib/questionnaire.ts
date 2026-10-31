@@ -202,7 +202,7 @@ export const parseDoctorOptions = (options: unknown): PublicLinkDoctor[] => {
 // Шаги анкеты
 
 /** Какой экран показать на шаге сервера. */
-export type QuestionnaireScreen = 'doctor' | 'chat' | 'patient_info' | 'code';
+export type QuestionnaireScreen = 'doctor' | 'chat' | 'patient_info' | 'code' | 'gastro';
 
 /**
  * Экран по шагу. Всё, что не выбор врача, не данные приёма и не код, —
@@ -212,6 +212,9 @@ export type QuestionnaireScreen = 'doctor' | 'chat' | 'patient_info' | 'code';
 export const screenForStep = (step: QuestionnaireStep): QuestionnaireScreen => {
   if (step.completed || step.step_key === 'code' || step.step_type === 'code') {
     return 'code';
+  }
+  if (step.step_type === 'gastro_form' || step.step_key.startsWith('gastro_')) {
+    return 'gastro';
   }
   if (step.step_key === 'choose_doctor' || step.step_type === 'choose_doctor') {
     return 'doctor';
@@ -234,7 +237,8 @@ export const isSameStep = (
 ): boolean =>
   a.step_key === b.step_key &&
   a.step_type === b.step_type &&
-  (a.text ?? '') === (b.text ?? '');
+  (a.text ?? '') === (b.text ?? '') &&
+  (!a.step_key.startsWith('gastro_') || JSON.stringify(a.gastro) === JSON.stringify(b.gastro));
 
 /**
  * Вопрос о типе приёма. У backend на этом шаге только заголовок «Тип приёма»

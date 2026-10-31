@@ -108,6 +108,7 @@ class Questionnaire(Base):
         JSONB,
         nullable=True,
     )
+    gastro_answers: Mapped[Optional[dict[str, Any]]] = mapped_column(JSONB, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         TIMESTAMP(timezone=True),
         default=lambda: datetime.now(timezone.utc),

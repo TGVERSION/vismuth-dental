@@ -24,6 +24,8 @@ import { AppointmentTimeForm } from './AppointmentTimeForm';
 import { CodeScreen } from './CodeScreen';
 import { QuestionnaireStub } from './QuestionnaireStub';
 import { QuestionnaireThemeProvider } from './QuestionnaireTheme';
+import { GastroQuestionnaireStep } from '@/components/gastro-questionnaire/GastroQuestionnaireStep';
+import { gastroMeta } from '@/lib/gastro-questionnaire';
 
 interface QuestionnaireAppProps {
   /** Slug ссылки из адреса страницы. */
@@ -99,6 +101,8 @@ const PatientInfoStep = ({
 export const QuestionnaireApp = ({ slug, link }: QuestionnaireAppProps) => {
   const flow = useQuestionnaireFlow(slug, link);
   const clinic = clinicBranding(link);
+  const gastroEntry = (link?.doctor ? [link.doctor] : link?.doctors ?? []).some((doctor) =>
+    doctor.specializations.some((specialty) => /гастро/i.test(specialty.name) && !/детск/i.test(specialty.name)));
 
   const [consentOpen, setConsentOpen] = useState(false);
   // Возврат из чата к выбору врача — экран поверх шага: прежняя анкета
@@ -182,6 +186,11 @@ export const QuestionnaireApp = ({ slug, link }: QuestionnaireAppProps) => {
     const { step } = flow;
     if (step) {
       switch (screenForStep(step)) {
+        case 'gastro':
+          return <GastroQuestionnaireStep
+            key={`${flow.questionnaireId}:${step.step_key}:${gastroMeta(step)?.revision ?? 0}`}
+            step={step} submit={flow.submit} isSubmitting={flow.isSubmitting}
+            submitError={flow.submitError} clinicPhone={clinic.phone} />;
         case 'doctor':
           return (
             <DoctorPicker
@@ -276,6 +285,7 @@ export const QuestionnaireApp = ({ slug, link }: QuestionnaireAppProps) => {
     return (
       <WelcomeScreen
         clinic={clinic}
+        gastroEntry={gastroEntry}
         isStarting={flow.isStarting || flow.isResuming}
         error={flow.startError}
         onStart={handleStart}

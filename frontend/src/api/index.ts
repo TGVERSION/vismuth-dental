@@ -716,6 +716,8 @@ export interface QuestionnaireStep {
    * Форма сужается в `lib/dental-questionnaire.ts`. У общей анкеты пусто.
    */
   groups?: unknown[];
+  /** Дескриптор отдельного первичного гастросценария; проверяется перед рендером. */
+  gastro?: unknown;
   /** YYYY-MM-DD по часам сервера. */
   date_min: string | null;
   date_max: string | null;
@@ -748,6 +750,8 @@ export interface QuestionnaireStartResponse {
  */
 export interface QuestionnaireStepAnswer {
   step_key: string;
+  /** Защита гастросценария от устаревшей вкладки и повторной отправки. */
+  revision?: number;
   value?: string | null;
   choice?: string | null;
   none?: boolean;
@@ -835,6 +839,11 @@ export interface DoctorQuestionnaireStructured {
   medications?: string | null;
   allergy_anamnesis?: string | null;
   life_anamnesis?: string | null;
+  /** Гастроанкета: исходная история и только подтверждённые элементы хронологии. */
+  history?: unknown;
+  safety?: string | null;
+  /** Собственные вопросы пациента, без пересказа и автоматического переноса в протокол. */
+  patient_questions?: string[];
   /** Стоматологическая анкета: «Самое важное» — красные строки. */
   important?: string[];
   /**
@@ -909,7 +918,7 @@ export interface DoctorQuestionnaireDetail extends Omit<
   'processing_status'
 > {
   /** `dental` — стоматологическая анкета: карточка собрана правилами. */
-  kind?: 'general' | 'dental';
+  kind?: 'general' | 'dental' | 'gastro';
   ai_unavailable: boolean;
   processing_status: QuestionnaireProcessingStatus | null;
   /** Результат обработки ИИ; `null`, пока обработка не завершилась. */

@@ -21,6 +21,8 @@ from ..services.questionnaire_code import allocate_code
 from ..services.questionnaire_limits import ensure_clinic_subscription_active
 from .dental_questionnaire import apply_dental, build_dental_descriptor, open_invite
 from .questionnaire_step import StepDescriptor
+from .gastro.flow import route_gastro
+from .gastro_questionnaire import apply_gastro, build_gastro_descriptor, submission_fingerprint
 
 _APPOINTMENT_TIME_RE = re.compile(r"^([01]\d|2[0-3]):([0-5]\d)$")
 
@@ -161,6 +163,8 @@ async def build_step_descriptor(
 
     if questionnaire.kind == "dental":
         return build_dental_descriptor(questionnaire)
+    if questionnaire.kind == "gastro":
+        return build_gastro_descriptor(questionnaire)
 
     if questionnaire.status == "completed" or step == "code":
         return StepDescriptor(
@@ -483,8 +487,21 @@ async def apply_answer(
     none_answer: bool = False,
     selections: dict[str, list[str]] | None = None,
     texts: dict[str, str] | None = None,
+    revision: int | None = None,
 ) -> tuple[StepDescriptor, bool, bool]:
     should_process = False
+    if questionnaire.kind == "gastro":
+        if questionnaire.status == "completed":
+            saved = questionnaire.gastro_answers or {}
+            if step_key == "gastro_questions" and revision == saved.get("submission_revision") and submission_fingerprint(selections, texts, choice) == saved.get("submission_fingerprint"):
+                return build_gastro_descriptor(questionnaire), False, False
+            raise HTTPException(status_code=409, detail="Questionnaire already completed")
+        if questionnaire.status != "in_progress" or step_key != questionnaire.current_step:
+            raise HTTPException(status_code=409, detail=f"Expected step {questionnaire.current_step}")
+        await apply_gastro(db, questionnaire, step_key=step_key, revision=revision, selections=selections or {}, texts=texts or {}, choice=choice)
+        await db.commit()
+        await db.refresh(questionnaire)
+        return await build_step_descriptor(db, questionnaire), False, False
     if questionnaire.kind == "dental":
         if questionnaire.status == "invited":
             # Как у общей анкеты: новую не начинаем при истёкшей подписке,
@@ -588,7 +605,12 @@ async def apply_answer(
             )
         questionnaire.visit_type = choice
         if choice == "primary":
-            questionnaire.current_step = "complaint"
+            if route_gastro(await specialization_name(db, questionnaire.specialization_id), choice):
+                questionnaire.kind = "gastro"
+                questionnaire.gastro_answers = questionnaire.gastro_answers or {"revision": 0}
+                questionnaire.current_step = "gastro_reason"
+            else:
+                questionnaire.current_step = "complaint"
         else:
             questionnaire.current_step = "repeat_change"
 

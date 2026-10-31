@@ -9,6 +9,7 @@ interface WelcomeScreenProps {
   isStarting: boolean;
   error: string | null;
   onStart: () => void;
+  gastroEntry?: boolean;
 }
 
 export const WelcomeScreen = ({
@@ -16,6 +17,7 @@ export const WelcomeScreen = ({
   isStarting,
   error,
   onStart,
+  gastroEntry = false,
 }: WelcomeScreenProps) => (
   <div
     className="q-screen flex min-h-[100dvh] flex-col bg-cover bg-center bg-no-repeat"
@@ -31,8 +33,9 @@ export const WelcomeScreen = ({
         </h1>
 
         <p className="mt-[20px] text-white text-[18px] text-medium">
-          Ответьте на несколько вопросов о том, что вас беспокоит, — врач
-          заранее прочитает ответы и лучше подготовится к встрече с вами
+          {gastroEntry
+            ? 'Расскажите, что вас беспокоит, и запишите вопросы врачу, чтобы не забыть важное на приёме. Ответы будут доступны врачу после отправки.'
+            : 'Ответьте на несколько вопросов о том, что вас беспокоит, — врач заранее прочитает ответы и лучше подготовится к встрече с вами'}
         </p>
 
         {error ? (

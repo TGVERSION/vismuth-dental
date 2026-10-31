@@ -56,6 +56,7 @@ body {
   --q-bg: #ffffff;
   --q-surface: #f1f2f6;
   --q-text: #202020;
+  --q-border: #d7dce3;
   --q-muted: #8b8b8b;
   --q-bubble-in: #f1f2f6;
   --q-bubble-out: var(--q-brand);

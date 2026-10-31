@@ -17,6 +17,7 @@ downloads/
 eggs/
 .eggs/
 lib/
+!frontend/src/lib/
 lib64/
 parts/
 sdist/
@@ -67,6 +68,10 @@ data/local/
 # Clinrec S3 loader (venv + download journal)
 scripts/clinrec/.venv/
 scripts/clinrec/.cache/
+
+# Локальные результаты UI-проверки (не исходники тестов).
+scripts/qa/output/
+scripts/qa/*.png
 
 # ML models (large binaries)
 ml-service/finetuned_autocomplete_kaggle/

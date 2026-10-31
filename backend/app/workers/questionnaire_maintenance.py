@@ -24,7 +24,7 @@ async def abandon_stale(now: datetime) -> int:
                 # Анкету по персональной ссылке не бросаем по бездействию:
                 # пациент может вернуться к ней до срока ссылки.
                 Questionnaire.invite_expires_at.is_(None),
-            ),
+            ).with_for_update(skip_locked=True),
         )
         rows = list(result.scalars().all())
         for q in rows:
@@ -35,6 +35,9 @@ async def abandon_stale(now: datetime) -> int:
             )
             q.status = "abandoned"
             q.dental_answers = None
+            q.gastro_answers = None
+            q.structured = None
+            q.gaps = None
             q.patient_first_name = None
             q.patient_middle_name = None
             q.appointment_date = None

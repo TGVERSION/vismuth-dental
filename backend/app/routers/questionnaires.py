@@ -98,6 +98,16 @@ def _map_structured_to_fields(structured: dict[str, Any]) -> dict[str, str]:
     return result
 
 
+def _structured_for_questionnaire(questionnaire: Questionnaire) -> dict[str, Any] | None:
+    if questionnaire.kind == "gastro":
+        from ..services.gastro.summary import build_summary
+
+        # Даже без сохранённой сводки исходная история доступна врачу/протоколу.
+        structured, _ = build_summary(questionnaire.gastro_answers or {})
+        return structured
+    return questionnaire.structured
+
+
 def _apply_medications_fallback(
     mapped: dict[str, str],
     structure_field_names: set[str],
@@ -137,7 +147,7 @@ async def _build_doctor_detail(
         code=questionnaire.code,
         ai_unavailable=questionnaire.ai_unavailable,
         protocol_id=questionnaire.protocol_id,
-        structured=questionnaire.structured,
+        structured=_structured_for_questionnaire(questionnaire),
         gaps=questionnaire.gaps,
         processing_status=questionnaire.processing_status,
         answers=[
@@ -376,8 +386,9 @@ async def create_protocol_from_questionnaire(
     mains = {m.id: m for m in main_result.scalars().all()}
 
     answers = await _answers_for_mapping(db, questionnaire.id)
-    if questionnaire.structured:
-        mapped = _map_structured_to_fields(questionnaire.structured)
+    structured = _structured_for_questionnaire(questionnaire)
+    if structured:
+        mapped = _map_structured_to_fields(structured)
         structure_field_names = {
             mains[sf.protocol_fields_main_id].field_name
             for sf in structure_fields

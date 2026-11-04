@@ -32,7 +32,7 @@ const createErrorText = (error: unknown): string => {
     return 'Доступ клиники к сервису закончился — новые ссылки создать нельзя';
   if (error.status === 409)
     return 'Клиника работает с общей анкетой — персональные ссылки недоступны';
-  if (error.status === 400) {
+  if (error.status === 400 || error.status === 422) {
     // Тексты проверок backend уже по-русски; прочие — общим текстом.
     if (HAS_CYRILLIC.test(error.message)) return error.message;
     return 'Проверьте поля формы';
@@ -162,6 +162,17 @@ export const NewLinkModal = ({
             value={form.middleName}
             onChange={set('middleName')}
             maxLength={255}
+          />
+        </FieldRow>
+
+        <FieldRow label="Дата рождения" htmlFor="nl-birth">
+          <input
+            id="nl-birth"
+            type="date"
+            className={field(form.birthDate ?? '')}
+            value={form.birthDate ?? ''}
+            onChange={set('birthDate')}
+            max={new Date().toISOString().slice(0, 10)}
           />
         </FieldRow>
 

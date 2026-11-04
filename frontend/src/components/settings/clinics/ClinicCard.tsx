@@ -135,11 +135,13 @@ export const ClinicCard = ({ clinicId }: ClinicCardProps) => {
         {/* Подсказка — по сохранённому значению: при неудачном сохранении
             она не должна выдавать желаемое за действительное. */}
         <FieldRow
-          label="Анкета пациента"
+          label="Направления клиники"
           error={errors.questionnaire_kind}
           hint={
-            (saved?.questionnaire_kind ?? draft.questionnaire_kind) === 'dental'
-              ? 'По персональным ссылкам от регистратуры. Если переключить на общую, у регистратуры пропадёт раздел «Анкеты пациентов», а начатые анкеты пациенты дозаполнят'
+            (saved?.questionnaire_kind ?? draft.questionnaire_kind) === 'mixed'
+              ? 'Обычные анкеты по ссылке и QR врача или клиники, стоматологические — по персональным ссылкам регистратуры'
+              : (saved?.questionnaire_kind ?? draft.questionnaire_kind) === 'dental'
+              ? 'По персональным ссылкам от регистратуры. Если переключить на многопрофильную, раздел «Анкеты для стоматологии» скроется, а начатые анкеты пациенты дозаполнят'
               : 'По ссылке и QR врача или клиники'
           }
         >
@@ -148,7 +150,7 @@ export const ClinicCard = ({ clinicId }: ClinicCardProps) => {
             value={draft.questionnaire_kind}
             onChange={(value) => card.setAndCommit('questionnaire_kind', value)}
             triggerClassName={fieldFillClass(draft.questionnaire_kind)}
-            aria-label="Анкета пациента"
+            aria-label="Направления клиники"
           />
         </FieldRow>
 

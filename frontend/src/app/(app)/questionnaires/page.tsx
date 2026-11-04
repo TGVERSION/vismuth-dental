@@ -3,7 +3,7 @@ import { Suspense } from 'react';
 import { QuestionnairesScreen } from '@/components/doctor-questionnaires/QuestionnairesScreen';
 
 export const metadata: Metadata = {
-  title: 'Анкеты',
+  title: 'Анкеты для врачей',
 };
 
 /**

@@ -76,7 +76,7 @@ def test_other_reason_requires_text():
         _answer(EMPTY, "dental_reason", selections={"reason": ["other"]})
 
 
-def test_other_reason_text_is_stripped_and_truncated():
+def test_other_reason_text_is_stripped_and_preserved():
     answers, _ = _answer(
         EMPTY,
         "dental_reason",
@@ -84,7 +84,7 @@ def test_other_reason_text_is_stripped_and_truncated():
         texts={"reason": "  " + "а" * 1200 + "  "},
     )
 
-    assert answers.groups["reason"].text == "а" * 1000
+    assert answers.groups["reason"].text == "а" * 1200
 
 
 def test_unknown_value_is_rejected():
@@ -163,7 +163,7 @@ def test_details_show_groups_only_for_checked_items():
     assert [g["key"] for g in step.groups] == [
         "transfusion", "allergy.substance", "allergy.reaction",
     ]
-    assert step.groups[1]["title"] == "Вы отметили: аллергия"
+    assert step.groups[1]["title"] == "Аллергия"
     assert step.groups[1]["required"] is True
 
 
@@ -174,11 +174,11 @@ def test_rows_without_own_yes_no_need_a_choice():
         _answer(answers, "dental_details", texts={"pressure": "120/80"})
 
 
-def test_medications_text_is_required():
+def test_medication_name_need_not_be_typed_after_selection():
     answers, _ = _health(EMPTY, ["medications"])
 
-    with pytest.raises(DentalAnswerError):
-        _answer(answers, "dental_details", selections={"medications": ["eliquis"]})
+    updated, _ = _answer(answers, "dental_details", selections={"medications": ["eliquis"]})
+    assert updated.groups["medications"].selected == ["eliquis"]
 
 
 def test_details_reject_groups_of_unchecked_items():
@@ -206,16 +206,16 @@ def test_about_step_asks_header_fields_of_the_paper_form():
     step = dental_step("dental_about", EMPTY)
 
     assert [g["key"] for g in step.groups] == [
-        "about.birth_date", "about.visit_year", "about.visit_clinic", "about.more",
+        "about.visit_year", "about.visit_clinic", "about.more",
     ]
     assert all(g["options"] == [] and g["text"]["show"] == "always" for g in step.groups)
     assert not any(g["text"]["required"] for g in step.groups)
 
 
-def test_about_step_may_stay_empty_and_completes_questionnaire():
+def test_about_step_may_stay_empty_and_leads_to_review():
     answers, next_step = _answer(EMPTY, "dental_about")
 
-    assert next_step == "done"
+    assert next_step == "dental_review"
     assert answers.groups == {}
 
 

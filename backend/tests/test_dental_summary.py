@@ -85,7 +85,7 @@ def test_igor_has_nothing_important():
     summary, gaps = build_dental_summary(IGOR)
 
     assert summary["important"] == []
-    assert summary["complaints"] == "Профосмотр или чистка, протезирование."
+    assert summary["complaints"] == "Осмотр, чистка, протезирование."
     assert summary["medications"] == "Постоянно не принимает."
     assert summary["allergy_anamnesis"] == "Аллергии нет."
     assert summary["about"] == ""
@@ -112,9 +112,9 @@ def test_risks_reach_important_with_patient_words_as_facts():
         "Гепатит C; в 2010: соблюдать меры инфекционной безопасности",
         "Химиотерапия или бифосфонаты: риск осложнений при удалении и имплантации",
         "Искусственный клапан сердца: уточнить, нужна ли профилактика антибиотиком",
-        "Был инфаркт; в 2019: осторожно с анестетиком с адреналином",
+        "Инфаркт; в 2019: осторожно с анестетиком с адреналином",
         "Кардиостимулятор: осторожно с анестетиком с адреналином и электроприборами",
-        "Бывает потеря сознания или судороги: риск приступа в кресле",
+        "Потеря сознания или судороги: риск приступа в кресле",
         "Бронхиальная астма; Сальбутамол: риск приступа в кресле — ингалятор пациента под рукой",
         "Легко появляются синяки: риск кровотечения при удалении и хирургии",
         "Беременность; 20 недель: учитывать при рентгене и выборе анестетика",
@@ -136,9 +136,9 @@ def test_other_diseases_go_to_life_anamnesis_only():
 
     assert summary["important"] == []
     assert summary["life_anamnesis"] == (
-        "Было переливание крови: в 2015 году. "
+        "Переливание крови: в 2015 году. "
         "Курю: 10 лет. "
-        "Сильно меняется давление: повышенное; 130/85. "
+        "Значительные перепады давления: повышенное; 130/85. "
         "Болезни печени."
     )
 
@@ -268,7 +268,8 @@ def test_form_header_is_filled_from_answers():
     assert form["birth_date"] == "14.03.1985"
     assert form["visit_year"] == "2024"
     assert form["visit_clinic"] == "Улыбка"
-    assert form["more"] == "Боюсь уколов"
+    assert form["more"].startswith("Боюсь уколов")
+    assert "20 недель" in form["more"]
     assert [(p["letter"], p["selected"]) for p in form["problems"]] == [
         ("а", True), ("б", False), ("в", False), ("г", False),
         ("д", True), ("е", False), ("ж", False),

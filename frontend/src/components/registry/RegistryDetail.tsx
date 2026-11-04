@@ -214,6 +214,16 @@ export const RegistryDetail = ({
           </button>
         ) : null}
       </div>
+      {sheet && sheet.continuation.length > 0 ? (
+        <p
+          role="status"
+          className="rounded-lg bg-[#FFF7E5] px-3 py-2 text-sm text-[#654B16]"
+        >
+          В анкете есть длинные ответы. Они будут полностью напечатаны на листе
+          продолжения вместе с основным бланком. Проверьте и подпишите все
+          листы.
+        </p>
+      ) : null}
       {error ? (
         <p role="alert" className="text-sm text-[#D91528]">
           {error}

@@ -29,15 +29,27 @@ describe('раздел «Анкеты пациентов»', () => {
     expect(getActiveNavItem('/registryX')).toBeNull();
   });
 
-  it('виден только регистратуре стоматологической клиники', () => {
+  it('скрывает протоколы, пока роль не известна', () => {
     expect(getNavItems({ showRegistry: false }).map((i) => i.id)).toEqual([
       'questionnaires',
-      'protocols',
     ]);
     expect(getNavItems({ showRegistry: true }).map((i) => i.id)).toEqual([
       'registry',
       'questionnaires',
-      'protocols',
+    ]);
+  });
+
+  it.each(['doctor', 'admin', 'patient', null])('скрывает протоколы для роли %s', (role) => {
+    expect(getNavItems({ showRegistry: true, role }).map((i) => i.id)).toEqual([
+      'registry', 'questionnaires',
+    ]);
+  });
+
+  it('сохраняет протоколы для супер-админа и использует новые названия', () => {
+    expect(getNavItems({ showRegistry: true, role: 'super_admin' })).toEqual([
+      { id: 'registry', label: 'Анкеты для стоматологии', href: '/registry' },
+      { id: 'questionnaires', label: 'Анкеты для врачей', href: '/questionnaires' },
+      { id: 'protocols', label: 'Протоколы', href: '/' },
     ]);
   });
 
@@ -46,5 +58,10 @@ describe('раздел «Анкеты пациентов»', () => {
     expect(canUseRegistry({ is_clinic_admin: false, questionnaire_kind: 'dental' })).toBe(false);
     expect(canUseRegistry({ is_clinic_admin: true, questionnaire_kind: 'general' })).toBe(false);
     expect(canUseRegistry(null)).toBe(false);
+  });
+
+  it('доступен администратору смешанной клиники', () => {
+    expect(canUseRegistry({ is_clinic_admin: true, questionnaire_kind: 'mixed' })).toBe(true);
+    expect(canUseRegistry({ is_clinic_admin: false, questionnaire_kind: 'mixed' })).toBe(false);
   });
 });

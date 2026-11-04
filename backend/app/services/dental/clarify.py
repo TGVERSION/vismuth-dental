@@ -8,7 +8,7 @@
 from __future__ import annotations
 
 from .flow import AiTurn, DentalAnswerError, DentalAnswers, DentalStep, has_pain
-from .flow import DEFAULT_MAX_TEXT_LEN
+from .flow import DEFAULT_MAX_TEXT_LEN, _clean_text
 from .summary import build_dental_summary
 
 AI_STEP = "dental_ai"
@@ -19,14 +19,16 @@ _FACT_KEYS = ("about.birth_date", "about.visit_year", "about.visit_clinic")
 
 
 def needs_clarification(answers: DentalAnswers) -> bool:
-    """Есть ли что уточнять: свой текст пациента или неполная боль."""
-    if any(
-        answer.text for key, answer in answers.groups.items() if key not in _FACT_KEYS
-    ):
-        return True
+    """Модель нужна только для конкретного пробела, а не любого своего текста.
+
+    Один цикл уточнения на неизменённые ответы предотвращает повторный доспрос.
+    Явное «не знаю» остаётся ответом пациента, а не поводом переспрашивать.
+    """
+    if answers.clarification_checked or answers.ai:
+        return False
     if has_pain(answers):
         return any(
-            not answers.groups.get(key) or not answers.groups[key].selected
+            not answers.groups.get(key) or not (answers.groups[key].selected or answers.groups[key].text)
             for key in _PAIN_KEYS
         )
     return False
@@ -64,7 +66,7 @@ def ai_step(answers: DentalAnswers) -> DentalStep:
                 ],
                 "multiple": True,
                 "required": False,
-                "text": {"placeholder": "Свой ответ", "required": False, "show": "always"},
+                "text": {"placeholder": "Свой ответ", "required": False, "show": "always", "max_length": DEFAULT_MAX_TEXT_LEN},
             },
         ],
         allow_skip=True,
@@ -93,7 +95,7 @@ def apply_ai_answer(
             if not value.isdigit() or int(value) >= len(turn.choices):
                 raise DentalAnswerError(f"Unknown choice {value}")
             labels.append(turn.choices[int(value)])
-        text = (texts.get(AI_GROUP) or "").strip()[:max_len]
+        text = _clean_text(texts.get(AI_GROUP), max_len)
         answer = "; ".join(part for part in (", ".join(labels), text) if part)
         if not answer:
             raise DentalAnswerError("Choose an option, write an answer or skip")
@@ -106,11 +108,18 @@ def clarify_request(answers: DentalAnswers) -> dict:
     """Тело запроса к ml-service `/dental_clarify`."""
     summary, _ = build_dental_summary(answers)
     has = [row for row in summary["health"] if row["has"]]
-    has_not = [row["label"] for row in summary["health"] if not row["has"]]
+    has_not = [row["label"] for row in summary["health"] if row["has"] is False]
+    uncertain = [row["label"] for row in summary["health"] if row["has"] is None]
     lines = [f"Повод и жалобы: {summary['complaints'] or '—'}"]
     lines += [f"Здоровье: {row['label']}" + (f" — {row['detail']}" if row["detail"] else "") for row in has]
     if has_not:
         lines.append("Нет: " + ", ".join(has_not))
+    if uncertain:
+        lines.append("Не знает / не отвечено: " + ", ".join(uncertain))
+    if has_pain(answers):
+        missing = [key for key in _PAIN_KEYS if not answers.groups.get(key) or not answers.groups[key].selected]
+        if missing:
+            lines.append("Уточнить только недостающие сведения о боли: " + ", ".join(missing))
     lines.append(f"Препараты: {summary['medications']}")
     lines.append(f"Аллергия: {summary['allergy_anamnesis']}")
     return {

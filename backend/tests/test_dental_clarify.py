@@ -29,7 +29,7 @@ CHECKUP = _answers(reason={"selected": ["checkup"]})
     ("answers", "expected"),
     [
         (CHECKUP, False),
-        (_answers(reason={"selected": ["other"], "text": "Шатается зуб"}), True),
+        (_answers(reason={"selected": ["other"], "text": "Шатается зуб"}), False),
         (_answers(reason={"selected": ["pain"]}, pain__where={"selected": ["upper_left"]}), True),
         (
             _answers(
@@ -40,7 +40,7 @@ CHECKUP = _answers(reason={"selected": ["checkup"]})
             ),
             False,
         ),
-        (_answers(["medications"], reason={"selected": ["checkup"]}, medications={"text": "Конкор"}), True),
+        (_answers(["medications"], reason={"selected": ["checkup"]}, medications={"text": "Конкор"}), False),
         # Дата рождения и последний визит — факты для шапки бланка, не повод спрашивать.
         (
             _answers(

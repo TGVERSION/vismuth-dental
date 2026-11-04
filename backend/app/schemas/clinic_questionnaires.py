@@ -4,7 +4,7 @@ from datetime import datetime
 from typing import Any, Literal, Optional
 from uuid import UUID
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, PastDate
 
 RegistryStatusLiteral = Literal["invited", "in_progress", "completed", "printed", "signed"]
 
@@ -13,6 +13,7 @@ class RegistryQuestionnaireCreate(BaseModel):
     last_name: str = Field(..., max_length=255)
     first_name: str = Field(..., max_length=255)
     middle_name: Optional[str] = Field(default=None, max_length=255)
+    birth_date: Optional[PastDate] = None
 
 
 class RegistryQuestionnaireItem(BaseModel):

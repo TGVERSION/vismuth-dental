@@ -98,6 +98,7 @@ class StepDescriptorResponse(BaseModel):
         description="True — ML недоступен; идут фиксированные вопросы без AI.",
     )
     gastro: Optional[dict[str, Any]] = None
+    dental: Optional[dict[str, Any]] = None
 
 
 class QuestionnaireCreateResponse(BaseModel):
@@ -164,10 +165,10 @@ class QuestionnaireAnswerRequest(BaseModel):
         description="Выбор специализации на соответствующем шаге.",
     )
     selections: Optional[
-        dict[str, Annotated[list[Annotated[str, Field(max_length=64)]], Field(max_length=20)]]
+        dict[str, Annotated[list[Annotated[str, Field(max_length=64)]], Field(max_length=64)]]
     ] = Field(
         default=None,
-        max_length=20,
+        max_length=64,
         description=(
             "Стоматологическая анкета: выбранные значения по ключу группы "
             "(chip_groups) или {\"health\": [...]} (checklist)."
@@ -176,7 +177,7 @@ class QuestionnaireAnswerRequest(BaseModel):
     revision: Optional[int] = Field(default=None, ge=0)
     texts: Optional[dict[str, Annotated[str, Field(max_length=20000)]]] = Field(
         default=None,
-        max_length=20,
+        max_length=64,
         description="Стоматологическая анкета: свой текст по ключу группы.",
     )
     first_name: Optional[str] = Field(default=None, max_length=255)

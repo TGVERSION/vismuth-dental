@@ -170,12 +170,12 @@ export const RegistryScreen = () => {
 
   return (
     <>
-      <h1 className="sr-only">Анкеты пациентов</h1>
+      <h1 className="sr-only">Анкеты для стоматологии</h1>
 
       {/* Колонка — как в разделе «Анкеты» у врача: кнопка, белая карточка
           фильтров, заголовок списка. */}
       <aside
-        aria-label="Анкеты пациентов"
+        aria-label="Анкеты для стоматологии"
         className="custom-height fixed top-20 left-0 ml-3 mr-5 flex w-85.75 flex-col bg-[#F3F4F8]"
       >
         <button
@@ -230,7 +230,7 @@ export const RegistryScreen = () => {
 
         <div className="custom-scrollbar mt-6 flex-1 overflow-x-hidden overflow-y-auto">
           <h2 className="px-0 py-2.25 text-[14px] font-medium">
-            Анкеты пациентов
+            Анкеты для стоматологии
           </h2>
           {renderList()}
         </div>

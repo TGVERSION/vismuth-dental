@@ -6,11 +6,11 @@ from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
 AccessType = Literal["trial", "paid"]
 AccessStatusCode = Literal["trial", "paid", "expired"]
-QuestionnaireKind = Literal["general", "dental"]
+QuestionnaireKind = Literal["general", "dental", "mixed"]
 
 _KIND_DESCRIPTION = (
     "general — общая анкета по ссылке и QR врача; dental — стоматологическая, "
-    "только по персональным ссылкам регистратуры."
+    "только по персональным ссылкам регистратуры; mixed — оба направления."
 )
 
 

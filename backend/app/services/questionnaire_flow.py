@@ -532,13 +532,12 @@ async def apply_answer(
             none_answer=none_answer,
             skip=skip,
             now=now,
+            revision=revision,
+            choice=choice,
         )
         await db.commit()
         await db.refresh(questionnaire)
-        truncated = any(
-            len(text.strip()) > settings.questionnaire_answer_max_len
-            for text in (texts or {}).values()
-        )
+        truncated = False  # Стоматологические ответы сохраняются целиком либо отклоняются.
         descriptor = build_dental_descriptor(questionnaire)
         descriptor.truncated = truncated
         return descriptor, truncated, False

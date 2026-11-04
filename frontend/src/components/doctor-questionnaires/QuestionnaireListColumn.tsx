@@ -110,7 +110,7 @@ export const QuestionnaireListColumn = ({
   return (
     <aside
       data-print-hide
-      aria-label="Анкеты пациентов"
+      aria-label="Анкеты для врачей"
       className="custom-height fixed top-20 left-0 ml-3 mr-5 flex w-85.75 flex-col bg-[#F3F4F8]"
     >
       <LinksQrButton />

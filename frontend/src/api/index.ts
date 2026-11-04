@@ -694,6 +694,7 @@ export interface QuestionnaireChoice {
   label: string;
   /** Подпись под строкой: только у списка здоровья стоматологической анкеты. */
   hint?: string;
+  section?: string;
 }
 
 /** Дескриптор шага. step_key и step_type — строки backend, сужаются в lib. */
@@ -718,6 +719,29 @@ export interface QuestionnaireStep {
   groups?: unknown[];
   /** Дескриптор отдельного первичного гастросценария; проверяется перед рендером. */
   gastro?: unknown;
+  /** Стоматология: серверная ревизия, сохранённые ответы и разрешённые исправления. */
+  dental?: {
+    revision: number;
+    question_key?: string;
+    question?: unknown;
+    allow_empty?: boolean;
+    conversation_progress?: { current: number; total: number; label: string };
+    answers: {
+      flow_version?: number;
+      health_answered?: string[];
+      health: string[] | null;
+      health_unknown: string[];
+      groups: Record<string, { selected: string[]; text: string }>;
+      ai?: { question: string; answer: string; choices?: string[]; skipped?: boolean }[];
+    };
+    editable_steps?: string[];
+    progress?: { current: number; total: number; label: string };
+    navigation?: { step_key: string; label: string }[];
+    /** Принятые сервером ответы для чтения в переписке, без переходов назад. */
+    history?: { id: string; step_key: string; question: string; answer: string }[];
+    page?: { kind: 'health' | 'details'; current: number; total: number };
+    review?: DoctorQuestionnaireStructured;
+  };
   /** YYYY-MM-DD по часам сервера. */
   date_min: string | null;
   date_max: string | null;
@@ -893,13 +917,13 @@ export interface DentalPaperRow {
   note: string;
   /** «Нужное подчеркнуть». */
   underline: { text: string; selected: boolean }[];
-  subs: { text: string; answer: boolean; note: string }[];
+  subs: { text: string; answer: boolean | null; note: string }[];
 }
 
 export interface DentalHealthRow {
   key: string;
   label: string;
-  has: boolean;
+  has: boolean | null;
   /** Уточнение пациента; пусто при «нет». */
   detail: string;
 }
@@ -943,7 +967,7 @@ export interface CreateProtocolFromQuestionnaireRequest {
 export type ClinicAccessType = 'trial' | 'paid';
 
 /** `dental` — стоматологическая анкета по персональным ссылкам регистратуры. */
-export type ClinicQuestionnaireKind = 'general' | 'dental';
+export type ClinicQuestionnaireKind = 'general' | 'dental' | 'mixed';
 
 /** Статус доступа, который backend вычисляет по типу и дате. */
 export type ClinicAccessStatus = 'trial' | 'paid' | 'expired';
@@ -1000,7 +1024,7 @@ export interface MyClinicRead {
   /** `{FRONTEND_PUBLIC_URL}/q/{slug}` — адрес собирает backend. */
   clinic_public_url: string;
   /** `dental` — анкета по персональным ссылкам регистратуры. */
-  questionnaire_kind: 'general' | 'dental';
+  questionnaire_kind: ClinicQuestionnaireKind;
   membership_id: string;
   is_clinic_admin: boolean;
   is_doctor: boolean;
@@ -1050,6 +1074,7 @@ export interface RegistryQuestionnaireCreate {
   last_name: string;
   first_name: string;
   middle_name: string | null;
+  birth_date?: string | null;
 }
 
 /** Новые анкеты сверху; фильтры — статус и ФИО. */

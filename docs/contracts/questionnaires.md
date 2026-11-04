@@ -1,4 +1,4 @@
-# Анкеты врача
+# Анкеты для врачей
 
 JWT + активный `clinic_membership` с `is_doctor`. Видны только анкеты своего membership (`status=completed`).
 

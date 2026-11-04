@@ -9,8 +9,9 @@ from __future__ import annotations
 import re
 from typing import Any
 
-from .flow import DentalAnswers, GroupAnswer, has_pain
+from .flow import DentalAnswers, GroupAnswer, has_pain, health_state
 from .paper_form import build_paper_form
+from .conversation import health_free_reference
 from .questions import (
     BLOOD_THINNER_OPTIONS,
     BLOOD_THINNERS,
@@ -107,10 +108,13 @@ def _item_detail(answers: DentalAnswers, item_value: str, *, lower: bool) -> str
 
 def _pain_sentence(answers: DentalAnswers) -> str:
     where = ", ".join(_lower_first(label) for label in _labels(answers, "pain.where"))
+    where = '; '.join(part for part in [where, _answer(answers, 'pain.where').text] if part)
     when = ", ".join(
         _PAIN_WHEN[v] for v in _answer(answers, "pain.when").selected if v in _PAIN_WHEN
     )
     since = ", ".join(_lower_first(label) for label in _labels(answers, "pain.since"))
+    when = '; '.join(part for part in [when, _answer(answers, 'pain.when').text] if part)
+    since = '; '.join(part for part in [since, _answer(answers, 'pain.since').text] if part)
     sentence = "Болит зуб" + (f" {where}" if where else "")
     sentence += f": {when}" if when else ""
     sentence += f"; {since}" if since else ""
@@ -145,9 +149,14 @@ def _thinner_labels(answers: DentalAnswers, health: list[str]) -> list[str]:
 
 
 def _medications(answers: DentalAnswers, health: list[str]) -> str:
+    if health_state(answers, "medications") is None:
+        if health_free_reference(answers, 'medications'):
+            return health_free_reference(answers, 'medications') + '.'
+        return "Не знает, принимает ли постоянно лекарства." if "medications" in answers.health_unknown else "Не отвечено."
     if "medications" not in health:
         return "Постоянно не принимает."
-    parts = [*_labels(answers, "medications"), _answer(answers, "medications").text]
+    parts = [*_labels(answers, "medications"), _answer(answers, "medications").text,
+             _group_detail(answers, "medications.dose", lower=False)]
     return ", ".join(part for part in parts if part) or "Постоянно не принимает."
 
 
@@ -271,7 +280,7 @@ def _gaps(answers: DentalAnswers, health: list[str]) -> list[dict[str, str]]:
             ("pain.when", "От чего возникает боль"),
             ("pain.since", "Как давно болит"),
         ):
-            if not _answer(answers, key).selected:
+            if not _answer(answers, key).selected and not _answer(answers, key).text:
                 gaps.append(_gap(COMPLAINTS, question))
     thinners = _thinner_labels(answers, health)
     if thinners:
@@ -281,7 +290,7 @@ def _gaps(answers: DentalAnswers, health: list[str]) -> list[dict[str, str]]:
             _gap(MEDICATIONS, f"Принимает ли {name} сейчас и в какой дозе")
             for name in _mentioned_blood_thinners(answers)
         )
-    if "allergy" in health and not _answer(answers, "allergy.reaction").selected:
+    if "allergy" in health and not (_answer(answers, "allergy.reaction").selected or _answer(answers, "allergy.reaction").text):
         gaps.append(_gap(ALLERGY, "Как проявлялась аллергия"))
     # Пропущенный вопрос нейросети — врач задаст его сам.
     gaps.extend(_gap(COMPLAINTS, turn.question) for turn in answers.ai if turn.skipped)
@@ -297,8 +306,10 @@ def build_dental_summary(
     совпадают с общей анкетой: по ним создаётся протокол.
     """
     health = answers.health or []
+    uncertainty = [f"{item.label}: {health_free_reference(answers, item.value) or 'не знаю'}" for item in HEALTH_ITEMS if item.value in answers.health_unknown]
+    unknown_chronic = any(item.value in answers.health_unknown for item in HEALTH_ITEMS if item.value in _CHRONIC)
     structured = {
-        "important": _important(answers, health),
+        "important": [*_important(answers, health), *uncertainty],
         # Для листа, который подписывает пациент: только факты из его ответов.
         "important_facts": [fact for fact, _ in _important_items(answers, health)],
         "complaints": _complaints(answers),
@@ -306,17 +317,17 @@ def build_dental_summary(
             {
                 "key": item.value,
                 "label": item.label,
-                "has": item.value in health,
+                "has": health_state(answers, item.value),
                 "detail": _item_detail(answers, item.value, lower=False)
                 if item.value in health
-                else "",
+                else (health_free_reference(answers, item.value) or ("Не знаю" if item.value in answers.health_unknown else ("Не отвечено" if answers.health is None else ""))),
             }
             for item in HEALTH_ITEMS
         ],
         "medications": _medications(answers, health),
-        "allergy_anamnesis": _allergy_line(answers) if "allergy" in health else "Аллергии нет.",
-        "life_anamnesis": _life_anamnesis(answers, health),
-        "about": _about(answers),
+        "allergy_anamnesis": _allergy_line(answers) if "allergy" in health else (health_free_reference(answers, 'allergy') or ("Не знает, есть ли аллергия." if "allergy" in answers.health_unknown else ("Не отвечено." if answers.health is None else "Аллергии нет."))),
+        "life_anamnesis": (_life_anamnesis(answers, health) if health or not unknown_chronic else "Есть ответы «Не знаю».") + (" " + "; ".join(uncertainty) if uncertainty else ""),
+        "about": '\n'.join(part for part in [_about(answers), *answers.health_comments.values()] if part),
         # Вопросы нейросети и ответы пациента дословно; пусто — пропустил.
         "clarifications": [
             {"question": turn.question, "answer": turn.answer}
@@ -325,4 +336,6 @@ def build_dental_summary(
         ],
         "paper_form": build_paper_form(answers),
     }
-    return structured, _gaps(answers, health)
+    return structured, [*_gaps(answers, health), *[_gap(ALLERGY if value == "allergy" else MEDICATIONS if value == "medications" else COMPLAINTS,
+                            f"Уточнить: {next(i.label for i in HEALTH_ITEMS if i.value == value)} — {health_free_reference(answers, value) or 'пациент ответил «Не знаю»'}")
+                            for value in answers.health_unknown]]

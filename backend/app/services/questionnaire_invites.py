@@ -1,7 +1,7 @@
 """Персональная ссылка на анкету, которую создаёт регистратура (админ клиники).
 
-Анкета создаётся заранее со статусом `invited`: регистратура вводит только
-ФИО, пациент отвечает на вопросы. Как и бумажная анкета, она не привязана ни к
+Анкета создаётся заранее со статусом `invited`: регистратура вводит
+ФИО и дату рождения, пациент отвечает на вопросы. Как и бумажная анкета, она не привязана ни к
 врачу, ни к дате приёма. Токен ссылки — это
 сессионный токен анкеты: в базе лежит только хэш, поэтому показать ссылку
 повторно нельзя — можно выпустить новую (старая перестаёт работать).
@@ -10,7 +10,7 @@
 from __future__ import annotations
 
 import secrets
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
 from typing import Any, Literal, Optional
 from uuid import UUID
 
@@ -21,7 +21,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from ..config import settings
 from ..models.clinic import Clinic
 from ..models.questionnaire import Questionnaire
-from .dental.flow import FIRST_STEP as DENTAL_FIRST_STEP
+from .dental.flow import FIRST_STEP as DENTAL_FIRST_STEP, DentalAnswers, GroupAnswer
 from .questionnaire_limits import ensure_clinic_subscription_active, hash_session_token
 
 # Сколько дней после создания работает ссылка.
@@ -84,9 +84,10 @@ async def create_invite(
     first_name: str,
     middle_name: Optional[str],
     created_by_membership_id: Optional[UUID],
+    birth_date: Optional[date] = None,
 ) -> tuple[Questionnaire, str]:
     """Создаёт анкету по персональной ссылке; возвращает её и токен ссылки."""
-    if clinic.questionnaire_kind != "dental":
+    if clinic.questionnaire_kind not in {"dental", "mixed"}:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail="Personal links are available for dental questionnaire only",
@@ -113,6 +114,9 @@ async def create_invite(
         invite_expires_at=invite_expires_at(datetime.now(timezone.utc)),
         created_by_membership_id=created_by_membership_id,
         session_token_hash=hash_session_token(raw_token),
+        dental_answers=DentalAnswers(flow_version=2, groups={
+            "about.birth_date": GroupAnswer(text=birth_date.isoformat())
+        } if birth_date else {}).model_dump(),
     )
     db.add(questionnaire)
     await db.commit()

@@ -25,7 +25,7 @@ Invite врача: `specialization_ids` обязательны при `is_doctor
 ## POST /super-admin/clinics
 
 - **Назначение:** создать клинику
-- **Поведение:** генерирует immutable `public_slug`; `201`. `questionnaire_kind`: `general` (по умолчанию — общая анкета по ссылке и QR) или `dental` (стоматологическая, только по персональным ссылкам регистратуры, см. [clinic-questionnaires.md](clinic-questionnaires.md))
+- **Поведение:** генерирует immutable `public_slug`; `201`. `questionnaire_kind`: `general` (по умолчанию — многопрофильная, обычные анкеты по ссылке и QR), `dental` (стоматология, только персональные ссылки регистратуры) или `mixed` (оба направления одновременно). В `mixed` общая ссылка и ссылки врачей запускают обычный сценарий, персональные приглашения — стоматологический, см. [clinic-questionnaires.md](clinic-questionnaires.md). Существующие клиники сохраняют прежний режим; новый включается супер-администратором.
 - **Ответ (смысл):** карточка клиники + computed access status, `doctors_count=0`
 - **Frontend:** форма создания в супер-админке
 - **Код:** `create_clinic`

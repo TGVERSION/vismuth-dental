@@ -80,7 +80,7 @@ export const QuestionnairesScreen = () => {
 
   return (
     <>
-      <h1 className="sr-only">Анкеты</h1>
+      <h1 className="sr-only">Анкеты для врачей</h1>
 
       <QuestionnaireListColumn
         search={search}

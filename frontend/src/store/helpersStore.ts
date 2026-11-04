@@ -157,8 +157,8 @@ export const useHelpersStore = create<HelpersStoreState>()(
       // Запись приёма по умолчанию выключена: функция появляется в интерфейсе
       // только после того, как врач включил её в помощниках.
       voiceEnabled: false,
-      // Проверка для ДМС по умолчанию выключена — так же, как запись приёма.
-      dmsEnabled: false,
+      // Проверка для ДМС доступна по умолчанию; сохранённый выбор имеет приоритет.
+      dmsEnabled: true,
       autocompleteProvider: 'dict_autocomplete',
 
       setUserSettings: (settings) => set({ userSettings: settings }),

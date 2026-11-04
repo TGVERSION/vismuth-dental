@@ -1,16 +1,19 @@
 'use client';
-
-import { useState } from 'react';
 import type { QuestionnaireStep, QuestionnaireStepAnswer } from '@/api';
 import {
   buildChecklistAnswer,
   parseChecklist,
-  toggleChecklist,
+  scopedChecklistValues,
 } from '@/lib/dental-questionnaire';
-import { DentalButton, DentalError } from './DentalShell';
-
+import { useDentalDraft } from '@/hooks/useDentalDraft';
+import {
+  DentalAssistantMessage,
+  DentalButton,
+  DentalError,
+} from './DentalShell';
 interface ChecklistStepProps {
   step: QuestionnaireStep;
+  questionnaireId: string;
   isSubmitting: boolean;
   error: string | null;
   onSubmit: (answer: QuestionnaireStepAnswer) => void;
@@ -19,59 +22,72 @@ interface ChecklistStepProps {
     footer: React.ReactNode,
   ) => React.ReactNode;
 }
-
-/**
- * «Что из этого у вас есть?». Пока ничего не отмечено, внизу одна кнопка
- * «Ничего из этого нет»: здоровый пациент проходит шаг одним нажатием.
- */
 export const ChecklistStep = ({
   step,
+  questionnaireId,
   isSubmitting,
   error,
   onSubmit,
   renderShell,
 }: ChecklistStepProps) => {
   const items = parseChecklist(step);
-  const [checked, setChecked] = useState<string[]>([]);
-
+  const { draft, setDraft, restored } = useDentalDraft(questionnaireId, step);
+  const { checked, uncertain } = scopedChecklistValues(step, draft);
+  const healthPage = step.dental?.page?.kind === 'health';
+  const toggle = (value: string, unknown: boolean) => {
+    setDraft((current) => {
+      const key = unknown ? 'health_unknown' : 'health';
+      const other = unknown ? 'health' : 'health_unknown';
+      const selected = current.selections[key] ?? [];
+      return {
+        ...current,
+        selections: {
+          ...current.selections,
+          [key]: selected.includes(value)
+            ? selected.filter((x) => x !== value)
+            : [...selected, value],
+          [other]: (current.selections[other] ?? []).filter((x) => x !== value),
+        },
+      };
+    });
+  };
   const body = (
     <>
-      <h2
-        id="health-question"
-        className="text-[23px] leading-tight font-semibold"
-      >
-        {step.title ?? 'Что из этого у вас есть?'}
-      </h2>
-      <p className="-mt-3 text-[15px] text-[var(--q-muted)]">
-        Отметьте только то, что есть. Остальное считаем «нет».
-      </p>
+      <DentalAssistantMessage>
+        <h2 id="health-question" className="text-base leading-snug font-medium">
+          {step.title ?? 'Здоровье сейчас и раньше'}
+        </h2>
+        <p className="mt-2 text-[14px] leading-snug text-[var(--q-muted)]">
+          {step.text ??
+            (healthPage && step.dental?.page?.current !== 1
+              ? 'Отметьте подходящее. Без отметки — «Нет».'
+              : 'Отметьте, что есть сейчас или было раньше. Учитывайте сроки. Без отметки — «Нет».')}
+        </p>
+      </DentalAssistantMessage>
       <ul
         role="group"
         aria-labelledby="health-question"
         className="flex flex-col overflow-hidden rounded-2xl bg-[var(--q-surface)]"
       >
-        {items.map((item) => {
-          const isOn = checked.includes(item.value);
-          return (
-            <li
-              key={item.value}
-              className="border-t border-[var(--q-bg)] first:border-t-0"
-            >
-              <label
-                className={`flex min-h-[52px] cursor-pointer items-center gap-3 px-4 py-2.5 ${
-                  isOn
-                    ? 'bg-[color-mix(in_srgb,var(--q-brand)_12%,var(--q-surface))]'
-                    : ''
-                }`}
-              >
+        {items.map((item, index) => (
+          <li
+            key={item.value}
+            className="border-t border-[var(--q-bg)] first:border-t-0"
+          >
+            {!healthPage &&
+            item.section &&
+            (index === 0 || items[index - 1].section !== item.section) ? (
+              <h3 className="bg-[var(--q-bg)] px-4 pt-5 pb-2 text-base font-semibold">
+                {item.section}
+              </h3>
+            ) : null}
+            <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-2 px-3 py-1">
+              <label className="flex min-h-[52px] min-w-0 cursor-pointer items-center gap-3 py-2.5">
                 <input
                   type="checkbox"
-                  checked={isOn}
-                  onChange={() =>
-                    setChecked((current) =>
-                      toggleChecklist(current, item.value),
-                    )
-                  }
+                  checked={checked.includes(item.value)}
+                  onChange={() => toggle(item.value, false)}
+                  disabled={isSubmitting || !restored}
                   className="h-[22px] w-[22px] shrink-0 accent-[var(--q-brand)]"
                 />
                 <span className="text-[15px] leading-snug">
@@ -83,28 +99,31 @@ export const ChecklistStep = ({
                   ) : null}
                 </span>
               </label>
-            </li>
-          );
-        })}
+            </div>
+          </li>
+        ))}
       </ul>
     </>
   );
-
-  const submit = () => onSubmit(buildChecklistAnswer(step.step_key, checked));
-  const footer = (
+  return (
     <>
-      <DentalError message={error} />
-      {checked.length === 0 ? (
-        <DentalButton variant="soft" onClick={submit} isBusy={isSubmitting}>
-          Ничего из этого нет
-        </DentalButton>
-      ) : (
-        <DentalButton onClick={submit} isBusy={isSubmitting}>
-          {`Далее · отмечено ${checked.length}`}
-        </DentalButton>
+      {renderShell(
+        body,
+        <>
+          <DentalError message={error} />
+          <DentalButton
+            isBusy={isSubmitting}
+            onClick={() => {
+              if (!restored) return;
+              onSubmit(buildChecklistAnswer(step.step_key, checked, uncertain));
+            }}
+          >
+            {checked.length || uncertain.length
+              ? 'Далее'
+              : 'Ничего из этого нет'}
+          </DentalButton>
+        </>,
       )}
     </>
   );
-
-  return <>{renderShell(body, footer)}</>;
 };

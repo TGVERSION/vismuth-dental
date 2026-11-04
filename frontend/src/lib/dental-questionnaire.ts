@@ -23,18 +23,24 @@ const stringOr = (value: unknown, fallback: string): string =>
 // ---------------------------------------------------------------------------
 // Шаг и экран
 
-export type DentalScreen = 'chips' | 'checklist' | 'done' | 'unknown';
+export type DentalScreen =
+  | 'chips'
+  | 'checklist'
+  | 'review'
+  | 'done'
+  | 'unknown';
 
 export const dentalScreenFor = (step: QuestionnaireStep): DentalScreen => {
   if (step.completed || step.step_type === 'done') return 'done';
   if (step.step_type === 'chip_groups') return 'chips';
   if (step.step_type === 'checklist') return 'checklist';
+  if (step.step_type === 'dental_review') return 'review';
   return 'unknown';
 };
 
 export interface DentalProgress {
-  current: 1 | 2 | 3;
-  total: 3;
+  current: number;
+  total: number;
   label: string;
 }
 
@@ -45,14 +51,35 @@ const PROGRESS: Record<string, DentalProgress> = {
   dental_details: { current: 2, total: 3, label: 'Уточнение' },
   dental_about: { current: 3, total: 3, label: 'О вас' },
   dental_ai: { current: 3, total: 3, label: 'Уточнение' },
+  dental_review: { current: 3, total: 3, label: 'Проверка ответов' },
 };
 
 /** Шаг уточняющего вопроса нейросети. */
 export const AI_STEP = 'dental_ai';
 
-/** «Шаг 1 из 3 · Зачем пришли». Уточнения не меняют номер шага. */
-export const dentalProgress = (stepKey: string): DentalProgress | null =>
-  PROGRESS[stepKey] ?? null;
+/** Новый маршрут задаёт точный прогресс; прежние дескрипторы совместимы. */
+export const dentalProgress = (
+  step: QuestionnaireStep | string,
+): DentalProgress | null =>
+  typeof step === 'string'
+    ? PROGRESS[step] ?? null
+    : step.dental?.progress ?? PROGRESS[step.step_key] ?? null;
+
+const STEP_LABELS: Record<string, string> = {
+  dental_reason: 'повод визита',
+  dental_pain: 'боль',
+  dental_health: 'здоровье',
+  dental_details: 'уточнения',
+  dental_about: 'о вас',
+};
+
+/** Только разрешённые сервером переходы, в порядке пройденных страниц. */
+export const dentalNavigation = (step: QuestionnaireStep) =>
+  (step.dental?.editable_steps ?? []).map((step_key) => ({
+    step_key,
+    label: step.dental?.navigation?.find((item) => item.step_key === step_key)
+      ?.label ?? STEP_LABELS[step_key] ?? 'ответы',
+  }));
 
 // ---------------------------------------------------------------------------
 // Группы кнопок
@@ -66,14 +93,23 @@ export interface DentalOption {
 
 export interface DentalGroup {
   key: string;
-  /** Заголовок над группой: «Вы отметили: …». */
+  /** Тема уточнения, например «Аллергия». */
   title: string | null;
   question: string;
   options: DentalOption[];
   multiple: boolean;
   /** Нужно выбрать хотя бы один вариант. */
   required: boolean;
-  text: { placeholder: string; required: boolean; show: TextShow } | null;
+  text: {
+    placeholder: string;
+    required: boolean;
+    show: TextShow;
+    input_kind?: 'date' | 'year' | 'pressure' | 'duration' | 'text';
+    input_mode?: 'numeric' | 'decimal' | 'text';
+    quick_choices?: string[];
+    optional_reveal?: boolean;
+    max_length?: number;
+  } | null;
 }
 
 const TEXT_SHOW: readonly TextShow[] = ['always', 'on_select', 'on_other'];
@@ -94,6 +130,23 @@ const parseText = (raw: unknown): DentalGroup['text'] => {
     placeholder: stringOr(raw.placeholder, ''),
     required: raw.required === true,
     show,
+    input_kind: ['date', 'year', 'pressure', 'duration'].includes(
+      String(raw.input_kind),
+    )
+      ? (raw.input_kind as 'date' | 'year' | 'pressure' | 'duration')
+      : 'text',
+    input_mode:
+      raw.input_mode === 'numeric' || raw.input_mode === 'decimal'
+        ? raw.input_mode
+        : 'text',
+    quick_choices: Array.isArray(raw.quick_choices)
+      ? raw.quick_choices.filter((x): x is string => typeof x === 'string')
+      : [],
+    optional_reveal: raw.optional_reveal === true,
+    max_length:
+      typeof raw.max_length === 'number'
+        ? Math.min(20000, raw.max_length)
+        : ANSWER_MAX_LENGTH,
   };
 };
 
@@ -135,6 +188,34 @@ export const EMPTY_DRAFT: DentalDraft = Object.freeze({
   texts: Object.freeze({}),
 });
 
+/** Сохранённые ответы приходят с сервера и не задают маршрут на клиенте. */
+export const draftForDentalStep = (step: QuestionnaireStep): DentalDraft => {
+  const answers = step.dental?.answers;
+  if (!answers) return EMPTY_DRAFT;
+  const selections: Record<string, string[]> = {};
+  const texts: Record<string, string> = {};
+  for (const [key, value] of Object.entries(answers.groups ?? {})) {
+    selections[key] = [...value.selected];
+    texts[key] = value.text;
+  }
+  selections.health = [...(answers.health ?? [])];
+  selections.health_unknown = [...(answers.health_unknown ?? [])];
+  return normalizeDentalDraft({ selections, texts });
+};
+
+/** Совместимость сохранённого ответа и локального черновика прежней версии. */
+export const normalizeDentalDraft = (draft: DentalDraft): DentalDraft => {
+  const key = 'medications.dose';
+  const selected = draft.selections[key] ?? [];
+  if (!selected.includes('unknown')) return draft;
+  const text = draft.texts[key] ?? '';
+  return {
+    selections: { ...draft.selections, [key]: selected.filter((x) => x !== 'unknown') },
+    texts: { ...draft.texts, [key]: text.includes('Дозу не помню')
+      ? text : ['Дозу не помню', text].filter(Boolean).join('; ') },
+  };
+};
+
 const selectedIn = (draft: DentalDraft, key: string): readonly string[] =>
   draft.selections[key] ?? [];
 
@@ -164,9 +245,10 @@ export const setGroupText = (
   draft: DentalDraft,
   key: string,
   text: string,
+  maxLength = ANSWER_MAX_LENGTH,
 ): DentalDraft => ({
   ...draft,
-  texts: { ...draft.texts, [key]: text.slice(0, ANSWER_MAX_LENGTH) },
+  texts: { ...draft.texts, [key]: text.slice(0, maxLength) },
 });
 
 /** Показывать ли поле для своего текста — правило приходит с сервера. */
@@ -244,6 +326,7 @@ export interface DentalChecklistItem {
   value: string;
   label: string;
   hint: string;
+  section?: string;
 }
 
 export const parseChecklist = (
@@ -258,7 +341,20 @@ export const parseChecklist = (
       value: raw.value as string,
       label: raw.label as string,
       hint: stringOr(raw.hint, ''),
+      ...(typeof raw.section === 'string' ? { section: raw.section } : {}),
     }));
+
+/** Глобальный черновик хранится целиком, но ответ принадлежит одной странице. */
+export const scopedChecklistValues = (
+  step: QuestionnaireStep,
+  draft: DentalDraft,
+): { checked: string[]; uncertain: string[] } => {
+  const visible = new Set(parseChecklist(step).map((item) => item.value));
+  return {
+    checked: (draft.selections.health ?? []).filter((value) => visible.has(value)),
+    uncertain: (draft.selections.health_unknown ?? []).filter((value) => visible.has(value)),
+  };
+};
 
 export const toggleChecklist = (
   checked: readonly string[],
@@ -272,10 +368,17 @@ export const toggleChecklist = (
 export const buildChecklistAnswer = (
   stepKey: string,
   checked: readonly string[],
+  uncertain: readonly string[] = [],
 ): QuestionnaireStepAnswer =>
-  checked.length === 0
+  checked.length === 0 && uncertain.length === 0
     ? { step_key: stepKey, none: true }
-    : { step_key: stepKey, selections: { [HEALTH_KEY]: [...checked] } };
+    : {
+        step_key: stepKey,
+        selections: {
+          [HEALTH_KEY]: [...checked],
+          ...(uncertain.length ? { health_unknown: [...uncertain] } : {}),
+        },
+      };
 
 // ---------------------------------------------------------------------------
 // Приветствие

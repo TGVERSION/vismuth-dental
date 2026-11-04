@@ -48,6 +48,7 @@ describe('printSheet', () => {
       lastName: 'Белова',
       firstMiddle: 'Ольга Сергеевна',
       form: FORM,
+      continuation: [],
     });
   });
 
@@ -66,5 +67,52 @@ describe('printSheet', () => {
     expect(JSON.stringify(printSheet(detail()))).not.toContain(
       'риск кровотечения',
     );
+  });
+
+  it('keeps a long answer complete on a labelled continuation without changing stored data', () => {
+    const longAnswer = 'Пациент сообщил точные сведения. '.repeat(40);
+    const original = {
+      ...FORM,
+      more: longAnswer,
+      rows: [{ ...FORM.rows[0], answer: true, note: longAnswer }],
+    };
+    const result = printSheet(detail({ structured: { paper_form: original } }));
+    expect(result?.continuation).toEqual([
+      { label: 'Пункт 1. Если да, то какого типа и когда', text: longAnswer },
+      { label: 'Дополнительные сведения пациента', text: longAnswer },
+    ]);
+    expect(result?.form.rows[0].note).toContain('продолжени');
+    expect(result?.form.more).toContain('продолжени');
+    expect(original.more).toBe(longAnswer);
+    expect(original.rows[0].note).toBe(longAnswer);
+  });
+
+  it('moves long named allergen notes to a continuation, retaining their category', () => {
+    const note = 'Подробное описание реакции '.repeat(30);
+    const form = {
+      ...FORM,
+      rows: [
+        {
+          ...FORM.rows[0],
+          number: 41,
+          note_label: null,
+          subs: [{ text: 'антибиотики', answer: true, note }],
+        },
+      ],
+    };
+    const result = printSheet(detail({ structured: { paper_form: form } }));
+    expect(result?.continuation[0]).toEqual({
+      label: 'Пункт 41. антибиотики',
+      text: note,
+    });
+    expect(result?.form.rows[0].subs[0].answer).toBe(true);
+  });
+
+  it('preserves an unknown answer as a blank mark rather than a negative', () => {
+    const form = { ...FORM, rows: [{ ...FORM.rows[0], answer: null }] };
+    expect(
+      printSheet(detail({ structured: { paper_form: form } }))?.form.rows[0]
+        .answer,
+    ).toBeNull();
   });
 });

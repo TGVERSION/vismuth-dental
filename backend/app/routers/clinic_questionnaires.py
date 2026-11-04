@@ -147,6 +147,7 @@ async def create_registry_questionnaire(
         last_name=payload.last_name,
         first_name=payload.first_name,
         middle_name=payload.middle_name,
+        birth_date=payload.birth_date,
         created_by_membership_id=await _admin_membership_id(db, clinic_id, current_user),
     )
     questionnaire = await _load(db, clinic_id, questionnaire.id)

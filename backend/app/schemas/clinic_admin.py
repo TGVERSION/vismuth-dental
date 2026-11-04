@@ -4,7 +4,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
-from .clinic import ClinicInvitationCreated, ClinicInvitationRead
+from .clinic import ClinicInvitationCreated, ClinicInvitationRead, QuestionnaireKind
 
 MemberStatus = Literal["invited", "active", "deactivated"]
 
@@ -82,9 +82,9 @@ class MyClinicRead(BaseModel):
     clinic_name: str
     clinic_public_slug: str
     clinic_public_url: str
-    questionnaire_kind: Literal["general", "dental"] = Field(
+    questionnaire_kind: QuestionnaireKind = Field(
         default="general",
-        description="dental — анкета по персональным ссылкам регистратуры",
+        description="general — обычные анкеты; dental — стоматология; mixed — оба направления",
     )
     membership_id: UUID
     is_clinic_admin: bool

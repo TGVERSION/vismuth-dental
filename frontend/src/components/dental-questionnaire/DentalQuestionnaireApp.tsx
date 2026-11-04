@@ -14,10 +14,13 @@ import type { ClinicBranding, QuestionnaireBlock } from '@/lib/questionnaire';
 import { useDentalQuestionnaire } from '@/hooks/useDentalQuestionnaire';
 import { QuestionnaireStub } from '@/components/questionnaire/QuestionnaireStub';
 import { QuestionnaireThemeProvider } from '@/components/questionnaire/QuestionnaireTheme';
+import { ChatBubble } from '@/components/questionnaire/ChatBubble';
 import { ChecklistStep } from './ChecklistStep';
 import { ChipGroupsStep } from './ChipGroupsStep';
 import { DentalDoneScreen } from './DentalDoneScreen';
 import { DentalShell } from './DentalShell';
+import { DentalReviewStep } from './DentalReviewStep';
+import { DentalConversationStep } from './DentalConversationStep';
 
 const inviteBranding = (invite: PublicInvite): ClinicBranding => ({
   name: invite.clinic_name,
@@ -31,14 +34,9 @@ const inviteBranding = (invite: PublicInvite): ClinicBranding => ({
  * Врача и приёма нет — анкета, как бумажная, к ним не привязана.
  */
 const Intro = ({ invite }: { invite: PublicInvite }) => (
-  <div className="flex flex-col gap-1 rounded-2xl bg-[var(--q-surface)] px-4 py-3">
-    <p className="text-[17px] font-semibold">
-      {inviteGreeting(invite.patient_first_name, invite.patient_middle_name)}
-    </p>
-    <p className="text-sm text-[var(--q-muted)]">
-      Ответы нужны врачу для безопасного лечения и составляют врачебную тайну.
-    </p>
-  </div>
+  <ChatBubble author="assistant">
+    {`${inviteGreeting(invite.patient_first_name, invite.patient_middle_name)}\nЗадам несколько вопросов для безопасного лечения. Ответы конфиденциальны.`}
+  </ChatBubble>
 );
 
 /** Над вопросом нейросети: пациент должен понимать, откуда вопрос. */
@@ -76,12 +74,27 @@ const InviteFlow = ({
   const renderShell = (body: React.ReactNode, footer: React.ReactNode) => (
     <DentalShell
       clinic={clinic}
-      progress={dentalProgress(step.step_key)}
+      progress={step.dental?.conversation_progress ?? dentalProgress(step)}
+      activeKey={`${step.step_key}:${step.dental?.question_key ?? ''}`}
+      history={step.dental?.history}
+      intro={<Intro invite={invite} />}
       footer={footer}
     >
       {body}
     </DentalShell>
   );
+
+  if (step.dental?.question_key && dentalScreenFor(step) !== 'done')
+    return (
+      <DentalConversationStep
+        step={step}
+        questionnaireId={invite.questionnaire_id}
+        isSubmitting={flow.isSubmitting}
+        error={flow.error}
+        onSubmit={(answer) => void flow.submit(answer)}
+        renderShell={renderShell}
+      />
+    );
 
   switch (dentalScreenFor(step)) {
     case 'done':
@@ -92,16 +105,11 @@ const InviteFlow = ({
           // Новый шаг — новый черновик ответа.
           key={step.step_key}
           step={step}
+          questionnaireId={invite.questionnaire_id}
           isSubmitting={flow.isSubmitting}
           error={flow.error}
           onSubmit={(answer) => void flow.submit(answer)}
-          intro={
-            step.step_key === 'dental_reason' ? (
-              <Intro invite={invite} />
-            ) : step.step_key === AI_STEP ? (
-              <AiBadge />
-            ) : undefined
-          }
+          intro={step.step_key === AI_STEP ? <AiBadge /> : undefined}
           onSkip={() => void flow.submit(buildSkipAnswer(step.step_key))}
           renderShell={renderShell}
         />
@@ -111,8 +119,20 @@ const InviteFlow = ({
         <ChecklistStep
           key={step.step_key}
           step={step}
+          questionnaireId={invite.questionnaire_id}
           isSubmitting={flow.isSubmitting}
           error={flow.error}
+          onSubmit={(answer) => void flow.submit(answer)}
+          renderShell={renderShell}
+        />
+      );
+    case 'review':
+      return (
+        <DentalReviewStep
+          key={step.step_key}
+          step={step}
+          error={flow.error}
+          isSubmitting={flow.isSubmitting}
           onSubmit={(answer) => void flow.submit(answer)}
           renderShell={renderShell}
         />

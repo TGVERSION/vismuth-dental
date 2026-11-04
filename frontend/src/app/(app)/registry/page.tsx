@@ -3,7 +3,7 @@ import { Suspense } from 'react';
 import { RegistryScreen } from '@/components/registry/RegistryScreen';
 
 export const metadata: Metadata = {
-  title: 'Анкеты пациентов',
+  title: 'Анкеты для стоматологии',
 };
 
 /**

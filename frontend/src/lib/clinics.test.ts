@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { ClinicMemberRead, ClinicRead } from '@/api';
 import {
   EMPTY_CLINIC_DRAFT,
+  QUESTIONNAIRE_KIND_OPTIONS,
   buildClinicCreate,
   buildMemberRolesPatch,
   canAddDoctor,
@@ -29,6 +30,16 @@ import {
 } from './clinics';
 
 const today = new Date(2026, 8, 27);
+
+it('предлагает оба направления и сохраняет выбранный режим', () => {
+  expect(QUESTIONNAIRE_KIND_OPTIONS).toContainEqual({
+    value: 'mixed', label: 'Многопрофильная и стоматология',
+  });
+  const draft = { ...EMPTY_CLINIC_DRAFT, name: 'Тест', access_type: 'trial' as const,
+    access_until: '2027-01-01', questionnaire_kind: 'mixed' as const };
+  expect(validateClinicField('questionnaire_kind', draft)).toBeNull();
+  expect(buildClinicCreate(draft).questionnaire_kind).toBe('mixed');
+});
 
 const clinic: ClinicRead = {
   id: 'c1',

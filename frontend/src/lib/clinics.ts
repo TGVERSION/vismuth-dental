@@ -83,8 +83,9 @@ export const QUESTIONNAIRE_KIND_OPTIONS: {
   value: ClinicQuestionnaireKind;
   label: string;
 }[] = [
-  { value: 'general', label: 'Общая' },
-  { value: 'dental', label: 'Стоматологическая' },
+  { value: 'general', label: 'Многопрофильная' },
+  { value: 'dental', label: 'Стоматология' },
+  { value: 'mixed', label: 'Многопрофильная и стоматология' },
 ];
 
 /** Значения полей карточки в том виде, в каком их редактирует пользователь. */

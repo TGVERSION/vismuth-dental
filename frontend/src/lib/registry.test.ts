@@ -107,6 +107,11 @@ describe('validateNewLink', () => {
 });
 
 describe('buildNewLinkPayload', () => {
+  it('passes the date entered by the administrator without asking the patient', () => {
+    expect(buildNewLinkPayload({ ...FORM, birthDate: '1985-03-14' })).toMatchObject({
+      birth_date: '1985-03-14',
+    });
+  });
   it('trims names and drops an empty patronymic', () => {
     expect(buildNewLinkPayload(FORM)).toEqual({
       last_name: 'Белова',

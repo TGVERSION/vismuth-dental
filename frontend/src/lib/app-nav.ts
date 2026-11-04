@@ -12,13 +12,13 @@ export interface AppNavItem {
 
 const REGISTRY_ITEM: AppNavItem = {
   id: 'registry',
-  label: 'Анкеты пациентов',
+  label: 'Анкеты для стоматологии',
   href: '/registry',
 };
 
 /** Порядок — как на макете. */
 export const NAV_ITEMS: AppNavItem[] = [
-  { id: 'questionnaires', label: 'Анкеты', href: '/questionnaires' },
+  { id: 'questionnaires', label: 'Анкеты для врачей', href: '/questionnaires' },
   { id: 'protocols', label: 'Протоколы', href: '/' },
 ];
 
@@ -28,11 +28,17 @@ export const NAV_ITEMS: AppNavItem[] = [
  */
 export const canUseRegistry = (
   clinic: Pick<MyClinicRead, 'is_clinic_admin' | 'questionnaire_kind'> | null,
-): boolean => clinic?.is_clinic_admin === true && clinic.questionnaire_kind === 'dental';
+): boolean => clinic?.is_clinic_admin === true &&
+  (clinic.questionnaire_kind === 'dental' || clinic.questionnaire_kind === 'mixed');
 
-/** Разделы шапки; «Анкеты пациентов» — первым, это рабочий экран регистратуры. */
-export const getNavItems = ({ showRegistry }: { showRegistry: boolean }): AppNavItem[] =>
-  showRegistry ? [REGISTRY_ITEM, ...NAV_ITEMS] : NAV_ITEMS;
+/** Стоматология — первой; протоколы временно показываем только супер-админу. */
+export const getNavItems = ({
+  showRegistry,
+  role,
+}: { showRegistry: boolean; role?: string | null }): AppNavItem[] => {
+  const items = NAV_ITEMS.filter((item) => item.id !== 'protocols' || role === 'super_admin');
+  return showRegistry ? [REGISTRY_ITEM, ...items] : items;
+};
 
 const isSection = (pathname: string, base: string): boolean =>
   pathname === base || pathname.startsWith(`${base}/`);

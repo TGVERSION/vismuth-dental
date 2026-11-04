@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useMyClinic } from '@/hooks/useMyClinic';
 import { canUseRegistry, getActiveNavItem, getNavItems } from '@/lib/app-nav';
+import { useAuthStore } from '@/store/authStore';
 
 /**
  * Разделы в шапке защищённой зоны.
@@ -19,10 +20,11 @@ import { canUseRegistry, getActiveNavItem, getNavItems } from '@/lib/app-nav';
  */
 export const AppNav = () => {
   const active = getActiveNavItem(usePathname());
-  // «Анкеты пациентов» видны только регистратуре стоматологической клиники;
+  // Стоматологические анкеты видны регистратуре при включённой стоматологии;
   // пока клиника не загрузилась, раздела нет.
   const { clinic } = useMyClinic();
-  const items = getNavItems({ showRegistry: canUseRegistry(clinic) });
+  const role = useAuthStore((state) => state.user?.role);
+  const items = getNavItems({ showRegistry: canUseRegistry(clinic), role });
 
   return (
     <nav aria-label="Разделы" className="flex items-center gap-11">

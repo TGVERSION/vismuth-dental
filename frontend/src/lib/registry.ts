@@ -118,19 +118,21 @@ export const patientFullName = (item: RegistryQuestionnaireItem): string =>
   );
 
 // ---------------------------------------------------------------------------
-// Форма новой ссылки: только ФИО — как бумажная анкета, ссылка не привязана
+// Форма новой ссылки: ФИО и дата рождения — ссылка не привязана
 // ни к врачу, ни к дате приёма.
 
 export interface NewLinkForm {
   lastName: string;
   firstName: string;
   middleName: string;
+  birthDate?: string;
 }
 
 export const EMPTY_NEW_LINK: NewLinkForm = Object.freeze({
   lastName: '',
   firstName: '',
   middleName: '',
+  birthDate: '',
 });
 
 export type NewLinkErrors = Partial<Record<keyof NewLinkForm, string>>;
@@ -148,6 +150,7 @@ export const buildNewLinkPayload = (
   last_name: form.lastName.trim(),
   first_name: form.firstName.trim(),
   middle_name: form.middleName.trim() || null,
+  ...(form.birthDate ? { birth_date: form.birthDate } : {}),
 });
 
 /**

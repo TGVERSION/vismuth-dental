@@ -87,6 +87,7 @@ def _step_response(descriptor) -> StepDescriptorResponse:
         truncated=descriptor.truncated,
         ai_unavailable=descriptor.ai_unavailable,
         gastro=descriptor.gastro,
+        dental=descriptor.dental,
     )
 
 

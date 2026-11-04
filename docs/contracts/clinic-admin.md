@@ -12,7 +12,7 @@
 ## GET /me/clinic
 
 - **Auth:** JWT
-- **Назначение:** клиника текущего пользователя: ссылки клиники и врача, роли membership, специализации, `questionnaire_kind` (`general` | `dental`). Фронт показывает раздел «Анкеты пациентов» (`/registry`) админу клиники с `dental`
+- **Назначение:** клиника текущего пользователя: ссылки клиники и врача, роли membership, специализации, `questionnaire_kind` (`general` | `dental` | `mixed`). Фронт показывает раздел «Анкеты для стоматологии» (`/registry`) админу клиники с `dental` или `mixed`
 - **Код:** `my_clinic`
 
 ## GET /clinics/{clinic_id}

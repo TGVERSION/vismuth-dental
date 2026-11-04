@@ -2,6 +2,7 @@
 
 import { useId } from 'react';
 import type { DentalClarification, DentalHealthRow } from '@/api';
+import { partitionDentalHealth } from '@/lib/dental-health';
 
 // Части карточки стоматологической анкеты, общие для врача и регистратуры.
 
@@ -54,8 +55,11 @@ export const DentalImportant = ({ important }: { important: string[] }) =>
 
 /** Здоровье: что есть — с уточнением, остального нет — одной строкой. */
 export const DentalHealth = ({ health }: { health: DentalHealthRow[] }) => {
-  const has = health.filter((row) => row.has);
-  const hasNot = health.filter((row) => !row.has);
+  const {
+    positive: has,
+    negative: hasNot,
+    uncertain,
+  } = partitionDentalHealth(health);
   return (
     <>
       {has.map((row) => (
@@ -67,6 +71,13 @@ export const DentalHealth = ({ health }: { health: DentalHealthRow[] }) => {
       {hasNot.length > 0 ? (
         <p className="text-sm text-[#6C757D]">
           Нет: {hasNot.map((row) => lowerFirst(row.label)).join(', ')}
+        </p>
+      ) : null}
+      {uncertain.length > 0 ? (
+        <p className="rounded-lg bg-[#FFF7E5] px-3 py-2 text-sm text-[#654B16]">
+          Нужно уточнить:{' '}
+          {uncertain.map((row) => lowerFirst(row.label)).join(', ')}. Пациент не
+          уверен в ответе.
         </p>
       ) : null}
     </>

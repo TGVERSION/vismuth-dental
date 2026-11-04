@@ -25,3 +25,4 @@ class StepDescriptor:
     truncated: bool = False
     ai_unavailable: bool = False
     gastro: dict[str, Any] | None = None
+    dental: dict[str, Any] | None = None

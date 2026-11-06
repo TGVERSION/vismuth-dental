@@ -2,7 +2,7 @@ from datetime import datetime, timezone
 from typing import Optional
 from uuid import UUID, uuid4
 
-from sqlalchemy import Boolean, ForeignKey, String, Text, TIMESTAMP
+from sqlalchemy import Boolean, CheckConstraint, ForeignKey, String, Text, TIMESTAMP
 from sqlalchemy.dialects.postgresql import UUID as PG_UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -11,6 +11,10 @@ from ..db import Base
 
 class ClinicMembership(Base):
     __tablename__ = "clinic_membership"
+    __table_args__ = (
+        CheckConstraint('is_clinic_admin OR is_doctor OR is_operator',
+                        name='clinic_membership_role_check'),
+    )
 
     id: Mapped[UUID] = mapped_column(
         PG_UUID(as_uuid=True),

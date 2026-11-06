@@ -13,6 +13,9 @@ depends_on = None
 
 def upgrade():
     op.add_column('clinic_membership', sa.Column('is_operator', sa.Boolean(), nullable=False, server_default=sa.false()))
+    op.drop_constraint('clinic_membership_role_check', 'clinic_membership', type_='check')
+    op.create_check_constraint('clinic_membership_role_check', 'clinic_membership',
+                               'is_clinic_admin OR is_doctor OR is_operator')
     op.add_column('service_user', sa.Column('clinic_join_restricted', sa.Boolean(), nullable=False, server_default=sa.false()))
     op.add_column('registration_pending', sa.Column('clinic_join_context', postgresql.JSONB(), nullable=True))
     op.create_table('clinic_join_link',
@@ -55,4 +58,7 @@ def downgrade():
     op.drop_table('clinic_join_link')
     op.drop_column('registration_pending', 'clinic_join_context')
     op.drop_column('service_user', 'clinic_join_restricted')
+    op.drop_constraint('clinic_membership_role_check', 'clinic_membership', type_='check')
     op.drop_column('clinic_membership', 'is_operator')
+    op.create_check_constraint('clinic_membership_role_check', 'clinic_membership',
+                               'is_clinic_admin OR is_doctor')

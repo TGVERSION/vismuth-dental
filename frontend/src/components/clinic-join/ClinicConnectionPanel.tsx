@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { copyText } from '@/lib/clipboard';
 import { clinicJoinApi } from '@/api/clinic-join-api';
 import { completedApi, type PatientLinks } from '@/api/completed-api';
 export function ClinicConnectionPanel({
@@ -55,7 +56,7 @@ export function ClinicConnectionPanel({
   };
   const copy = async (value: string) => {
     try {
-      await navigator.clipboard.writeText(value);
+      await copyText(value);
       setCopied(value);
     } catch {
       setError('Не удалось скопировать. Выделите ссылку и скопируйте вручную.');

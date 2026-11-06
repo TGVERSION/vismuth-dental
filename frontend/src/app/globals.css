@@ -161,11 +161,76 @@ body {
 }
 
 .header__container {
-  display: flex;
+  display: grid;
   width: 100%;
-  flex-direction: row;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
   align-items: center;
-  justify-content: space-between;
+  gap: 16px;
+}
+
+.header__navigation {
+  min-width: 0;
+  overflow-x: auto;
+  white-space: nowrap;
+}
+
+.header__navigation nav {
+  margin-inline: auto;
+}
+
+.header__actions {
+  display: flex;
+  align-items: center;
+  justify-self: end;
+  gap: 36px;
+}
+
+@media (max-width: 1199px) {
+  .header {
+    height: auto;
+    min-height: 60px;
+    padding: 12px 20px;
+  }
+
+  .header__container {
+    grid-template-columns: minmax(0, 1fr) auto;
+    row-gap: 12px;
+  }
+
+  .header__navigation {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+
+  .header__actions {
+    grid-column: 2;
+    grid-row: 1;
+    gap: 20px;
+  }
+
+  .app-main {
+    margin-top: 120px;
+  }
+}
+
+@media (max-width: 599px) {
+  .header {
+    padding-inline: 12px;
+  }
+
+  .header__actions {
+    gap: 12px;
+  }
+
+  .header__helpers {
+    max-width: 72px;
+    font-size: 12px;
+    line-height: 1.2;
+  }
+
+  .header .logo {
+    max-width: 140px;
+  }
 }
 
 .custom-scrollbar::-webkit-scrollbar {

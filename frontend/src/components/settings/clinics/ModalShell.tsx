@@ -71,7 +71,7 @@ export const ModalShell = ({
         role="dialog"
         aria-modal="true"
         aria-label={title}
-        className="animate-fade-in relative flex w-141.25 flex-col rounded-[15px] bg-white px-10 py-10 shadow-2xl"
+        className="animate-fade-in relative flex max-h-[calc(100dvh-32px)] w-141.25 max-w-[calc(100vw-32px)] flex-col overflow-y-auto rounded-[15px] bg-white px-6 py-8 shadow-2xl sm:px-10 sm:py-10"
         onClick={(event) => event.stopPropagation()}
       >
         <button

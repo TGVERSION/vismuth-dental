@@ -56,6 +56,7 @@ Access JWT короткий (~15 мин). Длинная сессия — чер
 Только `super_admin`:
 
 - `/super-admin/clinics*` (CRUD клиник, invitations)
+- `/super-admin/users*`, `/super-admin/user-membership-roles` (клиника и роль членства существующих пользователей)
 - `/super-admin/statistics` (сводная статистика анкет)
 - `/super-admin/questionnaires*` (заполненные анкеты всех клиник)
 - `/super-admin/join-requests*` и `/super-admin/clinics/{id}/join-link` (заявки и общие ссылки подключения)

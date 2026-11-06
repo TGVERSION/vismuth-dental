@@ -28,6 +28,7 @@ from .routers.check_dms import router as check_dms_router
 from .routers.clinic_join import router as clinic_join_router
 from .routers.super_admin.clinic_join import router as super_admin_clinic_join_router
 from .routers.super_admin.questionnaires import router as super_admin_questionnaires_router
+from .routers.super_admin.users import router as super_admin_users_router
 from .routers.clinic_completed_questionnaires import router as clinic_completed_questionnaires_router
 
 
@@ -163,6 +164,7 @@ app.include_router(check_dms_router)
 app.include_router(clinic_join_router)
 app.include_router(super_admin_clinic_join_router)
 app.include_router(super_admin_questionnaires_router)
+app.include_router(super_admin_users_router)
 app.include_router(clinic_completed_questionnaires_router)
 
 

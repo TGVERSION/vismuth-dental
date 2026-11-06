@@ -77,7 +77,7 @@ function WorkingLayout({ children }: { children: React.ReactNode }) {
     <>
       {!hideHeader && (
         <header className="header bg-white relative">
-          <div className="header__container flex items-center justify-between px-6 py-4">
+          <div className="header__container">
             <Image
               alt="logo"
               className="logo cursor-pointer"
@@ -85,18 +85,13 @@ function WorkingLayout({ children }: { children: React.ReactNode }) {
               width={206}
               height={26}
             />
-            {/* Абсолютно по центру шапки, а не третьим флекс-элементом: при
-                justify-between он встал бы между блоками разной ширины, а не
-                по центру страницы. Шапка — position: fixed на всю ширину
-                (.header в globals.css вне @layer перебивает утилиту relative),
-                поэтому центровка идёт по всей странице. */}
-            <div className="absolute top-1/2 left-[250px] right-[320px] -translate-y-1/2 overflow-x-auto whitespace-nowrap">
+            <div className="header__navigation">
               <AppNav />
             </div>
-            <div className="flex items-center gap-9">
+            <div className="header__actions">
               {!hideTools && (
                 <div
-                  className="hover:text-[#769CEF] cursor-pointer text-[#5D8CF1]"
+                  className="header__helpers hover:text-[#769CEF] cursor-pointer text-[#5D8CF1]"
                   onClick={() => setShowDoctorsHelpers(true)}
                 >
                   Помощники врача
@@ -155,7 +150,7 @@ function WorkingLayout({ children }: { children: React.ReactNode }) {
         onClose={() => setIsDictionaryOpen(false)}
       />
 
-      <main className="flex bg-[#F3F4F8] min-h-screen w-full mx-auto my-20">
+      <main className="app-main flex bg-[#F3F4F8] min-h-screen w-full mx-auto my-20">
         {children}
       </main>
 

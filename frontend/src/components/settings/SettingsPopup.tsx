@@ -24,6 +24,15 @@ import {
   type SettingsSection,
 } from '@/lib/settings-sections';
 import { ClinicsSection } from './clinics/ClinicsSection';
+import { UserClinicMembershipEditor } from './UserClinicMembershipEditor';
+import {
+  userMembershipApi,
+  type MembershipRoleOption,
+  type UserMembershipRead,
+} from '@/api/user-membership-api';
+import { canEditMembership } from '@/lib/user-membership';
+
+type SettingsUser = ServiceUserIdRead & Partial<UserMembershipRead>;
 
 interface SettingsPopupProps {
   isOpen: boolean;
@@ -37,7 +46,12 @@ export const SettingsPopup: React.FC<SettingsPopupProps> = ({
   // null — раздел ещё не выбран: какой открыть, решает роль.
   const [selectedSection, setSelectedSection] =
     useState<SettingsSection | null>(null);
-  const [users, setUsers] = useState<ServiceUserIdRead[]>([]);
+  const [users, setUsers] = useState<SettingsUser[]>([]);
+  const [membershipRoles, setMembershipRoles] = useState<
+    MembershipRoleOption[]
+  >([]);
+  const [editingMembership, setEditingMembership] =
+    useState<UserMembershipRead | null>(null);
   const [usersLoading, setUsersLoading] = useState(false);
   const [roles, setRoles] = useState<RoleRead[]>([]);
   const [rolesFailed, setRolesFailed] = useState(false);
@@ -65,16 +79,28 @@ export const SettingsPopup: React.FC<SettingsPopupProps> = ({
 
     const load = async () => {
       setUsersLoading(true);
-      const [usersResult, rolesResult] = await Promise.allSettled([
-        mainApi.serviceUsers.listServiceUserIds(),
-        mainApi.roles.list(),
-      ]);
+      const [usersResult, rolesResult, membershipRolesResult] =
+        await Promise.allSettled([
+          isSuperAdmin(currentUser?.role)
+            ? userMembershipApi.list()
+            : mainApi.serviceUsers.listServiceUserIds(),
+          mainApi.roles.list(),
+          isSuperAdmin(currentUser?.role)
+            ? userMembershipApi.roles()
+            : Promise.resolve([]),
+        ]);
       if (cancelled) return;
 
       if (usersResult.status === 'fulfilled') {
         setUsers(usersResult.value);
       } else {
         toast.error('Не удалось загрузить пользователей');
+      }
+      if (membershipRolesResult.status === 'fulfilled')
+        setMembershipRoles(membershipRolesResult.value);
+      else {
+        setMembershipRoles([]);
+        toast.error('Не удалось загрузить роли клиники');
       }
 
       // Без справочника список пользователей всё равно показываем:
@@ -95,7 +121,7 @@ export const SettingsPopup: React.FC<SettingsPopupProps> = ({
     return () => {
       cancelled = true;
     };
-  }, [isOpen, activeSection]);
+  }, [isOpen, activeSection, currentUser?.role]);
 
   const handleRoleChange = async (userId: string, value: string) => {
     if (pendingUserId) return;
@@ -181,14 +207,73 @@ export const SettingsPopup: React.FC<SettingsPopupProps> = ({
                       return (
                         <div
                           key={user.id}
-                          className={`flex justify-between items-center px-3.75 py-3 rounded-xl cursor-pointer transition-all shadow-custom-hover`}
+                          className="flex flex-wrap justify-between items-center gap-4 px-3.75 py-3 rounded-xl transition-all shadow-custom-hover"
                         >
-                          <span className="text-sm text-[#202020]">
-                            {user.login}
-                          </span>
+                          <div className="min-w-0 flex-1">
+                            <p className="break-all text-sm text-[#202020]">
+                              {user.login}
+                            </p>
+                            {access.canManageClinics && (
+                              <div className="mt-2 text-sm text-[#6C757D]">
+                                <p>
+                                  {user.clinic_name ?? 'Без клиники'}
+                                  {user.clinic_role
+                                    ? ' · ' +
+                                      (membershipRoles.find(
+                                        (option) =>
+                                          option.value === user.clinic_role,
+                                      )?.label ?? 'Роль клиники недоступна')
+                                    : ''}
+                                </p>
+                                {currentUser?.role &&
+                                  canEditMembership(
+                                    currentUser.role,
+                                    user.role,
+                                  ) &&
+                                  user.specialization_ids && (
+                                    <button
+                                      type="button"
+                                      disabled={
+                                        !membershipRoles.length ||
+                                        pendingUserId === user.id
+                                      }
+                                      onClick={() =>
+                                        setEditingMembership(
+                                          user as UserMembershipRead,
+                                        )
+                                      }
+                                      className="mt-1 cursor-pointer text-[#5D8CF1] disabled:opacity-50"
+                                    >
+                                      Клиника и доступ
+                                    </button>
+                                  )}
+                                {user.role !== 'doctor' &&
+                                  user.role !== 'super_admin' &&
+                                  roles.some(
+                                    (role) => role.name === 'doctor',
+                                  ) && (
+                                    <p className="mt-1 text-xs">
+                                      Для назначения клиники сначала выберите
+                                      роль «
+                                      {
+                                        roles.find(
+                                          (role) => role.name === 'doctor',
+                                        )?.name_ru
+                                      }
+                                      » в списке «Роль в системе».
+                                    </p>
+                                  )}
+                              </div>
+                            )}
+                          </div>
 
                           <div className="flex flex-row items-center gap-12.5">
-                            <div className="w-41.25">
+                            <div className="w-48">
+                              {access.canManageClinics && (
+                                <p className="mb-1 text-xs text-[#6C757D]">
+                                  Роль в системе
+                                </p>
+                              )}
                               <CustomDropdown
                                 options={buildRoleOptions(roles, user)}
                                 value={user.role}
@@ -324,6 +409,21 @@ export const SettingsPopup: React.FC<SettingsPopupProps> = ({
           </div>
         </div>
       </div>
+
+      {editingMembership && (
+        <UserClinicMembershipEditor
+          user={editingMembership}
+          roles={membershipRoles}
+          onClose={() => setEditingMembership(null)}
+          onSaved={(updated) => {
+            setUsers((previous) =>
+              previous.map((user) => (user.id === updated.id ? updated : user)),
+            );
+            setEditingMembership(null);
+            toast.success('Клиника и доступ пользователя обновлены');
+          }}
+        />
+      )}
 
       {deleteConfirmUserId && (
         <div

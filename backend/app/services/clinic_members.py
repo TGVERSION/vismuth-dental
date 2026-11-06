@@ -35,7 +35,7 @@ async def get_clinic_or_404(db: AsyncSession, clinic_id: UUID) -> Clinic:
         select(Clinic).where(
             Clinic.id == clinic_id,
             Clinic.deleted_at.is_(None),
-        ),
+        ).with_for_update().execution_options(populate_existing=True),
     )
     clinic = result.scalar_one_or_none()
     if clinic is None:
@@ -267,6 +267,7 @@ async def create_invitation(
     is_doctor: bool,
     specialization_ids: list[int],
 ) -> tuple[ClinicInvitation, str, bool, str | None]:
+    clinic = await get_clinic_or_404(db, clinic.id)
     if not is_clinic_admin and not is_doctor:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -352,6 +353,8 @@ async def resend_invitation(
     clinic: Clinic,
     invitation: ClinicInvitation,
 ) -> tuple[ClinicInvitation, str, bool, str | None]:
+    clinic = await get_clinic_or_404(db, clinic.id)
+    await ensure_doctors_limit(db, clinic, adding_doctor=invitation.is_doctor and invitation.expires_at <= datetime.now(timezone.utc))
     if invitation.used_at is not None:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,

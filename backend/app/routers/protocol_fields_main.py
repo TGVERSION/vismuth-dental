@@ -6,7 +6,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..db import get_db
-from ..deps import get_current_user
+from ..deps import require_clinical_user
 from ..models.protocol_structure import ProtocolFieldMain
 from ..models.service_user import ServiceUser
 from ..schemas.protocol_field_main import (
@@ -23,7 +23,7 @@ router = APIRouter(prefix="/protocol-fields-main", tags=["protocol-fields-main"]
     summary="Список основных полей протоколов",
 )
 async def list_protocol_fields_main(
-    current_user: ServiceUser = Depends(get_current_user),
+    current_user: ServiceUser = Depends(require_clinical_user),
     db: AsyncSession = Depends(get_db),
 ) -> List[ProtocolFieldMainListItem]:
     _ = current_user
@@ -46,7 +46,7 @@ async def list_protocol_fields_main(
 )
 async def get_protocol_field_main(
     field_id: UUID,
-    current_user: ServiceUser = Depends(get_current_user),
+    current_user: ServiceUser = Depends(require_clinical_user),
     db: AsyncSession = Depends(get_db),
 ) -> ProtocolFieldMainRead:
     _ = current_user

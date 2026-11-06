@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..db import get_db
-from ..deps import get_current_user
+from ..deps import require_clinical_user
 from ..models.service_user import ServiceUser
 from ..routers.ml_autocomplete_dict import autocomplete_mixed
 from ..schemas.ml_mkb_code import (
@@ -55,7 +55,7 @@ async def _publish_autocomplete_shown(
 )
 async def proxy_ml_autocomplete(
     payload: MlAutocompleteProxyRequest,
-    current_user: ServiceUser = Depends(get_current_user),
+    current_user: ServiceUser = Depends(require_clinical_user),
     db: AsyncSession = Depends(get_db),
 ) -> MlAutocompleteProxyResponse:
     if payload.type_autocomplete == AutocompleteType.ml_autocomplete:
@@ -103,7 +103,7 @@ async def proxy_ml_autocomplete(
 )
 async def push_selected_event(
     payload: MkbCodeSelectRequest,
-    current_user: ServiceUser = Depends(get_current_user),
+    current_user: ServiceUser = Depends(require_clinical_user),
 ) -> EventAcceptedResponse:
     redis = get_redis_client()
     try:

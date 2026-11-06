@@ -56,6 +56,7 @@ class ClinicMemberRead(BaseModel):
     photo_url: Optional[str] = None
     is_clinic_admin: bool
     is_doctor: bool
+    is_operator: bool = False
     specializations: list[SpecializationRead] = Field(default_factory=list)
     public_slug: Optional[str] = None
     public_url: Optional[str] = None
@@ -89,6 +90,7 @@ class MyClinicRead(BaseModel):
     membership_id: UUID
     is_clinic_admin: bool
     is_doctor: bool
+    is_operator: bool = False
     doctor_public_slug: Optional[str] = None
     doctor_public_url: Optional[str] = None
     specializations: list[SpecializationRead] = Field(default_factory=list)
@@ -104,3 +106,19 @@ class ClinicInvitationAdminRead(ClinicInvitationRead):
     middle_name: Optional[str] = None
     photo_url: Optional[str] = None
     specializations: list[SpecializationRead] = Field(default_factory=list)
+
+
+class PatientLinkDoctor(BaseModel):
+    membership_id: UUID
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+    middle_name: Optional[str] = None
+    public_url: str
+    specializations: list[SpecializationRead] = Field(default_factory=list)
+
+
+class ClinicPatientLinks(BaseModel):
+    clinic_id: UUID
+    clinic_name: str
+    clinic_public_url: Optional[str] = None
+    doctors: list[PatientLinkDoctor] = Field(default_factory=list)

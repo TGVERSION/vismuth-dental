@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..db import get_db
-from ..deps import get_current_user
+from ..deps import require_clinical_user
 from ..models.service_user import ServiceUser
 from ..schemas.ml_fullness_complaints import (
     MlFullnessComplaintsRequest,
@@ -26,7 +26,7 @@ router = APIRouter(tags=["ml_fullness"])
 )
 async def proxy_ml_fullness_complaints(
     payload: MlFullnessComplaintsRequest,
-    current_user: ServiceUser = Depends(get_current_user),
+    current_user: ServiceUser = Depends(require_clinical_user),
     db: AsyncSession = Depends(get_db),
 ) -> MlFullnessComplaintsResponse:
     await ensure_user_clinic_subscription_active(db, current_user)

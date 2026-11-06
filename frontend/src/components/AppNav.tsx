@@ -1,6 +1,8 @@
 'use client';
 
 import Link from 'next/link';
+import { useEffect, useState } from 'react';
+import { clinicJoinApi } from '@/api/clinic-join-api';
 import { usePathname } from 'next/navigation';
 import { useMyClinic } from '@/hooks/useMyClinic';
 import { canUseRegistry, getActiveNavItem, getNavItems } from '@/lib/app-nav';
@@ -19,15 +21,67 @@ import { useAuthStore } from '@/store/authStore';
  * досохраняет `useProtocolDraft` при размонтировании экрана.
  */
 export const AppNav = () => {
-  const active = getActiveNavItem(usePathname());
+  const pathname = usePathname();
+  const active = getActiveNavItem(pathname);
   // Стоматологические анкеты видны регистратуре при включённой стоматологии;
   // пока клиника не загрузилась, раздела нет.
   const { clinic } = useMyClinic();
   const role = useAuthStore((state) => state.user?.role);
-  const items = getNavItems({ showRegistry: canUseRegistry(clinic), role });
+  const [pending, setPending] = useState(0);
+  useEffect(() => {
+    if (role !== 'super_admin') return;
+    let live = true;
+    const reload = () => {
+      if (document.visibilityState === 'visible')
+        clinicJoinApi
+          .requests({ status: 'pending', page_size: 1 })
+          .then((r) => {
+            if (live) setPending(r.total);
+          })
+          .catch(() => {});
+    };
+    reload();
+    const timer = setInterval(reload, 30000);
+    document.addEventListener('visibilitychange', reload);
+    return () => {
+      live = false;
+      clearInterval(timer);
+      document.removeEventListener('visibilitychange', reload);
+    };
+  }, [role, pathname]);
+  const base = getNavItems({
+    showRegistry: role === 'super_admin' || canUseRegistry(clinic),
+    role,
+  });
+  const items =
+    role === 'super_admin'
+      ? base.map((item) =>
+          item.id === 'requests' && pending
+            ? { ...item, label: 'Заявки (' + pending + ')' }
+            : item,
+        )
+      : [
+          ...base.filter(
+            (i) =>
+              !(
+                clinic?.is_operator &&
+                !clinic.is_doctor &&
+                i.id === 'questionnaires'
+              ),
+          ),
+          ...(clinic?.is_operator
+            ? [
+                {
+                  id: 'completed',
+                  label: 'Заполненные анкеты',
+                  href: '/completed-questionnaires',
+                },
+              ]
+            : []),
+        ];
 
   return (
-    <nav aria-label="Разделы" className="flex items-center gap-11">
+    <nav aria-label="Разделы" className="flex w-max items-center gap-5 px-3">
       {items.map((item) =>
         item.id === active ? (
           <span key={item.id} aria-current="page" className="text-[#8B8B8B]">

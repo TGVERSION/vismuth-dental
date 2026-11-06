@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..db import get_db
-from ..deps import get_current_user
+from ..deps import require_clinical_user
 from ..models.clinrec_guideline import ClinrecGuideline
 from ..models.service_user import ServiceUser
 from ..schemas.ml_clinrec_check import MlClinrecCheckRequest, MlClinrecCheckResponse
@@ -76,7 +76,7 @@ async def _resolve_guideline_for_check(
 )
 async def proxy_ml_clinrec_check(
     payload: MlClinrecCheckRequest,
-    current_user: ServiceUser = Depends(get_current_user),
+    current_user: ServiceUser = Depends(require_clinical_user),
     db: AsyncSession = Depends(get_db),
 ) -> MlClinrecCheckResponse:
     """Resolve каталога + legacy proxy в ML (только ``protocol_text``).

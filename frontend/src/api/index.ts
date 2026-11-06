@@ -1018,6 +1018,7 @@ export interface SpecializationRead {
  * членства в клинике — 404.
  */
 export interface MyClinicRead {
+  is_operator?: boolean;
   clinic_id: string;
   clinic_name: string;
   clinic_public_slug: string;

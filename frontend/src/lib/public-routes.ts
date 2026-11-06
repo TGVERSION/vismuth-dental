@@ -11,7 +11,7 @@ export const PUBLIC_ROUTES = ['/login', '/register', '/verify'];
  * (`/q/AbC123`), поэтому точным сравнением его не покрыть. `/invite` —
  * принятие приглашения сотрудником: аккаунта у него ещё нет.
  */
-export const PUBLIC_ROUTE_PREFIXES = ['/q', '/invite'];
+export const PUBLIC_ROUTE_PREFIXES = ['/q', '/invite', '/clinic-join'];
 
 /**
  * Публичный ли путь.

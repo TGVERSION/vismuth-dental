@@ -24,6 +24,11 @@ Authorization: Bearer <access_token>
 | **privileged** | JWT + роль `super_admin` или `admin` |
 | **super_admin** | JWT + роль `super_admin` (группа `/super-admin/*`) |
 | **clinic_admin** | JWT + `super_admin` **или** membership `is_clinic_admin` в данной клинике |
+| **clinic_registry** | JWT + `super_admin` или активный membership `is_clinic_admin` / `is_operator` нужной клиники; не даёт прав управления сотрудниками |
+| **identity** | Подтверждённая активная учётная запись, включая ожидающую решения по заявке: свой профиль, статус подключения и подача заявки |
+| **clinical** | Рабочий JWT; operator-only не получает врачебные протоколы и ML-помощники. Старые платформенные `admin`/`super_admin` сохраняют права |
+
+Новые учётные записи по общей ссылке клиники имеют `clinic_join_restricted=true` до одобрения супер-администратором. Обычный JWT-барьер закрывает им рабочие API; скрытие меню не является защитой. Регистрация и подтверждение почты по такой ссылке описаны в [auth.md](auth.md). Самовыбор платформенных ролей запрещён; оператор — флаг членства клиники, не глобальный `admin`.
 
 Ошибки auth (типично): `401` не аутентифицирован / битый токен / user не найден / удалён; `403` inactive или нет прав.
 
@@ -52,6 +57,8 @@ Access JWT короткий (~15 мин). Длинная сессия — чер
 
 - `/super-admin/clinics*` (CRUD клиник, invitations)
 - `/super-admin/statistics` (сводная статистика анкет)
+- `/super-admin/questionnaires*` (заполненные анкеты всех клиник)
+- `/super-admin/join-requests*` и `/super-admin/clinics/{id}/join-link` (заявки и общие ссылки подключения)
 - `/clinrec/guidelines` запись (POST/PATCH/DELETE/index)
 
 ## Группы контрактов
@@ -69,6 +76,7 @@ Access JWT короткий (~15 мин). Длинная сессия — чер
 | [questionnaire-public.md](questionnaire-public.md) | `/public/*` анкета пациента |
 | [clinic-questionnaires.md](clinic-questionnaires.md) | `/clinics/{id}/questionnaires` персональные ссылки и регистратура |
 | [questionnaires.md](questionnaires.md) | `/questionnaires` раздел врача |
+| [questionnaires.md](questionnaires.md) | `/super-admin/questionnaires`, `/clinics/{id}/completed-questionnaires` — чтение заполненных анкет |
 | [protocols.md](protocols.md) | `/protocols` |
 | [protocol-templates.md](protocol-templates.md) | `/protocol-templates` |
 | [protocol-structures.md](protocol-structures.md) | `/protocol-structures`, `/protocol-fields-main` |

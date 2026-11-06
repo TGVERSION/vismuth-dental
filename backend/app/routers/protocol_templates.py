@@ -7,7 +7,7 @@ from sqlalchemy import and_, delete, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..db import get_db
-from ..deps import get_current_user
+from ..deps import require_clinical_user
 from ..models.protocol_structure import ProtocolStructure
 from ..models.protocol_template import ProtocolTemplate, ProtocolTemplateField
 from ..models.role import PRIVILEGED_ROLE_NAMES
@@ -34,7 +34,7 @@ _ROLES_ALLOWED_GENERAL_PRIVACY = PRIVILEGED_ROLE_NAMES
     summary="Список шаблонов протоколов",
 )
 async def list_protocol_templates(
-    current_user: ServiceUser = Depends(get_current_user),
+    current_user: ServiceUser = Depends(require_clinical_user),
     db: AsyncSession = Depends(get_db),
 ) -> List[ProtocolTemplateListItem]:
     """Личные шаблоны текущего пользователя и все общие (`privacy = general`)."""
@@ -67,7 +67,7 @@ async def list_protocol_templates(
 )
 async def get_protocol_template(
     template_id: UUID,
-    current_user: ServiceUser = Depends(get_current_user),
+    current_user: ServiceUser = Depends(require_clinical_user),
     db: AsyncSession = Depends(get_db),
 ) -> ProtocolTemplateRead:
     """Детали шаблона: общий или личный текущего пользователя (как в списке)."""
@@ -152,7 +152,7 @@ async def _ensure_protocol_structure_exists(
 async def update_protocol_template(
     template_id: UUID,
     payload: ProtocolTemplateUpdate,
-    current_user: ServiceUser = Depends(get_current_user),
+    current_user: ServiceUser = Depends(require_clinical_user),
     db: AsyncSession = Depends(get_db),
 ) -> ProtocolTemplateRead:
     tpl_stmt = select(ProtocolTemplate).where(
@@ -303,7 +303,7 @@ async def update_protocol_template(
 )
 async def delete_protocol_template(
     template_id: UUID,
-    current_user: ServiceUser = Depends(get_current_user),
+    current_user: ServiceUser = Depends(require_clinical_user),
     db: AsyncSession = Depends(get_db),
 ) -> None:
     tpl_stmt = select(ProtocolTemplate).where(
@@ -348,7 +348,7 @@ async def delete_protocol_template(
 )
 async def create_protocol_template(
     payload: ProtocolTemplateCreate,
-    current_user: ServiceUser = Depends(get_current_user),
+    current_user: ServiceUser = Depends(require_clinical_user),
     db: AsyncSession = Depends(get_db),
 ) -> ProtocolTemplateRead:
     protocol_name = payload.protocol_name.strip()

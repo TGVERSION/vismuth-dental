@@ -1,0 +1,3 @@
+[run]
+# SQLAlchemy async switches execution through greenlet; trace both contexts.
+concurrency = greenlet

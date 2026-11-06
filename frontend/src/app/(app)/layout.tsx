@@ -2,15 +2,21 @@
 
 import { useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
-import { usePathname } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import { useRefreshCurrentUser } from '@/hooks/useRefreshCurrentUser';
 import { DoctorsHelpers } from '@/components/DoctorsHelpers';
 import { SettingsPopup } from '@/components/settings/SettingsPopup';
+import { ClinicAccessGate } from '@/components/clinic-join/ClinicAccessGate';
+import { useMyClinic } from '@/hooks/useMyClinic';
+import { operatorOnly } from '@/lib/clinic-access';
 import { AppNav } from '@/components/AppNav';
 
-export default function AppLayout({ children }: { children: React.ReactNode }) {
+function WorkingLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const { clinic, isLoading: isClinicLoading } = useMyClinic();
+  const router = useRouter();
+  const hideTools = operatorOnly(clinic);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [isDictionaryOpen, setIsDictionaryOpen] = useState(false);
   const hideTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -45,6 +51,28 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       document.body.style.overflow = 'auto';
     };
   }, []);
+  useEffect(() => {
+    if (
+      hideTools &&
+      !['/completed-questionnaires', '/registry'].includes(pathname)
+    )
+      router.replace('/completed-questionnaires');
+  }, [hideTools, pathname, router]);
+  if (isClinicLoading)
+    return (
+      <p role="status" className="p-16">
+        Загрузка клиники…
+      </p>
+    );
+  if (
+    hideTools &&
+    !['/completed-questionnaires', '/registry'].includes(pathname)
+  )
+    return (
+      <p role="status" className="p-16">
+        Открытие анкет…
+      </p>
+    );
   return (
     <>
       {!hideHeader && (
@@ -62,24 +90,28 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 по центру страницы. Шапка — position: fixed на всю ширину
                 (.header в globals.css вне @layer перебивает утилиту relative),
                 поэтому центровка идёт по всей странице. */}
-            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">
+            <div className="absolute top-1/2 left-[250px] right-[320px] -translate-y-1/2 overflow-x-auto whitespace-nowrap">
               <AppNav />
             </div>
             <div className="flex items-center gap-9">
-              <div
-                className="hover:text-[#769CEF] cursor-pointer text-[#5D8CF1]"
-                onClick={() => setShowDoctorsHelpers(true)}
-              >
-                Помощники врача
-              </div>
-              <Image
-                onClick={() => setIsDictionaryOpen(true)}
-                alt="settings"
-                className="cursor-pointer icon"
-                src="/setting-fill.svg"
-                width={23}
-                height={23}
-              />
+              {!hideTools && (
+                <div
+                  className="hover:text-[#769CEF] cursor-pointer text-[#5D8CF1]"
+                  onClick={() => setShowDoctorsHelpers(true)}
+                >
+                  Помощники врача
+                </div>
+              )}
+              {!hideTools && (
+                <Image
+                  onClick={() => setIsDictionaryOpen(true)}
+                  alt="settings"
+                  className="cursor-pointer icon"
+                  src="/setting-fill.svg"
+                  width={23}
+                  height={23}
+                />
+              )}
               <div
                 className="relative"
                 onMouseEnter={handleProfileEnter}
@@ -132,5 +164,13 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         onClose={() => setShowDoctorsHelpers(false)}
       />
     </>
+  );
+}
+
+export default function AppLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <ClinicAccessGate>
+      <WorkingLayout>{children}</WorkingLayout>
+    </ClinicAccessGate>
   );
 }

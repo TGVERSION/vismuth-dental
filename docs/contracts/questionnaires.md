@@ -38,3 +38,13 @@ JWT + активный `clinic_membership` с `is_doctor`. Видны тольк
 - **Тело:** `protocol_structure_id`, опционально `protocol_name`
 - **Поведение:** `FOR UPDATE`; `409` если протокол уже есть; если есть `structured` — перенос `complaints` / `life_anamnesis` / `allergy_anamnesis`; препараты в поле с `field_name=medications`, иначе дописываются в жалобы. Без `structured` — механический маппинг сырых ответов (+ диалог ИИ в жалобы). `source_questionnaire_id`, `created_from_questionnaire=true`. Не тратит токены ML — доступно при истёкшей подписке
 - **Код:** `create_protocol_from_questionnaire`
+
+## Заполненные анкеты платформы и клиники
+
+`GET /super-admin/questionnaires` и `GET /super-admin/questionnaires/{id}` — только `super_admin`, без собственного membership. Включены general, gastro, dental со статусом completed; printed/signed не исключаются. Сохранившиеся анкеты удалённой или заблокированной клиники доступны для чтения независимо от подписки.
+
+`GET /clinics/{clinic_id}/completed-questionnaires` и `/{id}` — super_admin либо активный администратор/оператор своей неудалённой клиники. Подмена clinic_id или id не даёт читать другую клинику. Врачебный `/questionnaires` сохраняет существующие правила.
+
+Список: `clinic_id` (только платформа), `kind`, `name` (часть ФИО), `date_from`, `date_to` (даты завершения UTC, обе границы включены), `page` (от 1), `page_size` (1–100, по умолчанию 50). Без дат — весь доступный срок хранения; обратный диапазон даёт 422. Ответ: `{items,total,page,page_size}`, сортировка `completed_at DESC NULLS LAST, id DESC`.
+
+Строка и карточка расширяют врачебные схемы полями клиники, вида и `completed_at/printed_at/signed_at`. Карточка возвращает исходные ответы и сводку; эти маршруты не редактируют анкету, не запускают ML и не создают протокол. Печать dental использует существующую карточку регистратуры; новых шаблонов для general/gastro нет. Ограниченный срок хранения сохраняется.

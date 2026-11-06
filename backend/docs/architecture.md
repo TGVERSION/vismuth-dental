@@ -77,3 +77,13 @@ flowchart LR
 - Внутри сети контейнеров: `POSTGRES_HOST=db`, `REDIS_HOST=redis`, `S3_ENDPOINT_URL=http://minio:9000`, не IP хоста.
 - Порт API на хост: `BACKEND_PORT` (по умолчанию 8000).
 - MinIO на хост: `MINIO_API_PORT` (9000), консоль `MINIO_CONSOLE_PORT` (9001).
+
+## Подключение сотрудников (0018_clinic_join)
+
+`clinic_join_link` хранит hash токена, автора, время выдачи/отзыва; частичный unique index оставляет одну действующую ссылку на клинику. `clinic_join_request` хранит историю pending/approved/rejected; отдельный частичный unique index запрещает две pending-заявки одного аккаунта в одну клинику. Пароль находится только в auth, контекст email-подтверждения — JSONB `registration_pending.clinic_join_context` с существующим TTL.
+
+`service_user.clinic_join_restricted` и `clinic_membership.is_operator` по умолчанию false, старые аккаунты не меняют права. `get_identity_user` проверяет JWT/активность и разрешает собственный статус/профиль. `get_current_user` дополнительно запрещает рабочие API ограниченным аккаунтам. `require_clinic_registry` разрешает super_admin либо активного clinic_admin/operator своей неудалённой клиники. `require_clinical_user` закрывает врачебные инструменты operator-only membership, сохраняя старые роли без membership.
+
+Одобрение выполняется в одной транзакции: блокировка clinic → service_user → clinic_join_request, проверка подписки/членства/лимита, создание membership и специализаций, снятие ограничения. Создание/перевыпуск email-приглашений использует ту же блокировку clinic для лимита врача. Регистрация/подтверждение общей ссылки используют порядок clinic → link → registration_pending; отозванная ссылка не завершает регистрацию. Raw token отсутствует в БД.
+
+Rate-limit публичного onboarding использует атомарный Redis INCR+EXPIRE Lua, ключ содержит хэш IP/email/аккаунта; при отказе Redis запрос не выполняется. Миграцию нельзя откатить, если остались заявки, активные ссылки, операторы, ограниченные аккаунты или контексты регистрации: сначала требуется явно сохранить/очистить данные. Автоматического снятия ограничений или потери решений при downgrade нет.

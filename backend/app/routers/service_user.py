@@ -8,7 +8,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..db import get_db
-from ..deps import get_current_user, require_privileged
+from ..deps import get_identity_user, require_privileged
 from ..models.service_user import ServiceUser
 from ..schemas.service_user import (
     ServiceUserIdRead,
@@ -72,7 +72,7 @@ async def _check_login_unique(
     summary="Текущий пользователь (me)",
 )
 async def get_service_user_me(
-    current_user: ServiceUser = Depends(get_current_user),
+    current_user: ServiceUser = Depends(get_identity_user),
 ) -> ServiceUserMeResponse:
     return ServiceUserMeResponse.model_validate(current_user)
 

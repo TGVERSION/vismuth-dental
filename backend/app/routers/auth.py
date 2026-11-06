@@ -138,6 +138,9 @@ async def register(
             )
             db.add(pending)
         else:
+            if pending.clinic_join_context is not None and pending.expires_at > now:
+                raise HTTPException(status_code=409, detail="Complete clinic join registration first")
+            pending.clinic_join_context = None
             pending.password_hash = pwd_hash
             pending.code_hash = code_h
             pending.expires_at = expires_at
@@ -213,6 +216,9 @@ async def register_confirm(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="No pending registration for this email",
         )
+
+    if pending.clinic_join_context is not None:
+        raise HTTPException(status_code=400, detail="Use clinic join confirmation")
 
     now = datetime.now(timezone.utc)
     if pending.expires_at < now:

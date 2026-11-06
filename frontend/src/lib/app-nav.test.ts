@@ -39,29 +39,58 @@ describe('раздел «Анкеты пациентов»', () => {
     ]);
   });
 
-  it.each(['doctor', 'admin', 'patient', null])('скрывает протоколы для роли %s', (role) => {
-    expect(getNavItems({ showRegistry: true, role }).map((i) => i.id)).toEqual([
-      'registry', 'questionnaires',
-    ]);
-  });
+  it.each(['doctor', 'admin', 'patient', null])(
+    'скрывает протоколы для роли %s',
+    (role) => {
+      expect(
+        getNavItems({ showRegistry: true, role }).map((i) => i.id),
+      ).toEqual(['registry', 'questionnaires']);
+    },
+  );
 
   it('сохраняет протоколы для супер-админа и использует новые названия', () => {
     expect(getNavItems({ showRegistry: true, role: 'super_admin' })).toEqual([
-      { id: 'registry', label: 'Анкеты для стоматологии', href: '/registry' },
-      { id: 'questionnaires', label: 'Анкеты для врачей', href: '/questionnaires' },
+      { id: 'registry', label: 'Стоматология', href: '/registry' },
+      {
+        id: 'completed',
+        label: 'Все анкеты',
+        href: '/completed-questionnaires',
+      },
       { id: 'protocols', label: 'Протоколы', href: '/' },
+      { id: 'requests', label: 'Заявки', href: '/join-requests' },
     ]);
   });
 
   it('показывается админу клиники со стоматологической анкетой', () => {
-    expect(canUseRegistry({ is_clinic_admin: true, questionnaire_kind: 'dental' })).toBe(true);
-    expect(canUseRegistry({ is_clinic_admin: false, questionnaire_kind: 'dental' })).toBe(false);
-    expect(canUseRegistry({ is_clinic_admin: true, questionnaire_kind: 'general' })).toBe(false);
+    expect(
+      canUseRegistry({ is_clinic_admin: true, questionnaire_kind: 'dental' }),
+    ).toBe(true);
+    expect(
+      canUseRegistry({ is_clinic_admin: false, questionnaire_kind: 'dental' }),
+    ).toBe(false);
+    expect(
+      canUseRegistry({ is_clinic_admin: true, questionnaire_kind: 'general' }),
+    ).toBe(false);
     expect(canUseRegistry(null)).toBe(false);
   });
 
   it('доступен администратору смешанной клиники', () => {
-    expect(canUseRegistry({ is_clinic_admin: true, questionnaire_kind: 'mixed' })).toBe(true);
-    expect(canUseRegistry({ is_clinic_admin: false, questionnaire_kind: 'mixed' })).toBe(false);
+    expect(
+      canUseRegistry({ is_clinic_admin: true, questionnaire_kind: 'mixed' }),
+    ).toBe(true);
+    expect(
+      canUseRegistry({ is_clinic_admin: false, questionnaire_kind: 'mixed' }),
+    ).toBe(false);
   });
+});
+
+it('superadmin sees supported routes without own clinic membership', () => {
+  expect(
+    getNavItems({ showRegistry: false, role: 'super_admin' }).map(
+      (i) => i.href,
+    ),
+  ).toEqual(['/registry', '/completed-questionnaires', '/', '/join-requests']);
+  expect(
+    getNavItems({ showRegistry: false, role: 'doctor' }).map((i) => i.href),
+  ).toEqual(['/questionnaires']);
 });

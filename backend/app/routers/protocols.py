@@ -7,7 +7,7 @@ from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..db import get_db
-from ..deps import get_current_user
+from ..deps import require_clinical_user
 from ..models.protocol import Protocol, ProtocolField
 from ..models.protocol_structure import ProtocolStructure, ProtocolStructureField
 from ..models.service_user import ServiceUser
@@ -199,7 +199,7 @@ def _to_read(protocol: Protocol, field_values: dict[UUID, str | None]) -> Protoc
     summary="Список протоколов",
 )
 async def list_protocols(
-    current_user: ServiceUser = Depends(get_current_user),
+    current_user: ServiceUser = Depends(require_clinical_user),
     db: AsyncSession = Depends(get_db),
 ) -> List[ProtocolListItem]:
     stmt = (
@@ -221,7 +221,7 @@ async def list_protocols(
 )
 async def get_protocol(
     protocol_id: UUID,
-    current_user: ServiceUser = Depends(get_current_user),
+    current_user: ServiceUser = Depends(require_clinical_user),
     db: AsyncSession = Depends(get_db),
 ) -> ProtocolRead:
     protocol = await _load_protocol_owned(db, protocol_id=protocol_id, user_id=current_user.id)
@@ -237,7 +237,7 @@ async def get_protocol(
 )
 async def create_protocol(
     payload: ProtocolCreate,
-    current_user: ServiceUser = Depends(get_current_user),
+    current_user: ServiceUser = Depends(require_clinical_user),
     db: AsyncSession = Depends(get_db),
 ) -> ProtocolRead:
     await _ensure_structure_exists(db, protocol_structure_id=payload.protocol_structure_id)
@@ -292,7 +292,7 @@ async def create_protocol(
 async def put_protocol(
     protocol_id: UUID,
     payload: ProtocolPut,
-    current_user: ServiceUser = Depends(get_current_user),
+    current_user: ServiceUser = Depends(require_clinical_user),
     db: AsyncSession = Depends(get_db),
 ) -> ProtocolRead:
     protocol = await _load_protocol_owned(db, protocol_id=protocol_id, user_id=current_user.id)
@@ -340,7 +340,7 @@ async def put_protocol(
 async def patch_protocol(
     protocol_id: UUID,
     payload: ProtocolPatch,
-    current_user: ServiceUser = Depends(get_current_user),
+    current_user: ServiceUser = Depends(require_clinical_user),
     db: AsyncSession = Depends(get_db),
 ) -> ProtocolRead:
     protocol = await _load_protocol_owned(db, protocol_id=protocol_id, user_id=current_user.id)
@@ -391,7 +391,7 @@ async def patch_protocol(
 )
 async def delete_protocol(
     protocol_id: UUID,
-    current_user: ServiceUser = Depends(get_current_user),
+    current_user: ServiceUser = Depends(require_clinical_user),
     db: AsyncSession = Depends(get_db),
 ) -> None:
     protocol = await _load_protocol_owned(db, protocol_id=protocol_id, user_id=current_user.id)

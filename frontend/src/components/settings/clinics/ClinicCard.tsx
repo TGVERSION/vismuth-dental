@@ -1,6 +1,7 @@
 'use client';
 
 import { useId, useState, type KeyboardEvent } from 'react';
+import { ClinicConnectionPanel } from '@/components/clinic-join/ClinicConnectionPanel';
 import { CustomDropdown } from '@/components/CustomDropdown';
 import { SafeImage } from '@/components/SafeImage';
 import { useClinicCard } from '@/hooks/useClinicCard';
@@ -140,9 +141,10 @@ export const ClinicCard = ({ clinicId }: ClinicCardProps) => {
           hint={
             (saved?.questionnaire_kind ?? draft.questionnaire_kind) === 'mixed'
               ? 'Обычные анкеты по ссылке и QR врача или клиники, стоматологические — по персональным ссылкам регистратуры'
-              : (saved?.questionnaire_kind ?? draft.questionnaire_kind) === 'dental'
-              ? 'По персональным ссылкам от регистратуры. Если переключить на многопрофильную, раздел «Анкеты для стоматологии» скроется, а начатые анкеты пациенты дозаполнят'
-              : 'По ссылке и QR врача или клиники'
+              : (saved?.questionnaire_kind ?? draft.questionnaire_kind) ===
+                  'dental'
+                ? 'По персональным ссылкам от регистратуры. Если переключить на многопрофильную, раздел «Анкеты для стоматологии» скроется, а начатые анкеты пациенты дозаполнят'
+                : 'По ссылке и QR врача или клиники'
           }
         >
           <CustomDropdown<ClinicQuestionnaireKind>
@@ -268,6 +270,13 @@ export const ClinicCard = ({ clinicId }: ClinicCardProps) => {
         </FieldRow>
       </section>
 
+      {saved && (
+        <ClinicConnectionPanel
+          key={saved.id}
+          clinicId={saved.id}
+          dental={saved.questionnaire_kind !== 'general'}
+        />
+      )}
       <div className="border-t border-gray-200 px-8 py-8">
         {saved ? (
           <ClinicMembers

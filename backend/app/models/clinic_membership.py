@@ -37,6 +37,7 @@ class ClinicMembership(Base):
         nullable=False,
         default=False,
     )
+    is_operator: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="false")
     status: Mapped[str] = mapped_column(
         String(20),
         nullable=False,

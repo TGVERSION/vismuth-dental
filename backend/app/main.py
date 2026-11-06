@@ -25,6 +25,10 @@ from .routers.public_questionnaire import router as public_questionnaire_router
 from .routers.questionnaires import router as questionnaires_router
 from .routers.clinrec_guidelines import router as clinrec_guidelines_router
 from .routers.check_dms import router as check_dms_router
+from .routers.clinic_join import router as clinic_join_router
+from .routers.super_admin.clinic_join import router as super_admin_clinic_join_router
+from .routers.super_admin.questionnaires import router as super_admin_questionnaires_router
+from .routers.clinic_completed_questionnaires import router as clinic_completed_questionnaires_router
 
 
 app = FastAPI(
@@ -156,6 +160,10 @@ app.include_router(public_questionnaire_router)
 app.include_router(questionnaires_router)
 app.include_router(clinrec_guidelines_router)
 app.include_router(check_dms_router)
+app.include_router(clinic_join_router)
+app.include_router(super_admin_clinic_join_router)
+app.include_router(super_admin_questionnaires_router)
+app.include_router(clinic_completed_questionnaires_router)
 
 
 @app.get("/health", tags=["system"], summary="Health check")

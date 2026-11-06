@@ -7,7 +7,7 @@ from sqlalchemy import delete, func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..db import get_db
-from ..deps import get_current_user
+from ..deps import require_clinical_user
 from ..models.protocol_template import ProtocolTemplate
 from ..models.service_user import ServiceUser
 from ..models.template_group import TemplateGroup
@@ -27,7 +27,7 @@ router = APIRouter(prefix="/template-groups", tags=["template-groups"])
     summary="Список групп шаблонов",
 )
 async def list_template_groups(
-    current_user: ServiceUser = Depends(get_current_user),
+    current_user: ServiceUser = Depends(require_clinical_user),
     db: AsyncSession = Depends(get_db),
 ) -> List[TemplateGroupIdNameRead]:
     stmt = (
@@ -51,7 +51,7 @@ async def list_template_groups(
 )
 async def create_template_group(
     payload: TemplateGroupCreate,
-    current_user: ServiceUser = Depends(get_current_user),
+    current_user: ServiceUser = Depends(require_clinical_user),
     db: AsyncSession = Depends(get_db),
 ) -> TemplateGroupRead:
     normalized_name = payload.group_name.strip()
@@ -95,7 +95,7 @@ async def create_template_group(
 async def update_template_group(
     group_id: UUID,
     payload: TemplateGroupUpdate,
-    current_user: ServiceUser = Depends(get_current_user),
+    current_user: ServiceUser = Depends(require_clinical_user),
     db: AsyncSession = Depends(get_db),
 ) -> TemplateGroupRead:
     group_stmt = select(TemplateGroup).where(
@@ -145,7 +145,7 @@ async def update_template_group(
 )
 async def delete_template_group(
     group_id: UUID,
-    current_user: ServiceUser = Depends(get_current_user),
+    current_user: ServiceUser = Depends(require_clinical_user),
     db: AsyncSession = Depends(get_db),
 ) -> None:
     group_stmt = select(TemplateGroup).where(

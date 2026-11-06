@@ -8,7 +8,7 @@ from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..db import get_db
-from ..deps import get_current_user
+from ..deps import require_clinical_user
 from ..models.protocol_structure import ProtocolStructure, ProtocolStructureField
 from ..models.service_user import ServiceUser
 from ..schemas.protocol_structure import (
@@ -148,7 +148,7 @@ def _ensure_owner(
     summary="Список структур протоколов",
 )
 async def list_protocol_structures(
-    current_user: ServiceUser = Depends(get_current_user),
+    current_user: ServiceUser = Depends(require_clinical_user),
     db: AsyncSession = Depends(get_db),
 ) -> List[ProtocolStructureListItem]:
     _ = current_user
@@ -171,7 +171,7 @@ async def list_protocol_structures(
 )
 async def get_protocol_structure(
     structure_id: UUID,
-    current_user: ServiceUser = Depends(get_current_user),
+    current_user: ServiceUser = Depends(require_clinical_user),
     db: AsyncSession = Depends(get_db),
 ) -> ProtocolStructureRead:
     _ = current_user
@@ -193,7 +193,7 @@ async def get_protocol_structure(
 )
 async def create_protocol_structure(
     payload: ProtocolStructureCreate,
-    current_user: ServiceUser = Depends(get_current_user),
+    current_user: ServiceUser = Depends(require_clinical_user),
     db: AsyncSession = Depends(get_db),
 ) -> ProtocolStructureRead:
     now = datetime.now(timezone.utc)
@@ -245,7 +245,7 @@ async def create_protocol_structure(
 async def put_protocol_structure(
     structure_id: UUID,
     payload: ProtocolStructurePut,
-    current_user: ServiceUser = Depends(get_current_user),
+    current_user: ServiceUser = Depends(require_clinical_user),
     db: AsyncSession = Depends(get_db),
 ) -> ProtocolStructureRead:
     structure = _ensure_owner(await _load_structure(db, structure_id), current_user.id)
@@ -292,7 +292,7 @@ async def put_protocol_structure(
 async def patch_protocol_structure(
     structure_id: UUID,
     payload: ProtocolStructurePatch,
-    current_user: ServiceUser = Depends(get_current_user),
+    current_user: ServiceUser = Depends(require_clinical_user),
     db: AsyncSession = Depends(get_db),
 ) -> ProtocolStructureRead:
     structure = _ensure_owner(await _load_structure(db, structure_id), current_user.id)
@@ -421,7 +421,7 @@ async def patch_protocol_structure(
 )
 async def delete_protocol_structure(
     structure_id: UUID,
-    current_user: ServiceUser = Depends(get_current_user),
+    current_user: ServiceUser = Depends(require_clinical_user),
     db: AsyncSession = Depends(get_db),
 ) -> None:
     structure = _ensure_owner(await _load_structure(db, structure_id), current_user.id)

@@ -2,7 +2,12 @@
 
 import type { MyClinicRead } from '@/api';
 
-export type AppNavItemId = 'registry' | 'questionnaires' | 'protocols';
+export type AppNavItemId =
+  | 'registry'
+  | 'questionnaires'
+  | 'protocols'
+  | 'completed'
+  | 'requests';
 
 export interface AppNavItem {
   id: AppNavItemId;
@@ -27,16 +32,38 @@ export const NAV_ITEMS: AppNavItem[] = [
  * создаёт пациентам персональные ссылки и печатает анкеты.
  */
 export const canUseRegistry = (
-  clinic: Pick<MyClinicRead, 'is_clinic_admin' | 'questionnaire_kind'> | null,
-): boolean => clinic?.is_clinic_admin === true &&
-  (clinic.questionnaire_kind === 'dental' || clinic.questionnaire_kind === 'mixed');
+  clinic:
+    | (Pick<MyClinicRead, 'is_clinic_admin' | 'questionnaire_kind'> & {
+        is_operator?: boolean;
+      })
+    | null,
+): boolean =>
+  (clinic?.is_clinic_admin === true || clinic?.is_operator === true) &&
+  (clinic.questionnaire_kind === 'dental' ||
+    clinic.questionnaire_kind === 'mixed');
 
 /** Стоматология — первой; протоколы временно показываем только супер-админу. */
 export const getNavItems = ({
   showRegistry,
   role,
-}: { showRegistry: boolean; role?: string | null }): AppNavItem[] => {
-  const items = NAV_ITEMS.filter((item) => item.id !== 'protocols' || role === 'super_admin');
+}: {
+  showRegistry: boolean;
+  role?: string | null;
+}): AppNavItem[] => {
+  if (role === 'super_admin')
+    return [
+      { id: 'registry', label: 'Стоматология', href: '/registry' },
+      {
+        id: 'completed',
+        label: 'Все анкеты',
+        href: '/completed-questionnaires',
+      },
+      { id: 'protocols', label: 'Протоколы', href: '/' },
+      { id: 'requests', label: 'Заявки', href: '/join-requests' },
+    ];
+  const items = NAV_ITEMS.filter(
+    (item) => item.id !== 'protocols' || role === 'super_admin',
+  );
   return showRegistry ? [REGISTRY_ITEM, ...items] : items;
 };
 
@@ -52,6 +79,8 @@ const isSection = (pathname: string, base: string): boolean =>
  */
 export const getActiveNavItem = (pathname: string): AppNavItemId | null => {
   if (pathname === '/') return 'protocols';
+  if (isSection(pathname, '/completed-questionnaires')) return 'completed';
+  if (isSection(pathname, '/join-requests')) return 'requests';
   if (isSection(pathname, '/questionnaires')) return 'questionnaires';
   if (isSection(pathname, '/registry')) return 'registry';
   return null;

@@ -66,3 +66,9 @@
 - **Код:** `clinic_admin.py` → `get_clinic_statistics`
 
 Подробнее: [questionnaire-statistics.md](questionnaire-statistics.md).
+
+## Пациентские ссылки и оператор
+
+`GET /me/clinic` и строки участников возвращают `is_operator` (по умолчанию false). Флаг не назначается через старые email-приглашения или PATCH участников; одобрение заявки выполняет super_admin. Редактирование профиля существующего operator-only участника сохраняет его membership.
+
+`GET /clinics/{clinic_id}/patient-links`: super_admin либо активный администратор/оператор своей неудалённой клиники. Возвращает название/ID клиники, `clinic_public_url` и `doctors` (ФИО, membership_id, public_url, специализации). Для dental общая ссылка null и врачи не возвращаются. Для general/mixed включены только активные неудалённые врачи с непустыми специализациями и публичным slug. Эти данные не дают прав управления; запуск анкеты проверяет доступность действующим публичным resolver.

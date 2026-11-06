@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..db import get_db
-from ..deps import get_current_user
+from ..deps import require_clinical_user
 from ..models.service_user import ServiceUser
 from ..schemas.ml_mkb_code import (
     EventAcceptedResponse,
@@ -26,7 +26,7 @@ router = APIRouter(prefix="/ml_mkb_code", tags=["ml_mkb_code"])
 )
 async def proxy_mkb_code(
     payload: MkbCodeProxyRequest,
-    current_user: ServiceUser = Depends(get_current_user),
+    current_user: ServiceUser = Depends(require_clinical_user),
     db: AsyncSession = Depends(get_db),
 ) -> MkbCodeProxyResponse:
     await ensure_user_clinic_subscription_active(db, current_user)
@@ -67,7 +67,7 @@ async def proxy_mkb_code(
 )
 async def push_selected_event(
     payload: MkbCodeSelectRequest,
-    current_user: ServiceUser = Depends(get_current_user),
+    current_user: ServiceUser = Depends(require_clinical_user),
 ) -> EventAcceptedResponse:
     redis = get_redis_client()
     try:

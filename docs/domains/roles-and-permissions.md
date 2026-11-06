@@ -72,3 +72,11 @@ service_user 1 ── 1 service_user_role N ── 1 role
 | `deps.require_roles("super_admin")` | `/super-admin/clinics*`, `/super-admin/statistics`, запись `/clinrec/guidelines*` (POST/PATCH/DELETE/index) |
 | `deps.require_clinic_admin` | `/clinics/{clinic_id}*` |
 | doctor membership | `/questionnaires*` |
+
+## Оператор контакт-центра
+
+`clinic_membership.is_operator` — отдельное право, исходно false, назначается одобрением заявки super_admin. Оператор своей активной неудалённой клиники читает общую/врачебные пациентские ссылки, завершённые анкеты трёх видов и выполняет существующие действия dental-регистратуры (включая печать и отметки). Управление клиникой, участниками, подпиской и заявки других сотрудников недоступны. `require_clinic_registry` проверяет super_admin либо active membership с is_clinic_admin/is_operator; `require_clinic_admin` не расширяется.
+
+`/super-admin/questionnaires` доступен только super_admin, без собственного membership, в том числе для исторических анкет удалённых/заблокированных клиник. Legacy admin и остальные роли не получают платформенного обзора. Operator-only membership не публикуется как врач и не получает врачебную ссылку.
+
+Рабочие врачебные API протоколов, шаблонов, структур и ML/DMS используют отдельную проверку клинического доступа: operator-only пользователь без самостоятельных врачебных/платформенных прав не получает эти помощники. Ожидающая подтверждения новая учётная запись не допускается к рабочим API; чтение собственного профиля и статуса заявки остаётся доступно через проверку личности.

@@ -3,7 +3,7 @@ from typing import Optional
 from uuid import UUID, uuid4
 
 from sqlalchemy import SmallInteger, String, Text, TIMESTAMP
-from sqlalchemy.dialects.postgresql import UUID as PG_UUID
+from sqlalchemy.dialects.postgresql import JSONB, UUID as PG_UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from ..db import Base
@@ -18,6 +18,7 @@ class RegistrationPending(Base):
         default=uuid4,
     )
 
+    clinic_join_context: Mapped[Optional[dict]] = mapped_column(JSONB, nullable=True)
     login: Mapped[str] = mapped_column(String(255), nullable=False)
     password_hash: Mapped[str] = mapped_column(Text, nullable=False)
     code_hash: Mapped[str] = mapped_column(Text, nullable=False)

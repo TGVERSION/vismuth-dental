@@ -3,6 +3,8 @@
 import Image from 'next/image';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { mainApi, type ClinicRead } from '@/api';
+import { useAuthStore } from '@/store/authStore';
 import type { RegistryStatus } from '@/api';
 import { CustomDropdown } from '@/components/CustomDropdown';
 import { ErrorState, Spinner } from '@/components/settings/clinics/fields';
@@ -53,13 +55,37 @@ const useAutoRefresh = (refresh: () => void) => {
  */
 export const RegistryScreen = () => {
   const router = useRouter();
-  const selectedId = useSearchParams().get('id');
+  const params = useSearchParams();
+  const selectedId = params.get('id');
+  const superAdmin = useAuthStore((s) => s.user?.role) === 'super_admin';
+  const [clinics, setClinics] = useState<ClinicRead[]>([]);
+  const [clinicListError, setClinicListError] = useState('');
+  useEffect(() => {
+    if (superAdmin)
+      mainApi.clinics
+        .list()
+        .then((c) =>
+          setClinics(
+            c.filter(
+              (v) => v.questionnaire_kind !== 'general' && !v.deleted_at,
+            ),
+          ),
+        )
+        .catch(() => setClinicListError('Не удалось загрузить клиники'));
+  }, [superAdmin]);
+  const selectedClinic = superAdmin
+    ? (params.get('clinic_id') ?? clinics[0]?.id ?? null)
+    : null;
   const {
     clinic,
     isLoading: isClinicLoading,
     error: clinicError,
   } = useMyClinic();
-  const clinicId = canUseRegistry(clinic) && clinic ? clinic.clinic_id : null;
+  const clinicId = superAdmin
+    ? selectedClinic
+    : canUseRegistry(clinic) && clinic
+      ? clinic.clinic_id
+      : null;
 
   const [status, setStatus] = useState<RegistryStatus | ''>('');
   const [name, setName] = useState('');
@@ -85,12 +111,12 @@ export const RegistryScreen = () => {
 
   const select = (id: string | null) =>
     router.replace(
-      id ? `/registry?id=${encodeURIComponent(id)}` : '/registry',
+      `/registry?${new URLSearchParams({ ...(superAdmin && clinicId ? { clinic_id: clinicId } : {}), ...(id ? { id } : {}) }).toString()}`,
       { scroll: false },
     );
 
-  if (isClinicLoading) return <Spinner />;
-  if (clinicError === 'failed') {
+  if (!superAdmin && isClinicLoading) return <Spinner />;
+  if (!superAdmin && clinicError === 'failed') {
     return (
       <ErrorState
         text="Не удалось загрузить данные клиники"
@@ -101,7 +127,9 @@ export const RegistryScreen = () => {
   if (!clinicId) {
     return (
       <p className="mx-auto mt-40 max-w-md text-center text-[#8B8B8B]">
-        Раздел доступен администратору клиники со стоматологической анкетой
+        {superAdmin
+          ? clinicListError || 'Нет доступных стоматологических клиник'
+          : 'Раздел доступен администратору или оператору стоматологической клиники'}
       </p>
     );
   }
@@ -123,7 +151,13 @@ export const RegistryScreen = () => {
         </p>
       );
     }
-    return <RegistryList items={list.items} selectedId={selectedId} />;
+    return (
+      <RegistryList
+        items={list.items}
+        selectedId={selectedId}
+        clinicId={superAdmin ? clinicId : undefined}
+      />
+    );
   };
 
   const renderDetail = () => {
@@ -178,6 +212,28 @@ export const RegistryScreen = () => {
         aria-label="Анкеты для стоматологии"
         className="custom-height fixed top-20 left-0 ml-3 mr-5 flex w-85.75 flex-col bg-[#F3F4F8]"
       >
+        {superAdmin && (
+          <label className="mb-3 block text-sm">
+            Клиника
+            <select
+              aria-label="Клиника регистратуры"
+              value={clinicId ?? ''}
+              onChange={(e) => {
+                setIsCreating(false);
+                router.replace(
+                  '/registry?clinic_id=' + encodeURIComponent(e.target.value),
+                );
+              }}
+              className="mt-2 w-full rounded-xl bg-white p-3"
+            >
+              {clinics.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
         <button
           type="button"
           aria-haspopup="dialog"

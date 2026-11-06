@@ -10,7 +10,7 @@ from sqlalchemy import and_, delete, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..db import get_db
-from ..deps import require_clinic_admin
+from ..deps import require_clinic_registry
 from ..models.clinic_membership import ClinicMembership
 from ..models.questionnaire import Questionnaire
 from ..models.service_user import ServiceUser
@@ -137,7 +137,7 @@ def _require_completed(questionnaire: Questionnaire) -> None:
 async def create_registry_questionnaire(
     clinic_id: UUID,
     payload: RegistryQuestionnaireCreate,
-    current_user: ServiceUser = Depends(require_clinic_admin),
+    current_user: ServiceUser = Depends(require_clinic_registry),
     db: AsyncSession = Depends(get_db),
 ) -> RegistryQuestionnaireCreated:
     clinic = await get_clinic_or_404(db, clinic_id)
@@ -170,7 +170,7 @@ async def list_registry_questionnaires(
         alias="status",
     ),
     name: Optional[str] = Query(default=None, max_length=255),
-    _: ServiceUser = Depends(require_clinic_admin),
+    _: ServiceUser = Depends(require_clinic_registry),
     db: AsyncSession = Depends(get_db),
 ) -> list[RegistryQuestionnaireItem]:
     await get_clinic_or_404(db, clinic_id)
@@ -199,10 +199,24 @@ async def list_registry_questionnaires(
 async def get_registry_questionnaire(
     clinic_id: UUID,
     questionnaire_id: UUID,
-    _: ServiceUser = Depends(require_clinic_admin),
+    _: ServiceUser = Depends(require_clinic_registry),
     db: AsyncSession = Depends(get_db),
 ) -> RegistryQuestionnaireDetail:
-    questionnaire = await _load(db, clinic_id, questionnaire_id)
+    result = await db.execute(
+        select(Questionnaire).where(
+            Questionnaire.id == questionnaire_id,
+            Questionnaire.clinic_id == clinic_id,
+            Questionnaire.kind == "dental",
+            Questionnaire.status.in_(_VISIBLE_STATUSES),
+            or_(
+                Questionnaire.status == "completed",
+                Questionnaire.invite_expires_at.is_not(None),
+            ),
+        ),
+    )
+    questionnaire = result.scalar_one_or_none()
+    if questionnaire is None:
+        raise HTTPException(status_code=404, detail="Questionnaire not found")
     return RegistryQuestionnaireDetail(
         **_item_fields(questionnaire),
         structured=questionnaire.structured,
@@ -219,7 +233,7 @@ async def get_registry_questionnaire(
 async def regenerate_registry_link(
     clinic_id: UUID,
     questionnaire_id: UUID,
-    _: ServiceUser = Depends(require_clinic_admin),
+    _: ServiceUser = Depends(require_clinic_registry),
     db: AsyncSession = Depends(get_db),
 ) -> RegistryLink:
     questionnaire = await _load(db, clinic_id, questionnaire_id)
@@ -252,7 +266,7 @@ async def _mark(
 async def mark_registry_printed(
     clinic_id: UUID,
     questionnaire_id: UUID,
-    _: ServiceUser = Depends(require_clinic_admin),
+    _: ServiceUser = Depends(require_clinic_registry),
     db: AsyncSession = Depends(get_db),
 ) -> RegistryQuestionnaireItem:
     return await _mark(db, clinic_id, questionnaire_id, "printed_at")
@@ -266,7 +280,7 @@ async def mark_registry_printed(
 async def mark_registry_signed(
     clinic_id: UUID,
     questionnaire_id: UUID,
-    _: ServiceUser = Depends(require_clinic_admin),
+    _: ServiceUser = Depends(require_clinic_registry),
     db: AsyncSession = Depends(get_db),
 ) -> RegistryQuestionnaireItem:
     return await _mark(db, clinic_id, questionnaire_id, "signed_at")
@@ -281,7 +295,7 @@ async def mark_registry_signed(
 async def delete_registry_questionnaire(
     clinic_id: UUID,
     questionnaire_id: UUID,
-    _: ServiceUser = Depends(require_clinic_admin),
+    _: ServiceUser = Depends(require_clinic_registry),
     db: AsyncSession = Depends(get_db),
 ) -> Response:
     await _load(db, clinic_id, questionnaire_id)

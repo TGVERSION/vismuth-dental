@@ -8,7 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..config import settings
 from ..db import get_db
-from ..deps import get_current_user, require_clinic_admin
+from ..deps import get_current_user, require_clinic_admin, require_clinic_registry
 from ..models.clinic import Clinic
 from ..models.clinic_invitation import ClinicInvitation
 from ..models.clinic_membership import ClinicMembership
@@ -16,6 +16,8 @@ from ..models.service_user import ServiceUser
 from ..models.specialization import RefSpecialization
 from ..schemas.clinic_admin import (
     ClinicAdminPatch,
+    ClinicPatientLinks,
+    PatientLinkDoctor,
     ClinicAdminRead,
     ClinicInvitationAdminCreated,
     ClinicMemberInviteCreate,
@@ -110,6 +112,7 @@ async def my_clinic(
         membership_id=membership.id,
         is_clinic_admin=membership.is_clinic_admin,
         is_doctor=membership.is_doctor,
+        is_operator=membership.is_operator,
         doctor_public_slug=doctor_slug,
         doctor_public_url=_public_url(doctor_slug) if doctor_slug else None,
         specializations=specs,
@@ -273,6 +276,7 @@ async def list_members(
                 photo_url=membership.photo_url,
                 is_clinic_admin=membership.is_clinic_admin,
                 is_doctor=membership.is_doctor,
+                is_operator=membership.is_operator,
                 specializations=[
                     SpecializationRead(**item)
                     for item in membership_map.get(membership.id, [])
@@ -472,7 +476,7 @@ async def patch_member(
         membership.is_clinic_admin = bool(data["is_clinic_admin"])
     if "is_doctor" in data:
         membership.is_doctor = bool(data["is_doctor"])
-    if not membership.is_clinic_admin and not membership.is_doctor:
+    if not membership.is_clinic_admin and not membership.is_doctor and not membership.is_operator:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Member must have is_clinic_admin or is_doctor",
@@ -508,6 +512,7 @@ async def patch_member(
         photo_url=membership.photo_url,
         is_clinic_admin=membership.is_clinic_admin,
         is_doctor=membership.is_doctor,
+        is_operator=membership.is_operator,
         specializations=[
             SpecializationRead(**item)
             for item in membership_map.get(membership.id, [])
@@ -564,6 +569,7 @@ async def deactivate_member(
         photo_url=membership.photo_url,
         is_clinic_admin=membership.is_clinic_admin,
         is_doctor=membership.is_doctor,
+        is_operator=membership.is_operator,
         specializations=[
             SpecializationRead(**item)
             for item in membership_map.get(membership.id, [])
@@ -574,3 +580,30 @@ async def deactivate_member(
         ),
         user_id=user.id,
     )
+
+
+@router.get('/clinics/{clinic_id}/patient-links', response_model=ClinicPatientLinks)
+async def clinic_patient_links(
+    clinic_id: UUID,
+    _: ServiceUser = Depends(require_clinic_registry),
+    db: AsyncSession = Depends(get_db),
+) -> ClinicPatientLinks:
+    clinic = await get_clinic_or_404(db, clinic_id)
+    if clinic.questionnaire_kind not in {'general', 'mixed'}:
+        return ClinicPatientLinks(clinic_id=clinic.id, clinic_name=clinic.name)
+    rows = (await db.execute(
+        select(ClinicMembership, ServiceUser)
+        .join(ServiceUser, ServiceUser.id == ClinicMembership.user_id)
+        .where(ClinicMembership.clinic_id == clinic_id,
+               ClinicMembership.status == 'active', ClinicMembership.deleted_at.is_(None),
+               ClinicMembership.is_doctor.is_(True),
+               ServiceUser.deleted_at.is_(None), ServiceUser.is_active.is_(True))
+        .order_by(ServiceUser.last_name, ServiceUser.first_name, ClinicMembership.id)
+    )).all()
+    specs, _ = await load_specializations_map(db, membership_ids=[m.id for m, _ in rows])
+    return ClinicPatientLinks(clinic_id=clinic.id, clinic_name=clinic.name,
+        clinic_public_url=_public_url(clinic.public_slug),
+        doctors=[PatientLinkDoctor(membership_id=m.id, first_name=u.first_name,
+            last_name=u.last_name, middle_name=u.middle_name, public_url=_public_url(m.public_slug),
+            specializations=[SpecializationRead(**s) for s in specs.get(m.id, [])])
+            for m, u in rows if m.public_slug and specs.get(m.id)])

@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..db import get_db
-from ..deps import get_current_user
+from ..deps import require_clinical_user
 from ..models.service_user import ServiceUser
 from ..schemas.check_dms import CheckDmsRequest, CheckDmsResponse
 from ..services.clinrec_guidelines import resolve_dms_guideline
@@ -19,7 +19,7 @@ router = APIRouter(tags=["check_dms"])
 )
 async def check_dms(
     payload: CheckDmsRequest,
-    current_user: ServiceUser = Depends(get_current_user),
+    current_user: ServiceUser = Depends(require_clinical_user),
     db: AsyncSession = Depends(get_db),
 ) -> CheckDmsResponse:
     """Resolve КР по МКБ → скачать PDF из S3 → multipart в ML ``/check_dms``."""

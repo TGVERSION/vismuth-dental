@@ -35,7 +35,7 @@ export interface CustomDropdownProps<T = string, M extends boolean = false> {
   placeholder?: string;
   disabled?: boolean;
   className?: string;
-  /** Фон кнопки вместо `bg-gray-50` по умолчанию. */
+  /** Дополнительный фон/размер кнопки; общий вид списка остаётся единым. */
   triggerClassName?: string;
   dropdownClassName?: string;
   optionClassName?: string;
@@ -60,7 +60,7 @@ export function CustomDropdown<T = string, M extends boolean = false>({
   placeholder = 'Выберите...',
   disabled = false,
   className = '',
-  triggerClassName = 'bg-gray-50',
+  triggerClassName = 'bg-[#F8F9FA]',
   dropdownClassName = '',
   optionClassName = '',
   renderTrigger,
@@ -86,9 +86,13 @@ export function CustomDropdown<T = string, M extends boolean = false>({
   // Хелперы для работы с одиночным и множественным выбором
   const getValues = (): T[] => {
     if (multiple) {
-      return Array.isArray(value) ? (value as T[]) : value ? [value as T] : [];
+      return Array.isArray(value)
+        ? (value as T[])
+        : value == null
+          ? []
+          : [value as T];
     }
-    return value ? [value as T] : [];
+    return value == null ? [] : [value as T];
   };
 
   const isSelected = (optionValue: T): boolean => {
@@ -96,6 +100,7 @@ export function CustomDropdown<T = string, M extends boolean = false>({
   };
 
   const handleValueChange = (optionValue: T) => {
+    if (disabled) return;
     if (multiple) {
       const currentValues = getValues();
       const newValues = currentValues.includes(optionValue)
@@ -167,18 +172,22 @@ export function CustomDropdown<T = string, M extends boolean = false>({
 
       if (preferred === 'top') {
         bottom = viewportHeight - rect.top + gap;
-        maxHeight = Math.min(spaceAbove - gap * 2, 240);
+        maxHeight = Math.max(0, Math.min(spaceAbove - gap * 2, 240));
         top = undefined;
       } else {
         top = rect.bottom + gap;
-        maxHeight = Math.min(spaceBelow - gap * 2, 240);
+        maxHeight = Math.max(0, Math.min(spaceBelow - gap * 2, 240));
         bottom = undefined;
       }
 
+      const width = Math.min(rect.width, window.innerWidth - gap * 4);
       setCoords({
         top: top ?? 0,
-        left: rect.left,
-        width: rect.width,
+        left: Math.max(
+          gap * 2,
+          Math.min(rect.left, window.innerWidth - width - gap * 2),
+        ),
+        width,
         bottom,
         maxHeight,
       });
@@ -194,6 +203,28 @@ export function CustomDropdown<T = string, M extends boolean = false>({
   }, [isOpen, position]);
 
   const handleKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
+    if (disabled) return;
+    // События портального списка всплывают через React к полю. Не подавляем
+    // Enter/Space у option-button: его обычный click должен выбрать вариант.
+    const option = (e.target as HTMLElement).closest('[role="option"]');
+    if (option) {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        setIsOpen(false);
+        containerRef.current?.querySelector('button')?.focus();
+      } else if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+        e.preventDefault();
+        const buttons = Array.from(
+          listRef.current?.querySelectorAll<HTMLButtonElement>(
+            'button[role="option"]:not(:disabled)',
+          ) ?? [],
+        );
+        const index = buttons.indexOf(option as HTMLButtonElement);
+        const direction = e.key === 'ArrowDown' ? 1 : -1;
+        buttons[(index + direction + buttons.length) % buttons.length]?.focus();
+      }
+      return;
+    }
     if (!isOpen) {
       if (e.key === 'Enter' || e.key === ' ' || e.key === 'ArrowDown') {
         e.preventDefault();
@@ -269,15 +300,14 @@ export function CustomDropdown<T = string, M extends boolean = false>({
       ref={listRef}
       style={{
         position: 'fixed',
-        top: coords.bottom ? 'auto' : coords.top,
+        top: coords.bottom !== undefined ? 'auto' : coords.top,
         bottom: coords.bottom ?? 'auto',
         left: coords.left,
         width: coords.width,
         maxHeight: coords.maxHeight ?? 240,
         zIndex: 9999,
       }}
-      id={listboxId}
-      className={`bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden animate-fade-in flex flex-col ${dropdownClassName}`}
+      className={`bg-white border border-[#E9ECEF] rounded-2xl shadow-lg overflow-hidden animate-fade-in flex flex-col ${dropdownClassName}`}
     >
       {onSearch && (
         <div className="p-2 border-b border-gray-100 shrink-0">
@@ -292,12 +322,20 @@ export function CustomDropdown<T = string, M extends boolean = false>({
             placeholder="Поиск..."
             className="w-full px-3 py-1.5 text-sm bg-gray-50 rounded-lg border-0 outline-none focus:ring-2 focus:ring-[#5D8CF1] transition-shadow"
             onClick={(e) => e.stopPropagation()}
-            onKeyDown={(e) => e.stopPropagation()}
+            onKeyDown={(e) => {
+              e.stopPropagation();
+              if (e.key === 'Escape') {
+                setIsOpen(false);
+                containerRef.current?.focus();
+              }
+            }}
           />
         </div>
       )}
       <div
         role="listbox"
+        id={listboxId}
+        aria-label={ariaLabel}
         aria-multiselectable={multiple}
         className="overflow-y-auto"
         onScroll={handleListScroll}
@@ -313,9 +351,9 @@ export function CustomDropdown<T = string, M extends boolean = false>({
               role="option"
               aria-selected={optionIsSelected}
               onClick={() => handleValueChange(option.value)}
-              disabled={isDisabled}
-              className={`w-full cursor-pointer px-4 py-3 text-left flex items-center gap-3 hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
-                optionIsSelected ? 'bg-gray-50' : ''
+              disabled={disabled || isDisabled}
+              className={`w-full cursor-pointer px-5 py-3.5 text-left flex items-center gap-3 hover:bg-[#F8F9FA] focus-visible:bg-[#F0F5FF] focus-visible:outline-none transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
+                optionIsSelected ? 'bg-[#F8F9FA]' : ''
               } ${optionClassName}`}
             >
               <div className="flex-1 flex items-center gap-3">
@@ -380,7 +418,7 @@ export function CustomDropdown<T = string, M extends boolean = false>({
       tabIndex={disabled ? -1 : 0}
       role="combobox"
       aria-controls={listboxId}
-      aria-expanded={isOpen}
+      aria-expanded={isOpen && !disabled}
       aria-haspopup="listbox"
       aria-label={ariaLabel}
       aria-disabled={disabled}
@@ -389,8 +427,8 @@ export function CustomDropdown<T = string, M extends boolean = false>({
         type="button"
         onClick={() => !disabled && setIsOpen((prev) => !prev)}
         disabled={disabled}
-        className={`w-full min-h-10 px-3 py-2 ${triggerClassName} border-0 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#5D8CF1] text-left flex items-center justify-between cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed transition-shadow ${
-          isOpen ? 'ring-2 ring-[#5D8CF1]' : ''
+        className={`w-full min-h-12 gap-3 px-4 py-3 ${triggerClassName} border-0 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#5D8CF1] text-left flex items-center justify-between cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed transition-shadow ${
+          isOpen && !disabled ? 'ring-2 ring-[#5D8CF1]' : ''
         }`}
         aria-controls={listboxId}
       >
@@ -409,12 +447,12 @@ export function CustomDropdown<T = string, M extends boolean = false>({
           width={10}
           height={10}
           className={`transition-transform duration-200 shrink-0 ${
-            isOpen ? 'rotate-180' : ''
+            isOpen && !disabled ? 'rotate-180' : ''
           }`}
         />
       </button>
 
-      {isOpen && createPortal(dropdownList, document.body)}
+      {isOpen && !disabled && createPortal(dropdownList, document.body)}
     </div>
   );
 }

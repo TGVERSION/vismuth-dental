@@ -43,7 +43,8 @@ async def _exercise():
         await db.flush()
         users = {}
         for key, role in [('root', 'super_admin'), ('legacy', 'admin'), ('patient', 'patient'), ('worker', 'doctor'), ('rival', 'doctor')]:
-            user = ServiceUser(login=f'{key}-{suffix}@example.test', password_hash='unused')
+            user = ServiceUser(login=f'{key}-{suffix}@example.test', password_hash='unused',
+                               first_name='Иван', last_name='Тестовый', middle_name='Иванович')
             db.add(user)
             await db.flush()
             await set_user_role(db, user, role)
@@ -71,6 +72,7 @@ async def _exercise():
             overview = await client.get('/super-admin/users', headers=headers('root'))
             assert overview.status_code == 200, overview.text
             row = next(row for row in overview.json() if row['id'] == str(users['worker']))
+            assert [row.get(key) for key in ['last_name', 'first_name', 'middle_name']] == ['Тестовый', 'Иван', 'Иванович']
             assert row['clinic_id'] == str(first) and row['clinic_role'] == 'doctor'
             assert (await client.get('/super-admin/users', headers=headers('legacy'))).status_code == 403
             roles = await client.get('/super-admin/user-membership-roles', headers=headers('root'))

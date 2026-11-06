@@ -8,28 +8,29 @@ import {
   type MembershipRoleOption,
   type UserMembershipRead,
 } from '@/api/user-membership-api';
-import { buildMembershipUpdate } from '@/lib/user-membership';
 import {
-  ModalShell,
-  PRIMARY_BUTTON_CLASS,
-  SECONDARY_BUTTON_CLASS,
-} from './clinics/ModalShell';
+  buildMembershipUpdate,
+  membershipHasChanges,
+} from '@/lib/user-membership';
+import { CustomDropdown } from '../CustomDropdown';
+import { UserSettingsField } from './UserSettingsField';
 
 interface Props {
   user: UserMembershipRead;
   roles: MembershipRoleOption[];
+  disabled?: boolean;
   onSaved: (user: UserMembershipRead) => void;
   onClose: () => void;
+  onSavingChange?: (saving: boolean) => void;
 }
-
-const FIELD =
-  'w-full rounded-xl border border-[#E9ECEF] bg-[#F8F9FA] p-3 text-sm disabled:opacity-60';
 
 export function UserClinicMembershipEditor({
   user,
   roles,
+  disabled = false,
   onSaved,
   onClose,
+  onSavingChange,
 }: Props) {
   const [clinicId, setClinicId] = useState(user.clinic_id ?? '');
   const [role, setRole] = useState<MembershipRole | null>(user.clinic_role);
@@ -46,6 +47,8 @@ export function UserClinicMembershipEditor({
   const [loadFailed, setLoadFailed] = useState(false);
   const doctor = role === 'doctor' || role === 'clinic_admin_doctor';
   const payload = buildMembershipUpdate(clinicId, role, specializationIds);
+  const changed = membershipHasChanges(user, payload);
+  const blocked = disabled || saving || loading || loadFailed || !roles.length;
 
   useEffect(() => {
     let live = true;
@@ -58,7 +61,7 @@ export function UserClinicMembershipEditor({
       .catch(() => {
         if (live) {
           setError(
-            'Не удалось загрузить клиники и специализации. Откройте окно повторно.',
+            'Не удалось загрузить клиники и специализации. Раскройте карточку повторно.',
           );
           setLoadFailed(true);
         }
@@ -73,11 +76,16 @@ export function UserClinicMembershipEditor({
 
   async function submit(event: FormEvent) {
     event.preventDefault();
-    if (!payload || loading || loadFailed || saving) return;
+    if (!payload || !changed || blocked) return;
     setSaving(true);
+    onSavingChange?.(true);
     setError('');
     try {
-      onSaved(await userMembershipApi.update(user.id, payload));
+      const saved = await userMembershipApi.update(user.id, payload);
+      setClinicId(saved.clinic_id ?? '');
+      setRole(saved.clinic_role);
+      setSpecializationIds(saved.specialization_ids);
+      onSaved(saved);
     } catch (cause) {
       setError(
         cause instanceof Error
@@ -86,137 +94,120 @@ export function UserClinicMembershipEditor({
       );
     } finally {
       setSaving(false);
+      onSavingChange?.(false);
     }
   }
 
+  const clinicOptions = [
+    { value: '', label: 'Без клиники — отключить доступ' },
+    ...(user.clinic_id &&
+    !clinics.some((clinic) => clinic.id === user.clinic_id)
+      ? [
+          {
+            value: user.clinic_id,
+            label: `${user.clinic_name} (недоступна)`,
+            disabled: true,
+          },
+        ]
+      : []),
+    ...clinics.map((clinic) => ({
+      value: clinic.id,
+      label:
+        clinic.name +
+        (clinic.access_status_code === 'expired'
+          ? ' — подписка завершена'
+          : ''),
+      disabled: clinic.access_status_code === 'expired',
+    })),
+  ];
+
   return (
-    <ModalShell
-      title="Клиника и доступ"
-      onClose={onClose}
-      closeDisabled={saving}
+    <form
+      onSubmit={submit}
+      aria-label={`Клиника и доступ ${user.login}`}
+      className="flex min-w-0 flex-col gap-5"
     >
-      <p className="mb-4 break-all text-sm text-[#6C757D]">{user.login}</p>
-      {loading ? (
-        <p role="status">Загрузка клиник…</p>
-      ) : (
-        <form onSubmit={submit} className="flex flex-col gap-4">
-          <label className="text-sm">
-            Клиника
-            <select
-              aria-label="Клиника"
-              className={FIELD}
-              value={clinicId}
-              disabled={saving || loadFailed}
-              onChange={(event) => setClinicId(event.target.value)}
-            >
-              <option value="">Без клиники — отключить доступ</option>
-              {user.clinic_id &&
-                !clinics.some((clinic) => clinic.id === user.clinic_id) && (
-                  <option value={user.clinic_id}>
-                    {user.clinic_name} (недоступна)
-                  </option>
-                )}
-              {clinics.map((clinic) => (
-                <option
-                  key={clinic.id}
-                  value={clinic.id}
-                  disabled={clinic.access_status_code === 'expired'}
-                >
-                  {clinic.name}
-                  {clinic.access_status_code === 'expired'
-                    ? ' — подписка завершена'
-                    : ''}
-                </option>
-              ))}
-            </select>
-          </label>
-          {clinicId && (
-            <label className="text-sm">
-              Роль в клинике
-              <select
-                aria-label="Роль в клинике"
-                className={FIELD}
-                value={role ?? ''}
-                disabled={saving || loadFailed}
-                onChange={(event) =>
-                  setRole((event.target.value || null) as MembershipRole | null)
-                }
-              >
-                <option value="">Выберите роль</option>
-                {roles.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-            </label>
-          )}
-          {clinicId && doctor && (
-            <fieldset disabled={saving || loadFailed}>
-              <legend className="mb-2 text-sm">Специализации врача</legend>
-              <div className="max-h-40 overflow-y-auto rounded-xl border border-[#E9ECEF] p-3">
-                {specializations.map((spec) => (
-                  <label
-                    key={spec.id}
-                    className="flex items-center gap-2 py-1 text-sm"
-                  >
-                    <input
-                      type="checkbox"
-                      checked={specializationIds.includes(spec.id)}
-                      onChange={(event) =>
-                        setSpecializationIds((previous) =>
-                          event.target.checked
-                            ? [...previous, spec.id]
-                            : previous.filter((id) => id !== spec.id),
-                        )
-                      }
-                    />
-                    {spec.name}
-                  </label>
-                ))}
-              </div>
-              {!specializationIds.length && (
-                <p className="mt-1 text-sm text-[#6C757D]">
-                  Выберите хотя бы одну специализацию.
-                </p>
-              )}
-            </fieldset>
-          )}
-          {clinicId && role === 'operator' && (
-            <p className="text-sm text-[#6C757D]">
-              Оператор видит анкеты и пациентские ссылки своей клиники, печатает
-              и отмечает подпись. Управление сотрудниками, клиникой и помощники
-              врача недоступны.
-            </p>
-          )}
-          <p className="text-sm text-[#6C757D]">
-            При смене клиники доступ к прежней клинике прекращается. Её анкеты
-            сохраняются в прежней клинике. При отключении клиники рабочий доступ
-            пользователя закрывается.
-          </p>
-          {error && (
-            <p role="alert" className="text-sm text-[#E53E3E]">
-              {error}
-            </p>
-          )}
-          <button
-            type="submit"
-            disabled={!payload || saving || loadFailed}
-            className={PRIMARY_BUTTON_CLASS}
-          >
-            {saving ? 'Сохраняем…' : 'Сохранить'}
-          </button>
-          <button
-            type="button"
-            disabled={saving}
-            onClick={onClose}
-            className={SECONDARY_BUTTON_CLASS}
-          >
-            Отмена
-          </button>
-        </form>
+      {loading && (
+        <p role="status" className="text-sm text-[#8B8B8B]">
+          Загрузка клиник…
+        </p>
       )}
-      {loading && error && <p role="alert">{error}</p>}
-    </ModalShell>
+      <UserSettingsField
+        label="Клиника"
+        hint="При переводе прежний доступ прекращается. Заполненные анкеты остаются в исходной клинике."
+      >
+        <CustomDropdown
+          options={clinicOptions}
+          value={clinicId}
+          onChange={setClinicId}
+          disabled={blocked}
+          aria-label="Клиника"
+          triggerClassName="bg-[#E3E8F1]"
+        />
+      </UserSettingsField>
+      {clinicId && (
+        <UserSettingsField
+          label="Роль в клинике"
+          hint={
+            role === 'operator'
+              ? 'Оператор видит анкеты и пациентские ссылки своей клиники. Управление сотрудниками и помощники врача недоступны.'
+              : 'Определяет доступ сотрудника к анкетам и функциям клиники'
+          }
+        >
+            <CustomDropdown<MembershipRole | ''>
+            options={roles}
+              value={role ?? ''}
+              onChange={(value) => setRole(value || null)}
+            disabled={blocked || !roles.length}
+            aria-label="Роль в клинике"
+            placeholder="Выберите роль"
+            triggerClassName="bg-[#E3E8F1]"
+          />
+        </UserSettingsField>
+      )}
+      {clinicId && doctor && (
+        <UserSettingsField
+          label="Специализации врача"
+          hint="Выберите хотя бы одну специализацию для врачебного доступа"
+        >
+          <CustomDropdown<number, true>
+            multiple
+            options={specializations.map((spec) => ({
+              value: spec.id,
+              label: spec.name,
+            }))}
+            value={specializationIds}
+            onChange={setSpecializationIds}
+            disabled={blocked}
+            aria-label="Специализации врача"
+            placeholder="Выберите специализации"
+            triggerClassName="bg-[#E3E8F1]"
+            showCheckIcon
+          />
+        </UserSettingsField>
+      )}
+      {error && (
+        <p role="alert" className="text-sm text-[#E53E3E]">
+          {error}
+        </p>
+      )}
+      <div className="flex flex-wrap items-center justify-end gap-3 pt-1">
+        <button
+          type="button"
+          disabled={saving}
+          onClick={onClose}
+          className="cursor-pointer rounded-xl bg-[#F1F2F4] px-5 py-3 text-sm disabled:opacity-50"
+        >
+          Отмена
+        </button>
+        <button
+          type="submit"
+          disabled={!payload || !changed || blocked}
+          className="cursor-pointer rounded-xl bg-[#E8EEFF] px-5 py-3 text-sm text-[#202020] hover:bg-[#D6E0FF] disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          {saving ? 'Сохраняем…' : 'Сохранить'}
+        </button>
+      </div>
+    </form>
   );
 }

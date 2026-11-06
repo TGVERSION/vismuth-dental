@@ -10,6 +10,7 @@ import { completedQuery, type CompletedFilters } from '@/lib/clinic-access';
 import { useAuthStore } from '@/store/authStore';
 import { useMyClinic } from '@/hooks/useMyClinic';
 import { CompletedDetail } from './CompletedDetail';
+import { CustomDropdown } from '@/components/CustomDropdown';
 const kinds: Record<string, string> = {
   general: 'Общая',
   gastro: 'Гастроэнтерология',
@@ -108,33 +109,30 @@ export function CompletedScreen() {
       <h1 className="mb-5 text-2xl font-medium">Заполненные анкеты</h1>
       <div className="mb-5 flex flex-wrap gap-3">
         {superAdmin && (
-          <select
+          <CustomDropdown
             aria-label="Клиника"
-            className="rounded-xl bg-white p-3"
+            className="max-w-sm"
+            options={[
+              { value: '', label: 'Все клиники' },
+              ...clinics.map((c) => ({ value: c.id, label: c.name })),
+            ]}
             value={filters.clinic_id}
-            onChange={(e) => filter('clinic_id', e.target.value)}
-          >
-            <option value="">Все клиники</option>
-            {clinics.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name}
-              </option>
-            ))}
-          </select>
+            onChange={(value) => filter('clinic_id', value)}
+          />
         )}
-        <select
+        <CustomDropdown
           aria-label="Вид анкеты"
-          className="rounded-xl bg-white p-3"
+          className="max-w-64"
+          options={[
+            { value: '', label: 'Все виды' },
+            ...Object.entries(kinds).map(([value, label]) => ({
+              value,
+              label,
+            })),
+          ]}
           value={filters.kind}
-          onChange={(e) => filter('kind', e.target.value)}
-        >
-          <option value="">Все виды</option>
-          {Object.entries(kinds).map(([k, v]) => (
-            <option key={k} value={k}>
-              {v}
-            </option>
-          ))}
-        </select>
+          onChange={(value) => filter('kind', value)}
+        />
         <input
           aria-label="ФИО пациента"
           placeholder="ФИО пациента"

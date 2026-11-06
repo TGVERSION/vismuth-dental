@@ -29,6 +29,9 @@ class UserMembershipUpdate(BaseModel):
 class UserMembershipRead(BaseModel):
     id: UUID
     login: str
+    first_name: str | None = None
+    last_name: str | None = None
+    middle_name: str | None = None
     role: RoleName
     role_name_ru: str
     is_active: bool

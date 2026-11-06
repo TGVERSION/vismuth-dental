@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { buildMembershipUpdate, canEditMembership } from './user-membership';
+import {
+  buildMembershipUpdate,
+  canEditMembership,
+  membershipHasChanges,
+  userDisplayName,
+} from './user-membership';
 
 describe('назначение клиники пользователю', () => {
   it('не предлагает операторскую роль аккаунту с платформенными привилегиями', () => {
@@ -36,5 +41,47 @@ describe('назначение клиники пользователю', () => {
       specialization_ids: [],
     });
     expect(buildMembershipUpdate('clinic-2', null, [])).toBeNull();
+  });
+});
+
+describe('карточка пользователя', () => {
+  it('показывает ФИО, а при отсутствии имени — почту', () => {
+    expect(
+      userDisplayName({
+        login: 'user@example.test',
+        first_name: ' Иван ',
+        last_name: ' Петров ',
+        middle_name: 'Иванович',
+      }),
+    ).toBe('Петров Иван Иванович');
+    expect(
+      userDisplayName({
+        login: 'user@example.test',
+        first_name: ' ',
+        last_name: null,
+      }),
+    ).toBe('user@example.test');
+  });
+
+  it('не предлагает сохранять неизменённое членство из-за порядка специализаций', () => {
+    const original = {
+      clinic_id: 'clinic-1',
+      clinic_role: 'doctor' as const,
+      specialization_ids: [2, 1],
+    };
+    expect(
+      membershipHasChanges(original, {
+        ...original,
+        specialization_ids: [1, 2],
+      }),
+    ).toBe(false);
+    expect(
+      membershipHasChanges(original, {
+        clinic_id: 'clinic-2',
+        clinic_role: 'operator',
+        specialization_ids: [],
+      }),
+    ).toBe(true);
+    expect(membershipHasChanges(original, null)).toBe(false);
   });
 });

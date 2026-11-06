@@ -4,6 +4,7 @@ import { mainApi, type ClinicRead } from '@/api';
 import { clinicJoinApi, type JoinRequest } from '@/api/clinic-join-api';
 import { joinStatusLabel } from '@/lib/clinic-access';
 import { useAuthStore } from '@/store/authStore';
+import { CustomDropdown } from '@/components/CustomDropdown';
 export function JoinRequestsScreen() {
   const superAdmin = useAuthStore((s) => s.user?.role) === 'super_admin';
   const [clinics, setClinics] = useState<ClinicRead[]>([]),
@@ -82,37 +83,32 @@ export function JoinRequestsScreen() {
         <span className="text-[#5D8CF1]">{count} ожидают</span>
       </h1>
       <div className="mb-6 flex flex-wrap gap-3">
-        <select
+        <CustomDropdown
           aria-label="Клиника"
-          className="rounded-xl bg-white p-3"
+          className="max-w-sm"
+          options={[
+            { value: '', label: 'Все клиники' },
+            ...clinics.map((c) => ({ value: c.id, label: c.name })),
+          ]}
           value={clinic}
-          onChange={(e) => {
-            setClinic(e.target.value);
+          onChange={(value) => {
+            setClinic(value);
             setPage(1);
           }}
-        >
-          <option value="">Все клиники</option>
-          {clinics.map((c) => (
-            <option key={c.id} value={c.id}>
-              {c.name}
-            </option>
-          ))}
-        </select>
-        <select
+        />
+        <CustomDropdown
           aria-label="Статус заявки"
-          className="rounded-xl bg-white p-3"
+          className="max-w-64"
+          options={['pending', 'approved', 'rejected'].map((value) => ({
+            value,
+            label: joinStatusLabel(value),
+          }))}
           value={status}
-          onChange={(e) => {
-            setStatus(e.target.value);
+          onChange={(value) => {
+            setStatus(value);
             setPage(1);
           }}
-        >
-          {['pending', 'approved', 'rejected'].map((s) => (
-            <option key={s} value={s}>
-              {joinStatusLabel(s)}
-            </option>
-          ))}
-        </select>
+        />
         <button onClick={() => void reload()} className="text-[#5D8CF1]">
           Обновить
         </button>

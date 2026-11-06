@@ -5,6 +5,7 @@ import { clinicJoinApi, type JoinPreview } from '@/api/clinic-join-api';
 import { mainApi, type TokenResponse } from '@/api';
 import { useAuthStore } from '@/store/authStore';
 import { PASSWORD_MIN_LENGTH } from '@/lib/clinics';
+import { CustomDropdown } from '@/components/CustomDropdown';
 const input =
   'mt-1 w-full rounded-xl bg-[#F3F4F8] p-3 focus:outline-none focus:ring-2 focus:ring-[#5D8CF1]';
 export function ClinicJoinForm({ token }: { token: string }) {
@@ -170,20 +171,16 @@ export function ClinicJoinForm({ token }: { token: string }) {
                   )}
                   <label className="block text-sm">
                     Роль
-                    <select
-                      className={input}
+                    <CustomDropdown
+                      aria-label="Роль"
+                      className="mt-1"
+                      options={preview.roles}
                       value={role}
-                      onChange={(e) => {
-                        setRole(e.target.value as typeof role);
+                      onChange={(value) => {
+                        setRole(value);
                         setSpecializations([]);
                       }}
-                    >
-                      {preview.roles.map((r) => (
-                        <option key={r.value} value={r.value}>
-                          {r.label}
-                        </option>
-                      ))}
-                    </select>
+                    />
                   </label>
                   {role === 'doctor' && (
                     <fieldset>

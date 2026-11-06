@@ -215,23 +215,18 @@ export const RegistryScreen = () => {
         {superAdmin && (
           <label className="mb-3 block text-sm">
             Клиника
-            <select
+            <CustomDropdown
               aria-label="Клиника регистратуры"
               value={clinicId ?? ''}
-              onChange={(e) => {
+              options={clinics.map((c) => ({ value: c.id, label: c.name }))}
+              onChange={(value) => {
                 setIsCreating(false);
                 router.replace(
-                  '/registry?clinic_id=' + encodeURIComponent(e.target.value),
+                  '/registry?clinic_id=' + encodeURIComponent(value),
                 );
               }}
-              className="mt-2 w-full rounded-xl bg-white p-3"
-            >
-              {clinics.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name}
-                </option>
-              ))}
-            </select>
+              className="mt-2"
+            />
           </label>
         )}
         <button

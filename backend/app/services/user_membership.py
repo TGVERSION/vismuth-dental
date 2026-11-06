@@ -45,6 +45,7 @@ async def list_user_memberships(db: AsyncSession, user_id: UUID | None = None):
         member, clinic = pair if pair else (None, None)
         result.append(UserMembershipRead(
             id=user.id, login=user.login, role=user.role, role_name_ru=user.role_name_ru, is_active=user.is_active,
+            first_name=user.first_name, last_name=user.last_name, middle_name=user.middle_name,
             clinic_id=clinic.id if clinic else None, clinic_name=clinic.name if clinic else None,
             membership_id=member.id if member else None, clinic_role=membership_role(member) if member else None,
             specialization_ids=[row['id'] for row in specs.get(member.id, [])] if member and member.is_doctor else [],

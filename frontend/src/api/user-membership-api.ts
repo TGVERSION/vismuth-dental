@@ -13,6 +13,9 @@ export interface MembershipRoleOption {
 }
 
 export interface UserMembershipRead extends ServiceUserIdRead {
+  first_name?: string | null;
+  last_name?: string | null;
+  middle_name?: string | null;
   is_active: boolean;
   clinic_id: string | null;
   clinic_name: string | null;

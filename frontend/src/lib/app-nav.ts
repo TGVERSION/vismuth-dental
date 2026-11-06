@@ -52,10 +52,10 @@ export const getNavItems = ({
 }): AppNavItem[] => {
   if (role === 'super_admin')
     return [
-      { id: 'registry', label: 'Стоматология', href: '/registry' },
+      REGISTRY_ITEM,
       {
+        ...NAV_ITEMS[0],
         id: 'completed',
-        label: 'Все анкеты',
         href: '/completed-questionnaires',
       },
       { id: 'protocols', label: 'Протоколы', href: '/' },

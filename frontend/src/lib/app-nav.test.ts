@@ -48,12 +48,12 @@ describe('раздел «Анкеты пациентов»', () => {
     },
   );
 
-  it('сохраняет протоколы для супер-админа и использует новые названия', () => {
+  it('использует общие названия разделов для супер-админа и добавляет заявки', () => {
     expect(getNavItems({ showRegistry: true, role: 'super_admin' })).toEqual([
-      { id: 'registry', label: 'Стоматология', href: '/registry' },
+      { id: 'registry', label: 'Анкеты для стоматологии', href: '/registry' },
       {
         id: 'completed',
-        label: 'Все анкеты',
+        label: 'Анкеты для врачей',
         href: '/completed-questionnaires',
       },
       { id: 'protocols', label: 'Протоколы', href: '/' },

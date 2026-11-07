@@ -136,7 +136,12 @@ export const initialStep = (
   questionnaire: MockQuestionnaire,
   doctor: PublicLinkDoctor | null,
 ): MockQuestionnaire => {
-  if (!doctor) return { ...questionnaire, currentStep: 'choose_doctor' };
+  if (!doctor)
+    return {
+      ...questionnaire,
+      visitType: 'primary',
+      currentStep: 'choose_doctor',
+    };
 
   return selectDoctor(questionnaire, doctor);
 };
@@ -148,9 +153,10 @@ const selectDoctor = (
   const specs = doctor.specializations;
   return {
     ...questionnaire,
+    visitType: 'primary',
     doctorMembershipId: doctor.membership_id,
     specializationId: specs.length === 1 ? specs[0].id : null,
-    currentStep: specs.length > 1 ? 'choose_specialization' : 'visit_type',
+    currentStep: specs.length > 1 ? 'choose_specialization' : 'complaint',
   };
 };
 
@@ -352,7 +358,8 @@ export const applyAnswer = (
       next = {
         ...questionnaire,
         specializationId: answer.specialization_id,
-        currentStep: 'visit_type',
+        visitType: 'primary',
+        currentStep: 'complaint',
       };
       break;
     }
@@ -363,9 +370,8 @@ export const applyAnswer = (
       }
       next = {
         ...questionnaire,
-        visitType: answer.choice,
-        currentStep:
-          answer.choice === 'primary' ? 'complaint' : 'repeat_change',
+        visitType: 'primary',
+        currentStep: 'complaint',
       };
       break;
     }

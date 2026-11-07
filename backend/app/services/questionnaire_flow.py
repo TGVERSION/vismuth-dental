@@ -139,6 +139,7 @@ async def resolve_initial_step(
     *,
     doctor_preselected: bool,
 ) -> str:
+    questionnaire.visit_type = "primary"
     if not doctor_preselected or questionnaire.doctor_membership_id is None:
         return "choose_doctor"
     membership_map, _ = await load_specializations_map(
@@ -148,10 +149,10 @@ async def resolve_initial_step(
     specs = membership_map.get(questionnaire.doctor_membership_id, [])
     if len(specs) == 1:
         questionnaire.specialization_id = specs[0]["id"]
-        return "visit_type"
+        return "complaint"
     if len(specs) > 1:
         return "choose_specialization"
-    return "visit_type"
+    return "complaint"
 
 
 async def build_step_descriptor(
@@ -570,15 +571,16 @@ async def apply_answer(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Doctor not available",
             )
+        questionnaire.visit_type = "primary"
         questionnaire.doctor_membership_id = doctor_membership_id
         specs = await doctor_specializations(db, doctor_membership_id)
         if len(specs) == 1:
             questionnaire.specialization_id = specs[0]["id"]
-            questionnaire.current_step = "visit_type"
+            questionnaire.current_step = "complaint"
         elif len(specs) > 1:
             questionnaire.current_step = "choose_specialization"
         else:
-            questionnaire.current_step = "visit_type"
+            questionnaire.current_step = "complaint"
 
     elif step_key == "choose_specialization":
         if specialization_id is None:
@@ -592,8 +594,9 @@ async def apply_answer(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Specialization not available for doctor",
             )
+        questionnaire.visit_type = "primary"
         questionnaire.specialization_id = specialization_id
-        questionnaire.current_step = "visit_type"
+        questionnaire.current_step = "complaint"
 
     elif step_key == "visit_type":
         if choice not in {"primary", "repeat"}:
@@ -601,11 +604,9 @@ async def apply_answer(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="visit_type must be primary or repeat",
             )
-        questionnaire.visit_type = choice
-        if choice == "primary":
-            questionnaire.current_step = "complaint"
-        else:
-            questionnaire.current_step = "repeat_change"
+        # Compatibility for a browser that was already on the old visit-type step.
+        questionnaire.visit_type = "primary"
+        questionnaire.current_step = "complaint"
 
     elif step_key == "complaint":
         if not text_value:

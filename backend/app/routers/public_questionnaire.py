@@ -411,6 +411,14 @@ async def get_step(
         questionnaire_id,
         x_questionnaire_token,
     )
+    # Existing sessions waiting on the removed selector resume as primary visits.
+    # Recheck after a row lock, so a concurrently accepted answer is never reset.
+    if questionnaire.kind == "general" and questionnaire.current_step == "visit_type":
+        await db.refresh(questionnaire, with_for_update=True)
+        if questionnaire.kind == "general" and questionnaire.current_step == "visit_type":
+            questionnaire.visit_type = "primary"
+            questionnaire.current_step = "complaint"
+            await db.commit()
     descriptor = await build_step_descriptor(db, questionnaire)
     return _step_response(descriptor)
 

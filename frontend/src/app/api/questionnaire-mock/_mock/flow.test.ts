@@ -64,16 +64,25 @@ const run = (
 
 const fresh = () => newQuestionnaire('q-1', 'token-1');
 
-const atVisitType = () => initialStep(fresh(), oneSpec);
+const atVisitType = (): MockQuestionnaire => ({
+  ...initialStep(fresh(), oneSpec),
+  currentStep: 'visit_type',
+});
+const atRepeatChange = (): MockQuestionnaire => ({
+  ...initialStep(fresh(), oneSpec),
+  visitType: 'repeat',
+  currentStep: 'repeat_change',
+});
 
 describe('initialStep', () => {
   it('без врача — выбор врача', () => {
     expect(initialStep(fresh(), null).currentStep).toBe('choose_doctor');
   });
 
-  it('у врача одна специализация — сразу тип приёма', () => {
+  it('у врача одна специализация — сразу жалобы первичного приёма', () => {
     const questionnaire = initialStep(fresh(), oneSpec);
-    expect(questionnaire.currentStep).toBe('visit_type');
+    expect(questionnaire.currentStep).toBe('complaint');
+    expect(questionnaire.visitType).toBe('primary');
     expect(questionnaire.specializationId).toBe(2);
   });
 
@@ -89,7 +98,6 @@ describe('первичный приём', () => {
     const { stepKeys, step, questionnaire } = run(fresh(), [
       { step_key: 'choose_doctor', doctor_membership_id: 'doc-many' },
       { step_key: 'choose_specialization', specialization_id: 1 },
-      { step_key: 'visit_type', choice: 'primary' },
       { step_key: 'complaint', value: 'болит голова' },
       { step_key: 'ai_clarify', value: 'неделю' },
       { step_key: 'ai_clarify', value: 'ничего' },
@@ -106,7 +114,6 @@ describe('первичный приём', () => {
 
     expect(stepKeys).toEqual([
       'choose_specialization',
-      'visit_type',
       'complaint',
       'ai_clarify',
       'ai_clarify',
@@ -126,8 +133,7 @@ describe('первичный приём', () => {
   });
 
   it('уточнение ИИ — текст заготовленного вопроса', () => {
-    const { step } = run(atVisitType(), [
-      { step_key: 'visit_type', choice: 'primary' },
+    const { step } = run({ ...atVisitType(), currentStep: 'complaint' }, [
       { step_key: 'complaint', value: 'кашель' },
     ]);
 
@@ -142,9 +148,8 @@ describe('первичный приём', () => {
   it('ИИ недоступен — без уточнений, пометка на коде', () => {
     const env = makeEnv({ aiDown: true });
     const { stepKeys, step } = run(
-      atVisitType(),
+      { ...atVisitType(), currentStep: 'complaint' },
       [
-        { step_key: 'visit_type', choice: 'primary' },
         { step_key: 'complaint', value: 'кашель' },
         { step_key: 'medications', none: true },
         { step_key: 'chronic', none: true },
@@ -166,8 +171,7 @@ describe('первичный приём', () => {
 
 describe('повторный приём', () => {
   it('проходит до кода; уточнений не больше двух', () => {
-    const { stepKeys } = run(atVisitType(), [
-      { step_key: 'visit_type', choice: 'repeat' },
+    const { stepKeys } = run(atRepeatChange(), [
       { step_key: 'repeat_change', choice: 'better', value: 'меньше болит' },
       { step_key: 'repeat_compliance', choice: 'partial' },
       { step_key: 'repeat_side_effects', none: true },
@@ -183,7 +187,6 @@ describe('повторный приём', () => {
     ]);
 
     expect(stepKeys).toEqual([
-      'repeat_change',
       'repeat_compliance',
       'repeat_side_effects',
       'ai_clarify',
@@ -194,9 +197,7 @@ describe('повторный приём', () => {
   });
 
   it('шаги с выбором описаны как у backend', () => {
-    const { step } = run(atVisitType(), [
-      { step_key: 'visit_type', choice: 'repeat' },
-    ]);
+    const { step } = run(atRepeatChange(), []);
 
     expect(step).toMatchObject({
       step_key: 'repeat_change',
@@ -234,9 +235,7 @@ describe('отказы', () => {
     expect(visitType.ok).toBe(false);
     if (!visitType.ok) expect(visitType.error.status).toBe(400);
 
-    const { questionnaire } = run(atVisitType(), [
-      { step_key: 'visit_type', choice: 'repeat' },
-    ]);
+    const { questionnaire } = run(atRepeatChange(), []);
     const change = applyAnswer(
       questionnaire,
       { step_key: 'repeat_change', value: 'лучше' },
@@ -250,11 +249,8 @@ describe('отказы', () => {
 
   it('шаг «Нет» без ответа — 400, с none — принят', () => {
     const { questionnaire } = run(
-      atVisitType(),
-      [
-        { step_key: 'visit_type', choice: 'primary' },
-        { step_key: 'complaint', value: 'кашель' },
-      ],
+      { ...atVisitType(), currentStep: 'complaint' },
+      [{ step_key: 'complaint', value: 'кашель' }],
       makeEnv({ aiDown: true }),
     );
 
@@ -271,9 +267,10 @@ describe('отказы', () => {
   });
 
   it('пустая жалоба — 400', () => {
-    const { questionnaire } = run(atVisitType(), [
-      { step_key: 'visit_type', choice: 'primary' },
-    ]);
+    const { questionnaire } = run(
+      { ...atVisitType(), currentStep: 'complaint' },
+      [],
+    );
     expect(
       applyAnswer(
         questionnaire,
@@ -285,9 +282,8 @@ describe('отказы', () => {
 
   it('данные приёма: дата вне диапазона и некорректное время — 400', () => {
     const { questionnaire } = run(
-      atVisitType(),
+      { ...atVisitType(), currentStep: 'complaint' },
       [
-        { step_key: 'visit_type', choice: 'primary' },
         { step_key: 'complaint', value: 'кашель' },
         { step_key: 'medications', none: true },
         { step_key: 'chronic', none: true },
@@ -323,9 +319,8 @@ describe('отказы', () => {
 
   it('данные приёма: время вне прежних слотов принимается', () => {
     const { questionnaire } = run(
-      atVisitType(),
+      { ...atVisitType(), currentStep: 'complaint' },
       [
-        { step_key: 'visit_type', choice: 'primary' },
         { step_key: 'complaint', value: 'кашель' },
         { step_key: 'medications', none: true },
         { step_key: 'chronic', none: true },
@@ -450,4 +445,17 @@ describe('старт', () => {
       ).ok,
     ).toBe(false);
   });
+});
+
+it('stale visit-type choice is treated as primary', () => {
+  const result = applyAnswer(
+    atVisitType(),
+    { step_key: 'visit_type', choice: 'repeat' },
+    makeEnv(),
+  );
+  expect(result.ok).toBe(true);
+  if (result.ok) {
+    expect(result.value.questionnaire.visitType).toBe('primary');
+    expect(result.value.step.step_key).toBe('complaint');
+  }
 });

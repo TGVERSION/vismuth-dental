@@ -17,7 +17,7 @@ from app.services.gastro.summary import build_summary
 
 @pytest.mark.parametrize("specialty,visit,kind,next_step", [
     ("Гастроэнтеролог", "primary", "general", "complaint"),
-    ("Гастроэнтеролог", "repeat", "general", "repeat_change"),
+    ("Гастроэнтеролог", "repeat", "general", "complaint"),
     ("Детский гастроэнтеролог", "primary", "general", "complaint"),
     ("Терапевт", "primary", "general", "complaint"),
 ])
@@ -27,6 +27,7 @@ def test_visit_routes_preserve_other_flows(monkeypatch, specialty, visit, kind, 
     descriptor, _, process_flag = asyncio.run(flow.apply_answer(AsyncMock(), q, step_key="visit_type", choice=visit))
     assert q.kind == kind and descriptor.step_key == next_step
     assert process_flag is False
+    assert q.visit_type == "primary"
 
 
 def test_public_answer_lock_and_get_without_lock():
@@ -74,3 +75,48 @@ def test_gastro_processing_never_uses_general_model(monkeypatch):
     asyncio.run(process.run_questionnaire_processing(q.id))
     model.assert_not_awaited()
     assert q.processing_status == "done" and "Моя история" in q.structured["life_anamnesis"]
+
+
+@pytest.mark.parametrize("specializations,next_step", [([], "complaint"), ([{"id": 7}], "complaint"), ([{"id": 7}, {"id": 8}], "choose_specialization")])
+def test_preselected_doctor_starts_primary_without_visit_type(monkeypatch, specializations, next_step):
+    mid = uuid4()
+    monkeypatch.setattr(flow, "load_specializations_map", AsyncMock(return_value=({mid: specializations}, {})))
+    q = Questionnaire(kind="general", doctor_membership_id=mid)
+    assert asyncio.run(flow.resolve_initial_step(AsyncMock(), q, doctor_preselected=True)) == next_step
+    assert q.visit_type == "primary"
+
+
+def test_legacy_visit_type_session_resumes_as_primary(monkeypatch):
+    q = Questionnaire(kind="general", status="in_progress", current_step="visit_type", ai_unavailable=False)
+    monkeypatch.setattr(public, "_load_questionnaire_for_token", AsyncMock(return_value=q))
+    db = AsyncMock()
+    descriptor = asyncio.run(public.get_step(uuid4(), db=db, x_questionnaire_token="synthetic"))
+    assert descriptor.step_key == "complaint" and q.visit_type == "primary"
+    db.refresh.assert_awaited_once_with(q, with_for_update=True)
+    db.commit.assert_awaited_once()
+
+@pytest.mark.parametrize("step_key", ["choose_doctor", "choose_specialization"])
+def test_selected_doctor_or_specialization_goes_directly_to_primary_complaint(monkeypatch, step_key):
+    mid = uuid4()
+    q = Questionnaire(kind="general", status="in_progress", current_step=step_key, doctor_membership_id=mid, ai_unavailable=False)
+    db = AsyncMock()
+    result = MagicMock()
+    result.scalar_one_or_none.return_value = object()
+    db.execute.return_value = result
+    monkeypatch.setattr(flow, "doctor_specializations", AsyncMock(return_value=[{"id": 7}]))
+    kwargs = {"doctor_membership_id": mid} if step_key == "choose_doctor" else {"specialization_id": 7}
+    descriptor, _, _ = asyncio.run(flow.apply_answer(db, q, step_key=step_key, **kwargs))
+    assert descriptor.step_key == "complaint" and q.visit_type == "primary"
+
+
+def test_legacy_resume_does_not_reset_concurrently_advanced_session(monkeypatch):
+    q = Questionnaire(kind="general", status="in_progress", current_step="visit_type", ai_unavailable=False)
+    monkeypatch.setattr(public, "_load_questionnaire_for_token", AsyncMock(return_value=q))
+    async def refresh(*args, **kwargs):
+        q.current_step = "medications"
+        q.visit_type = "primary"
+    db = AsyncMock()
+    db.refresh.side_effect = refresh
+    descriptor = asyncio.run(public.get_step(uuid4(), db=db, x_questionnaire_token="synthetic"))
+    assert descriptor.step_key == "medications"
+    db.commit.assert_not_awaited()

@@ -1,6 +1,7 @@
 'use client';
 
 import { createContext, useContext, type CSSProperties } from 'react';
+import './patient-controls.css';
 
 /**
  * Тема клиники для того, что рендерится порталом.

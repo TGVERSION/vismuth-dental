@@ -1,4 +1,6 @@
 'use client';
+import type { MembershipRole } from '@/api/user-membership-api';
+
 import { useEffect, useState, type FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import { clinicJoinApi, type JoinPreview } from '@/api/clinic-join-api';
@@ -6,8 +8,8 @@ import { mainApi, type TokenResponse } from '@/api';
 import { useAuthStore } from '@/store/authStore';
 import { PASSWORD_MIN_LENGTH } from '@/lib/clinics';
 import { CustomDropdown } from '@/components/CustomDropdown';
-const input =
-  'mt-1 w-full rounded-xl bg-[#F3F4F8] p-3 focus:outline-none focus:ring-2 focus:ring-[#5D8CF1]';
+import { Checkbox } from '@/components/Checkbox';
+const input = 'vismuth-input mt-1 w-full';
 export function ClinicJoinForm({ token }: { token: string }) {
   const router = useRouter();
   const auth = useAuthStore();
@@ -17,7 +19,7 @@ export function ClinicJoinForm({ token }: { token: string }) {
     'register',
   );
   const [busy, setBusy] = useState(false);
-  const [role, setRole] = useState<'operator' | 'doctor'>('operator');
+  const [role, setRole] = useState<MembershipRole>('operator');
   const [specializations, setSpecializations] = useState<number[]>([]);
   const [fields, setFields] = useState({
     login: '',
@@ -62,7 +64,10 @@ export function ClinicJoinForm({ token }: { token: string }) {
     const selection = {
       token,
       requested_role: role,
-      specialization_ids: role === 'doctor' ? specializations : [],
+      specialization_ids:
+        role === 'doctor' || role === 'clinic_admin_doctor'
+          ? specializations
+          : [],
     };
     try {
       if (mode === 'confirm') {
@@ -137,12 +142,14 @@ export function ClinicJoinForm({ token }: { token: string }) {
     </label>
   );
   return (
-    <main className="flex min-h-screen items-center justify-center bg-[#F3F4F8] p-4">
+    <main className="flex min-h-screen items-center justify-center bg-[var(--ui-color-slate-100)] p-4">
       <section className="w-full max-w-lg space-y-6 rounded-2xl bg-white p-8">
         <h1 className="text-2xl font-medium">Подключение к клинике</h1>
         {preview ? (
           <>
-            <p className="text-xl text-[#5D8CF1]">{preview.clinic_name}</p>
+            <p className="text-xl text-[var(--ui-color-blue-600)]">
+              {preview.clinic_name}
+            </p>
             <p className="text-sm text-gray-500">
               Доступ выдаёт супер-администратор после рассмотрения заявки.
             </p>
@@ -182,26 +189,28 @@ export function ClinicJoinForm({ token }: { token: string }) {
                       }}
                     />
                   </label>
-                  {role === 'doctor' && (
+                  {(role === 'doctor' || role === 'clinic_admin_doctor') && (
                     <fieldset>
                       <legend className="mb-2 text-sm">
                         Специализации врача
                       </legend>
                       {preview.specializations.map((s) => (
-                        <label key={s.id} className="flex gap-2 py-1 text-sm">
-                          <input
-                            type="checkbox"
+                        <div key={s.id} className="py-1 text-sm">
+                          <Checkbox
+                            id={`join-specialization-${s.id}`}
                             checked={specializations.includes(s.id)}
-                            onChange={(e) =>
+                            disabled={busy}
+                            onChange={(checked) =>
                               setSpecializations((v) =>
-                                e.target.checked
+                                checked
                                   ? [...v, s.id]
                                   : v.filter((id) => id !== s.id),
                               )
                             }
-                          />
-                          {s.name}
-                        </label>
+                          >
+                            {s.name}
+                          </Checkbox>
+                        </div>
                       ))}
                     </fieldset>
                   )}
@@ -216,10 +225,10 @@ export function ClinicJoinForm({ token }: { token: string }) {
                 disabled={
                   busy ||
                   (mode !== 'confirm' &&
-                    role === 'doctor' &&
+                    (role === 'doctor' || role === 'clinic_admin_doctor') &&
                     !specializations.length)
                 }
-                className="w-full rounded-xl bg-[#5D8CF1] p-3 text-white disabled:opacity-50"
+                className="vismuth-button vismuth-button--primary w-full"
               >
                 {busy
                   ? 'Отправляется…'
@@ -233,7 +242,7 @@ export function ClinicJoinForm({ token }: { token: string }) {
             {mode === 'confirm' && (
               <button
                 disabled={busy}
-                className="text-sm text-[#5D8CF1]"
+                className="vismuth-function-button text-sm"
                 onClick={() => {
                   setMode('register');
                   setError('');
@@ -244,7 +253,7 @@ export function ClinicJoinForm({ token }: { token: string }) {
             )}
             {!auth.isAuthenticated && mode !== 'confirm' && (
               <button
-                className="text-sm text-[#5D8CF1]"
+                className="vismuth-function-button text-sm"
                 onClick={() => {
                   setMode(mode === 'login' ? 'register' : 'login');
                   setError('');
@@ -261,7 +270,7 @@ export function ClinicJoinForm({ token }: { token: string }) {
             <p role="alert">{error}</p>
             <button
               onClick={() => setRetry((v) => v + 1)}
-              className="text-[#5D8CF1]"
+              className="vismuth-function-button"
             >
               Повторить
             </button>

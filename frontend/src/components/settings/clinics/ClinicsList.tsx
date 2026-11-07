@@ -7,9 +7,9 @@ import { logWarn } from '@/lib/logger';
 import { ErrorState, Spinner } from './fields';
 
 const TONE_CLASS: Record<ClinicStatusTone, string> = {
-  muted: 'text-[#6C757D]',
-  success: 'text-[#22A06B]',
-  danger: 'text-[#E53E3E]',
+  muted: 'text-[var(--ui-color-alabaster-950)]',
+  success: 'text-[var(--ui-color-green-600)]',
+  danger: 'text-[var(--ui-color-red-600)]',
 };
 
 interface ClinicsListProps {
@@ -53,11 +53,13 @@ export const ClinicsList = ({ onOpen, onCreate }: ClinicsListProps) => {
   return (
     <>
       <div className="flex items-center justify-between border-b border-gray-200 px-8 pb-6">
-        <h3 className="text-3xl font-medium text-[#202020]">Клиники</h3>
+        <h3 className="text-3xl font-medium text-[var(--ui-color-alabaster-dark-800)]">
+          Клиники
+        </h3>
         <button
           type="button"
           onClick={onCreate}
-          className="h-9.5 cursor-pointer rounded-xl bg-[#5D8CF1] px-5 text-sm text-white transition-colors hover:bg-[#4A7BE0]"
+          className="vismuth-button vismuth-button--primary"
         >
           Создать новую
         </button>
@@ -69,7 +71,9 @@ export const ClinicsList = ({ onOpen, onCreate }: ClinicsListProps) => {
         ) : error ? (
           <ErrorState text="Не удалось загрузить клиники" onRetry={retry} />
         ) : clinics.length === 0 ? (
-          <p className="py-16 text-center text-[#6C757D]">Клиник пока нет</p>
+          <p className="py-16 text-center text-[var(--ui-color-alabaster-950)]">
+            Клиник пока нет
+          </p>
         ) : (
           <ul className="flex flex-col gap-2">
             {clinics.map((clinic) => {
@@ -83,9 +87,9 @@ export const ClinicsList = ({ onOpen, onCreate }: ClinicsListProps) => {
                   <button
                     type="button"
                     onClick={() => onOpen(clinic.id)}
-                    className="shadow-custom-hover flex w-full cursor-pointer items-center justify-between gap-4 rounded-xl px-3.75 py-3 text-left transition-all"
+                    className="shadow-custom-hover flex w-full cursor-pointer items-center justify-between gap-4 rounded-xl px-[var(--ui-space-14)] py-3 text-left transition-all"
                   >
-                    <span className="min-w-0 truncate text-base text-[#202020]">
+                    <span className="min-w-0 truncate text-base text-[var(--ui-color-alabaster-dark-800)]">
                       {clinic.name}
                     </span>
                     <span

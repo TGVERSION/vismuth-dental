@@ -104,12 +104,12 @@ export const DentalConversationStep = ({
           {question}
         </h2>
         {health ? (
-          <p className="mt-2 text-[13px] leading-snug text-[var(--q-muted)]">
+          <p className="mt-2 text-[length:var(--ui-font-size-13)] leading-snug text-[var(--q-muted)]">
             Отметьте подходящие состояния. Учитывайте указанные сроки.
           </p>
         ) : null}
         {!health && group?.multiple && options.length > 1 ? (
-          <p className="mt-1 text-[13px] text-[var(--q-muted)]">
+          <p className="mt-1 text-[length:var(--ui-font-size-13)] text-[var(--q-muted)]">
             Можно несколько
           </p>
         ) : null}
@@ -124,7 +124,7 @@ export const DentalConversationStep = ({
               key={item.value}
               className="border-t border-[var(--q-bg)] px-3 py-1 first:border-t-0"
             >
-              <label className="flex min-h-[52px] cursor-pointer items-center gap-3 py-2">
+              <label className="flex min-h-[var(--ui-size-btn-m)] cursor-pointer items-center gap-3 py-2">
                 <input
                   type="checkbox"
                   disabled={isSubmitting || !restored}
@@ -140,14 +140,14 @@ export const DentalConversationStep = ({
                       },
                     }));
                   }}
-                  className="h-[22px] w-[22px] shrink-0 accent-[var(--q-brand)]"
+                  className="h-[var(--ui-size-checkbox-m)] w-[var(--ui-size-checkbox-m)] shrink-0 accent-[var(--q-brand)]"
                 />
-                <span className="text-[15px] leading-snug">
+                <span className="text-[length:var(--ui-font-size-15)] leading-snug">
                   {item.label}
                   {'hint' in item &&
                   typeof item.hint === 'string' &&
                   item.hint ? (
-                    <span className="block text-[13px] text-[var(--q-muted)]">
+                    <span className="block text-[length:var(--ui-font-size-13)] text-[var(--q-muted)]">
                       {item.hint}
                     </span>
                   ) : null}
@@ -168,7 +168,7 @@ export const DentalConversationStep = ({
               onClick={() =>
                 choose(option.label, Boolean(group?.multiple), option.value)
               }
-              className={`min-h-[44px] rounded-full border border-[var(--q-brand)] px-4 text-base ${selected.includes(option.value) ? 'bg-[var(--q-brand)] text-[var(--q-brand-contrast)]' : 'text-[var(--q-brand)]'}`}
+              className={`q-choice rounded-full border border-[var(--q-brand)] px-4 text-base ${selected.includes(option.value) ? 'bg-[var(--q-brand)] text-[var(--q-brand-contrast)]' : 'text-[var(--q-brand)]'}`}
             >
               {option.label}
             </button>
@@ -184,7 +184,7 @@ export const DentalConversationStep = ({
               disabled={isSubmitting || !restored}
               onMouseDown={(e) => e.preventDefault()}
               onClick={() => setValue(label, [])}
-              className="min-h-[44px] rounded-full border border-[var(--q-brand)] px-4 text-base text-[var(--q-brand)]"
+              className="q-choice min-h-[44px] rounded-full border border-[var(--q-brand)] px-4 text-base text-[var(--q-brand)]"
             >
               {label}
             </button>
@@ -213,7 +213,7 @@ export const DentalConversationStep = ({
     <>
       <DentalError message={error} />
       <form
-        className="flex items-end gap-2 rounded-2xl bg-[var(--q-surface)] px-4 py-1"
+        className="q-composer flex items-end gap-2 bg-[var(--q-surface)] px-4 py-1"
         onSubmit={(e) => {
           e.preventDefault();
           send();
@@ -247,7 +247,7 @@ export const DentalConversationStep = ({
           }
           disabled={isSubmitting || !restored || !value.trim()}
           onMouseDown={(e) => e.preventDefault()}
-          className="mb-1 flex h-11 w-11 shrink-0 items-center justify-center text-[var(--q-brand)] disabled:opacity-40"
+          className="q-icon-button mb-1 flex shrink-0 items-center justify-center text-[var(--q-brand)] disabled:opacity-40"
         >
           {isSubmitting ? (
             <span className="h-5 w-5 animate-spin rounded-full border-2 border-current border-b-transparent" />

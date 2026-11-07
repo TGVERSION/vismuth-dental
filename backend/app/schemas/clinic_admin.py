@@ -25,6 +25,7 @@ class ClinicAdminPatch(BaseModel):
 
 
 class ClinicMemberInviteCreate(BaseModel):
+    is_operator: bool = False
     email: EmailStr
     first_name: Optional[str] = Field(default=None, max_length=255)
     last_name: Optional[str] = Field(default=None, max_length=255)
@@ -36,6 +37,7 @@ class ClinicMemberInviteCreate(BaseModel):
 
 
 class ClinicMemberPatch(BaseModel):
+    is_operator: Optional[bool] = None
     first_name: Optional[str] = Field(default=None, max_length=255)
     last_name: Optional[str] = Field(default=None, max_length=255)
     middle_name: Optional[str] = Field(default=None, max_length=255)

@@ -331,8 +331,7 @@ export const SectionInput: React.FC<SectionInputProps> = ({
         pendingAnalysisTextRef.current = null;
 
         const payload: mlFullnessComplaintPayload = { example_prompt: text };
-        const response =
-          await mainApi.ml_handlers.mlFullnessComplaint(payload);
+        const response = await mainApi.ml_handlers.mlFullnessComplaint(payload);
 
         // Пока запрос летел, врач мог дописать ещё — тогда результат уже
         // неактуален, и цикл пойдёт на следующий круг.
@@ -488,7 +487,7 @@ export const SectionInput: React.FC<SectionInputProps> = ({
                         position: 'fixed',
                         bottom: popoverPosition?.bottom,
                         left: popoverPosition?.left,
-                        zIndex: 9999,
+                        zIndex: 'var(--ui-z-popover)',
                       }}
                     />,
                     document.body,
@@ -496,10 +495,10 @@ export const SectionInput: React.FC<SectionInputProps> = ({
                 <div
                   className={`w-4 h-4 cursor-pointer rounded-full transition-all duration-300 ${
                     mlAnalysis.color === 'green'
-                      ? 'bg-[#459F49]'
+                      ? 'bg-[var(--ui-color-green-600)]'
                       : mlAnalysis.color === 'yellow'
-                        ? 'bg-[#F29100]'
-                        : 'bg-[#D91528]'
+                        ? 'bg-[var(--ui-color-yellow-600)]'
+                        : 'bg-[var(--ui-color-red-600)]'
                   }`}
                 />
               </div>
@@ -507,7 +506,7 @@ export const SectionInput: React.FC<SectionInputProps> = ({
               // Раньше сбой запроса уходил только в консоль, и врач считал,
               // что проверка прошла и замечаний нет.
               <div
-                className="w-4 h-4 rounded-full border-2 border-dashed border-[#909090]"
+                className="w-4 h-4 rounded-full border-2 border-dashed border-[var(--ui-color-alabaster-950)]"
                 title="Проверка полноты не выполнена. Попробуйте выйти из поля ещё раз."
                 aria-label="Проверка полноты не выполнена"
               />
@@ -518,7 +517,7 @@ export const SectionInput: React.FC<SectionInputProps> = ({
         )}
       </div>
       <div
-        className={`text-[30px] font-medium text-[#202020] mb-1 ${animate ? 'animate-scale-pulse' : ''}`}
+        className={`text-[length:var(--ui-font-size-31)] font-medium text-[var(--ui-color-alabaster-dark-800)] mb-1 ${animate ? 'animate-scale-pulse' : ''}`}
       >
         {label}
       </div>
@@ -577,7 +576,9 @@ export const SectionInput: React.FC<SectionInputProps> = ({
                 checked={selectedValues.includes(opt)}
                 onChange={(checked) => handleMultiselectChange(opt, checked)}
               >
-                <span className="text-[16px] text-[#202020]">{opt}</span>
+                <span className="text-[length:var(--ui-font-size-16)] text-[var(--ui-color-alabaster-dark-800)]">
+                  {opt}
+                </span>
               </Checkbox>
             ))
           )}
@@ -608,7 +609,9 @@ export const SectionInput: React.FC<SectionInputProps> = ({
                 checked={value === opt}
                 onChange={() => onValueChange(id, opt)}
               >
-                <span className="text-[16px] text-[#202020]">{opt}</span>
+                <span className="text-[length:var(--ui-font-size-16)] text-[var(--ui-color-alabaster-dark-800)]">
+                  {opt}
+                </span>
               </RadioButton>
             ))
           )}
@@ -643,7 +646,9 @@ export const SectionInput: React.FC<SectionInputProps> = ({
                 checked={selectedValues.includes(opt)}
                 onChange={(checked) => handleCheckboxChange(opt, checked)}
               >
-                <span className="text-[16px] text-[#202020]">{opt}</span>
+                <span className="text-[length:var(--ui-font-size-16)] text-[var(--ui-color-alabaster-dark-800)]">
+                  {opt}
+                </span>
               </Checkbox>
             ))
           )}
@@ -680,7 +685,7 @@ export const SectionInput: React.FC<SectionInputProps> = ({
                 setIsComposing(false);
                 handleInput();
               }}
-              className="text-[#202020] border-0 focus:border-0 focus:outline-none focus:ring-0 w-full resize-none bg-transparent min-h-5.5 text-[16px] whitespace-pre-wrap wrap-break-word"
+              className="text-[var(--ui-color-alabaster-dark-800)] border-0 focus:border-0 focus:outline-none focus:ring-0 w-full resize-none bg-transparent min-h-5.5 text-[length:var(--ui-font-size-16)] whitespace-pre-wrap wrap-break-word"
               style={{ wordBreak: 'break-word' }}
               role="textbox"
               aria-multiline="true"

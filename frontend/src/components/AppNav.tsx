@@ -64,12 +64,13 @@ export const AppNav = () => {
           ...base.filter(
             (i) =>
               !(
-                clinic?.is_operator &&
+                (clinic?.is_operator || clinic?.is_clinic_admin) &&
                 !clinic.is_doctor &&
                 i.id === 'questionnaires'
               ),
           ),
-          ...(clinic?.is_operator
+          ...((clinic?.is_operator || clinic?.is_clinic_admin) &&
+          !clinic.is_doctor
             ? [
                 {
                   id: 'completed',
@@ -84,14 +85,18 @@ export const AppNav = () => {
     <nav aria-label="Разделы" className="flex w-max items-center gap-5 px-3">
       {items.map((item) =>
         item.id === active ? (
-          <span key={item.id} aria-current="page" className="text-[#8B8B8B]">
+          <span
+            key={item.id}
+            aria-current="page"
+            className="text-[var(--ui-color-alabaster-950)]"
+          >
             {item.label}
           </span>
         ) : (
           <Link
             key={item.id}
             href={item.href}
-            className="text-[#202020] transition-colors hover:text-[#5D8CF1]"
+            className="text-[var(--ui-color-alabaster-dark-800)] transition-colors hover:text-[var(--ui-color-blue-600)]"
           >
             {item.label}
           </Link>

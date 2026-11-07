@@ -18,13 +18,12 @@ type PreviewState =
   | { status: 'expired' }
   | { status: 'network' };
 
-const INPUT_CLASS =
-  'w-full px-3 py-2 border-0 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#5D8CF1] transition-all disabled:text-[#6C757D]';
+const INPUT_CLASS = 'vismuth-input w-full';
 
-const LABEL_CLASS = 'block text-sm text-[#6C757D] mb-1.25';
+const LABEL_CLASS =
+  'block text-sm text-[var(--ui-color-alabaster-950)] mb-[var(--ui-space-4)]';
 
-const LINK_CLASS =
-  'text-[#5D8CF1] hover:text-[#769CEF] cursor-pointer transition-colors';
+const LINK_CLASS = 'vismuth-function-button';
 
 /**
  * Принятие приглашения в клинику: превью по токену из ссылки, пароль, вход.
@@ -120,9 +119,9 @@ export const InviteAcceptForm = () => {
   const state: PreviewState = token ? preview : { status: 'invalid' };
 
   return (
-    <div className="min-h-screen bg-[#F3F4F8] flex items-center justify-center px-4">
+    <div className="min-h-screen bg-[var(--ui-color-slate-100)] flex items-center justify-center px-4">
       <div className="bg-white rounded-2xl w-full max-w-130 p-8 sm:p-15">
-        <div className="mx-auto mb-6.25">
+        <div className="mx-auto mb-[var(--ui-space-24)]">
           <Image
             alt="Ассистент врача"
             className="logo mx-auto"
@@ -136,7 +135,7 @@ export const InviteAcceptForm = () => {
           <div
             role="status"
             aria-label="Загрузка"
-            className="mx-auto my-10 h-10 w-10 animate-spin rounded-full border-b-2 border-[#5D8CF1]"
+            className="mx-auto my-10 h-10 w-10 animate-spin rounded-full border-b-2 border-[var(--ui-color-blue-600)]"
           />
         )}
 
@@ -159,15 +158,15 @@ export const InviteAcceptForm = () => {
 
         {state.status === 'ready' && (
           <>
-            <h2 className="text-center text-[#6F6F6F] mb-2">
+            <h2 className="text-center text-[var(--ui-color-alabaster-950)] mb-2">
               Приглашение в клинику
             </h2>
-            <p className="text-center text-lg text-[#202020] mb-7.5">
+            <p className="text-center text-lg text-[var(--ui-color-alabaster-dark-800)] mb-[var(--ui-space-32)]">
               {state.preview.clinic_name}
             </p>
 
             {isAuthenticated && user && (
-              <p className="mb-5 rounded-lg bg-[#FFF6E5] p-3 text-sm text-[#6C5A2E]">
+              <p className="mb-5 rounded-lg bg-[var(--ui-color-yellow-50)] p-3 text-sm text-[var(--ui-color-yellow-900)]">
                 Вы вошли как {user.login}. После принятия приглашения вход
                 выполнится под новой учётной записью.
               </p>
@@ -256,7 +255,7 @@ export const InviteAcceptForm = () => {
                   </button>
                 </div>
                 {password && !isValidPassword(password) && (
-                  <p className="mt-1 text-xs text-[#E53E3E]">
+                  <p className="mt-1 text-xs text-[var(--ui-color-red-600)]">
                     От {PASSWORD_MIN_LENGTH} до 128 символов
                   </p>
                 )}
@@ -276,14 +275,17 @@ export const InviteAcceptForm = () => {
                   className={`${INPUT_CLASS} ${fieldFillClass(confirm)}`}
                 />
                 {confirm && !passwordsMatch && (
-                  <p className="mt-1 text-xs text-[#E53E3E]">
+                  <p className="mt-1 text-xs text-[var(--ui-color-red-600)]">
                     Пароли не совпадают
                   </p>
                 )}
               </div>
 
               {error && (
-                <p role="alert" className="text-sm text-[#E53E3E]">
+                <p
+                  role="alert"
+                  className="text-sm text-[var(--ui-color-red-600)]"
+                >
                   {error}{' '}
                   {mustLogin && (
                     <Link href="/login" className={LINK_CLASS}>
@@ -296,7 +298,7 @@ export const InviteAcceptForm = () => {
               <button
                 type="submit"
                 disabled={!canSubmit}
-                className="cursor-pointer h-11.75 w-full py-3 bg-[#5D8CF1] mt-2.5 hover:bg-[#769CEF] text-white rounded-xl transition-colors disabled:cursor-not-allowed disabled:opacity-60"
+                className="vismuth-button vismuth-button--primary mt-[var(--ui-space-10)] w-full"
               >
                 {submitting ? (
                   <div className="animate-spin mx-auto rounded-full h-5 w-5 border-b-2 border-white" />
@@ -313,5 +315,7 @@ export const InviteAcceptForm = () => {
 };
 
 const Message = ({ text }: { text: string }) => (
-  <p className="my-6 text-center text-[#202020]">{text}</p>
+  <p className="my-6 text-center text-[var(--ui-color-alabaster-dark-800)]">
+    {text}
+  </p>
 );

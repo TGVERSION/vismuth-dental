@@ -64,14 +64,14 @@ export const ModalShell = ({
 
   return createPortal(
     <div
-      className="modal-overlay fixed inset-0 flex items-center justify-center overscroll-contain bg-black/40"
+      className="modal-overlay fixed inset-0 z-[var(--ui-z-modal)] flex items-center justify-center overscroll-contain bg-[color:var(--ui-color-alabaster-dark-800)]/20"
       onClick={() => !closeDisabled && onClose()}
     >
       <div
         role="dialog"
         aria-modal="true"
         aria-label={title}
-        className="animate-fade-in relative flex max-h-[calc(100dvh-32px)] w-141.25 max-w-[calc(100vw-32px)] flex-col overflow-y-auto rounded-[15px] bg-white px-6 py-8 shadow-2xl sm:px-10 sm:py-10"
+        className="animate-fade-in relative flex max-h-[calc(100dvh-32px)] w-141.25 max-w-[calc(100vw-32px)] flex-col overflow-y-auto rounded-2xl bg-white px-6 py-8 shadow-[var(--ui-shadow)] sm:px-10 sm:py-10"
         onClick={(event) => event.stopPropagation()}
       >
         <button
@@ -79,11 +79,13 @@ export const ModalShell = ({
           onClick={onClose}
           disabled={closeDisabled}
           aria-label="Закрыть"
-          className="absolute top-5 right-5 cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
+          className="vismuth-icon-button absolute top-4 right-4"
         >
-          <Image alt="" src="/close.svg" width={25} height={25} />
+          <Image alt="" src="/close.svg" width={24} height={24} />
         </button>
-        <h2 className="mb-3 text-[34px] font-medium text-[#202020]">{title}</h2>
+        <h2 className="mb-3 pr-10 text-[length:var(--ui-font-size-34)] font-medium text-[var(--ui-color-alabaster-dark-800)]">
+          {title}
+        </h2>
         {children}
       </div>
     </div>,
@@ -92,10 +94,10 @@ export const ModalShell = ({
 };
 
 export const PRIMARY_BUTTON_CLASS =
-  'h-12 w-full cursor-pointer rounded-2xl bg-[#5D8CF1] text-base text-white transition-colors hover:bg-[#4A7BE0] disabled:cursor-not-allowed disabled:opacity-60';
+  'vismuth-button vismuth-button--primary w-full';
 
 export const SECONDARY_BUTTON_CLASS =
-  'h-12 w-full cursor-pointer rounded-2xl bg-[#E8EEFF] text-base text-[#202020] transition-colors hover:bg-[#D6E0FF] disabled:cursor-not-allowed disabled:opacity-60';
+  'vismuth-button vismuth-button--secondary w-full';
 
 export const DANGER_BUTTON_CLASS =
-  'h-12 w-full cursor-pointer rounded-2xl bg-[#F15D5D] text-base text-white transition-colors hover:bg-[#F26E6E] disabled:cursor-not-allowed disabled:opacity-60';
+  'vismuth-button vismuth-button--danger w-full';

@@ -223,10 +223,10 @@ export function TableEditor({
   );
 
   return (
-    <div ref={wrapRef} className="relative pt-2.25">
+    <div ref={wrapRef} className="relative pt-[var(--ui-space-8)]">
       <div
         ref={outerRef}
-        className="border border-[#E5E7EB] rounded-lg overflow-hidden"
+        className="border border-[var(--ui-color-slate-200)] rounded-lg overflow-hidden"
       >
         <div
           ref={scrollRef}
@@ -234,14 +234,13 @@ export function TableEditor({
           style={{ maxHeight: MAX_TABLE_HEIGHT }}
         >
           <table ref={tableRef} className="border-collapse w-full table-fixed">
-
             <thead>
               <tr>
                 {columns.map((col, ci) => (
                   <th
                     key={col.id}
                     style={{ width: col.width }}
-                    className={`sticky top-0 z-5 min-w-15 border-r border-b border-[#E5E7EB] h-9 p-0 font-medium text-[13px] text-[#202020] select-none relative ${hoveredCol === ci ? 'bg-[#F1F3F9]' : 'bg-[#F9FAFB]'}`}
+                    className={`sticky top-0 z-5 min-w-15 border-r border-b border-[var(--ui-color-slate-200)] h-9 p-0 font-medium text-[length:var(--ui-font-size-13)] text-[var(--ui-color-alabaster-dark-800)] select-none relative ${hoveredCol === ci ? 'bg-[var(--ui-color-slate-100)]' : 'bg-[var(--ui-color-slate-50)]'}`}
                     onMouseEnter={() => setHoveredCol(ci)}
                     onMouseLeave={() => setHoveredCol(null)}
                   >
@@ -254,7 +253,7 @@ export function TableEditor({
                           if (e.key === 'Enter') e.currentTarget.blur();
                         }}
                         onMouseDown={(e) => e.stopPropagation()}
-                        className="flex-1 text-[13px] font-medium border-none bg-transparent text-[#202020] outline-none cursor-text min-w-0 p-0 w-full"
+                        className="flex-1 text-[length:var(--ui-font-size-13)] font-medium border-none bg-transparent text-[var(--ui-color-alabaster-dark-800)] outline-none cursor-text min-w-0 p-0 w-full"
                         style={{ fontFamily: 'inherit' }}
                       />
                     </div>
@@ -266,7 +265,7 @@ export function TableEditor({
                         onMouseDown={(e) => e.stopPropagation()}
                         onMouseEnter={() => setHoveredDelBtn(`col-${ci}`)}
                         onMouseLeave={() => setHoveredDelBtn(null)}
-                        className={`absolute right-1.5 top-1/2 -translate-y-1/2 w-5 h-5 rounded-full border-none cursor-pointer text-[11px] inline-flex items-center justify-center p-0 leading-none ${hoveredDelBtn === `col-${ci}` ? 'bg-[#FEE2E2] text-[#EF4444]' : 'bg-transparent text-[#BDBDBD]'}`}
+                        className={`absolute right-1.5 top-1/2 -translate-y-1/2 w-5 h-5 rounded-full border-none cursor-pointer text-[length:var(--ui-font-size-11)] inline-flex items-center justify-center p-0 leading-none ${hoveredDelBtn === `col-${ci}` ? 'bg-[var(--ui-color-red-100)] text-[var(--ui-color-red-500)]' : 'bg-transparent text-[var(--ui-color-alabaster-700)]'}`}
                       >
                         ✕
                       </button>
@@ -282,7 +281,7 @@ export function TableEditor({
                 <th
                   data-actions="true"
                   style={{ borderLeftStyle: 'hidden' }}
-                  className="w-9 min-w-9 sticky top-0 z-5 bg-[#F9FAFB] border-r-0 border-b border-[#E5E7EB] h-9 p-0"
+                  className="w-9 min-w-9 sticky top-0 z-5 bg-[var(--ui-color-slate-50)] border-r-0 border-b border-[var(--ui-color-slate-200)] h-9 p-0"
                 />
               </tr>
             </thead>
@@ -291,14 +290,16 @@ export function TableEditor({
               {rows.map((row, ri) => (
                 <tr
                   key={ri}
-                  className={hoveredRow === ri ? 'bg-[#FAFBFF]' : ''}
+                  className={
+                    hoveredRow === ri ? 'bg-[var(--ui-color-blue-50)]' : ''
+                  }
                   onMouseEnter={() => setHoveredRow(ri)}
                   onMouseLeave={() => setHoveredRow(null)}
                 >
                   {row.map((cell, ci) => (
                     <td
                       key={ci}
-                      className="border-r border-b border-[#E5E7EB] relative p-0"
+                      className="border-r border-b border-[var(--ui-color-slate-200)] relative p-0"
                       style={{ height: ROW_HEIGHT_PX }}
                     >
                       <div
@@ -310,21 +311,21 @@ export function TableEditor({
                         value={cell}
                         placeholder="—"
                         onChange={(e) => updateCell(ri, ci, e.target.value)}
-                        className="block w-full h-full border-none px-3 text-[13px] text-[#202020] bg-transparent outline-none"
+                        className="block w-full h-full border-none px-3 text-[length:var(--ui-font-size-13)] text-[var(--ui-color-alabaster-dark-800)] bg-transparent outline-none"
                         style={{ fontFamily: 'inherit' }}
                       />
                     </td>
                   ))}
                   <td
                     style={{ borderLeftStyle: 'hidden' }}
-                    className="border-r-0 border-b border-[#E5E7EB] w-9 min-w-9 p-0 text-center align-middle"
+                    className="border-r-0 border-b border-[var(--ui-color-slate-200)] w-9 min-w-9 p-0 text-center align-middle"
                   >
                     <button
                       type="button"
                       onClick={() => deleteRow(ri)}
                       onMouseEnter={() => setHoveredDelBtn(`row-${ri}`)}
                       onMouseLeave={() => setHoveredDelBtn(null)}
-                      className={`w-5 h-5 rounded-full border-none cursor-pointer text-[11px] inline-flex items-center justify-center p-0 leading-none transition-opacity ${hoveredRow === ri ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'} ${hoveredDelBtn === `row-${ri}` ? 'bg-[#FEE2E2] text-[#EF4444]' : 'bg-transparent text-[#BDBDBD]'}`}
+                      className={`w-5 h-5 rounded-full border-none cursor-pointer text-[length:var(--ui-font-size-11)] inline-flex items-center justify-center p-0 leading-none transition-opacity ${hoveredRow === ri ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'} ${hoveredDelBtn === `row-${ri}` ? 'bg-[var(--ui-color-red-100)] text-[var(--ui-color-red-500)]' : 'bg-transparent text-[var(--ui-color-alabaster-700)]'}`}
                     >
                       ✕
                     </button>
@@ -344,7 +345,7 @@ export function TableEditor({
             onClick={() => addColumn(ci)}
             onMouseEnter={() => setPlusColHovered(ci)}
             onMouseLeave={() => setPlusColHovered(null)}
-            className="absolute w-4.5 h-4.5 rounded-full bg-[#5D8CF1] text-white border-none text-[13px] cursor-pointer flex items-center justify-center shadow-[0_1px_4px_rgba(93,140,241,0.5)] z-30 p-0 leading-none"
+            className="absolute w-4.5 h-4.5 rounded-full bg-[var(--ui-color-blue-600)] text-white border-none text-[length:var(--ui-font-size-13)] cursor-pointer flex items-center justify-center shadow-[var(--ui-shadow)] z-30 p-0 leading-none"
             style={{ left: pos.left, top: pos.top }}
           >
             +
@@ -360,7 +361,7 @@ export function TableEditor({
             onClick={() => addRow(ri)}
             onMouseEnter={() => setPlusRowHovered(ri)}
             onMouseLeave={() => setPlusRowHovered(null)}
-            className="absolute w-4.5 h-4.5 rounded-full bg-[#5D8CF1] text-white border-none text-[13px] cursor-pointer flex items-center justify-center shadow-[0_1px_4px_rgba(93,140,241,0.5)] z-30 p-0 leading-none"
+            className="absolute w-4.5 h-4.5 rounded-full bg-[var(--ui-color-blue-600)] text-white border-none text-[length:var(--ui-font-size-13)] cursor-pointer flex items-center justify-center shadow-[var(--ui-shadow)] z-30 p-0 leading-none"
             style={{ left: pos.left, top: pos.top }}
           >
             +

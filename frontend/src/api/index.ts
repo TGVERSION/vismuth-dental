@@ -732,13 +732,23 @@ export interface QuestionnaireStep {
       health: string[] | null;
       health_unknown: string[];
       groups: Record<string, { selected: string[]; text: string }>;
-      ai?: { question: string; answer: string; choices?: string[]; skipped?: boolean }[];
+      ai?: {
+        question: string;
+        answer: string;
+        choices?: string[];
+        skipped?: boolean;
+      }[];
     };
     editable_steps?: string[];
     progress?: { current: number; total: number; label: string };
     navigation?: { step_key: string; label: string }[];
     /** Принятые сервером ответы для чтения в переписке, без переходов назад. */
-    history?: { id: string; step_key: string; question: string; answer: string }[];
+    history?: {
+      id: string;
+      step_key: string;
+      question: string;
+      answer: string;
+    }[];
     page?: { kind: 'health' | 'details'; current: number; total: number };
     review?: DoctorQuestionnaireStructured;
   };
@@ -1088,6 +1098,7 @@ export type ClinicMemberStatus = 'invited' | 'active' | 'deactivated';
 
 /** Сотрудник клиники или ещё не принятое приглашение. */
 export interface ClinicMemberRead {
+  is_operator?: boolean;
   id: string;
   kind: 'membership' | 'invitation';
   status: ClinicMemberStatus;
@@ -1106,6 +1117,7 @@ export interface ClinicMemberRead {
 }
 
 export interface ClinicMemberPatch {
+  is_operator?: boolean;
   first_name?: string | null;
   last_name?: string | null;
   middle_name?: string | null;
@@ -1116,6 +1128,7 @@ export interface ClinicMemberPatch {
 }
 
 export interface ClinicMemberInviteCreate {
+  is_operator?: boolean;
   email: string;
   is_clinic_admin: boolean;
   is_doctor: boolean;
@@ -1127,6 +1140,7 @@ export interface ClinicMemberInviteCreate {
  * одноразовый токен: его не логируют и не сохраняют.
  */
 export interface ClinicInvitationCreated {
+  is_operator?: boolean;
   id: string;
   clinic_id: string;
   email: string;
@@ -1140,6 +1154,7 @@ export interface ClinicInvitationCreated {
 
 /** Превью приглашения по токену из ссылки (без авторизации). */
 export interface InvitationPreview {
+  is_operator?: boolean;
   email: string;
   clinic_name: string;
   clinic_id: string;

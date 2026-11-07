@@ -24,6 +24,8 @@ from ..services.redis_stream import get_redis_client
 from ..services.roles import set_user_role
 from .auth import _attach_session_tokens
 
+from ..services.staff_roles import STAFF_ROLES
+
 router = APIRouter(tags=['clinic-join'])
 
 
@@ -53,7 +55,7 @@ async def preview(token: str, request: Request, db: AsyncSession = Depends(get_d
     _, clinic = await load_join_link(db, token)
     specs = (await db.execute(select(RefSpecialization).where(RefSpecialization.id.is_not(None)).order_by(RefSpecialization.name))).scalars().all()
     return JoinPreview(clinic_id=clinic.id, clinic_name=clinic.name,
-        roles=[{'value':'operator','label':'Оператор контакт-центра'}, {'value':'doctor','label':'Врач'}],
+        roles=STAFF_ROLES,
         specializations=[{'id':s.id,'code':s.code,'name':s.name} for s in specs])
 
 

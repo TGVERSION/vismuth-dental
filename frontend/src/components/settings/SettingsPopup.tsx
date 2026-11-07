@@ -6,7 +6,6 @@ import { toast } from 'react-toastify';
 import { ProtocolStructuresSection } from './ProtocolStructuresSection';
 import { DirectoriesSection } from './DirectoriesSection';
 import { mainApi } from '@/api';
-import type { RoleRead } from '@/api';
 import { useAuthStore } from '@/store/authStore';
 import { isPrivilegedRole, isSuperAdmin } from '@/lib/roles';
 import {
@@ -40,8 +39,6 @@ export const SettingsPopup: React.FC<SettingsPopupProps> = ({
     MembershipRoleOption[]
   >([]);
   const [usersLoading, setUsersLoading] = useState(false);
-  const [roles, setRoles] = useState<RoleRead[]>([]);
-  const [rolesFailed, setRolesFailed] = useState(false);
   const [pendingUserId, setPendingUserId] = useState<string | null>(null);
   const [deleteConfirmUserId, setDeleteConfirmUserId] = useState<string | null>(
     null,
@@ -66,16 +63,12 @@ export const SettingsPopup: React.FC<SettingsPopupProps> = ({
 
     const load = async () => {
       setUsersLoading(true);
-      const [usersResult, rolesResult, membershipRolesResult] =
-        await Promise.allSettled([
-          isSuperAdmin(currentUser?.role)
-            ? userMembershipApi.list()
-            : mainApi.serviceUsers.listServiceUserIds(),
-          mainApi.roles.list(),
-          isSuperAdmin(currentUser?.role)
-            ? userMembershipApi.roles()
-            : Promise.resolve([]),
-        ]);
+      const [usersResult, membershipRolesResult] = await Promise.allSettled([
+        isSuperAdmin(currentUser?.role)
+          ? userMembershipApi.list()
+          : mainApi.serviceUsers.listServiceUserIds(),
+        userMembershipApi.staffRoles(),
+      ]);
       if (cancelled) return;
 
       if (usersResult.status === 'fulfilled') {
@@ -90,17 +83,6 @@ export const SettingsPopup: React.FC<SettingsPopupProps> = ({
         toast.error('Не удалось загрузить роли клиники');
       }
 
-      // Без справочника список пользователей всё равно показываем:
-      // роли подписаны из role_name_ru, но сменить их нельзя.
-      if (rolesResult.status === 'fulfilled') {
-        setRoles(rolesResult.value);
-        setRolesFailed(false);
-      } else {
-        setRoles([]);
-        setRolesFailed(true);
-        toast.error('Не удалось загрузить список ролей');
-      }
-
       setUsersLoading(false);
     };
     load();
@@ -110,36 +92,8 @@ export const SettingsPopup: React.FC<SettingsPopupProps> = ({
     };
   }, [isOpen, activeSection, currentUser?.role]);
 
-  const handleRoleChange = async (userId: string, value: string) => {
-    if (pendingUserId) return;
-
-    // Код роли берём из справочника: в список может попасть запасная опция
-    // с устаревшим кодом, отправлять её на сервер нельзя.
-    const role = roles.find((item) => item.name === value);
-    const target = users.find((item) => item.id === userId);
-    if (!role || !target || target.role === role.name) return;
-
-    setPendingUserId(userId);
-    try {
-      const updated = await mainApi.serviceUsers.patchServiceUser(userId, {
-        role: role.name,
-      });
-      setUsers((prev) =>
-        prev.map((u) =>
-          u.id === userId
-            ? { ...u, role: updated.role, role_name_ru: updated.role_name_ru }
-            : u,
-        ),
-      );
-      toast.success('Роль пользователя обновлена');
-    } catch {
-      toast.error('Не удалось обновить роль');
-    } finally {
-      setPendingUserId(null);
-    }
-  };
-
   const handleDeleteUser = async (userId: string) => {
+    setPendingUserId(userId);
     try {
       await mainApi.serviceUsers.deleteServiceUser(userId);
       setUsers((prev) => prev.filter((u) => u.id !== userId));
@@ -147,6 +101,8 @@ export const SettingsPopup: React.FC<SettingsPopupProps> = ({
       toast.success('Пользователь удален');
     } catch {
       toast.error('Не удалось удалить пользователя');
+    } finally {
+      setPendingUserId(null);
     }
   };
 
@@ -176,12 +132,12 @@ export const SettingsPopup: React.FC<SettingsPopupProps> = ({
 
       case 'users':
         return (
-          <div className="min-w-0 bg-[#F8F9FB] p-4 sm:p-6">
+          <div className="min-w-0 bg-[var(--ui-color-alabaster-100)] p-4 sm:p-6">
             {usersLoading ? (
               <div
                 role="status"
                 aria-label="Загрузка пользователей"
-                className="mx-auto my-20 h-10 w-10 animate-spin rounded-full border-b-2 border-[#5D8CF1]"
+                className="mx-auto my-20 h-10 w-10 animate-spin rounded-full border-b-2 border-[var(--ui-color-blue-600)]"
               />
             ) : (
               <div className="flex min-w-0 flex-col gap-3">
@@ -191,12 +147,9 @@ export const SettingsPopup: React.FC<SettingsPopupProps> = ({
                     user={user}
                     actorId={currentUser?.id}
                     actorRole={currentUser?.role}
-                    roles={roles}
                     membershipRoles={membershipRoles}
-                    rolesFailed={rolesFailed}
                     pending={pendingUserId !== null}
                     canManageClinics={access.canManageClinics}
-                    onRoleChange={handleRoleChange}
                     onMembershipSaved={(updated) => {
                       setUsers((previous) =>
                         previous.map((item) =>
@@ -211,7 +164,7 @@ export const SettingsPopup: React.FC<SettingsPopupProps> = ({
                   />
                 ))}
                 {!users.length && (
-                  <p className="py-10 text-center text-sm text-[#8B8B8B]">
+                  <p className="py-10 text-center text-sm text-[var(--ui-color-alabaster-950)]">
                     Пользователи не найдены
                   </p>
                 )}
@@ -251,8 +204,8 @@ export const SettingsPopup: React.FC<SettingsPopupProps> = ({
           onClick={(e) => e.stopPropagation()}
         >
           <div className="flex min-w-0 flex-1 flex-col md:flex-row">
-            <div className="flex shrink-0 flex-col gap-4 border-b border-[#E9ECEF] p-4 sm:p-6 md:w-60 md:border-r md:border-b-0 md:p-6">
-              <h2 className="text-2xl font-semibold text-[#202020] md:text-[34px]">
+            <div className="flex shrink-0 flex-col gap-4 border-b border-[var(--ui-color-slate-200)] p-4 sm:p-6 md:w-60 md:border-r md:border-b-0 md:p-6">
+              <h2 className="text-2xl font-semibold text-[var(--ui-color-alabaster-dark-800)] md:text-[length:var(--ui-font-size-34)]">
                 Настройки
               </h2>
               <div className="overflow-x-auto md:overflow-visible">
@@ -260,16 +213,16 @@ export const SettingsPopup: React.FC<SettingsPopupProps> = ({
                   {menuItems.map((item) => (
                     <div
                       key={item.id}
-                      className={`px-3.75 py-3 rounded-lg cursor-pointer transition-all ${
+                      className={`px-[var(--ui-space-14)] py-3 rounded-lg cursor-pointer transition-all ${
                         activeSection === item.id
                           ? 'bg-white shadow-custom'
                           : 'hover:bg-white shadow-custom-hover'
                       }`}
                       onClick={() => handleSectionChange(item.id)}
                     >
-                      <div className="flex items-center gap-3.75">
+                      <div className="flex items-center gap-[var(--ui-space-14)]">
                         <div className="flex flex-col gap-1">
-                          <span className="text-md text-[#202020]">
+                          <span className="text-md text-[var(--ui-color-alabaster-dark-800)]">
                             {item.label}
                           </span>
                         </div>
@@ -285,7 +238,7 @@ export const SettingsPopup: React.FC<SettingsPopupProps> = ({
                 <button
                   type="button"
                   onClick={closeModal}
-                  className="mt-2.5 mr-2.5 cursor-pointer transition-colors"
+                  className="mt-[var(--ui-space-10)] mr-[var(--ui-space-10)] cursor-pointer transition-colors"
                 >
                   <Image alt="close" src="/close.svg" width={25} height={25} />
                 </button>
@@ -295,7 +248,7 @@ export const SettingsPopup: React.FC<SettingsPopupProps> = ({
                 {activeSection === 'users' && (
                   <div className="flex items-center justify-between border-b border-gray-200 px-4 pb-5 sm:px-6">
                     <div className="flex items-center gap-3">
-                      <h3 className="text-3xl font-medium text-[#202020]">
+                      <h3 className="text-3xl font-medium text-[var(--ui-color-alabaster-dark-800)]">
                         {getSectionTitle()}
                       </h3>
                     </div>
@@ -315,7 +268,7 @@ export const SettingsPopup: React.FC<SettingsPopupProps> = ({
           onClick={() => setDeleteConfirmUserId(null)}
         >
           <div
-            className="bg-white rounded-[15px] px-10 py-10 w-141.25 shadow-2xl flex flex-col animate-fade-in relative"
+            className="bg-white rounded-[var(--ui-radius-2xl)] px-10 py-10 w-141.25 shadow-2xl flex flex-col animate-fade-in relative"
             onClick={(e) => e.stopPropagation()}
           >
             <button
@@ -327,10 +280,10 @@ export const SettingsPopup: React.FC<SettingsPopupProps> = ({
             </button>
 
             <div className="flex flex-col text-center">
-              <p className="text-[34px] font-medium text-center mb-5">
+              <p className="text-[length:var(--ui-font-size-34)] font-medium text-center mb-5">
                 Вы действительно хотите удалить пользователя?
               </p>
-              <p className="mb-7.5  text-[18px] text-center text-[#6C757D]">
+              <p className="mb-[var(--ui-space-32)]  text-[length:var(--ui-font-size-18)] text-center text-[var(--ui-color-alabaster-950)]">
                 Для входа этому пользователю придётся зарегистрироваться заново
               </p>
             </div>
@@ -339,14 +292,14 @@ export const SettingsPopup: React.FC<SettingsPopupProps> = ({
               <button
                 type="button"
                 onClick={() => handleDeleteUser(deleteConfirmUserId)}
-                className="w-full h-12 bg-[#F15D5D] hover:bg-[#F26E6E] text-white rounded-2xl text-base transition-colors cursor-pointer"
+                className="w-full h-12 bg-[var(--ui-color-red-400)] hover:bg-[var(--ui-color-red-400)] text-white rounded-2xl text-base transition-colors cursor-pointer"
               >
                 Удалить
               </button>
               <button
                 type="button"
                 onClick={() => setDeleteConfirmUserId(null)}
-                className="w-full h-12 bg-[#E8EEFF] hover:bg-[#D6E0FF] text-[#202020] rounded-2xl text-base transition-colors cursor-pointer"
+                className="w-full h-12 bg-[var(--ui-color-blue-100)] hover:bg-[var(--ui-color-blue-200)] text-[var(--ui-color-alabaster-dark-800)] rounded-2xl text-base transition-colors cursor-pointer"
               >
                 Оставить
               </button>

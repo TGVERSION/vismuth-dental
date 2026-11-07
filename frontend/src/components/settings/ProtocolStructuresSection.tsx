@@ -214,8 +214,7 @@ export function ProtocolStructuresSection({
     const usedNames = new Set<string>();
     const apiFields: StructureProtocolsFieldsSmall[] = fields.map((f, i) => {
       const baseName =
-        f.field_name ||
-        (f.field_label ? slugify(f.field_label) : `field_${i}`);
+        f.field_name || (f.field_label ? slugify(f.field_label) : `field_${i}`);
       let name = baseName;
       if (usedNames.has(name)) {
         let counter = 2;
@@ -450,13 +449,13 @@ export function ProtocolStructuresSection({
     return (
       <>
         <div className="flex items-center justify-between pb-6 border-b px-8 border-gray-200">
-          <h3 className="text-3xl font-medium text-[#202020]">
+          <h3 className="text-3xl font-medium text-[var(--ui-color-alabaster-dark-800)]">
             Структуры протоколов
           </h3>
           <button
             type="button"
             onClick={createNew}
-            className="px-5 py-2.5 bg-[#5D8CF1] hover:bg-[#769CEF] text-white rounded-xl text-sm font-medium transition-colors cursor-pointer"
+            className="vismuth-button vismuth-button--primary"
           >
             Создать новую
           </button>
@@ -464,7 +463,7 @@ export function ProtocolStructuresSection({
 
         <div className="px-8 py-5">
           {isLoadingList ? (
-            <div className="animate-spin mx-auto my-40 rounded-full h-10 w-10 border-b-2 border-[#5D8CF1]"></div>
+            <div className="animate-spin mx-auto my-40 rounded-full h-10 w-10 border-b-2 border-[var(--ui-color-blue-600)]"></div>
           ) : structures.length === 0 ? (
             <p className="text-sm text-gray-400">Нет структур протоколов</p>
           ) : (
@@ -472,10 +471,10 @@ export function ProtocolStructuresSection({
               {structures.map((s) => (
                 <div
                   key={s.id}
-                  className={`flex items-center justify-between px-3.75 py-3 rounded-lg cursor-pointer transition-all shadow-custom-hover`}
+                  className={`flex items-center justify-between px-[var(--ui-space-14)] py-3 rounded-lg cursor-pointer transition-all shadow-custom-hover`}
                   onClick={() => openEditor(s)}
                 >
-                  <span className="text-sm text-[#202020]">
+                  <span className="text-sm text-[var(--ui-color-alabaster-dark-800)]">
                     {s.structure_name}
                   </span>
                   <button
@@ -509,7 +508,7 @@ export function ProtocolStructuresSection({
         <button
           type="button"
           onClick={handleBack}
-          className="flex items-center gap-2 text-sm text-[#6C757D] hover:text-[#202020] cursor-pointer transition-colors"
+          className="flex items-center gap-2 text-sm text-[var(--ui-color-alabaster-950)] hover:text-[var(--ui-color-alabaster-dark-800)] cursor-pointer transition-colors"
         >
           <Image src="/arrow-left.svg" alt="back" width={16} height={16} />
           Назад
@@ -518,7 +517,7 @@ export function ProtocolStructuresSection({
           type="button"
           onClick={() => save()}
           disabled={isSaving}
-          className="px-5 py-2.5 bg-[#5D8CF1] hover:bg-[#769CEF] disabled:opacity-60 text-white rounded-xl text-sm font-medium transition-colors cursor-pointer"
+          className="vismuth-button vismuth-button--primary"
         >
           {isSaving ? 'Сохранение...' : 'Сохранить'}
         </button>
@@ -533,17 +532,17 @@ export function ProtocolStructuresSection({
             setStructureName(e.target.value);
           }}
           placeholder="Введите название структуры"
-          className="text-3xl font-medium text-[#202020] w-full bg-transparent border-none outline-none mb-8 placeholder-gray-300"
+          className="text-3xl font-medium text-[var(--ui-color-alabaster-dark-800)] w-full bg-transparent border-none outline-none mb-8 placeholder-gray-300"
         />
 
         {fields.length === 0 ? (
           <div className="flex flex-wrap justify-center gap-3">
-            <div className="rounded-[15px] hover:bg-[#F0F5FF] bg-[#DCE7FF]">
+            <div className="rounded-2xl hover:bg-[var(--ui-color-blue-50)] bg-[var(--ui-color-blue-100)]">
               <button
                 ref={addFieldBtnRef}
                 type="button"
                 onClick={() => setShowFieldPicker((v) => !v)}
-                className="flex items-center px-3.75 py-3 text-md  text-[#202020] cursor-pointer"
+                className="flex items-center px-[var(--ui-space-14)] py-3 text-md  text-[var(--ui-color-alabaster-dark-800)] cursor-pointer"
               >
                 Все блоки
               </button>
@@ -553,12 +552,12 @@ export function ProtocolStructuresSection({
                 (label) => (
                   <div
                     key={label}
-                    className="border border-[#DCE7FF] hover:bg-[#DCE7FF] transition-all rounded-[15px]"
+                    className="border border-[var(--ui-color-blue-100)] hover:bg-[var(--ui-color-blue-100)] transition-all rounded-2xl"
                   >
                     <button
                       type="button"
                       onClick={() => addPresetByLabel(label)}
-                      className="px-5 py-3.5 text-sm font-medium text-[#202020] cursor-pointer transition-colors"
+                      className="px-5 py-[var(--ui-space-14)] text-sm font-medium text-[var(--ui-color-alabaster-dark-800)] cursor-pointer transition-colors"
                     >
                       {label}
                     </button>
@@ -566,11 +565,11 @@ export function ProtocolStructuresSection({
                 ),
               )}
             </div>
-            <div className="border border-[#DCE7FF] hover:bg-[#DCE7FF] transition-all rounded-[15px]">
+            <div className="border border-[var(--ui-color-blue-100)] hover:bg-[var(--ui-color-blue-100)] transition-all rounded-2xl">
               <button
                 type="button"
                 onClick={addCustomField}
-                className="px-5 py-3.5 text-sm font-medium text-[#202020] cursor-pointer transition-colors"
+                className="px-5 py-[var(--ui-space-14)] text-sm font-medium text-[var(--ui-color-alabaster-dark-800)] cursor-pointer transition-colors"
               >
                 Своё поле
               </button>
@@ -584,7 +583,7 @@ export function ProtocolStructuresSection({
                   {dropTarget?.localId === field.localId &&
                     dropTarget.side === 'before' &&
                     draggedLocalId !== field.localId && (
-                      <div className="h-0.5 mx-2 bg-[#5D8CF1] rounded-full" />
+                      <div className="h-0.5 mx-2 bg-[var(--ui-color-blue-600)] rounded-full" />
                     )}
                   <FieldRow
                     field={field}
@@ -626,7 +625,7 @@ export function ProtocolStructuresSection({
                   {dropTarget?.localId === field.localId &&
                     dropTarget.side === 'after' &&
                     draggedLocalId !== field.localId && (
-                      <div className="h-0.5 mx-2 bg-[#5D8CF1] rounded-full" />
+                      <div className="h-0.5 mx-2 bg-[var(--ui-color-blue-600)] rounded-full" />
                     )}
                 </Fragment>
               ))}
@@ -636,7 +635,7 @@ export function ProtocolStructuresSection({
               ref={addFieldBtnRef}
               type="button"
               onClick={() => setShowFieldPicker((v) => !v)}
-              className="mt-6 w-full py-3.5 rounded-[15px] hover:bg-[#F0F5FF] bg-[#DCE7FF] text-md transition-all cursor-pointer"
+              className="vismuth-button vismuth-button--secondary mt-6 w-full"
             >
               Добавить поле
             </button>
@@ -656,12 +655,12 @@ export function ProtocolStructuresSection({
 
       {showConfirmClose && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-          <div className="bg-white rounded-2xl w-120 p-10 shadow-2xl flex flex-col gap-5 animate-fade-in">
-            <div className="flex flex-col gap-1.5">
-              <p className="text-[34px] font-medium text-center mb-5 ">
+          <div className="animate-fade-in flex max-h-[calc(100dvh-32px)] w-full max-w-120 flex-col gap-5 overflow-y-auto rounded-2xl bg-white p-6 shadow-[var(--ui-shadow)] sm:p-8">
+            <div className="flex flex-col gap-[var(--ui-space-6)]">
+              <p className="text-[length:var(--ui-font-size-34)] font-medium text-center mb-5 ">
                 Вы действительно хотите закрыть?
               </p>
-              <p className="mb-7.5  text-[18px] text-center text-[#6C757D]">
+              <p className="mb-[var(--ui-space-32)]  text-[length:var(--ui-font-size-18)] text-center text-[var(--ui-color-alabaster-950)]">
                 Ваши изменения не сохранятся.
               </p>
             </div>
@@ -677,7 +676,7 @@ export function ProtocolStructuresSection({
                   }
                 }}
                 disabled={isSaving}
-                className="w-full h-12 py-3 bg-[#5D8CF1] hover:bg-[#769CEF] disabled:opacity-60 text-white rounded-xl text-sm transition-colors cursor-pointer"
+                className="vismuth-button vismuth-button--primary w-full"
               >
                 {isSaving ? (
                   <div className="animate-spin mx-auto my- rounded-full h-5 w-5 border-b-2 border-white"></div>
@@ -696,7 +695,7 @@ export function ProtocolStructuresSection({
                     setView('list');
                   }
                 }}
-                className="w-full h-12 py-3 rounded-[15px] hover:bg-[#F0F5FF] bg-[#DCE7FF] text-sm transition-all cursor-pointer"
+                className="vismuth-button vismuth-button--secondary w-full"
               >
                 Закрыть без сохранения
               </button>

@@ -33,7 +33,9 @@ export function UserClinicMembershipEditor({
   onSavingChange,
 }: Props) {
   const [clinicId, setClinicId] = useState(user.clinic_id ?? '');
-  const [role, setRole] = useState<MembershipRole | null>(user.clinic_role);
+  const [role, setRole] = useState<MembershipRole | null>(
+    user.clinic_role ?? (user.role === 'admin' ? 'clinic_admin' : 'doctor'),
+  );
   const [specializationIds, setSpecializationIds] = useState(
     user.specialization_ids,
   );
@@ -128,7 +130,10 @@ export function UserClinicMembershipEditor({
       className="flex min-w-0 flex-col gap-5"
     >
       {loading && (
-        <p role="status" className="text-sm text-[#8B8B8B]">
+        <p
+          role="status"
+          className="text-sm text-[var(--ui-color-alabaster-950)]"
+        >
           Загрузка клиник…
         </p>
       )}
@@ -142,29 +147,31 @@ export function UserClinicMembershipEditor({
           onChange={setClinicId}
           disabled={blocked}
           aria-label="Клиника"
-          triggerClassName="bg-[#E3E8F1]"
+          triggerClassName="bg-[var(--ui-color-slate-200)]"
         />
       </UserSettingsField>
-      {clinicId && (
+      {
         <UserSettingsField
-          label="Роль в клинике"
+          label="Роль"
           hint={
-            role === 'operator'
-              ? 'Оператор видит анкеты и пациентские ссылки своей клиники. Управление сотрудниками и помощники врача недоступны.'
-              : 'Определяет доступ сотрудника к анкетам и функциям клиники'
+            !clinicId
+              ? 'Выберите клинику, чтобы назначить сотруднику роль'
+              : role === 'operator'
+                ? 'Анкеты и пациентские ссылки своей клиники. Управление сотрудниками и помощники врача недоступны.'
+                : 'Определяет доступ сотрудника к анкетам и функциям клиники'
           }
         >
-            <CustomDropdown<MembershipRole | ''>
+          <CustomDropdown<MembershipRole | ''>
             options={roles}
-              value={role ?? ''}
-              onChange={(value) => setRole(value || null)}
+            value={role ?? ''}
+            onChange={(value) => setRole(value || null)}
             disabled={blocked || !roles.length}
-            aria-label="Роль в клинике"
+            aria-label="Роль"
             placeholder="Выберите роль"
-            triggerClassName="bg-[#E3E8F1]"
+            triggerClassName="bg-[var(--ui-color-slate-200)]"
           />
         </UserSettingsField>
-      )}
+      }
       {clinicId && doctor && (
         <UserSettingsField
           label="Специализации врача"
@@ -181,13 +188,13 @@ export function UserClinicMembershipEditor({
             disabled={blocked}
             aria-label="Специализации врача"
             placeholder="Выберите специализации"
-            triggerClassName="bg-[#E3E8F1]"
+            triggerClassName="bg-[var(--ui-color-slate-200)]"
             showCheckIcon
           />
         </UserSettingsField>
       )}
       {error && (
-        <p role="alert" className="text-sm text-[#E53E3E]">
+        <p role="alert" className="text-sm text-[var(--ui-color-red-600)]">
           {error}
         </p>
       )}
@@ -196,14 +203,14 @@ export function UserClinicMembershipEditor({
           type="button"
           disabled={saving}
           onClick={onClose}
-          className="cursor-pointer rounded-xl bg-[#F1F2F4] px-5 py-3 text-sm disabled:opacity-50"
+          className="vismuth-button--secondary"
         >
           Отмена
         </button>
         <button
           type="submit"
           disabled={!payload || !changed || blocked}
-          className="cursor-pointer rounded-xl bg-[#E8EEFF] px-5 py-3 text-sm text-[#202020] hover:bg-[#D6E0FF] disabled:cursor-not-allowed disabled:opacity-50"
+          className="vismuth-button--primary"
         >
           {saving ? 'Сохраняем…' : 'Сохранить'}
         </button>

@@ -31,12 +31,12 @@ export const DentalReviewStep = ({
     <>
       {renderShell(
         <>
-          <h2 className="text-[23px] leading-tight font-semibold">
+          <h2 className="text-[length:var(--ui-font-size-23)] leading-tight font-semibold">
             Проверьте ответы
           </h2>
           <section className="rounded-2xl bg-[var(--q-surface)] p-4">
             <h3 className="font-semibold">Повод визита</h3>
-            <p className="mt-2 whitespace-pre-wrap break-words text-[15px]">
+            <p className="mt-2 whitespace-pre-wrap break-words text-[length:var(--ui-font-size-15)]">
               {review?.complaints || 'Не указан'}
             </p>
           </section>
@@ -46,23 +46,23 @@ export const DentalReviewStep = ({
               positive.map((row) => (
                 <p
                   key={row.key}
-                  className="mt-2 whitespace-pre-wrap break-words text-[15px]"
+                  className="mt-2 whitespace-pre-wrap break-words text-[length:var(--ui-font-size-15)]"
                 >
                   <b>{row.label}</b>:{' '}
                   {row.has === null ? 'Не уверен' : row.detail || 'Да'}
                 </p>
               ))
             ) : (
-              <p className="mt-2 text-[15px]">
+              <p className="mt-2 text-[length:var(--ui-font-size-15)]">
                 Ничего из перечисленного не отмечено.
               </p>
             )}
             {negative.length > 0 ? (
               <details className="mt-3">
-                <summary className="min-h-[44px] cursor-pointer text-[15px]">
+                <summary className="min-h-[44px] cursor-pointer text-[length:var(--ui-font-size-15)]">
                   По остальным {negative.length} пунктам — «Нет». Посмотреть
                 </summary>
-                <ul className="mt-2 list-disc pl-5 text-[15px]">
+                <ul className="mt-2 list-disc pl-5 text-[length:var(--ui-font-size-15)]">
                   {negative.map((row) => (
                     <li key={row.key}>{row.label}: Нет</li>
                   ))}
@@ -71,7 +71,7 @@ export const DentalReviewStep = ({
             ) : null}
           </section>
           {paper ? (
-            <section className="rounded-2xl bg-[var(--q-surface)] p-4 text-[15px]">
+            <section className="rounded-2xl bg-[var(--q-surface)] p-4 text-[length:var(--ui-font-size-15)]">
               <h3 className="font-semibold">О вас</h3>
               <p className="mt-2">
                 Дата рождения: {paper.birth_date || 'Не указана'}
@@ -88,7 +88,10 @@ export const DentalReviewStep = ({
             </section>
           ) : null}
           {review?.clarifications?.map((item, index) => (
-            <section key={index} className="text-[15px]">
+            <section
+              key={index}
+              className="text-[length:var(--ui-font-size-15)]"
+            >
               <h3 className="font-semibold">{item.question}</h3>
               <p className="whitespace-pre-wrap break-words">
                 {item.answer || 'Пропущено'}
@@ -96,7 +99,7 @@ export const DentalReviewStep = ({
             </section>
           ))}
           {paper ? (
-            <details className="rounded-2xl bg-[var(--q-surface)] p-4 text-[15px]">
+            <details className="rounded-2xl bg-[var(--q-surface)] p-4 text-[length:var(--ui-font-size-15)]">
               <summary className="min-h-[44px] cursor-pointer">
                 Все ответы для распечатки
               </summary>

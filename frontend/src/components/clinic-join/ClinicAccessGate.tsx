@@ -37,7 +37,7 @@ function AccountGate({ children }: { children: React.ReactNode }) {
     return (
       <div className="m-auto p-16">
         <p role="alert">Не удалось проверить доступ</p>
-        <button onClick={check} className="text-[#5D8CF1]">
+        <button onClick={check} className="text-[var(--ui-color-blue-600)]">
           Повторить
         </button>
       </div>

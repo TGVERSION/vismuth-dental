@@ -62,7 +62,8 @@ export const DateSheet = ({
             <button
               type="button"
               onClick={() => setDraft('')}
-              className="min-h-[52px] flex-1 rounded-xl border border-[var(--q-brand)] px-4 text-base font-medium text-[var(--q-brand)]"
+              data-variant="outline"
+              className="q-button flex-1"
             >
               Сбросить
             </button>
@@ -70,7 +71,7 @@ export const DateSheet = ({
               type="button"
               onClick={() => onApply(draft)}
               disabled={draft === ''}
-              className="min-h-[52px] flex-1 rounded-xl bg-[var(--q-brand)] px-4 text-base font-medium text-[var(--q-brand-contrast)] disabled:opacity-60"
+              className="q-button flex-1"
             >
               Готово
             </button>
@@ -86,7 +87,7 @@ export const DateSheet = ({
               onClick={() => setMonthIndex((index) => index - 1)}
               disabled={monthIndex === 0}
               aria-label="Предыдущий месяц"
-              className="flex h-8 w-8 items-center justify-center rounded-lg hover:bg-gray-50 disabled:opacity-30"
+              className="q-icon-button flex items-center justify-center disabled:opacity-30"
             >
               <BackIcon className="h-4 w-4" />
             </button>
@@ -100,7 +101,7 @@ export const DateSheet = ({
               onClick={() => setMonthIndex((index) => index + 1)}
               disabled={monthIndex === months.length - 1}
               aria-label="Следующий месяц"
-              className="flex h-8 w-8 items-center justify-center rounded-lg hover:bg-gray-50 disabled:opacity-30"
+              className="q-icon-button flex items-center justify-center disabled:opacity-30"
             >
               <BackIcon className="h-4 w-4 rotate-180" />
             </button>
@@ -140,7 +141,7 @@ export const DateSheet = ({
                     // Ховер — только у невыбранных дней: иначе он перекрыл
                     // бы фирменный фон выбранного, а светлый текст остался
                     // бы и число пропадало под курсором.
-                    className={`flex items-center justify-center rounded-xl disabled:opacity-30 ${
+                    className={`q-select-option flex items-center justify-center rounded-xl disabled:opacity-30 ${
                       isDesktop ? 'h-9 text-sm' : 'h-11 text-base'
                     } ${
                       draft === day.date

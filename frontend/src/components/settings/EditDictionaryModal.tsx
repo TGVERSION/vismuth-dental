@@ -150,20 +150,25 @@ export function EditDictionaryModal({
   return (
     <div
       onClick={handleOverlayClick}
-      className="modal-overlay fixed inset-0 bg-black/50 flex justify-center items-start pt-10 z-1002 overflow-y-auto"
+      className="modal-overlay fixed inset-0 z-[var(--ui-z-modal)] flex items-start justify-center overflow-y-auto bg-[color:var(--ui-color-alabaster-dark-800)]/20 px-4 py-8"
     >
-      <div className="bg-white rounded-xl w-160 h-auto pr-5 pt-5 pb-10 pl-10 shadow-[0_8px_32px_rgba(0,0,0,0.12)] animate-fade-in">
+      <div className="animate-fade-in h-auto w-full max-w-160 rounded-2xl bg-white p-6 shadow-[var(--ui-shadow)] sm:p-8">
         <div className="flex justify-end">
-          <button type="button" onClick={onClose} className="cursor-pointer">
+          <button
+            type="button"
+            onClick={onClose}
+            className="vismuth-icon-button"
+            aria-label="Закрыть"
+          >
             <Image alt="close" src="/close.svg" width={20} height={20} />
           </button>
         </div>
         <div className="mr-5">
-          <h2 className="text-[32px] font-medium text-[#202020] mb-7.5">
+          <h2 className="mb-6 text-[length:var(--ui-font-size-31)] font-medium text-[var(--ui-color-alabaster-dark-800)]">
             {dictionary ? 'Редактирование справочника' : 'Новый справочник'}
           </h2>
 
-          <label className="block text-[14px] text-[#6C757D] mb-1.25">
+          <label className="block text-[length:var(--ui-font-size-14)] text-[var(--ui-color-alabaster-950)] mb-[var(--ui-space-4)]">
             Название справочника
           </label>
           <input
@@ -174,21 +179,21 @@ export function EditDictionaryModal({
             }
             placeholder="Введите название"
             readOnly={!!dictionary}
-            className={`w-full border-0 h-10 rounded-lg px-3 py-2 text-sm text-[#202020] bg-[#F2F4F7] outline-none mb-4 transition-colors ${
+            className={`vismuth-input mb-4 w-full ${
               dictionary
                 ? 'opacity-60 cursor-default'
-                : 'focus:border-[#5D8CF1]'
+                : 'focus:border-[var(--ui-color-blue-600)]'
             }`}
           />
 
           {data.totalCount !== null && (
-            <p className="text-xs text-[#6C757D] mb-3">
+            <p className="text-xs text-[var(--ui-color-alabaster-950)] mb-3">
               Показано{' '}
-              <span className="text-[#5D8CF1]">
+              <span className="text-[var(--ui-color-blue-600)]">
                 {data.loadedCount.toLocaleString('ru-RU')}
               </span>{' '}
               из{' '}
-              <span className="text-[#5D8CF1]">
+              <span className="text-[var(--ui-color-blue-600)]">
                 {data.totalCount.toLocaleString('ru-RU')}
               </span>
             </p>
@@ -229,14 +234,14 @@ export function EditDictionaryModal({
             <button
               type="button"
               onClick={handleSave}
-              className="cursor-pointer h-12 w-full py-3 bg-[#5D8CF1] hover:bg-[#769CEF] text-white rounded-xl transition-colors"
+              className="vismuth-button vismuth-button--primary w-full"
             >
               Сохранить
             </button>
             <button
               type="button"
               onClick={onClose}
-              className="cursor-pointer h-12 w-full py-3 bg-[#DCE7FF] hover:bg-[#F0F5FF] rounded-xl transition-colors"
+              className="vismuth-button vismuth-button--secondary w-full"
             >
               Отменить
             </button>

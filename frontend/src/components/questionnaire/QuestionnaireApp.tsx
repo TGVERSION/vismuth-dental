@@ -101,8 +101,14 @@ const PatientInfoStep = ({
 export const QuestionnaireApp = ({ slug, link }: QuestionnaireAppProps) => {
   const flow = useQuestionnaireFlow(slug, link);
   const clinic = clinicBranding(link);
-  const gastroEntry = (link?.doctor ? [link.doctor] : link?.doctors ?? []).some((doctor) =>
-    doctor.specializations.some((specialty) => /гастро/i.test(specialty.name) && !/детск/i.test(specialty.name)));
+  const gastroEntry = (
+    link?.doctor ? [link.doctor] : (link?.doctors ?? [])
+  ).some((doctor) =>
+    doctor.specializations.some(
+      (specialty) =>
+        /гастро/i.test(specialty.name) && !/детск/i.test(specialty.name),
+    ),
+  );
 
   const [consentOpen, setConsentOpen] = useState(false);
   // Возврат из чата к выбору врача — экран поверх шага: прежняя анкета
@@ -187,10 +193,16 @@ export const QuestionnaireApp = ({ slug, link }: QuestionnaireAppProps) => {
     if (step) {
       switch (screenForStep(step)) {
         case 'gastro':
-          return <GastroQuestionnaireStep
-            key={`${flow.questionnaireId}:${step.step_key}:${gastroMeta(step)?.revision ?? 0}`}
-            step={step} submit={flow.submit} isSubmitting={flow.isSubmitting}
-            submitError={flow.submitError} clinicPhone={clinic.phone} />;
+          return (
+            <GastroQuestionnaireStep
+              key={`${flow.questionnaireId}:${step.step_key}:${gastroMeta(step)?.revision ?? 0}`}
+              step={step}
+              submit={flow.submit}
+              isSubmitting={flow.isSubmitting}
+              submitError={flow.submitError}
+              clinicPhone={clinic.phone}
+            />
+          );
         case 'doctor':
           return (
             <DoctorPicker
@@ -268,7 +280,10 @@ export const QuestionnaireApp = ({ slug, link }: QuestionnaireAppProps) => {
                 onSelect={(doctor) => startWithDoctor(doctor.membership_id)}
               />
               {flow.startError && !flow.isStarting ? (
-                <p role="alert" className="text-sm text-[#C2334D]">
+                <p
+                  role="alert"
+                  className="text-sm text-[var(--ui-color-red-700)]"
+                >
                   {flow.startError}
                 </p>
               ) : null}

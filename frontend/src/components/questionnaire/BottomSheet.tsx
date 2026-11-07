@@ -58,7 +58,7 @@ export const BottomSheet = ({
   return createPortal(
     <div
       data-questionnaire
-      className="fixed inset-0 z-[1100] flex flex-col justify-end"
+      className="fixed inset-0 z-[var(--ui-z-modal)] flex flex-col justify-end"
       style={theme}
     >
       <button
@@ -72,7 +72,7 @@ export const BottomSheet = ({
         role="dialog"
         aria-modal="true"
         aria-label={title}
-        className="animate-slide-up relative flex max-h-[85dvh] flex-col rounded-t-2xl bg-[var(--q-bg)]"
+        className="animate-slide-up relative flex max-h-[85dvh] flex-col rounded-t-[var(--ui-radius-2xl)] bg-[var(--q-bg)] shadow-[var(--ui-shadow)]"
       >
         <div className="flex shrink-0 items-center justify-between px-4 pt-5 pb-3">
           <h2 className="text-lg font-semibold">{title}</h2>
@@ -80,7 +80,7 @@ export const BottomSheet = ({
             type="button"
             onClick={onClose}
             aria-label="Закрыть"
-            className="-mr-2 flex h-11 w-11 items-center justify-center"
+            className="q-icon-button -mr-2 flex items-center justify-center"
           >
             <Image src="/close.svg" alt="" width={16} height={16} />
           </button>

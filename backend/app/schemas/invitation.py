@@ -7,6 +7,7 @@ from .auth import TokenResponse
 
 
 class InvitationPreview(BaseModel):
+    is_operator: bool = False
     email: str
     clinic_name: str
     clinic_id: str

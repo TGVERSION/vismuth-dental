@@ -164,7 +164,10 @@ export default function AuthForms() {
 
     setLoading(true);
 
-    const result = await handleConfirmRegistration(pendingRegistration.login, fullCode);
+    const result = await handleConfirmRegistration(
+      pendingRegistration.login,
+      fullCode,
+    );
 
     if (result.success) {
       setCode(['', '', '', '']);
@@ -205,9 +208,9 @@ export default function AuthForms() {
   };
 
   return (
-    <div className="min-h-screen bg-[#F3F4F8] mx-auto my-auto flex items-center justify-center">
-      <div className="bg-white rounded-2xl w-full max-w-130 p-15">
-        <div className="mx-auto mb-6.25">
+    <div className="min-h-screen bg-[var(--ui-color-slate-100)] mx-auto my-auto flex items-center justify-center">
+      <div className="bg-white rounded-2xl w-full max-w-130 p-6 sm:p-12">
+        <div className="mx-auto mb-[var(--ui-space-24)]">
           <Image
             alt="logo"
             className="logo mx-auto"
@@ -218,10 +221,12 @@ export default function AuthForms() {
         </div>
         {mode === 'login' && (
           <>
-            <h2 className="text-center text-[#6F6F6F] mb-8.75">Вход</h2>
+            <h2 className="text-center text-[var(--ui-color-alabaster-950)] mb-[var(--ui-space-32)]">
+              Вход
+            </h2>
             <form onSubmit={handleLoginSubmit} className="space-y-5">
               <div>
-                <label className="block text-sm text-[#6C757D] mb-1.25">
+                <label className="block text-sm text-[var(--ui-color-alabaster-950)] mb-[var(--ui-space-4)]">
                   Почта
                 </label>
                 <input
@@ -231,13 +236,13 @@ export default function AuthForms() {
                     setUserData((prev) => ({ ...prev, login: e.target.value }))
                   }
                   placeholder="Введите..."
-                  className="w-full px-3 py-2 bg-[#F3F4F8] border-0 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#5D8CF1] transition-all"
+                  className="vismuth-input w-full px-3 py-2 bg-[var(--ui-color-slate-100)] border-0 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--ui-color-blue-600)] transition-all"
                   required
                   disabled={loading}
                 />
               </div>
               <div>
-                <label className="block text-sm text-[#6C757D] mb-1.25">
+                <label className="block text-sm text-[var(--ui-color-alabaster-950)] mb-[var(--ui-space-4)]">
                   Пароль
                 </label>
                 <div className="relative">
@@ -246,10 +251,13 @@ export default function AuthForms() {
                     value={userData.password}
                     minLength={8}
                     onChange={(e) =>
-                      setUserData((prev) => ({ ...prev, password: e.target.value }))
+                      setUserData((prev) => ({
+                        ...prev,
+                        password: e.target.value,
+                      }))
                     }
                     placeholder="Введите..."
-                    className="w-full px-3 py-2 pr-10 bg-[#F3F4F8] border-0 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#5D8CF1] transition-all"
+                    className="vismuth-input w-full px-3 py-2 pr-10 bg-[var(--ui-color-slate-100)] border-0 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--ui-color-blue-600)] transition-all"
                     required
                     disabled={loading}
                   />
@@ -281,7 +289,7 @@ export default function AuthForms() {
               <button
                 type="submit"
                 disabled={loading}
-                className="cursor-pointer h-11.75 w-full py-3 bg-[#5D8CF1] mt-2.5 hover:bg-[#769CEF] text-white rounded-xl transition-colors"
+                className="vismuth-button--primary cursor-pointer h-11.75 w-full py-3 bg-[var(--ui-color-blue-600)] mt-[var(--ui-space-10)] hover:bg-[var(--ui-color-blue-700)] text-white rounded-xl transition-colors"
               >
                 {loading ? (
                   <div className="animate-spin mx-auto my- rounded-full h-5 w-5 border-b-2 border-white"></div>
@@ -290,12 +298,12 @@ export default function AuthForms() {
                 )}
               </button>
             </form>
-            <div className="flex justify-center mt-7.5 text-sm">
+            <div className="flex justify-center mt-[var(--ui-space-32)] text-sm">
               {/* <button
         type="button"
                 onClick={() => console.log('Forgot password')}
                 disabled={loading}
-                className="text-[#5D8CF1] hover:text-[#769CEF] cursor-pointer transition-colors"
+                className="text-[var(--ui-color-blue-600)] hover:text-[var(--ui-color-blue-700)] cursor-pointer transition-colors"
               >
                 Забыли пароль?
               </button> */}
@@ -303,7 +311,7 @@ export default function AuthForms() {
                 type="button"
                 onClick={switchToRegister}
                 disabled={loading}
-                className="text-[#5D8CF1] hover:text-[#769CEF] cursor-pointer transition-colors"
+                className="text-[var(--ui-color-blue-600)] hover:text-[var(--ui-color-blue-700)] cursor-pointer transition-colors"
               >
                 Зарегистрироваться
               </button>
@@ -313,10 +321,12 @@ export default function AuthForms() {
 
         {mode === 'register' && (
           <>
-            <h2 className="text-center text-[#6C757D] mb-8.75">Регистрация</h2>
+            <h2 className="text-center text-[var(--ui-color-alabaster-950)] mb-[var(--ui-space-32)]">
+              Регистрация
+            </h2>
             <form onSubmit={handleRegisterSubmit} className="space-y-5">
               <div>
-                <label className="block text-sm text-[#6C757D] mb-1.25">
+                <label className="block text-sm text-[var(--ui-color-alabaster-950)] mb-[var(--ui-space-4)]">
                   Почта
                 </label>
                 <input
@@ -326,13 +336,13 @@ export default function AuthForms() {
                     setUserData((prev) => ({ ...prev, login: e.target.value }))
                   }
                   placeholder="Введите..."
-                  className="w-full px-3 py-2 bg-[#F3F4F8] border-0 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#5D8CF1] transition-all"
+                  className="vismuth-input w-full px-3 py-2 bg-[var(--ui-color-slate-100)] border-0 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--ui-color-blue-600)] transition-all"
                   required
                   disabled={loading}
                 />
               </div>
               <div>
-                <label className="block text-sm text-[#6C757D] mb-1.25">
+                <label className="block text-sm text-[var(--ui-color-alabaster-950)] mb-[var(--ui-space-4)]">
                   Пароль
                 </label>
                 <div className="relative">
@@ -341,10 +351,13 @@ export default function AuthForms() {
                     value={userData.password}
                     minLength={8}
                     onChange={(e) =>
-                      setUserData((prev) => ({ ...prev, password: e.target.value }))
+                      setUserData((prev) => ({
+                        ...prev,
+                        password: e.target.value,
+                      }))
                     }
                     placeholder="Введите..."
-                    className="w-full px-3 py-2 pr-10 bg-[#F3F4F8] border-0 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#5D8CF1] transition-all"
+                    className="vismuth-input w-full px-3 py-2 pr-10 bg-[var(--ui-color-slate-100)] border-0 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--ui-color-blue-600)] transition-all"
                     required
                     disabled={loading}
                   />
@@ -375,7 +388,7 @@ export default function AuthForms() {
               </div>
               <button
                 type="submit"
-                className="w-full h-11.75 py-3 cursor-pointer bg-[#5D8CF1] hover:bg-[#769CEF] mt-2.5 text-white rounded-xl transition-colors"
+                className="vismuth-button--primary w-full h-11.75 py-3 cursor-pointer bg-[var(--ui-color-blue-600)] hover:bg-[var(--ui-color-blue-700)] mt-[var(--ui-space-10)] text-white rounded-xl transition-colors"
               >
                 {loading ? (
                   <div className="animate-spin mx-auto my- rounded-full h-5 w-5 border-b-2 border-white"></div>
@@ -384,12 +397,12 @@ export default function AuthForms() {
                 )}
               </button>
             </form>
-            <div className="text-center mt-7.5">
+            <div className="text-center mt-[var(--ui-space-32)]">
               <button
                 type="button"
                 onClick={switchToLogin}
                 disabled={loading}
-                className="text-[#5D8CF1] hover:text-[#769CEF] cursor-pointer transition-colors text-sm"
+                className="text-[var(--ui-color-blue-600)] hover:text-[var(--ui-color-blue-700)] cursor-pointer transition-colors text-sm"
               >
                 Войти
               </button>
@@ -413,13 +426,13 @@ export default function AuthForms() {
                 height={25}
               />
             </button>
-            <div className="text-center flex flex-col items-center -mt-8 mb-7.5">
-              <h2 className="text-[#202020] font-bold mb-2 text-lg">
+            <div className="text-center flex flex-col items-center -mt-8 mb-[var(--ui-space-32)]">
+              <h2 className="text-[var(--ui-color-alabaster-dark-800)] font-bold mb-2 text-lg">
                 Для завершения регистрации введите код <br />
                 из письма на почте
               </h2>
               <p
-                className="text-lg w-fit text-[#5D8CF1] hover:text-[#769CEF] font-bold cursor-pointer"
+                className="text-lg w-fit text-[var(--ui-color-blue-600)] hover:text-[var(--ui-color-blue-700)] font-bold cursor-pointer"
                 onClick={() => {
                   handleClickEmail(pendingRegistration.login);
                 }}
@@ -444,7 +457,7 @@ export default function AuthForms() {
                     onChange={(e) => handleCodeChange(index, e.target.value)}
                     onPaste={handlePaste}
                     onKeyDown={(e) => handleCodeKeyDown(index, e)}
-                    className="w-12 h-14 text-center text-xl font-semibold bg-[#F3F4F8] border-0 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#5D8CF1] transition-all"
+                    className="vismuth-input w-12 h-14 text-center text-xl font-semibold bg-[var(--ui-color-slate-100)] border-0 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--ui-color-blue-600)] transition-all"
                     disabled={loading}
                   />
                 ))}
@@ -453,7 +466,7 @@ export default function AuthForms() {
               <button
                 type="submit"
                 disabled={code.some((d) => !d) || loading}
-                className="w-full h-11.75 py-3 bg-[#5D8CF1] hover:bg-[#769CEF] disabled:bg-gray-300 disabled:cursor-not-allowed text-white rounded-xl transition-colors"
+                className="vismuth-button--primary w-full h-11.75 py-3 bg-[var(--ui-color-blue-600)] hover:bg-[var(--ui-color-blue-700)] disabled:bg-gray-300 disabled:cursor-not-allowed text-white rounded-xl transition-colors"
               >
                 {loading ? (
                   <div className="animate-spin mx-auto my- rounded-full h-5 w-5 border-b-2 border-white"></div>

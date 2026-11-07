@@ -9,6 +9,8 @@ from ..models.clinic_membership import ClinicMembership
 from ..models.service_user import ServiceUser
 from ..models.specialization import RefSpecialization
 from ..schemas.clinic_join import JoinRequestRead
+from .staff_roles import STAFF_ROLES, staff_role_label
+from .roles import set_user_role, user_role_load_options
 from .clinic_access import generate_invite_token, hash_invite_token
 from .clinic_members import ensure_doctors_limit, set_membership_specializations, unique_membership_public_slug, validate_specialization_ids
 
@@ -21,9 +23,10 @@ def ensure_join_available(clinic):
 
 
 def ensure_role_specializations(role, ids):
-    if role not in ('operator', 'doctor'):
+    if role not in {item['value'] for item in STAFF_ROLES}:
         raise HTTPException(400, 'Недопустимая роль')
-    if (role == 'doctor' and not ids) or (role == 'operator' and ids):
+    doctor = role in ('doctor', 'clinic_admin_doctor')
+    if (doctor and not ids) or (not doctor and ids):
         raise HTTPException(400, 'Выберите специализации только для врача')
 
 
@@ -75,7 +78,9 @@ async def revoke_join_link(db, clinic_id, *, commit=True):
 
 async def create_join_request(db, user, clinic, role, ids):
     # Serialize on user as well: two clinics cannot concurrently approve one account.
-    await db.execute(select(ServiceUser.id).where(ServiceUser.id == user.id).with_for_update())
+    user = (await db.execute(select(ServiceUser).options(*user_role_load_options()).where(ServiceUser.id == user.id).with_for_update().execution_options(populate_existing=True))).scalar_one()
+    if user.role == 'super_admin':
+        raise HTTPException(409, 'Супер-администратору не назначается роль сотрудника')
     ensure_role_specializations(role, ids)
     ids = await validate_specialization_ids(db, ids)
     membership = (await db.execute(select(ClinicMembership).where(
@@ -103,7 +108,7 @@ async def read_request(db, request):
     return JoinRequestRead(
         id=request.id, clinic_id=clinic.id, clinic_name=clinic.name, user_id=user.id,
         email=user.login, first_name=user.first_name, last_name=user.last_name, middle_name=user.middle_name,
-        requested_role=request.requested_role, specialization_ids=request.specialization_ids,
+        requested_role=request.requested_role, requested_role_label=staff_role_label(request.requested_role), specialization_ids=request.specialization_ids,
         status=request.status, created_at=request.created_at, reviewed_at=request.reviewed_at,
     )
 
@@ -113,7 +118,7 @@ async def review_join_request(db, request_id, actor, decision):
     if initial is None:
         raise HTTPException(404, 'Заявка не найдена')
     clinic = await lock_clinic(db, initial.clinic_id)
-    user = (await db.execute(select(ServiceUser).where(ServiceUser.id == initial.user_id).with_for_update())).scalar_one()
+    user = (await db.execute(select(ServiceUser).options(*user_role_load_options()).where(ServiceUser.id == initial.user_id).with_for_update().execution_options(populate_existing=True))).scalar_one()
     request = (await db.execute(select(ClinicJoinRequest).where(
         ClinicJoinRequest.id == request_id,
     ).with_for_update().execution_options(populate_existing=True))).scalar_one()
@@ -122,6 +127,8 @@ async def review_join_request(db, request_id, actor, decision):
             raise HTTPException(409, 'Заявка уже рассмотрена')
         return await read_request(db, request)
     if decision == 'approved':
+        if user.role == 'super_admin':
+            raise HTTPException(409, 'Супер-администратору не назначается роль сотрудника')
         ensure_join_available(clinic)
         if not user.is_active or user.deleted_at is not None:
             raise HTTPException(409, 'Учётная запись недоступна')
@@ -131,18 +138,19 @@ async def review_join_request(db, request_id, actor, decision):
         ).with_for_update())).scalars().all()
         if memberships:
             raise HTTPException(409, 'Пользователь уже состоит в клинике; требуется решение о переводе')
-        await ensure_doctors_limit(db, clinic, adding_doctor=request.requested_role == 'doctor')
+        await ensure_doctors_limit(db, clinic, adding_doctor=request.requested_role in ('doctor', 'clinic_admin_doctor'))
         ids = await validate_specialization_ids(db, request.specialization_ids)
         ensure_role_specializations(request.requested_role, ids)
         membership = ClinicMembership(
-            clinic_id=clinic.id, user_id=user.id, is_clinic_admin=False,
-            is_doctor=request.requested_role == 'doctor', is_operator=request.requested_role == 'operator',
+            clinic_id=clinic.id, user_id=user.id, is_clinic_admin=request.requested_role in ('clinic_admin', 'clinic_admin_doctor'),
+            is_doctor=request.requested_role in ('doctor', 'clinic_admin_doctor'), is_operator=request.requested_role == 'operator',
             status='active', public_slug=await unique_membership_public_slug(db),
         )
         db.add(membership)
         await db.flush()
         await set_membership_specializations(db, membership.id, ids)
         user.clinic_join_restricted = False
+        await set_user_role(db, user, 'doctor')
     request.status = decision
     request.reviewed_at = datetime.now(timezone.utc)
     request.reviewed_by = actor.id
@@ -159,6 +167,6 @@ async def read_requests(db, requests):
         id=r.id, clinic_id=r.clinic_id, clinic_name=clinics[r.clinic_id].name, user_id=r.user_id,
         email=users[r.user_id].login, first_name=users[r.user_id].first_name,
         last_name=users[r.user_id].last_name, middle_name=users[r.user_id].middle_name,
-        requested_role=r.requested_role, specialization_ids=r.specialization_ids,
+        requested_role=r.requested_role, requested_role_label=staff_role_label(r.requested_role), specialization_ids=r.specialization_ids,
         status=r.status, created_at=r.created_at, reviewed_at=r.reviewed_at,
     ) for r in requests]

@@ -10,7 +10,11 @@ import {
 import { DentalDoctorSummary } from './DentalDoctorSummary';
 import { ProtocolActionButton } from './ProtocolActionButton';
 import { QuestionnaireSection } from './QuestionnaireSection';
-import { GastroDoctorHighlights, GastroDoctorHistory, GastroPatientQuestions } from './GastroDoctorSummary';
+import {
+  GastroDoctorHighlights,
+  GastroDoctorHistory,
+  GastroPatientQuestions,
+} from './GastroDoctorSummary';
 
 interface QuestionnaireCardProps {
   questionnaire: DoctorQuestionnaireDetail;
@@ -31,16 +35,20 @@ export const QuestionnaireCard = ({
 
   return (
     <article className="flex flex-col gap-9">
-      <header className="flex items-baseline gap-9 text-[#6C757D]">
-        <span className="shrink-0 text-[20px]">
+      <header className="flex items-baseline gap-9 text-[var(--ui-color-alabaster-950)]">
+        <span className="shrink-0 text-[length:var(--ui-font-size-20)]">
           {formatAppointmentTime(questionnaire.appointment_time)}
         </span>
-        <span className="min-w-0 flex-1 truncate text-[20px]">
+        <span className="min-w-0 flex-1 truncate text-[length:var(--ui-font-size-20)]">
           {questionnaire.code}
           {questionnaire.code && name && ' · '}
           {name}
         </span>
-        {typeLabel && <span className="shrink-0 text-[14px]">{typeLabel}</span>}
+        {typeLabel && (
+          <span className="shrink-0 text-[length:var(--ui-font-size-14)]">
+            {typeLabel}
+          </span>
+        )}
       </header>
 
       {isReady ? (
@@ -48,24 +56,39 @@ export const QuestionnaireCard = ({
           {questionnaire.kind === 'dental' && questionnaire.structured ? (
             <DentalDoctorSummary structured={questionnaire.structured} />
           ) : null}
-          {questionnaire.kind === 'gastro' && questionnaire.structured ? <GastroDoctorHighlights structured={questionnaire.structured} /> : null}
-          {buildSections(questionnaire).map((section) => questionnaire.kind === 'gastro' && section.text.length > 3000 ? (
-            <details key={section.key} className="rounded-xl border border-[#D7DCE3] p-4">
-              <summary className="cursor-pointer py-2 font-medium">{section.title} — полный текст</summary>
-              <div className="mt-4"><QuestionnaireSection section={section} /></div>
-            </details>
-          ) : <QuestionnaireSection key={section.key} section={section} />)}
-          {questionnaire.kind === 'gastro' && questionnaire.structured ? <>
-            <GastroDoctorHistory structured={questionnaire.structured} />
-            <GastroPatientQuestions structured={questionnaire.structured} />
-          </> : null}
+          {questionnaire.kind === 'gastro' && questionnaire.structured ? (
+            <GastroDoctorHighlights structured={questionnaire.structured} />
+          ) : null}
+          {buildSections(questionnaire).map((section) =>
+            questionnaire.kind === 'gastro' && section.text.length > 3000 ? (
+              <details
+                key={section.key}
+                className="rounded-xl border border-[var(--ui-color-slate-200)] p-4"
+              >
+                <summary className="cursor-pointer py-2 font-medium">
+                  {section.title} — полный текст
+                </summary>
+                <div className="mt-4">
+                  <QuestionnaireSection section={section} />
+                </div>
+              </details>
+            ) : (
+              <QuestionnaireSection key={section.key} section={section} />
+            ),
+          )}
+          {questionnaire.kind === 'gastro' && questionnaire.structured ? (
+            <>
+              <GastroDoctorHistory structured={questionnaire.structured} />
+              <GastroPatientQuestions structured={questionnaire.structured} />
+            </>
+          ) : null}
           <ProtocolActionButton
             questionnaireId={questionnaire.id}
             protocolId={questionnaire.protocol_id}
           />
         </>
       ) : (
-        <p className="py-10 text-center text-[#8B8B8B]">
+        <p className="py-10 text-center text-[var(--ui-color-alabaster-950)]">
           {notReadyMessage(questionnaire.processing_status)}
         </p>
       )}

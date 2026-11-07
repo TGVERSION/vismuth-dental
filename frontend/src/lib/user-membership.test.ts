@@ -7,10 +7,11 @@ import {
 } from './user-membership';
 
 describe('назначение клиники пользователю', () => {
-  it('не предлагает операторскую роль аккаунту с платформенными привилегиями', () => {
+  it('супер-админ назначает единую роль сотруднику без отдельной смены системной роли', () => {
     expect(canEditMembership('super_admin', 'doctor')).toBe(true);
     expect(canEditMembership('admin', 'doctor')).toBe(false);
-    expect(canEditMembership('super_admin', 'admin')).toBe(false);
+    expect(canEditMembership('super_admin', 'admin')).toBe(true);
+    expect(canEditMembership('super_admin', 'patient')).toBe(true);
     expect(canEditMembership('super_admin', 'super_admin')).toBe(false);
   });
 

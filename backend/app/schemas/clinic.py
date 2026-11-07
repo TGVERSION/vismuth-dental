@@ -98,6 +98,7 @@ class ClinicRead(BaseModel):
 
 
 class ClinicInvitationCreate(BaseModel):
+    is_operator: bool = False
     email: EmailStr
     first_name: Optional[str] = Field(default=None, max_length=255)
     last_name: Optional[str] = Field(default=None, max_length=255)
@@ -118,6 +119,7 @@ class ClinicInvitationCreate(BaseModel):
 
 
 class ClinicInvitationRead(BaseModel):
+    is_operator: bool = False
     id: UUID
     clinic_id: UUID
     email: str

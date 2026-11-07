@@ -1,8 +1,8 @@
 // Фон поля зависит от того, заполнено ли оно: пустое — светлее,
 // заполненное — темнее (макеты раздела «Клиники» и приглашения).
 
-export const FIELD_EMPTY_BG = 'bg-[#F1F1F1]';
-export const FIELD_FILLED_BG = 'bg-[#E2E8F0]';
+export const FIELD_EMPTY_BG = 'bg-[var(--ui-color-alabaster-500)]';
+export const FIELD_FILLED_BG = 'bg-[var(--ui-color-slate-200)]';
 
 /** Заполнено ли поле: непустая строка, непустой список, выбранное значение. */
 export const isFilled = (value: unknown): boolean => {

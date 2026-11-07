@@ -73,10 +73,13 @@ export const ClinicCard = ({ clinicId }: ClinicCardProps) => {
   return (
     <>
       <div className="flex items-center justify-between gap-4 px-8 pb-6">
-        <h3 className="min-w-0 truncate text-3xl font-medium text-[#202020]">
+        <h3 className="min-w-0 truncate text-3xl font-medium text-[var(--ui-color-alabaster-dark-800)]">
           {saved?.name || 'Новая клиника'}
         </h3>
-        <span role="status" className="shrink-0 text-sm text-[#6C757D]">
+        <span
+          role="status"
+          className="shrink-0 text-sm text-[var(--ui-color-alabaster-950)]"
+        >
           {card.isSaving ? 'Сохраняется…' : saved ? 'Сохранено' : ''}
         </span>
       </div>
@@ -84,13 +87,13 @@ export const ClinicCard = ({ clinicId }: ClinicCardProps) => {
       <section className="px-8 pb-8" aria-labelledby={`${baseId}-clinic`}>
         <h4
           id={`${baseId}-clinic`}
-          className="mb-3 text-[30px] font-medium text-[#202020]"
+          className="mb-3 text-[length:var(--ui-font-size-31)] font-medium text-[var(--ui-color-alabaster-dark-800)]"
         >
           Клиника
         </h4>
 
         {!saved && (
-          <p className="mb-2 text-sm text-[#6C757D]">
+          <p className="mb-2 text-sm text-[var(--ui-color-alabaster-950)]">
             Клиника сохранится, когда будут заполнены название, тип и период
             доступа
           </p>
@@ -239,7 +242,7 @@ export const ClinicCard = ({ clinicId }: ClinicCardProps) => {
           error={errors.brand_color}
         >
           <div
-            className={`flex h-10 items-center gap-2 rounded-xl ${fieldFillClass(draft.brand_color)} px-3.5 focus-within:ring-2 focus-within:ring-[#5D8CF1]`}
+            className={`flex h-10 items-center gap-2 rounded-xl ${fieldFillClass(draft.brand_color)} px-[var(--ui-space-14)] focus-within:ring-2 focus-within:ring-[var(--ui-color-blue-600)]`}
           >
             <input
               type="color"
@@ -264,7 +267,7 @@ export const ClinicCard = ({ clinicId }: ClinicCardProps) => {
               onKeyDown={blurOnEnter}
               placeholder="#C9CAFF"
               maxLength={7}
-              className="min-w-0 flex-1 bg-transparent text-sm text-[#202020] outline-none placeholder:text-[#A0A7B0]"
+              className="min-w-0 flex-1 bg-transparent text-sm text-[var(--ui-color-alabaster-dark-800)] outline-none placeholder:text-[var(--ui-color-alabaster-800)]"
             />
           </div>
         </FieldRow>
@@ -287,7 +290,7 @@ export const ClinicCard = ({ clinicId }: ClinicCardProps) => {
             onDoctorsChanged={card.refreshSaved}
           />
         ) : (
-          <p className="text-sm text-[#6C757D]">
+          <p className="text-sm text-[var(--ui-color-alabaster-950)]">
             Сотрудников можно будет добавить после сохранения клиники
           </p>
         )}

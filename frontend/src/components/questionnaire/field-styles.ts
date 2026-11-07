@@ -10,5 +10,4 @@
  * и какая победит — зависит от порядка правил в собранной таблице стилей.
  * Из-за этого поле поиска врача схлопывалось, а фильтр занимал всю строку.
  */
-export const FIELD_CLASS =
-  'min-h-[44px] rounded-xl bg-[var(--q-surface)] px-4 text-base outline-none';
+export const FIELD_CLASS = 'q-field outline-none';

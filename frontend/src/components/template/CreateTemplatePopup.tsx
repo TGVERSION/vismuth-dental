@@ -84,12 +84,14 @@ export const CreateTemplatePopup: React.FC<CreateTemplatePopupProps> = ({
     {
       value: 'personal',
       label: 'Личный',
-      badgeClass: 'bg-[#FFD6BF] text-[#202020]',
+      badgeClass:
+        'bg-[var(--ui-color-red-200)] text-[var(--ui-color-alabaster-dark-800)]',
     },
     {
       value: 'general',
       label: 'Общий',
-      badgeClass: 'bg-[#CFE5E6] text-[#202020]',
+      badgeClass:
+        'bg-[var(--ui-color-slate-300)] text-[var(--ui-color-alabaster-dark-800)]',
     },
   ];
 
@@ -300,24 +302,24 @@ export const CreateTemplatePopup: React.FC<CreateTemplatePopupProps> = ({
   return (
     <>
       <div
-        className="modal-overlay fixed inset-0 flex items-start justify-center z-50 pt-10 pb-10 overflow-y-auto"
+        className="modal-overlay px-4 fixed inset-0 flex items-start justify-center z-50 pt-10 pb-10 overflow-y-auto"
         onClick={handleClose}
       >
         <div
-          className="bg-white rounded-2xl w-full max-w-xl p-5 shadow-2xl animate-fade-in"
+          className="bg-white rounded-2xl w-full max-w-xl p-5 shadow-[var(--ui-shadow)] animate-fade-in"
           onClick={(e) => e.stopPropagation()}
         >
           <div className="flex justify-end">
             <button
               type="button"
               onClick={step === 1 ? handleClose : () => setStep(1)}
-              className="cursor-pointer"
+              className="vismuth-icon-button cursor-pointer"
             >
               <Image alt="close" src="/close.svg" width={25} height={25} />
             </button>
           </div>
 
-          <h2 className="text-[32px] font-medium mb-7.5 px-5">
+          <h2 className="text-[length:var(--ui-font-size-31)] font-medium mb-[var(--ui-space-32)] px-5">
             Создание шаблона
           </h2>
 
@@ -338,7 +340,7 @@ export const CreateTemplatePopup: React.FC<CreateTemplatePopupProps> = ({
                       const opt = Array.isArray(option) ? option[0] : option;
                       return (
                         <span
-                          className={`text-sm px-2 py-0.75 rounded-full ${opt.badgeClass}`}
+                          className={`text-sm px-2 py-[var(--ui-space-2)] rounded-full ${opt.badgeClass}`}
                         >
                           {opt.label}
                         </span>
@@ -346,7 +348,7 @@ export const CreateTemplatePopup: React.FC<CreateTemplatePopupProps> = ({
                     }}
                     renderOption={(option) => (
                       <span
-                        className={`text-sm px-2 py-0.75 rounded-full ${option.badgeClass}`}
+                        className={`text-sm px-2 py-[var(--ui-space-2)] rounded-full ${option.badgeClass}`}
                       >
                         {option.label}
                       </span>
@@ -362,7 +364,7 @@ export const CreateTemplatePopup: React.FC<CreateTemplatePopupProps> = ({
                     value={templateName}
                     onChange={(e) => setTemplateName(e.target.value)}
                     placeholder="Введите название"
-                    className="w-full h-10 px-4 py-2.5 bg-gray-50 border-0 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#5D8CF1]"
+                    className="vismuth-input w-full h-10 px-4 py-[var(--ui-space-10)] bg-gray-50 border-0 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--ui-color-blue-600)]"
                     autoFocus
                   />
                 </div>
@@ -374,11 +376,11 @@ export const CreateTemplatePopup: React.FC<CreateTemplatePopupProps> = ({
                 </label>
                 <div className="space-y-2 max-h-60 overflow-y-auto">
                   <label className="flex items-center justify-between p-3 rounded-lg cursor-pointer border-0 hover:bg-gray-50 transition-colors">
-                    <span className="text-sm text-[#202020]">
+                    <span className="text-sm text-[var(--ui-color-alabaster-dark-800)]">
                       Шаблоны без группы
                     </span>
                     {selectedGroupId === '' ? (
-                      <span className="text-sm text-[#459F49] px-3 py-1.25 bg-[#D4FBD7] rounded-[10px] flex items-center gap-1">
+                      <span className="text-sm text-[var(--ui-color-green-600)] px-3 py-[var(--ui-space-4)] bg-[var(--ui-color-green-100)] rounded-[var(--ui-radius-lg)] flex items-center gap-1">
                         <Image
                           alt="check"
                           src="/check.svg"
@@ -388,7 +390,7 @@ export const CreateTemplatePopup: React.FC<CreateTemplatePopupProps> = ({
                         Выбрано
                       </span>
                     ) : (
-                      <span className="text-sm text-[#5D8CF1] px-3 py-1.25 bg-[#DCE7FF] rounded-[10px] flex items-center gap-1">
+                      <span className="text-sm text-[var(--ui-color-blue-600)] px-3 py-[var(--ui-space-4)] bg-[var(--ui-color-blue-100)] rounded-[var(--ui-radius-lg)] flex items-center gap-1">
                         Выбрать
                       </span>
                     )}
@@ -407,11 +409,11 @@ export const CreateTemplatePopup: React.FC<CreateTemplatePopupProps> = ({
                       key={group.id}
                       className="flex items-center justify-between p-3 rounded-lg cursor-pointer border-0 hover:bg-gray-50 transition-colors"
                     >
-                      <span className="text-sm text-[#202020]">
+                      <span className="text-sm text-[var(--ui-color-alabaster-dark-800)]">
                         {group.name}
                       </span>
                       {selectedGroupId === group.id ? (
-                        <span className="text-sm text-[#459F49] px-3 py-1.25 bg-[#D4FBD7] rounded-[10px] flex items-center gap-1">
+                        <span className="text-sm text-[var(--ui-color-green-600)] px-3 py-[var(--ui-space-4)] bg-[var(--ui-color-green-100)] rounded-[var(--ui-radius-lg)] flex items-center gap-1">
                           <Image
                             alt="check"
                             src="/check.svg"
@@ -421,7 +423,7 @@ export const CreateTemplatePopup: React.FC<CreateTemplatePopupProps> = ({
                           Выбрано
                         </span>
                       ) : (
-                        <span className="text-sm text-[#5D8CF1] px-3 py-1.25 bg-[#DCE7FF] rounded-[10px] flex items-center gap-1">
+                        <span className="text-sm text-[var(--ui-color-blue-600)] px-3 py-[var(--ui-space-4)] bg-[var(--ui-color-blue-100)] rounded-[var(--ui-radius-lg)] flex items-center gap-1">
                           Выбрать
                         </span>
                       )}
@@ -440,7 +442,7 @@ export const CreateTemplatePopup: React.FC<CreateTemplatePopupProps> = ({
                   <button
                     type="button"
                     onClick={() => setShowCreateGroupPopup(true)}
-                    className="mt-3 mx-auto text-[16px] text-[#5D8CF1] cursor-pointer text-center hover:text-[#769CEF] transition-colors"
+                    className="vismuth-function-button mt-3 mx-auto text-[length:var(--ui-font-size-16)] text-[var(--ui-color-blue-600)] cursor-pointer text-center hover:text-[var(--ui-color-blue-700)] transition-colors"
                   >
                     Создать новую группу
                   </button>
@@ -452,7 +454,8 @@ export const CreateTemplatePopup: React.FC<CreateTemplatePopupProps> = ({
                   type="button"
                   onClick={handleNext}
                   disabled={isFromPage ? saving : loading}
-                  className="h-12 bg-[#5D8CF1] text-white cursor-pointer rounded-[15px] hover:bg-[#769CEF] transition-colors disabled:opacity-50"
+                  className="vismuth-button bg-[var(--ui-color-blue-600)] text-white cursor-pointer hover:bg-[var(--ui-color-blue-700)] transition-colors disabled:opacity-50"
+                  data-variant="primary"
                 >
                   {isFromPage ? 'Сохранить' : 'Далее'}
                 </button>
@@ -460,7 +463,8 @@ export const CreateTemplatePopup: React.FC<CreateTemplatePopupProps> = ({
                   type="button"
                   onClick={handleClose}
                   disabled={loading}
-                  className="h-12 rounded-[15px] hover:bg-[#F0F5FF] text-[#202020] cursor-pointer bg-[#DCE7FF] transition-colors disabled:opacity-50"
+                  className="vismuth-button hover:bg-[var(--ui-color-blue-50)] cursor-pointer bg-[var(--ui-color-blue-100)] transition-colors disabled:opacity-50"
+                  data-variant="secondary"
                 >
                   Отменить
                 </button>
@@ -483,7 +487,7 @@ export const CreateTemplatePopup: React.FC<CreateTemplatePopupProps> = ({
                   disabled={structuresLoading || structureOptions.length === 0}
                   renderOption={(option, _isSelected) => (
                     <>
-                      <span className="text-sm text-[#202020] flex-1">
+                      <span className="text-sm text-[var(--ui-color-alabaster-dark-800)] flex-1">
                         {option.label}
                       </span>
                     </>
@@ -511,7 +515,7 @@ export const CreateTemplatePopup: React.FC<CreateTemplatePopupProps> = ({
                 ) : (
                   currentStructureFields.map((field) => (
                     <div key={field.id} className="flex flex-col gap-2">
-                      <label className="text-lg font-medium text-[#202020] flex items-center gap-2">
+                      <label className="text-lg font-medium text-[var(--ui-color-alabaster-dark-800)] flex items-center gap-2">
                         {field.field_label}
                         {field.is_required && (
                           <span className="text-red-500 text-sm">*</span>
@@ -528,7 +532,7 @@ export const CreateTemplatePopup: React.FC<CreateTemplatePopupProps> = ({
                         }
                         placeholder={'Введите текст...'}
                         rows={3}
-                        className="w-full px-4 py-3 bg-gray-50 border-0 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#5D8CF1] resize-none text-sm"
+                        className="w-full px-4 py-3 bg-gray-50 border-0 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--ui-color-blue-600)] resize-none text-sm"
                       />
                     </div>
                   ))
@@ -546,7 +550,8 @@ export const CreateTemplatePopup: React.FC<CreateTemplatePopupProps> = ({
                       !currentProtocolStructure ||
                       currentStructureFields.length === 0
                     }
-                    className="h-12 bg-[#5D8CF1] text-white rounded-[15px] hover:bg-[#769CEF] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="vismuth-button bg-[var(--ui-color-blue-600)] text-white hover:bg-[var(--ui-color-blue-700)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    data-variant="primary"
                   >
                     {saving ? 'Сохранение...' : 'Сохранить'}
                   </button>
@@ -554,7 +559,8 @@ export const CreateTemplatePopup: React.FC<CreateTemplatePopupProps> = ({
                     type="button"
                     onClick={() => setStep(1)}
                     disabled={saving}
-                    className="h-12 rounded-[15px] hover:bg-[#F0F5FF] text-[#202020] cursor-pointer bg-[#DCE7FF] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="vismuth-button hover:bg-[var(--ui-color-blue-50)] cursor-pointer bg-[var(--ui-color-blue-100)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    data-variant="secondary"
                   >
                     Назад
                   </button>

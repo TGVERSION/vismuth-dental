@@ -40,7 +40,9 @@ export const ClinicAdminsField = ({
 
     setSaving(true);
     const results = await Promise.all([
-      ...added.map((memberId) => onPatch(memberId, { is_clinic_admin: true })),
+      ...added.map((memberId) =>
+        onPatch(memberId, { is_clinic_admin: true, is_operator: false }),
+      ),
       ...removed.map((memberId) =>
         onPatch(memberId, { is_clinic_admin: false }),
       ),
@@ -65,7 +67,7 @@ export const ClinicAdminsField = ({
           placeholder={options.length ? 'Не выбраны' : 'Сотрудников пока нет'}
           aria-label="Администраторы"
           renderTrigger={() => (
-            <span className="text-sm text-[#202020]">
+            <span className="text-sm text-[var(--ui-color-alabaster-dark-800)]">
               Выбран: {selected.length}
             </span>
           )}
@@ -75,7 +77,7 @@ export const ClinicAdminsField = ({
         type="button"
         onClick={onInviteAdmin}
         disabled={disabled}
-        className={`mt-1.5 ${LINK_BUTTON_CLASS}`}
+        className={`mt-[var(--ui-space-6)] ${LINK_BUTTON_CLASS}`}
       >
         Пригласить администратора
       </button>

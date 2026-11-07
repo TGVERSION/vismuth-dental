@@ -5,6 +5,16 @@ export const operatorOnly = (
     is_clinic_admin: boolean;
   } | null,
 ) => !!clinic?.is_operator && !clinic.is_doctor && !clinic.is_clinic_admin;
+export const nonClinicalStaff = (
+  clinic: {
+    is_operator?: boolean;
+    is_doctor: boolean;
+    is_clinic_admin: boolean;
+  } | null,
+) =>
+  !!clinic &&
+  !clinic.is_doctor &&
+  (!!clinic.is_operator || clinic.is_clinic_admin);
 export const joinStatusLabel = (status: string) =>
   ({
     pending: 'Ожидает подтверждения',

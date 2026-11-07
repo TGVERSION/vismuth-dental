@@ -67,14 +67,14 @@ export const LinksQrModal = ({ onClose }: LinksQrModalProps) => {
         <div
           role="status"
           aria-label="Загрузка ссылок"
-          className="mx-auto my-16 h-10 w-10 animate-spin rounded-full border-b-2 border-[#5D8CF1]"
+          className="mx-auto my-16 h-10 w-10 animate-spin rounded-full border-b-2 border-[var(--ui-color-blue-600)]"
         />
       );
     }
 
     if (error === 'no_clinic') {
       return (
-        <p className="my-12 text-center text-[#8B8B8B]">
+        <p className="my-12 text-center text-[var(--ui-color-alabaster-950)]">
           Вы не состоите в клинике — ссылок для анкеты нет
         </p>
       );
@@ -83,11 +83,13 @@ export const LinksQrModal = ({ onClose }: LinksQrModalProps) => {
     if (error || !links) {
       return (
         <div className="my-12 flex flex-col items-center gap-3 text-center">
-          <p className="text-[#D91528]">Не удалось загрузить ссылки</p>
+          <p className="text-[var(--ui-color-red-600)]">
+            Не удалось загрузить ссылки
+          </p>
           <button
             type="button"
             onClick={reload}
-            className="cursor-pointer text-[#5D8CF1] hover:text-[#769CEF]"
+            className="vismuth-function-button"
           >
             Повторить
           </button>
@@ -97,7 +99,7 @@ export const LinksQrModal = ({ onClose }: LinksQrModalProps) => {
 
     return (
       <>
-        <p className="mb-5 text-sm text-[#6C757D]">
+        <p className="mb-5 text-sm text-[var(--ui-color-alabaster-950)]">
           По ссылке пациент заполнит анкету перед приёмом. Отправьте её или
           распечатайте QR-код для кабинета.
         </p>

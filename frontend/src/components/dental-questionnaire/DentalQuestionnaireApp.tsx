@@ -41,7 +41,7 @@ const Intro = ({ invite }: { invite: PublicInvite }) => (
 
 /** Над вопросом нейросети: пациент должен понимать, откуда вопрос. */
 const AiBadge = () => (
-  <p className="flex items-center gap-1.5 text-[13px] font-semibold text-[#7B4CC0]">
+  <p className="flex items-center gap-[var(--ui-space-6)] text-[length:var(--ui-font-size-13)] font-semibold text-[var(--ui-color-purple-700)]">
     <svg
       width="14"
       height="14"

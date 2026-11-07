@@ -42,8 +42,8 @@ export const TranscriptPanel: React.FC<TranscriptPanelProps> = ({
 
   return (
     <>
-      <div className="flex items-start justify-between px-6.25 pt-5">
-        <h3 className="text-xl font-medium text-[#202020]">
+      <div className="flex items-start justify-between px-[var(--ui-space-24)] pt-5">
+        <h3 className="text-xl font-medium text-[var(--ui-color-alabaster-dark-800)]">
           Расшифровка приёма
         </h3>
         <button
@@ -61,18 +61,18 @@ export const TranscriptPanel: React.FC<TranscriptPanelProps> = ({
         <div
           role="group"
           aria-label="Записи приёма"
-          className="flex flex-wrap gap-2 px-6.25 pt-4"
+          className="flex flex-wrap gap-2 px-[var(--ui-space-24)] pt-4"
         >
           {items.map((item, index) => {
             const isSelected = item.sessionId === selected?.sessionId;
             const isFailed = item.status === 'error';
             const stateClass = isSelected
               ? isFailed
-                ? 'bg-[#D91528] text-white'
-                : 'bg-[#5D8CF1] text-white'
+                ? 'bg-[var(--ui-color-red-600)] text-white'
+                : 'bg-[var(--ui-color-blue-600)] text-white'
               : isFailed
-                ? 'bg-[#FFF0F0] text-[#D91528] hover:bg-[#FFDCDC]'
-                : 'bg-[#F0F5FF] text-[#202020] hover:bg-[#DCE7FF]';
+                ? 'bg-[var(--ui-color-red-50)] text-[var(--ui-color-red-600)] hover:bg-[var(--ui-color-red-100)]'
+                : 'bg-[var(--ui-color-blue-50)] text-[var(--ui-color-alabaster-dark-800)] hover:bg-[var(--ui-color-blue-100)]';
 
             return (
               <button
@@ -80,7 +80,7 @@ export const TranscriptPanel: React.FC<TranscriptPanelProps> = ({
                 type="button"
                 onClick={() => onSelect(item.sessionId)}
                 aria-pressed={isSelected}
-                className={`cursor-pointer rounded-lg px-3 py-1.5 text-[14px] transition-colors ${stateClass}`}
+                className={`cursor-pointer rounded-lg px-3 py-[var(--ui-space-6)] text-[length:var(--ui-font-size-14)] transition-colors ${stateClass}`}
               >
                 {formatTranscriptLabel(index, item.createdAt)}
                 {isFailed && ' · не распознана'}
@@ -93,42 +93,44 @@ export const TranscriptPanel: React.FC<TranscriptPanelProps> = ({
       <div className="flex-1 overflow-y-auto custom-scrollbar">
         {isLoading && items.length === 0 ? (
           <div className="text-center pt-9">
-            <p className="text-[#909090] text-md">Загружаем расшифровку…</p>
+            <p className="text-[var(--ui-color-alabaster-950)] text-md">
+              Загружаем расшифровку…
+            </p>
           </div>
         ) : failed && items.length === 0 ? (
-          <div className="text-center pt-9 px-6.25">
-            <p className="text-[#D91528]">
+          <div className="text-center pt-9 px-[var(--ui-space-24)]">
+            <p className="text-[var(--ui-color-red-600)]">
               Не удалось загрузить расшифровку. Попробуйте открыть панель ещё
               раз.
             </p>
           </div>
         ) : !selected ? (
-          <div className="text-center pt-9 px-6.25">
-            <p className="text-[#909090] text-md">
+          <div className="text-center pt-9 px-[var(--ui-space-24)]">
+            <p className="text-[var(--ui-color-alabaster-950)] text-md">
               Для этого протокола ещё нет записей приёма.
             </p>
           </div>
         ) : (
-          <div className="py-5 px-6.25">
+          <div className="py-5 px-[var(--ui-space-24)]">
             {items.length === 1 && (
-              <p className="pb-3 text-[13px] text-[#6C757D]">
+              <p className="pb-3 text-[length:var(--ui-font-size-13)] text-[var(--ui-color-alabaster-950)]">
                 {formatTranscriptLabel(selectedIndex, selected.createdAt)}
                 {selected.status === 'error' && ' · не распознана'}
               </p>
             )}
 
             {selected.status === 'error' ? (
-              <div className="rounded-xl border border-[#D91528] bg-[#FFF5F5] px-4 py-3">
-                <p className="text-md text-[#D91528]">
+              <div className="rounded-xl border border-[var(--ui-color-red-600)] bg-[var(--ui-color-red-50)] px-4 py-3">
+                <p className="text-md text-[var(--ui-color-red-600)]">
                   {describeRecognitionFailure(selected.error)}
                 </p>
-                <p className="pt-2 text-[14px] text-[#6C757D]">
+                <p className="pt-2 text-[length:var(--ui-font-size-14)] text-[var(--ui-color-alabaster-950)]">
                   Текст из этой записи в протокол не попал. Заполните разделы
                   вручную или запишите приём заново.
                 </p>
               </div>
             ) : (
-              <p className="whitespace-pre-wrap text-md text-[#202020]">
+              <p className="whitespace-pre-wrap text-md text-[var(--ui-color-alabaster-dark-800)]">
                 {selected.transcript}
               </p>
             )}

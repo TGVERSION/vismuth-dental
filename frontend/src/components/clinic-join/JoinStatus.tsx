@@ -40,7 +40,10 @@ export function JoinStatus({ onAllowed }: { onAllowed?: () => void }) {
             : 'Заявка отклонена. При необходимости повторите подачу через действующую ссылку клиники.'}
       </p>
       {state?.requests.map((r) => (
-        <article key={r.id} className="rounded-xl bg-[#F3F4F8] p-4">
+        <article
+          key={r.id}
+          className="rounded-xl bg-[var(--ui-color-slate-100)] p-4"
+        >
           <h2 className="font-medium">{r.clinic_name}</h2>
           <p>{joinStatusLabel(r.status)}</p>
         </article>
@@ -54,7 +57,7 @@ export function JoinStatus({ onAllowed }: { onAllowed?: () => void }) {
         <button
           disabled={busy}
           onClick={() => void reload()}
-          className="text-[#5D8CF1] disabled:opacity-50"
+          className="text-[var(--ui-color-blue-600)] disabled:opacity-50"
         >
           {busy ? 'Проверяется…' : 'Обновить статус'}
         </button>

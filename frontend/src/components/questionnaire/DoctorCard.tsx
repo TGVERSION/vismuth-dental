@@ -34,7 +34,7 @@ export const DoctorCard = ({
       onClick={() => onSelect(doctor)}
       disabled={disabled}
       aria-busy={isPending || undefined}
-      className="flex w-full items-center gap-3 rounded-2xl bg-[var(--q-surface)] p-3 text-left disabled:opacity-60"
+      className="q-doctor-card flex w-full items-center gap-3 rounded-[var(--ui-radius-2xl)] bg-[var(--q-surface)] p-3 text-left disabled:opacity-60"
     >
       <SafeImage
         src={doctor.photo_url}

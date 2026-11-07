@@ -7,7 +7,7 @@ from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
 class JoinSubmission(BaseModel):
     model_config = ConfigDict(extra='forbid')
     token: str = Field(min_length=32, max_length=128)
-    requested_role: Literal['operator', 'doctor']
+    requested_role: Literal['operator', 'doctor', 'clinic_admin', 'clinic_admin_doctor']
     specialization_ids: list[int] = Field(default_factory=list, max_length=50)
 
 
@@ -38,7 +38,8 @@ class JoinRequestRead(BaseModel):
     first_name: str | None
     last_name: str | None
     middle_name: str | None
-    requested_role: Literal['operator', 'doctor']
+    requested_role: Literal['operator', 'doctor', 'clinic_admin', 'clinic_admin_doctor']
+    requested_role_label: str | None = None
     specialization_ids: list[int]
     status: Literal['pending', 'approved', 'rejected']
     created_at: datetime
@@ -46,7 +47,7 @@ class JoinRequestRead(BaseModel):
 
 
 class JoinRole(BaseModel):
-    value: Literal['operator', 'doctor']
+    value: Literal['operator', 'doctor', 'clinic_admin', 'clinic_admin_doctor']
     label: str
 
 

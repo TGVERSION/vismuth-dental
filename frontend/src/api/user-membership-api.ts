@@ -31,6 +31,7 @@ export interface MembershipUpdate {
 }
 
 export const userMembershipApi = {
+  staffRoles: () => apiClient.get<MembershipRoleOption[]>('/clinic-roles'),
   list: () => apiClient.get<UserMembershipRead[]>('/super-admin/users'),
   roles: () =>
     apiClient.get<MembershipRoleOption[]>('/super-admin/user-membership-roles'),

@@ -24,17 +24,17 @@ export const Sidebar: React.FC<SidebarProps> = ({
   // подсветки в навигации не было вовсе.
   const getSectionColor = (section: Section) => {
     if (section.id === activeSection) {
-      return 'text-[#5D8CF1] font-medium hover:text-[#769CEF]';
+      return 'text-[var(--ui-color-blue-600)] font-medium hover:text-[var(--ui-color-blue-700)]';
     }
     if (section.hasContent) {
-      return 'text-[#202020] hover:text-[#5D8CF1]';
+      return 'text-[var(--ui-color-alabaster-dark-800)] hover:text-[var(--ui-color-blue-600)]';
     }
 
-    return 'text-[#909090] hover:text-[#5D8CF1]';
+    return 'text-[var(--ui-color-alabaster-950)] hover:text-[var(--ui-color-blue-600)]';
   };
 
   return (
-    <nav className="fixed w-62.5 flex-col ml-6.25 gap-6 hidden lg:flex">
+    <nav className="fixed w-62.5 flex-col ml-[var(--ui-space-24)] gap-6 hidden lg:flex">
       <div className="sticky top-24">
         <ul className="flex flex-col gap-4">
           {sections.map((section) => {
@@ -44,7 +44,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 <button
                   type="button"
                   onClick={() => onSectionClick(section.id)}
-                  className={`text-[15px] transition-colors flex items-center duration-200 text-left cursor-pointer ${getSectionColor(
+                  className={`text-[length:var(--ui-font-size-15)] transition-colors flex items-center duration-200 text-left cursor-pointer ${getSectionColor(
                     section,
                   )}`}
                 >
@@ -52,10 +52,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     <span
                       className={`inline-block w-3.5 h-3.5 mr-2 rounded-full transition-all duration-300 fade-in ${
                         status.color === 'green'
-                          ? 'bg-[#459F49]'
+                          ? 'bg-[var(--ui-color-green-600)]'
                           : status.color === 'yellow'
-                            ? 'bg-[#F29100]'
-                            : 'bg-[#D91528]'
+                            ? 'bg-[var(--ui-color-yellow-600)]'
+                            : 'bg-[var(--ui-color-red-600)]'
                       }`}
                     />
                   )}

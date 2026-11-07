@@ -20,7 +20,7 @@ export const RegistryList = ({
   selectedId,
   clinicId,
 }: RegistryListProps) => (
-  <ul className="flex flex-col gap-1.25">
+  <ul className="flex flex-col gap-[var(--ui-space-4)]">
     {items.map((item) => {
       const isSelected = item.id === selectedId;
       return (
@@ -29,13 +29,13 @@ export const RegistryList = ({
             href={`/registry?id=${encodeURIComponent(item.id)}${clinicId ? `&clinic_id=${encodeURIComponent(clinicId)}` : ''}`}
             scroll={false}
             aria-current={isSelected ? 'true' : undefined}
-            className={`flex items-center gap-3 rounded-[15px] px-3 py-2.5 text-[14px] text-[#202020] transition-colors ${
+            className={`flex items-center gap-3 rounded-2xl px-3 py-[var(--ui-space-10)] text-[length:var(--ui-font-size-14)] text-[var(--ui-color-alabaster-dark-800)] transition-colors ${
               isSelected ? 'bg-white' : 'hover:bg-white'
             }`}
           >
             <span className="min-w-0 flex-1">
               <span className="block truncate">{patientFullName(item)}</span>
-              <span className="block truncate text-[#8B8B8B]">
+              <span className="block truncate text-[var(--ui-color-alabaster-950)]">
                 {registryWhenLine(item)}
               </span>
             </span>

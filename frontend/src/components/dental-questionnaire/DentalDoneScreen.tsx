@@ -13,7 +13,7 @@ interface DentalDoneScreenProps {
  */
 export const DentalDoneScreen = ({ clinic }: DentalDoneScreenProps) => (
   <div className="q-screen flex flex-col px-4 pt-[calc(env(safe-area-inset-top)+24px)]">
-    <h1 className="text-[24px] font-bold">Готово!</h1>
+    <h1 className="text-[length:var(--ui-font-size-26)] font-bold">Готово!</h1>
     <p className="mt-3 text-[var(--q-muted)]">
       Анкета у врача. Перед приёмом в регистратуре попросят подписать распечатку
       анкеты.

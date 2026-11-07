@@ -866,7 +866,7 @@ export default function Home() {
     <>
       <div
         data-print-hide
-        className="fixed ml-3 mr-5 left-0 top-20 custom-height w-85.75 flex flex-col bg-[#F3F4F8]"
+        className="fixed ml-3 mr-5 left-0 top-20 custom-height w-85.75 flex flex-col bg-[var(--ui-color-slate-100)]"
       >
         <div className="relative" ref={createMenuRef}>
           <button
@@ -875,7 +875,7 @@ export default function Home() {
               if (!showCreateMenu) fetchStructures();
               setShowCreateMenu(!showCreateMenu);
             }}
-            className="shrink-0 w-full hover:text-[#769CEF] bg-white rounded-xl h-13 cursor-pointer text-[#5D8CF1] px-6 transition-colors"
+            className="shrink-0 w-full hover:text-[var(--ui-color-blue-700)] bg-white rounded-xl h-13 cursor-pointer text-[var(--ui-color-blue-600)] px-6 transition-colors"
           >
             Создать новый протокол
           </button>
@@ -884,7 +884,7 @@ export default function Home() {
             <div className="absolute top-full left-0 right-0 mt-1 bg-white rounded-xl shadow-custom p-2 z-50 max-h-60 overflow-y-auto">
               {structuresLoading ? (
                 <div className="py-4 text-center text-sm text-gray-500">
-                  <div className="animate-spin mx-auto mb-2 rounded-full h-4 w-4 border-b-2 border-[#5D8CF1]"></div>
+                  <div className="animate-spin mx-auto mb-2 rounded-full h-4 w-4 border-b-2 border-[var(--ui-color-blue-600)]"></div>
                   Загрузка структур...
                 </div>
               ) : structures.length > 0 ? (
@@ -897,13 +897,13 @@ export default function Home() {
                         handleCreateWithStructure(structure.id);
                         setShowCreateMenu(false);
                       }}
-                      className="w-full text-left px-3 py-2 rounded-lg hover:bg-[#F0F5FF] text-sm transition-colors group"
+                      className="w-full text-left px-3 py-2 rounded-lg hover:bg-[var(--ui-color-blue-50)] text-sm transition-colors group"
                     >
                       <div className="font-medium text-gray-800">
                         {structure.structure_name}
                       </div>
                       {structure.description && (
-                        <div className="text-xs text-gray-500 mt-0.5 line-clamp-1">
+                        <div className="text-xs text-gray-500 mt-[var(--ui-space-2)] line-clamp-1">
                           {structure.description}
                         </div>
                       )}
@@ -920,11 +920,11 @@ export default function Home() {
         </div>
 
         {isLoadingList ? (
-          <div className="animate-spin mx-auto my-40 rounded-full h-10 w-10 border-b-2 border-[#5D8CF1]"></div>
+          <div className="animate-spin mx-auto my-40 rounded-full h-10 w-10 border-b-2 border-[var(--ui-color-blue-600)]"></div>
         ) : (
           <div className="flex-1 mt-6 overflow-y-auto overflow-x-hidden custom-scrollbar">
             {consultations.length > 0 ? (
-              <div className="flex flex-col gap-1.25">
+              <div className="flex flex-col gap-[var(--ui-space-4)]">
                 {Object.entries(
                   consultations.reduce(
                     (acc, consultation) => {
@@ -938,8 +938,11 @@ export default function Home() {
                     {} as Record<string, Protocols[]>,
                   ),
                 ).map(([year, yearConsultations]) => (
-                  <div key={year} className="flex flex-col gap-1.25">
-                    <div className="px-3.75 py-2.25 text-[14px] font-semibold">
+                  <div
+                    key={year}
+                    className="flex flex-col gap-[var(--ui-space-4)]"
+                  >
+                    <div className="px-[var(--ui-space-14)] py-[var(--ui-space-8)] text-[length:var(--ui-font-size-14)] font-semibold">
                       {year}
                     </div>
                     {Object.entries(
@@ -955,8 +958,11 @@ export default function Home() {
                         {} as Record<string, Protocols[]>,
                       ),
                     ).map(([month, monthConsultations]) => (
-                      <div key={month} className="flex flex-col gap-1.25">
-                        <div className="px-6.25 py-2.25 text-[14px] font-medium">
+                      <div
+                        key={month}
+                        className="flex flex-col gap-[var(--ui-space-4)]"
+                      >
+                        <div className="px-[var(--ui-space-24)] py-[var(--ui-space-8)] text-[length:var(--ui-font-size-14)] font-medium">
                           {month.charAt(0).toUpperCase() + month.slice(1)}
                         </div>
 
@@ -966,17 +972,17 @@ export default function Home() {
                             onClick={() =>
                               handleConsultationClick(consultation.id)
                             }
-                            className={`ml-6.25 px-2.5 py-2.25 rounded-[15px] transition-all cursor-pointer ${
+                            className={`ml-[var(--ui-space-24)] px-[var(--ui-space-10)] py-[var(--ui-space-8)] rounded-[var(--ui-radius-2xl)] transition-all cursor-pointer ${
                               protocolId === consultation.id
                                 ? 'bg-white'
                                 : 'hover:bg-white'
                             }`}
                           >
-                            <p className="text-[14px] font-medium">
+                            <p className="text-[length:var(--ui-font-size-14)] font-medium">
                               {consultation.protocol_name ||
                                 `Протокол №${consultation.id.slice(-12)}`}
                             </p>
-                            <span className="text-[14px] text-[#6C757D]">
+                            <span className="text-[length:var(--ui-font-size-14)] text-[var(--ui-color-alabaster-950)]">
                               {formatDate(protocolDate(consultation))}
                             </span>
                           </div>
@@ -998,14 +1004,16 @@ export default function Home() {
       </div>
 
       {isLoading && (
-        <div className="bg-white rounded-[15px] ml-93.5 w-full max-w-372.75 py-6.25 flex flex-row gap-16">
-          <div className="animate-spin mx-auto my-40 rounded-full h-10 w-10 border-b-2 border-[#5D8CF1]"></div>
+        <div className="bg-white rounded-[var(--ui-radius-2xl)] ml-[var(--ui-space-64)] w-full max-w-372.75 py-[var(--ui-space-24)] flex flex-row gap-16">
+          <div className="animate-spin mx-auto my-40 rounded-full h-10 w-10 border-b-2 border-[var(--ui-color-blue-600)]"></div>
         </div>
       )}
 
       {loadError && !isLoading && (
-        <div className="bg-white rounded-[15px] ml-93.5 w-full max-w-372.75 py-6.25">
-          <p className="my-40 text-center text-[#D91528]">{loadError}</p>
+        <div className="bg-white rounded-[var(--ui-radius-2xl)] ml-[var(--ui-space-64)] w-full max-w-372.75 py-[var(--ui-space-24)]">
+          <p className="my-40 text-center text-[var(--ui-color-red-600)]">
+            {loadError}
+          </p>
         </div>
       )}
 
@@ -1014,11 +1022,11 @@ export default function Home() {
           <div
             ref={setProtocolAreaEl}
             data-print-area
-            className={`bg-white rounded-[15px] ml-93.5 flex-1 min-w-0 flex flex-col h-[calc(100vh-55px)] custom-scrollbar overflow-hidden ${showClinRecPanel || isTranscriptPanelOpen ? '' : 'mr-2'}`}
+            className={`bg-white rounded-[var(--ui-radius-2xl)] ml-[var(--ui-space-64)] flex-1 min-w-0 flex flex-col h-[calc(100vh-55px)] custom-scrollbar overflow-hidden ${showClinRecPanel || isTranscriptPanelOpen ? '' : 'mr-2'}`}
           >
             <div
               data-print-hide
-              className="mx-6.25 mt-2 bg-white border-b border-b-[#E9ECEF]"
+              className="mx-[var(--ui-space-24)] mt-2 bg-white border-b border-b-[var(--ui-color-slate-200)]"
             >
               <div className="mx-auto mb-2 flex flex-row items-center justify-center gap-6">
                 {dmsEnabled && (canCheckDms || dms.phase !== 'idle') && (
@@ -1035,7 +1043,7 @@ export default function Home() {
                             ? 'Дождитесь окончания записи приёма'
                             : undefined
                     }
-                    className={`cursor-pointer rounded-xl hover:bg-white shadow-custom-hover flex flex-row items-center gap-2 py-3 px-3.75 ${
+                    className={`cursor-pointer rounded-xl hover:bg-white shadow-custom-hover flex flex-row items-center gap-2 py-3 px-[var(--ui-space-14)] ${
                       isDmsBusy
                         ? 'shadow-custom disabled:cursor-progress'
                         : 'disabled:cursor-not-allowed disabled:opacity-50'
@@ -1049,7 +1057,7 @@ export default function Home() {
                   <button
                     type="button"
                     onClick={handleClinRecCheck}
-                    className="cursor-pointer rounded-xl hover:bg-white shadow-custom-hover flex flex-row items-center gap-2 py-3 px-3.75"
+                    className="cursor-pointer rounded-xl hover:bg-white shadow-custom-hover flex flex-row items-center gap-2 py-3 px-[var(--ui-space-14)]"
                   >
                     <Image
                       alt="klinReg"
@@ -1081,7 +1089,7 @@ export default function Home() {
                     <button
                       type="button"
                       onClick={() => handleOpenTranscriptPanel()}
-                      className="cursor-pointer rounded-xl hover:bg-white shadow-custom-hover flex flex-row items-center gap-2 py-3 px-3.75"
+                      className="cursor-pointer rounded-xl hover:bg-white shadow-custom-hover flex flex-row items-center gap-2 py-3 px-[var(--ui-space-14)]"
                     >
                       <Image
                         alt=""
@@ -1095,7 +1103,7 @@ export default function Home() {
                 <button
                   type="button"
                   onClick={handlePrint}
-                  className="cursor-pointer rounded-xl hover:bg-white shadow-custom-hover flex flex-row items-center gap-2 py-3 px-3.75"
+                  className="cursor-pointer rounded-xl hover:bg-white shadow-custom-hover flex flex-row items-center gap-2 py-3 px-[var(--ui-space-14)]"
                 >
                   <Image
                     alt="print"
@@ -1112,7 +1120,7 @@ export default function Home() {
                 >
                   <button
                     type="button"
-                    className="cursor-pointer rounded-xl hover:bg-white shadow-custom-hover flex flex-row items-center gap-2 py-3 px-3.75"
+                    className="cursor-pointer rounded-xl hover:bg-white shadow-custom-hover flex flex-row items-center gap-2 py-3 px-[var(--ui-space-14)]"
                   >
                     <Image
                       alt="template"
@@ -1124,7 +1132,7 @@ export default function Home() {
                   </button>
 
                   {showTemplateMenu && (
-                    <div className="absolute left-0 top-full mt-2 w-46.25 bg-white rounded-xl shadow-custom p-1.5 z-50 flex flex-col">
+                    <div className="absolute left-0 top-full mt-2 w-46.25 bg-white rounded-xl shadow-custom p-[var(--ui-space-6)] z-50 flex flex-col">
                       <button
                         type="button"
                         onClick={() => {
@@ -1139,7 +1147,7 @@ export default function Home() {
                             ? 'Сначала завершите проверку для ДМС'
                             : undefined
                         }
-                        className="hover:bg-[#F0F5FF] text-[14px] w-ful rounded-md h-8.25 cursor-pointer px-2.5 py-1.5 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                        className="hover:bg-[var(--ui-color-blue-50)] text-[length:var(--ui-font-size-14)] w-ful rounded-md h-8.25 cursor-pointer px-[var(--ui-space-10)] py-[var(--ui-space-6)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                       >
                         Использовать шаблон
                       </button>
@@ -1150,7 +1158,7 @@ export default function Home() {
                           setIsFromPage(true);
                           setShowTemplateMenu(false);
                         }}
-                        className="hover:bg-[#F0F5FF] text-[14px] cursor-pointer w-full  rounded-md h-8.25 px-2.5 py-1.5 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                        className="hover:bg-[var(--ui-color-blue-50)] text-[length:var(--ui-font-size-14)] cursor-pointer w-full  rounded-md h-8.25 px-[var(--ui-space-10)] py-[var(--ui-space-6)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                       >
                         Сохранить как шаблон
                       </button>
@@ -1160,7 +1168,7 @@ export default function Home() {
               </div>
             </div>
 
-            <div className="py-6.25 flex flex-row pr-5 mr-2 overflow-hidden">
+            <div className="py-[var(--ui-space-24)] flex flex-row pr-5 mr-2 overflow-hidden">
               {isSidebarVisible && (
                 <div data-print-hide>
                   <Sidebar
@@ -1236,7 +1244,7 @@ export default function Home() {
                                 же отступом. */}
                               <div className="flex items-center gap-3">
                                 <div className="shrink-0 w-4 h-4" />
-                                <div className="text-[30px] font-medium text-[#202020] mb-1">
+                                <div className="text-[length:var(--ui-font-size-31)] font-medium text-[var(--ui-color-alabaster-dark-800)] mb-1">
                                   {section.label}
                                 </div>
                               </div>
@@ -1249,7 +1257,7 @@ export default function Home() {
                                 />
                                 {/* На печать — текущий текст раздела, без
                                   отметок и кнопок. */}
-                                <div className="hidden print:block whitespace-pre-wrap text-[16px] text-[#202020]">
+                                <div className="hidden print:block whitespace-pre-wrap text-[length:var(--ui-font-size-16)] text-[var(--ui-color-alabaster-dark-800)]">
                                   {section.value}
                                 </div>
                               </div>
@@ -1266,14 +1274,14 @@ export default function Home() {
                           }}
                           className={
                             voiceEntry
-                              ? 'scroll-mt-24 rounded-xl border-l-4 border-[#5D8CF1] bg-[#F8FAFF] pl-2 py-1'
+                              ? 'scroll-mt-24 rounded-xl border-l-4 border-[var(--ui-color-blue-600)] bg-[var(--ui-color-blue-50)] pl-2 py-1'
                               : 'scroll-mt-24'
                           }
                         >
                           {voiceEntry && (
                             <div
                               data-print-hide
-                              className="ml-7 mb-1 flex items-center gap-3 text-[13px] text-[#5D8CF1]"
+                              className="ml-7 mb-1 flex items-center gap-3 text-[length:var(--ui-font-size-13)] text-[var(--ui-color-blue-600)]"
                             >
                               <span>
                                 {voiceEntry.mode === 'append'
@@ -1345,19 +1353,24 @@ export default function Home() {
                   </div>
                 </div>
                 <div data-print-hide className="flex flex-col gap-3">
-                  <div className="ml-6 min-h-5 text-[14px]" aria-live="polite">
+                  <div
+                    className="ml-6 min-h-5 text-[length:var(--ui-font-size-14)]"
+                    aria-live="polite"
+                  >
                     {saveFailed ? (
-                      <span className="text-[#D91528]">
+                      <span className="text-[var(--ui-color-red-600)]">
                         Не сохранено — изменения остались только в браузере
                       </span>
                     ) : isSaving ? (
-                      <span className="text-[#6C757D]">Сохранение…</span>
+                      <span className="text-[var(--ui-color-alabaster-950)]">
+                        Сохранение…
+                      </span>
                     ) : hasUnsavedChanges ? (
-                      <span className="text-[#F29100]">
+                      <span className="text-[var(--ui-color-yellow-600)]">
                         Есть несохранённые изменения
                       </span>
                     ) : (
-                      <span className="text-[#6C757D]">
+                      <span className="text-[var(--ui-color-alabaster-950)]">
                         Все изменения сохранены
                       </span>
                     )}
@@ -1368,7 +1381,7 @@ export default function Home() {
                       setShowSaveAsTemplatePopup(true);
                       setIsFromPage(true);
                     }}
-                    className="hover:bg-[#F0F5FF] text-[#202020] cursor-pointer bg-[#DCE7FF]  rounded-xl h-13 ml-6 px-6 py-2.5 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                    className="vismuth-button--secondary hover:bg-[var(--ui-color-blue-50)] text-[var(--ui-color-alabaster-dark-800)] cursor-pointer bg-[var(--ui-color-blue-100)]  rounded-xl h-13 ml-6 px-6 py-[var(--ui-space-10)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                   >
                     Сохранить как шаблон
                   </button>
@@ -1376,7 +1389,7 @@ export default function Home() {
                     type="button"
                     onClick={handleSave}
                     disabled={isSaving}
-                    className="hover:bg-[#769CEF] mb-4 text-white rounded-xl h-13 ml-6 cursor-pointer bg-[#5D8CF1] px-6 py-2.5 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                    className="vismuth-button--primary hover:bg-[var(--ui-color-blue-700)] mb-4 text-white rounded-xl h-13 ml-6 cursor-pointer bg-[var(--ui-color-blue-600)] px-6 py-[var(--ui-space-10)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                   >
                     {isSaving ? (
                       <div className="animate-spin mx-auto my- rounded-full h-5 w-5 border-b-2 border-white"></div>
@@ -1396,15 +1409,15 @@ export default function Home() {
                 className="w-2 mx-1 cursor-col-resize flex-shrink-0 flex items-center justify-center group"
                 onMouseDown={handleDividerMouseDown}
               >
-                <div className="w-0.5 h-12 bg-gray-300 rounded-full group-hover:bg-[#5D8CF1] transition-colors" />
+                <div className="w-0.5 h-12 bg-gray-300 rounded-full group-hover:bg-[var(--ui-color-blue-600)] transition-colors" />
               </div>
               <div
                 data-print-hide
-                className="mr-2 h-[calc(100vh-55px)] bg-white rounded-[15px] flex flex-col overflow-hidden flex-shrink-0"
+                className="mr-2 h-[calc(100vh-55px)] bg-white rounded-[var(--ui-radius-2xl)] flex flex-col overflow-hidden flex-shrink-0"
                 style={{ width: clinRecPanelWidth }}
               >
-                <div className="flex items-start justify-between px-6.25 pt-5 border-[#E9ECEF]">
-                  <h3 className="text-xl font-medium text-[#202020]">
+                <div className="flex items-start justify-between px-[var(--ui-space-24)] pt-5 border-[var(--ui-color-slate-200)]">
+                  <h3 className="text-xl font-medium text-[var(--ui-color-alabaster-dark-800)]">
                     Проверка протокола по клиническим рекомендациям
                   </h3>
                   <button
@@ -1424,7 +1437,7 @@ export default function Home() {
                 <div className="flex-1 overflow-y-auto custom-scrollbar">
                   {isLoadingClinRec ? (
                     <div className="text-center pt-9">
-                      <p className="text-[#909090] text-md transition-opacity duration-500 ease-in-out">
+                      <p className="text-[var(--ui-color-alabaster-950)] text-md transition-opacity duration-500 ease-in-out">
                         {LOADING_MESSAGES[currentMessageIndex]}
                       </p>
                     </div>
@@ -1433,12 +1446,12 @@ export default function Home() {
                       <p className="text-red-500 text-center">{clinRecError}</p>
                     </div>
                   ) : clinRecResults ? (
-                    <div className="py-7 px-6.25 space-y-5">
+                    <div className="py-7 px-[var(--ui-space-24)] space-y-5">
                       {clinRecResults.critical.length > 0 && (
                         <div className="space-y-5">
                           {clinRecResults.critical.map((finding, index) => (
                             <div key={`critical-${index}`}>
-                              <p className="text-xl font-medium text-[#D91528] pb-2">
+                              <p className="text-xl font-medium text-[var(--ui-color-red-600)] pb-2">
                                 {finding.section}
                               </p>
                               <p className="text-md">
@@ -1453,7 +1466,7 @@ export default function Home() {
                         <div className="space-y-3">
                           {clinRecResults.warning.map((finding, index) => (
                             <div key={`warning-${index}`}>
-                              <p className="text-xl font-medium text-[#F29100] pb-2">
+                              <p className="text-xl font-medium text-[var(--ui-color-yellow-600)] pb-2">
                                 {finding.section}
                               </p>
                               <p className="text-md">
@@ -1468,7 +1481,7 @@ export default function Home() {
                         <div className="space-y-3">
                           {clinRecResults.info.map((finding, index) => (
                             <div key={`info-${index}`}>
-                              <p className="text-xl font-medium text-[#5D8CF1] pb-2">
+                              <p className="text-xl font-medium text-[var(--ui-color-blue-600)] pb-2">
                                 {finding.section}
                               </p>
                               <p className="text-md">
@@ -1502,11 +1515,11 @@ export default function Home() {
                 className="w-2 mx-1 cursor-col-resize flex-shrink-0 flex items-center justify-center group"
                 onMouseDown={handleDividerMouseDown}
               >
-                <div className="w-0.5 h-12 bg-gray-300 rounded-full group-hover:bg-[#5D8CF1] transition-colors" />
+                <div className="w-0.5 h-12 bg-gray-300 rounded-full group-hover:bg-[var(--ui-color-blue-600)] transition-colors" />
               </div>
               <div
                 data-print-hide
-                className="mr-2 h-[calc(100vh-55px)] bg-white rounded-[15px] flex flex-col overflow-hidden flex-shrink-0"
+                className="mr-2 h-[calc(100vh-55px)] bg-white rounded-[var(--ui-radius-2xl)] flex flex-col overflow-hidden flex-shrink-0"
                 style={{ width: clinRecPanelWidth }}
               >
                 <TranscriptPanel

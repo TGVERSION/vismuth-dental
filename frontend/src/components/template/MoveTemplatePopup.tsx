@@ -125,24 +125,24 @@ export const MoveTemplatePopup: React.FC<MoveTemplatePopupProps> = ({
   return (
     <>
       <div
-        className="modal-overlay fixed inset-0 flex items-start justify-center z-50 pt-10 pb-10 overflow-y-auto"
+        className="modal-overlay px-4 fixed inset-0 flex items-start justify-center z-50 pt-10 pb-10 overflow-y-auto"
         onClick={handleClose}
       >
         <div
-          className="bg-white rounded-2xl w-full max-w-xl p-5 shadow-2xl animate-fade-in"
+          className="bg-white rounded-2xl w-full max-w-xl p-5 shadow-[var(--ui-shadow)] animate-fade-in"
           onClick={(e) => e.stopPropagation()}
         >
           <div className="flex justify-end">
             <button
               type="button"
               onClick={handleClose}
-              className="cursor-pointer"
+              className="vismuth-icon-button cursor-pointer"
             >
               <Image alt="close" src="/close.svg" width={25} height={25} />
             </button>
           </div>
 
-          <h2 className="text-[32px] font-medium mb-7.5 px-5">
+          <h2 className="text-[length:var(--ui-font-size-31)] font-medium mb-[var(--ui-space-32)] px-5">
             Переместить шаблон
           </h2>
 
@@ -158,11 +158,11 @@ export const MoveTemplatePopup: React.FC<MoveTemplatePopupProps> = ({
                 </label>
                 <div className="space-y-2 max-h-60 overflow-y-auto">
                   <label className="flex items-center justify-between p-3 rounded-lg cursor-pointer border-0 hover:bg-gray-50 transition-colors">
-                    <span className="text-sm text-[#202020]">
+                    <span className="text-sm text-[var(--ui-color-alabaster-dark-800)]">
                       Шаблоны без группы
                     </span>
                     {selectedGroupId === '' ? (
-                      <span className="text-sm text-[#459F49] px-3 py-1.25 bg-[#D4FBD7] rounded-[10px] flex items-center gap-1">
+                      <span className="text-sm text-[var(--ui-color-green-600)] px-3 py-[var(--ui-space-4)] bg-[var(--ui-color-green-100)] rounded-[var(--ui-radius-lg)] flex items-center gap-1">
                         <Image
                           alt="check"
                           src="/check.svg"
@@ -172,7 +172,7 @@ export const MoveTemplatePopup: React.FC<MoveTemplatePopupProps> = ({
                         Выбрано
                       </span>
                     ) : (
-                      <span className="text-sm text-[#5D8CF1] px-3 py-1.25 bg-[#DCE7FF] rounded-[10px] flex items-center gap-1">
+                      <span className="text-sm text-[var(--ui-color-blue-600)] px-3 py-[var(--ui-space-4)] bg-[var(--ui-color-blue-100)] rounded-[var(--ui-radius-lg)] flex items-center gap-1">
                         Выбрать
                       </span>
                     )}
@@ -191,11 +191,11 @@ export const MoveTemplatePopup: React.FC<MoveTemplatePopupProps> = ({
                       key={group.id}
                       className="flex items-center justify-between p-3 rounded-lg cursor-pointer border-0 hover:bg-gray-50 transition-colors"
                     >
-                      <span className="text-sm text-[#202020]">
+                      <span className="text-sm text-[var(--ui-color-alabaster-dark-800)]">
                         {group.group_name}
                       </span>
                       {selectedGroupId === group.id ? (
-                        <span className="text-sm text-[#459F49] px-3 py-1.25 bg-[#D4FBD7] rounded-[10px] flex items-center gap-1">
+                        <span className="text-sm text-[var(--ui-color-green-600)] px-3 py-[var(--ui-space-4)] bg-[var(--ui-color-green-100)] rounded-[var(--ui-radius-lg)] flex items-center gap-1">
                           <Image
                             alt="check"
                             src="/check.svg"
@@ -205,7 +205,7 @@ export const MoveTemplatePopup: React.FC<MoveTemplatePopupProps> = ({
                           Выбрано
                         </span>
                       ) : (
-                        <span className="text-sm text-[#5D8CF1] px-3 py-1.25 bg-[#DCE7FF] rounded-[10px] flex items-center gap-1">
+                        <span className="text-sm text-[var(--ui-color-blue-600)] px-3 py-[var(--ui-space-4)] bg-[var(--ui-color-blue-100)] rounded-[var(--ui-radius-lg)] flex items-center gap-1">
                           Выбрать
                         </span>
                       )}
@@ -224,7 +224,7 @@ export const MoveTemplatePopup: React.FC<MoveTemplatePopupProps> = ({
                   <button
                     type="button"
                     onClick={() => setShowCreateGroupPopup(true)}
-                    className="mt-3 mx-auto text-[16px] text-[#5D8CF1] cursor-pointer text-center hover:text-[#769CEF] transition-colors"
+                    className="vismuth-function-button mt-3 mx-auto text-[length:var(--ui-font-size-16)] text-[var(--ui-color-blue-600)] cursor-pointer text-center hover:text-[var(--ui-color-blue-700)] transition-colors"
                   >
                     Создать новую группу
                   </button>
@@ -236,7 +236,8 @@ export const MoveTemplatePopup: React.FC<MoveTemplatePopupProps> = ({
                   type="button"
                   onClick={handleSave}
                   disabled={saving}
-                  className="h-12 bg-[#5D8CF1] text-white cursor-pointer rounded-[15px] hover:bg-[#769CEF] transition-colors disabled:opacity-50"
+                  className="vismuth-button bg-[var(--ui-color-blue-600)] text-white cursor-pointer hover:bg-[var(--ui-color-blue-700)] transition-colors disabled:opacity-50"
+                  data-variant="primary"
                 >
                   {saving ? 'Сохранение...' : 'Сохранить'}
                 </button>
@@ -244,7 +245,8 @@ export const MoveTemplatePopup: React.FC<MoveTemplatePopupProps> = ({
                   type="button"
                   onClick={handleClose}
                   disabled={saving}
-                  className="h-12 rounded-[15px] hover:bg-[#F0F5FF] text-[#202020] cursor-pointer bg-[#DCE7FF] transition-colors disabled:opacity-50"
+                  className="vismuth-button hover:bg-[var(--ui-color-blue-50)] cursor-pointer bg-[var(--ui-color-blue-100)] transition-colors disabled:opacity-50"
+                  data-variant="secondary"
                 >
                   Отменить
                 </button>

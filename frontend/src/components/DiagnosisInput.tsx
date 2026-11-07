@@ -336,18 +336,18 @@ export const DiagnosisInput: React.FC<DiagnosisInputProps> = ({
         position: 'fixed',
         top: dropdownPos?.top ?? 0,
         left: dropdownPos?.left ?? 0,
-        zIndex: 9999,
+        zIndex: 'var(--ui-z-popover)',
       }}
-      className="p-1.5 max-w-103.5 bg-white rounded-lg shadow-lg border-0 max-h-80 overflow-y-auto custom-scrollbar"
+      className="p-[var(--ui-space-6)] max-w-103.5 bg-[var(--ui-color-alabaster-50)] rounded-[var(--ui-radius-lg)] shadow-[var(--ui-shadow)] border-0 max-h-80 overflow-y-auto custom-scrollbar"
     >
       {isMkbHelperEnabled && (
         <>
-          <h4 className="text-[#6C757D] text-[12px] font-medium">
+          <h4 className="text-[var(--ui-color-alabaster-950)] text-[length:var(--ui-font-size-12)] font-medium">
             Наиболее подходящие диагнозы
           </h4>
-          <div className="pt-1.5 pb-3 border-b mb-3 border-[#E9ECEF]">
+          <div className="pt-[var(--ui-space-6)] pb-3 border-b mb-3 border-[var(--ui-color-slate-200)]">
             {aiLoading ? (
-              <div className="px-2.5 py-1.5 text-gray-400 text-sm">
+              <div className="px-[var(--ui-space-10)] py-[var(--ui-space-6)] text-gray-400 text-sm">
                 Загрузка рекомендаций...
               </div>
             ) : aiCandidates.length > 0 ? (
@@ -357,9 +357,9 @@ export const DiagnosisInput: React.FC<DiagnosisInputProps> = ({
                   <div
                     key={`ai-${cand.code}`}
                     onClick={() => handleAiSelect(cand)}
-                    className="px-2.5 py-1.5 flex flex-row gap-2.5 items-center cursor-pointer rounded-md transition-colors hover:bg-[#e6efff] text-[#202020]"
+                    className="px-[var(--ui-space-10)] py-[var(--ui-space-6)] flex flex-row gap-[var(--ui-space-10)] items-center cursor-pointer rounded-md transition-colors hover:bg-[var(--ui-color-blue-100)] text-[var(--ui-color-alabaster-dark-800)]"
                   >
-                    <div className="text-sm text-[#5D8CF1] text-right">
+                    <div className="text-sm text-[var(--ui-color-blue-600)] text-right">
                       {percent}%
                     </div>
                     <div className="text-sm flex-1">{cand.name}</div>
@@ -367,7 +367,7 @@ export const DiagnosisInput: React.FC<DiagnosisInputProps> = ({
                 );
               })
             ) : (
-              <div className="px-2.5 py-1.5 text-gray-400 text-sm">
+              <div className="px-[var(--ui-space-10)] py-[var(--ui-space-6)] text-gray-400 text-sm">
                 Опишите диагноз система поможет его подобрать
               </div>
             )}
@@ -375,16 +375,18 @@ export const DiagnosisInput: React.FC<DiagnosisInputProps> = ({
         </>
       )}
 
-      <h4 className="text-[#6C757D] text-[12px] font-medium">Все диагнозы</h4>
-      <div className="py-1.5">
+      <h4 className="text-[var(--ui-color-alabaster-950)] text-[length:var(--ui-font-size-12)] font-medium">
+        Все диагнозы
+      </h4>
+      <div className="py-[var(--ui-space-6)]">
         {diagnoses.length === 0 && !loading && searchValue.trim() !== '' && (
-          <div className="px-2.5 py-1.5 text-gray-500 text-sm">
+          <div className="px-[var(--ui-space-10)] py-[var(--ui-space-6)] text-gray-500 text-sm">
             Диагнозы не найдены
           </div>
         )}
 
         {diagnoses.length === 0 && !loading && searchValue.trim() === '' && (
-          <div className="px-2.5 py-1.5 text-gray-400 text-sm">
+          <div className="px-[var(--ui-space-10)] py-[var(--ui-space-6)] text-gray-400 text-sm">
             Начните вводить код или название...
           </div>
         )}
@@ -397,10 +399,10 @@ export const DiagnosisInput: React.FC<DiagnosisInputProps> = ({
             <div
               key={diagnosis.code}
               onClick={() => handleSelect(diagnosis)}
-              className={`px-2.5 py-1.5 cursor-pointer rounded-md transition-colors ${
+              className={`px-[var(--ui-space-10)] py-[var(--ui-space-6)] cursor-pointer rounded-md transition-colors ${
                 isSelected
-                  ? 'bg-[#e6efff] text-[#202020]'
-                  : 'hover:bg-[#e6efff] text-[#202020]'
+                  ? 'bg-[var(--ui-color-blue-100)] text-[var(--ui-color-alabaster-dark-800)]'
+                  : 'hover:bg-[var(--ui-color-blue-100)] text-[var(--ui-color-alabaster-dark-800)]'
               }`}
             >
               <div className="text-sm">
@@ -411,8 +413,8 @@ export const DiagnosisInput: React.FC<DiagnosisInputProps> = ({
         })}
 
         {loading && diagnoses.length === 0 && (
-          <div className="px-2.5 py-1.5 text-center">
-            <div className="inline-block animate-spin rounded-full h-5 w-5 border-b-2 border-[#5D8CF1]"></div>
+          <div className="px-[var(--ui-space-10)] py-[var(--ui-space-6)] text-center">
+            <div className="inline-block animate-spin rounded-full h-5 w-5 border-b-2 border-[var(--ui-color-blue-600)]"></div>
           </div>
         )}
 
@@ -433,7 +435,7 @@ export const DiagnosisInput: React.FC<DiagnosisInputProps> = ({
       <div className="flex-grow relative">
         <div className="flex items-center ml-7 gap-3">
           <div className="flex-shrink-0">
-            <div className="text-[30px] font-medium bg-transparent border-0 focus:outline-none focus:ring-0 w-full">
+            <div className="text-[length:var(--ui-font-size-31)] font-medium bg-transparent border-0 focus:outline-none focus:ring-0 w-full">
               <p className={`${animate ? 'animate-scale-pulse' : ''}`}>
                 {label}
               </p>
@@ -451,14 +453,14 @@ export const DiagnosisInput: React.FC<DiagnosisInputProps> = ({
             onBlur={handleBlur}
             onClick={handleOpenWithReset}
             data-placeholder="Введите код или название диагноза..."
-            className="ml-7 text-[#202020] border-0 focus:border-0 focus:outline-none focus:ring-0 w-full bg-transparent placeholder-gray-400 py-2 min-h-5.5 whitespace-pre-wrap break-words"
+            className="ml-7 text-[var(--ui-color-alabaster-dark-800)] border-0 focus:border-0 focus:outline-none focus:ring-0 w-full bg-transparent placeholder-gray-400 py-2 min-h-5.5 whitespace-pre-wrap break-words"
             style={{ wordBreak: 'break-word' }}
             role="textbox"
             aria-multiline="true"
           />
 
           {hasUnselectedText && (
-            <p className="ml-7 mt-0.5 text-[13px] text-[#F29100]">
+            <p className="ml-7 mt-[var(--ui-space-2)] text-[length:var(--ui-font-size-13)] text-[var(--ui-color-yellow-600)]">
               Диагноз не выбран — выберите вариант из списка
             </p>
           )}

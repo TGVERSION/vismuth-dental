@@ -183,15 +183,14 @@ async def require_clinical_user(
         clinical.user_id == current_user.id,
         clinical.status == 'active',
         clinical.deleted_at.is_(None),
-        clinical.is_doctor.is_(True) | clinical.is_clinic_admin.is_(True),
+        clinical.is_doctor.is_(True),
     ).exists()
     result = await db.execute(select(ClinicMembership.id).where(
         ClinicMembership.user_id == current_user.id,
-        ClinicMembership.is_operator.is_(True),
+        ClinicMembership.is_operator.is_(True) | ClinicMembership.is_clinic_admin.is_(True),
         ClinicMembership.is_doctor.is_(False),
-        ClinicMembership.is_clinic_admin.is_(False),
         ~has_clinical_access,
     ).limit(1))
     if result.scalar_one_or_none() is not None:
-        raise HTTPException(status_code=403, detail='Врачебные инструменты недоступны оператору')
+        raise HTTPException(status_code=403, detail='Врачебные инструменты доступны только роли врача')
     return current_user

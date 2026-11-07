@@ -23,7 +23,7 @@ export const InviteLinkResult = ({ invitation }: InviteLinkResultProps) => {
 
   if (invitation.email_sent) {
     return (
-      <p role="status" className="text-sm text-[#22A06B]">
+      <p role="status" className="text-sm text-[var(--ui-color-green-600)]">
         Приглашение отправлено на {invitation.email}
       </p>
     );
@@ -41,7 +41,7 @@ export const InviteLinkResult = ({ invitation }: InviteLinkResultProps) => {
 
   return (
     <div role="status">
-      <p className="text-sm text-[#202020]">
+      <p className="text-sm text-[var(--ui-color-alabaster-dark-800)]">
         Письмо на {invitation.email} не отправлено. Передайте ссылку сотруднику
         сами — она действует 7 дней.
       </p>
@@ -60,10 +60,12 @@ export const InviteLinkResult = ({ invitation }: InviteLinkResultProps) => {
         </button>
       </div>
       {copyState === 'copied' && (
-        <p className="mt-1 text-xs text-[#22A06B]">Ссылка скопирована</p>
+        <p className="mt-1 text-xs text-[var(--ui-color-green-600)]">
+          Ссылка скопирована
+        </p>
       )}
       {copyState === 'manual' && (
-        <p className="mt-1 text-xs text-[#6C757D]">
+        <p className="mt-1 text-xs text-[var(--ui-color-alabaster-950)]">
           Скопируйте выделенную ссылку вручную
         </p>
       )}

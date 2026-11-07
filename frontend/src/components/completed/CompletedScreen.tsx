@@ -21,7 +21,7 @@ export function CompletedScreen() {
   const { clinic } = useMyClinic();
   const scope = superAdmin
     ? '/super-admin/questionnaires'
-    : clinic?.is_operator
+    : clinic?.is_operator || clinic?.is_clinic_admin
       ? '/clinics/' + clinic.clinic_id + '/completed-questionnaires'
       : null;
   const [clinics, setClinics] = useState<ClinicRead[]>([]),
@@ -98,7 +98,7 @@ export function CompletedScreen() {
     setSelected('');
     setDetail(null);
   };
-  if (!superAdmin && !clinic?.is_operator)
+  if (!superAdmin && !clinic?.is_operator && !clinic?.is_clinic_admin)
     return (
       <p className="p-8">
         Раздел доступен оператору клиники и супер-администратору
@@ -136,7 +136,7 @@ export function CompletedScreen() {
         <input
           aria-label="ФИО пациента"
           placeholder="ФИО пациента"
-          className="rounded-xl bg-white p-3"
+          className="vismuth-input"
           value={filters.name}
           onChange={(e) => filter('name', e.target.value)}
         />
@@ -144,7 +144,7 @@ export function CompletedScreen() {
           Заполнена с
           <input
             type="date"
-            className="ml-2 rounded-xl bg-white p-3"
+            className="vismuth-input ml-2"
             value={filters.date_from}
             onChange={(e) => filter('date_from', e.target.value)}
           />
@@ -153,13 +153,13 @@ export function CompletedScreen() {
           по
           <input
             type="date"
-            className="ml-2 rounded-xl bg-white p-3"
+            className="vismuth-input ml-2"
             value={filters.date_to}
             min={filters.date_from}
             onChange={(e) => filter('date_to', e.target.value)}
           />
         </label>
-        <button onClick={changed} className="text-[#5D8CF1]">
+        <button onClick={changed} className="vismuth-function-button">
           Обновить
         </button>
       </div>
@@ -185,7 +185,7 @@ export function CompletedScreen() {
                 className={
                   'block w-full rounded-xl border bg-white p-4 text-left ' +
                   (selected === i.id
-                    ? 'border-[#5D8CF1]'
+                    ? 'border-[var(--ui-color-blue-600)]'
                     : 'border-transparent')
                 }
               >
@@ -224,7 +224,7 @@ export function CompletedScreen() {
                 setItems([]);
                 setPage((p) => p - 1);
               }}
-              className="text-[#5D8CF1] disabled:opacity-40"
+              className="text-[var(--ui-color-blue-600)] disabled:opacity-40"
             >
               Назад
             </button>
@@ -240,12 +240,12 @@ export function CompletedScreen() {
                 setItems([]);
                 setPage((p) => p + 1);
               }}
-              className="text-[#5D8CF1] disabled:opacity-40"
+              className="text-[var(--ui-color-blue-600)] disabled:opacity-40"
             >
               Вперёд
             </button>
           </div>
-          {!superAdmin && clinic?.is_operator && (
+          {!superAdmin && (clinic?.is_operator || clinic?.is_clinic_admin) && (
             <OperatorLinks clinicId={clinic.clinic_id} />
           )}
         </div>
@@ -296,7 +296,7 @@ function OperatorLinks({ clinicId }: { clinicId: string }) {
             readOnly
             value={l.url}
             onFocus={(e) => e.target.select()}
-            className="mt-1 w-full rounded-lg bg-[#F3F4F8] p-2"
+            className="mt-1 w-full rounded-lg bg-[var(--ui-color-slate-100)] p-2"
           />
         </label>
       ))}

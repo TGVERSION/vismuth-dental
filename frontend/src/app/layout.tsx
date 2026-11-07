@@ -5,7 +5,10 @@ import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import ProtectedRoute from '@/components/ProtectedRoute';
 
-const onest = Onest({ subsets: ['cyrillic', 'latin'] });
+const onest = Onest({
+  subsets: ['cyrillic', 'latin'],
+  variable: '--font-onest',
+});
 
 export const metadata: Metadata = {
   title: 'Протокол врача',
@@ -19,7 +22,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="ru">
-      <body className={`${onest.className} text-black bg-[#F3F4F8]`}>
+      <body className={`${onest.variable} text-foreground bg-background`}>
         <ProtectedRoute>{children}</ProtectedRoute>
 
         <ToastContainer

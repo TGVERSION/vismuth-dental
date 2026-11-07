@@ -1,0 +1,179 @@
+/* VISMUTH control geometry and states; clinic accent/contrast stay local. */
+@media screen {
+  [data-questionnaire] .q-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--ui-space-8);
+    min-height: var(--ui-size-btn-m);
+    padding: var(--ui-space-12) var(--ui-space-16);
+    border: var(--ui-border-width-sm) solid transparent;
+    border-radius: var(--ui-radius-xl);
+    background: var(--q-brand);
+    color: var(--q-brand-contrast);
+    font-size: var(--ui-font-size-16);
+    font-weight: var(--ui-font-weight-regular);
+    line-height: var(--ui-line-height);
+    cursor: pointer;
+    transition:
+      background-color var(--ui-duration-fast) var(--ui-easing-standard),
+      color var(--ui-duration-fast) var(--ui-easing-standard),
+      box-shadow var(--ui-duration-fast) var(--ui-easing-standard);
+  }
+
+  [data-questionnaire] .q-button:hover:not(:disabled) {
+    background: color-mix(
+      in srgb,
+      var(--q-brand),
+      var(--ui-color-alabaster-dark-950) 12%
+    );
+  }
+
+  [data-questionnaire] .q-button:active:not(:disabled) {
+    background: color-mix(
+      in srgb,
+      var(--q-brand),
+      var(--ui-color-alabaster-dark-950) 20%
+    );
+  }
+
+  [data-questionnaire] .q-button[data-variant='secondary'] {
+    background: var(--q-surface);
+    color: var(--q-brand);
+  }
+
+  [data-questionnaire] .q-button[data-variant='outline'] {
+    border-color: var(--q-brand);
+    background: var(--q-bg);
+    color: var(--q-brand);
+  }
+
+  [data-questionnaire] .q-button[data-variant='secondary']:hover:not(:disabled),
+  [data-questionnaire] .q-button[data-variant='outline']:hover:not(:disabled) {
+    background: color-mix(in srgb, var(--q-brand) 10%, var(--q-bg));
+  }
+
+  [data-questionnaire] .q-button:disabled {
+    border-color: transparent;
+    background: var(--ui-color-alabaster-500);
+    color: var(--ui-color-alabaster-700);
+    opacity: 1;
+    cursor: not-allowed;
+  }
+
+  [data-questionnaire] .q-field {
+    min-height: var(--ui-size-textarea-no-label-l);
+    padding: 0 var(--ui-space-14);
+    border: var(--ui-border-width-sm) solid transparent;
+    border-radius: var(--ui-radius-lg);
+    background: var(--q-surface);
+    color: var(--q-text);
+    font-size: var(--ui-font-size-16);
+    line-height: var(--ui-line-height);
+    transition:
+      background-color var(--ui-duration-fast) var(--ui-easing-standard),
+      box-shadow var(--ui-duration-fast) var(--ui-easing-standard);
+  }
+
+  [data-questionnaire] .q-field:hover:not(:disabled) {
+    background: var(--ui-color-alabaster-600);
+  }
+
+  [data-questionnaire] .q-field::placeholder {
+    color: var(--ui-color-alabaster-700);
+  }
+
+  [data-questionnaire] .q-field[aria-invalid='true'],
+  [data-questionnaire] .q-field[aria-invalid='true']:hover:not(:disabled) {
+    background: var(--ui-color-red-100);
+    border-color: var(--ui-color-red-600);
+  }
+
+  [data-questionnaire] .q-field:disabled {
+    background: var(--ui-color-alabaster-500);
+    color: var(--ui-color-alabaster-700);
+    opacity: 1;
+    cursor: not-allowed;
+  }
+
+  [data-questionnaire] textarea.q-field {
+    min-height: var(--ui-size-textarea-l);
+    padding-block: var(--ui-space-10);
+  }
+
+  [data-questionnaire] .q-button:focus-visible,
+  [data-questionnaire] .q-field:focus-visible,
+  [data-questionnaire] .q-field:focus-within,
+  [data-questionnaire] .q-choice:focus-visible,
+  [data-questionnaire] .q-icon-button:focus-visible,
+  [data-questionnaire] .q-select-option:focus-visible,
+  [data-questionnaire] .q-doctor-card:focus-visible {
+    outline: none;
+    box-shadow: var(--ui-focus-ring);
+  }
+
+  [data-questionnaire] .q-composer {
+    border-radius: var(--ui-radius-xl);
+    transition: box-shadow var(--ui-duration-fast) var(--ui-easing-standard);
+  }
+
+  [data-questionnaire] .q-composer:focus-within {
+    box-shadow: var(--ui-focus-ring);
+  }
+
+  [data-questionnaire] .q-composer textarea:focus-visible {
+    box-shadow: none;
+  }
+
+  [data-questionnaire] .q-choice {
+    position: relative;
+    min-height: var(--ui-size-btn-s);
+    padding: var(--ui-space-6) var(--ui-space-12);
+    border-width: var(--ui-border-width-lg);
+    border-radius: var(--ui-radius-full);
+    font-size: var(--ui-font-size-16);
+    font-weight: var(--ui-font-weight-regular);
+    line-height: var(--ui-line-height);
+    cursor: pointer;
+    transition:
+      background-color var(--ui-duration-fast) var(--ui-easing-standard),
+      box-shadow var(--ui-duration-fast) var(--ui-easing-standard);
+  }
+
+  /* The 36px chip keeps a 44px touch target without changing its DS size. */
+  [data-questionnaire] .q-choice::before {
+    content: '';
+    position: absolute;
+    inset: calc(-1 * var(--ui-space-4)) 0;
+  }
+
+  [data-questionnaire] .q-choice:hover:not(:disabled) {
+    box-shadow: inset 0 0 0 var(--ui-border-width-sm) var(--q-brand);
+  }
+
+  [data-questionnaire] .q-choice:disabled {
+    border-color: transparent;
+    background: var(--ui-color-alabaster-500);
+    color: var(--ui-color-alabaster-700);
+    opacity: 1;
+    cursor: not-allowed;
+  }
+
+  [data-questionnaire] .q-icon-button {
+    width: var(--ui-size-btn-m);
+    height: var(--ui-size-btn-m);
+    border-radius: var(--ui-radius-xl);
+    cursor: pointer;
+  }
+
+  [data-questionnaire] .q-icon-button:hover:not(:disabled),
+  [data-questionnaire] .q-doctor-card:hover:not(:disabled) {
+    background: var(--ui-color-alabaster-500);
+  }
+
+  [data-questionnaire] .q-icon-button:disabled {
+    color: var(--ui-color-alabaster-700);
+    opacity: 1;
+    cursor: not-allowed;
+  }
+}

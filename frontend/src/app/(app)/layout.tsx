@@ -9,18 +9,22 @@ import { DoctorsHelpers } from '@/components/DoctorsHelpers';
 import { SettingsPopup } from '@/components/settings/SettingsPopup';
 import { ClinicAccessGate } from '@/components/clinic-join/ClinicAccessGate';
 import { useMyClinic } from '@/hooks/useMyClinic';
-import { operatorOnly } from '@/lib/clinic-access';
+import { nonClinicalStaff } from '@/lib/clinic-access';
 import { AppNav } from '@/components/AppNav';
+import { OwnClinicSettings } from '@/components/settings/clinics/OwnClinicSettings';
 
 function WorkingLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const { clinic, isLoading: isClinicLoading } = useMyClinic();
   const router = useRouter();
-  const hideTools = operatorOnly(clinic);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [isDictionaryOpen, setIsDictionaryOpen] = useState(false);
+  const [showClinicSettings, setShowClinicSettings] = useState(true);
   const hideTimerRef = useRef<NodeJS.Timeout | null>(null);
   const { user, handleLogout } = useAuth();
+  const hideTools =
+    user?.role !== 'super_admin' &&
+    (isClinicLoading || nonClinicalStaff(clinic));
   useRefreshCurrentUser();
   const hideHeader = ['/login', '/register'].includes(pathname);
   const [showDoctorsHelpers, setShowDoctorsHelpers] = useState(false);
@@ -90,41 +94,59 @@ function WorkingLayout({ children }: { children: React.ReactNode }) {
             </div>
             <div className="header__actions">
               {!hideTools && (
-                <div
-                  className="header__helpers hover:text-[#769CEF] cursor-pointer text-[#5D8CF1]"
+                <button
+                  type="button"
+                  className="header__helpers hover:text-[var(--ui-color-blue-700)] cursor-pointer text-[var(--ui-color-blue-600)]"
                   onClick={() => setShowDoctorsHelpers(true)}
                 >
                   Помощники врача
-                </div>
+                </button>
               )}
-              {!hideTools && (
-                <Image
-                  onClick={() => setIsDictionaryOpen(true)}
-                  alt="settings"
-                  className="cursor-pointer icon"
-                  src="/setting-fill.svg"
-                  width={23}
-                  height={23}
-                />
+              {(!hideTools || clinic?.is_clinic_admin) && (
+                <button
+                  type="button"
+                  className="vismuth-icon-button"
+                  aria-label="Настройки"
+                  onClick={() => {
+                    setShowClinicSettings(true);
+                    setIsDictionaryOpen(true);
+                  }}
+                >
+                  <Image
+                    alt="settings"
+                    className="cursor-pointer icon"
+                    src="/setting-fill.svg"
+                    width={23}
+                    height={23}
+                  />
+                </button>
               )}
               <div
                 className="relative"
                 onMouseEnter={handleProfileEnter}
                 onMouseLeave={handleProfileLeave}
               >
-                <Image
-                  alt="profile"
-                  className="profile cursor-pointer icon"
-                  src="/profile.svg"
-                  width={23}
-                  height={23}
-                />
+                <button
+                  type="button"
+                  className="vismuth-icon-button"
+                  aria-label="Профиль"
+                  aria-expanded={showProfileMenu}
+                  onClick={() => setShowProfileMenu((value) => !value)}
+                >
+                  <Image
+                    alt="profile"
+                    className="profile cursor-pointer icon"
+                    src="/profile.svg"
+                    width={23}
+                    height={23}
+                  />
+                </button>
 
                 {showProfileMenu && (
                   <div className="absolute right-0 top-full mt-2 w-65 bg-white rounded-xl shadow-custom p-5 z-50">
                     {user && (
-                      <div className=" pb-6.25">
-                        <p className="text-[#202020] text-base truncate">
+                      <div className=" pb-[var(--ui-space-24)]">
+                        <p className="text-[var(--ui-color-alabaster-dark-800)] text-base truncate">
                           {user.login}
                         </p>
                       </div>
@@ -133,7 +155,7 @@ function WorkingLayout({ children }: { children: React.ReactNode }) {
                     <button
                       type="button"
                       onClick={handleLogout}
-                      className="w-full cursor-pointer py-2.5 px-4 bg-[#FED7D7] hover:bg-[#FECACA] text-[#E53E3E] rounded-lg font-medium transition-colors text-sm"
+                      className="vismuth-button--danger w-full cursor-pointer py-[var(--ui-space-10)] px-4 bg-[var(--ui-color-red-100)] hover:bg-[var(--ui-color-red-200)] text-[var(--ui-color-red-600)] rounded-lg font-medium transition-colors text-sm"
                     >
                       Выйти
                     </button>
@@ -146,11 +168,30 @@ function WorkingLayout({ children }: { children: React.ReactNode }) {
       )}
 
       <SettingsPopup
-        isOpen={isDictionaryOpen}
+        isOpen={
+          isDictionaryOpen &&
+          !(
+            user?.role !== 'super_admin' &&
+            clinic?.is_clinic_admin &&
+            showClinicSettings
+          )
+        }
         onClose={() => setIsDictionaryOpen(false)}
       />
+      {isDictionaryOpen &&
+        user?.role !== 'super_admin' &&
+        clinic?.is_clinic_admin &&
+        showClinicSettings && (
+          <OwnClinicSettings
+            clinic={clinic}
+            onClose={() => setIsDictionaryOpen(false)}
+            onClinicalSettings={
+              clinic.is_doctor ? () => setShowClinicSettings(false) : undefined
+            }
+          />
+        )}
 
-      <main className="app-main flex bg-[#F3F4F8] min-h-screen w-full mx-auto my-20">
+      <main className="app-main flex bg-[var(--ui-color-slate-100)] min-h-screen w-full mx-auto my-20">
         {children}
       </main>
 

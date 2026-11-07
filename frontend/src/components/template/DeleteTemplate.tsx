@@ -36,20 +36,24 @@ export const DeleteTemplate: React.FC<DeleteTemplateProps> = ({
 
   return (
     <div
-      className="modal-overlay fixed inset-0 bg-black/50 flex items-center justify-center z-1002"
+      className="modal-overlay px-4 fixed inset-0 bg-black/50 flex items-center justify-center z-[calc(var(--ui-z-modal)+2)]"
       onClick={onClose}
     >
       <div
-        className="bg-white rounded-2xl w-full max-w-lg p-5 shadow-2xl animate-fade-in"
+        className="bg-white rounded-2xl w-full max-w-lg p-5 shadow-[var(--ui-shadow)] animate-fade-in"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex justify-end">
-          <button type="button" onClick={onClose} className="cursor-pointer">
+          <button
+            type="button"
+            onClick={onClose}
+            className="vismuth-icon-button cursor-pointer"
+          >
             <Image alt="close" src="/close.svg" width={25} height={25} />
           </button>
         </div>
 
-        <h2 className="text-[34px] font-medium text-center mb-7.5 px-5">
+        <h2 className="text-[length:var(--ui-font-size-34)] font-medium text-center mb-[var(--ui-space-32)] px-5">
           Вы действительно хотите удалить шаблон?
         </h2>
 
@@ -57,14 +61,16 @@ export const DeleteTemplate: React.FC<DeleteTemplateProps> = ({
           <button
             type="button"
             onClick={handleDelete}
-            className="cursor-pointer h-12 w-full py-3 bg-[#F15D5D] hover:bg-[#F26E6E] text-white rounded-xl transition-colors"
+            className="vismuth-button cursor-pointer w-full bg-[var(--ui-color-red-400)] hover:bg-[var(--ui-color-red-400)] text-white transition-colors"
+            data-variant="danger"
           >
             Удалить
           </button>
           <button
             type="button"
             onClick={onClose}
-            className="cursor-pointer h-12 w-full py-3 bg-[#DCE7FF] hover:bg-[#F0F5FF] rounded-xl transition-colors"
+            className="vismuth-button cursor-pointer w-full bg-[var(--ui-color-blue-100)] hover:bg-[var(--ui-color-blue-50)] transition-colors"
+            data-variant="secondary"
           >
             Оставить
           </button>

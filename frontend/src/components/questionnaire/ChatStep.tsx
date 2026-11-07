@@ -111,12 +111,14 @@ export const ChatStep = ({
             onClick={onBack}
             disabled={chat.isAwaiting}
             aria-label="Вернуться к выбору врача"
-            className="-ml-2 flex h-11 w-11 shrink-0 items-center justify-center disabled:opacity-40"
+            className="q-icon-button -ml-2 flex shrink-0 items-center justify-center disabled:opacity-40"
           >
             <BackIcon className="h-5 w-5" />
           </button>
         ) : null}
-        <h1 className="text-[24px] font-bold">Чат с Ассистентом</h1>
+        <h1 className="text-[length:var(--ui-font-size-26)] font-bold">
+          Чат с Ассистентом
+        </h1>
       </header>
 
       <div className="shrink-0 px-4 pb-3">
@@ -163,7 +165,7 @@ export const ChatStep = ({
               <button
                 type="button"
                 onClick={chat.retry}
-                className="mt-2 min-h-[44px] rounded-xl bg-[var(--q-brand)] px-4 text-sm font-medium text-[var(--q-brand-contrast)]"
+                className="q-button mt-2"
               >
                 Повторить
               </button>

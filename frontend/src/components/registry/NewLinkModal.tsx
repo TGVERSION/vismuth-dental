@@ -104,7 +104,7 @@ export const NewLinkModal = ({
       // должны её терять — закрыть можно только кнопкой «Готово».
       <ModalShell title="Ссылка готова" onClose={onClose} closeDisabled>
         <LinkQrCard item={inviteLinkItem(created)} />
-        <div className="mt-7.5 flex flex-col gap-3">
+        <div className="mt-[var(--ui-space-32)] flex flex-col gap-3">
           <button
             type="button"
             className={PRIMARY_BUTTON_CLASS}
@@ -177,12 +177,15 @@ export const NewLinkModal = ({
         </FieldRow>
 
         {serverError ? (
-          <p role="alert" className="mt-3 text-sm text-[#E53E3E]">
+          <p
+            role="alert"
+            className="mt-3 text-sm text-[var(--ui-color-red-600)]"
+          >
             {serverError}
           </p>
         ) : null}
 
-        <div className="mt-7.5 flex flex-col gap-3">
+        <div className="mt-[var(--ui-space-32)] flex flex-col gap-3">
           <button
             type="submit"
             disabled={isSaving}

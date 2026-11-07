@@ -313,7 +313,7 @@ export const filterOptions = <O extends { value: unknown; label: string }>(
 
 // --- Сотрудники -------------------------------------------------------------
 
-export type MemberRole = 'admin' | 'doctor';
+export type MemberRole = 'admin' | 'doctor' | 'operator';
 
 export const MEMBER_ROLE_OPTIONS: { value: MemberRole; label: string }[] = [
   { value: 'admin', label: 'Админ' },
@@ -321,6 +321,7 @@ export const MEMBER_ROLE_OPTIONS: { value: MemberRole; label: string }[] = [
 ];
 
 interface MemberFlags {
+  is_operator?: boolean;
   is_clinic_admin: boolean;
   is_doctor: boolean;
 }
@@ -329,12 +330,14 @@ export const memberFlagsToRoles = (member: MemberFlags): MemberRole[] => {
   const roles: MemberRole[] = [];
   if (member.is_clinic_admin) roles.push('admin');
   if (member.is_doctor) roles.push('doctor');
+  if (member.is_operator) roles.push('operator');
   return roles;
 };
 
 export const memberRolesToFlags = (roles: MemberRole[]): MemberFlags => ({
   is_clinic_admin: roles.includes('admin'),
   is_doctor: roles.includes('doctor'),
+  ...(roles.includes('operator') ? { is_operator: true } : {}),
 });
 
 type NamedMember = Pick<
@@ -439,12 +442,19 @@ export const buildMemberRolesPatch = (
   roles: MemberRole[],
   specializationIds: number[],
 ): MemberRolesChange => {
-  const flags = memberRolesToFlags(roles);
-  if (!flags.is_clinic_admin && !flags.is_doctor) return { kind: 'no_roles' };
+  const flags = {
+    ...memberRolesToFlags(roles),
+    ...(member.is_operator !== undefined || roles.includes('operator')
+      ? { is_operator: roles.includes('operator') }
+      : {}),
+  };
+  if (!flags.is_clinic_admin && !flags.is_doctor && !flags.is_operator)
+    return { kind: 'no_roles' };
 
   if (
     flags.is_clinic_admin === member.is_clinic_admin &&
-    flags.is_doctor === member.is_doctor
+    flags.is_doctor === member.is_doctor &&
+    !!flags.is_operator === !!member.is_operator
   ) {
     return { kind: 'unchanged' };
   }

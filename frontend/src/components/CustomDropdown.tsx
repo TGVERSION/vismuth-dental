@@ -60,7 +60,7 @@ export function CustomDropdown<T = string, M extends boolean = false>({
   placeholder = 'Выберите...',
   disabled = false,
   className = '',
-  triggerClassName = 'bg-[#F8F9FA]',
+  triggerClassName = 'bg-[var(--ui-color-alabaster-100)]',
   dropdownClassName = '',
   optionClassName = '',
   renderTrigger,
@@ -212,13 +212,17 @@ export function CustomDropdown<T = string, M extends boolean = false>({
         e.preventDefault();
         setIsOpen(false);
         containerRef.current?.querySelector('button')?.focus();
-      } else if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      } else if (['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(e.key)) {
         e.preventDefault();
         const buttons = Array.from(
           listRef.current?.querySelectorAll<HTMLButtonElement>(
             'button[role="option"]:not(:disabled)',
           ) ?? [],
         );
+        if (e.key === 'Home' || e.key === 'End') {
+          buttons[e.key === 'Home' ? 0 : buttons.length - 1]?.focus();
+          return;
+        }
         const index = buttons.indexOf(option as HTMLButtonElement);
         const direction = e.key === 'ArrowDown' ? 1 : -1;
         buttons[(index + direction + buttons.length) % buttons.length]?.focus();
@@ -233,10 +237,13 @@ export function CustomDropdown<T = string, M extends boolean = false>({
       return;
     }
 
-    const enabledOptions = options.filter((opt) => !opt.disabled);
-    const currentValues = getValues();
-    const currentIndex = enabledOptions.findIndex((opt) =>
-      currentValues.includes(opt.value),
+    const buttons = Array.from(
+      listRef.current?.querySelectorAll<HTMLButtonElement>(
+        'button[role="option"]:not(:disabled)',
+      ) ?? [],
+    );
+    const currentIndex = buttons.findIndex(
+      (button) => button.getAttribute('aria-selected') === 'true',
     );
 
     switch (e.key) {
@@ -246,18 +253,20 @@ export function CustomDropdown<T = string, M extends boolean = false>({
         break;
       case 'ArrowDown':
         e.preventDefault();
-        if (enabledOptions.length > 0) {
-          const nextIndex = (currentIndex + 1) % enabledOptions.length;
-          handleValueChange(enabledOptions[nextIndex].value);
-        }
+        buttons[(currentIndex + 1) % buttons.length]?.focus();
         break;
       case 'ArrowUp':
         e.preventDefault();
-        if (enabledOptions.length > 0) {
-          const prevIndex =
-            (currentIndex - 1 + enabledOptions.length) % enabledOptions.length;
-          handleValueChange(enabledOptions[prevIndex].value);
-        }
+        buttons[
+          (currentIndex < 0
+            ? buttons.length - 1
+            : currentIndex - 1 + buttons.length) % buttons.length
+        ]?.focus();
+        break;
+      case 'Home':
+      case 'End':
+        e.preventDefault();
+        buttons[e.key === 'Home' ? 0 : buttons.length - 1]?.focus();
         break;
       case 'Enter':
       case ' ':
@@ -305,9 +314,9 @@ export function CustomDropdown<T = string, M extends boolean = false>({
         left: coords.left,
         width: coords.width,
         maxHeight: coords.maxHeight ?? 240,
-        zIndex: 9999,
+        zIndex: 'var(--ui-z-popover)',
       }}
-      className={`bg-white border border-[#E9ECEF] rounded-2xl shadow-lg overflow-hidden animate-fade-in flex flex-col ${dropdownClassName}`}
+      className={`bg-[var(--ui-color-alabaster-50)] rounded-[var(--ui-radius-lg)] shadow-[var(--ui-shadow)] p-[var(--ui-space-6)] overflow-hidden animate-fade-in flex flex-col ${dropdownClassName}`}
     >
       {onSearch && (
         <div className="p-2 border-b border-gray-100 shrink-0">
@@ -320,7 +329,8 @@ export function CustomDropdown<T = string, M extends boolean = false>({
               onSearch(e.target.value);
             }}
             placeholder="Поиск..."
-            className="w-full px-3 py-1.5 text-sm bg-gray-50 rounded-lg border-0 outline-none focus:ring-2 focus:ring-[#5D8CF1] transition-shadow"
+            className="vismuth-input w-full text-sm"
+            aria-label="Поиск вариантов"
             onClick={(e) => e.stopPropagation()}
             onKeyDown={(e) => {
               e.stopPropagation();
@@ -352,8 +362,10 @@ export function CustomDropdown<T = string, M extends boolean = false>({
               aria-selected={optionIsSelected}
               onClick={() => handleValueChange(option.value)}
               disabled={disabled || isDisabled}
-              className={`w-full cursor-pointer px-5 py-3.5 text-left flex items-center gap-3 hover:bg-[#F8F9FA] focus-visible:bg-[#F0F5FF] focus-visible:outline-none transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
-                optionIsSelected ? 'bg-[#F8F9FA]' : ''
+              className={`w-full cursor-pointer min-h-[var(--ui-size-control-l)] rounded-[var(--ui-radius-sm)] px-[var(--ui-space-10)] py-[var(--ui-space-6)] text-left flex items-center gap-2 hover:bg-[var(--ui-color-alabaster-500)] hover:text-[var(--ui-color-alabaster-dark-800)] focus-visible:shadow-[var(--ui-focus-ring)] focus-visible:outline-none transition-colors disabled:bg-transparent disabled:text-[var(--ui-color-alabaster-700)] disabled:cursor-not-allowed ${
+                optionIsSelected
+                  ? 'bg-[var(--ui-color-blue-100)] text-[var(--ui-color-blue-600)]'
+                  : 'text-[var(--ui-color-alabaster-dark-800)]'
               } ${optionClassName}`}
             >
               <div className="flex-1 flex items-center gap-3">
@@ -370,12 +382,10 @@ export function CustomDropdown<T = string, M extends boolean = false>({
                         className="shrink-0"
                       />
                     )}
-                    <span className="text-sm text-[#202020]">
-                      {option.label}
-                    </span>
+                    <span className="text-sm">{option.label}</span>
                     {option.badgeClass && (
                       <span
-                        className={`text-xs px-2 py-0.5 rounded-full ${option.badgeClass}`}
+                        className={`text-xs px-2 py-[var(--ui-space-2)] rounded-full ${option.badgeClass}`}
                       >
                         {option.label}
                       </span>
@@ -397,12 +407,12 @@ export function CustomDropdown<T = string, M extends boolean = false>({
           );
         })}
         {isLoading && (
-          <div className="px-4 py-3 text-center text-sm text-[#6C757D]">
+          <div className="px-4 py-3 text-center text-sm text-[var(--ui-color-alabaster-950)]">
             Загрузка...
           </div>
         )}
         {!isLoading && options.length === 0 && (
-          <div className="px-4 py-3 text-center text-sm text-[#6C757D]">
+          <div className="px-4 py-3 text-center text-sm text-[var(--ui-color-alabaster-950)]">
             Ничего не найдено
           </div>
         )}
@@ -427,29 +437,43 @@ export function CustomDropdown<T = string, M extends boolean = false>({
         type="button"
         onClick={() => !disabled && setIsOpen((prev) => !prev)}
         disabled={disabled}
-        className={`w-full min-h-12 gap-3 px-4 py-3 ${triggerClassName} border-0 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#5D8CF1] text-left flex items-center justify-between cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed transition-shadow ${
-          isOpen && !disabled ? 'ring-2 ring-[#5D8CF1]' : ''
+        data-filled={selectedOptions.length > 0 || undefined}
+        className={`vismuth-input w-full gap-3 ${triggerClassName} text-left flex items-center justify-between cursor-pointer disabled:cursor-not-allowed transition-shadow ${
+          isOpen && !disabled ? 'shadow-[var(--ui-focus-ring)]' : ''
         }`}
         aria-controls={listboxId}
       >
         {renderTrigger && selectedOptions.length > 0 ? (
           renderTrigger(multiple ? selectedOptions : selectedOptions[0])
         ) : (
-          <span className="text-sm text-[#202020] truncate">
+          <span className="min-w-0 truncate">
             {multiple && selectedOptions.length > 0
               ? selectedOptions.map((opt) => opt.label).join(', ')
               : selectedOptions[0]?.label || placeholder}
           </span>
         )}
-        <Image
-          src="/arrow-dropdown.svg"
-          alt="toggle"
-          width={10}
-          height={10}
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          aria-hidden="true"
+          style={{
+            color: disabled
+              ? 'var(--ui-color-alabaster-700)'
+              : 'var(--ui-color-alabaster-950)',
+          }}
+          width={24}
+          height={24}
           className={`transition-transform duration-200 shrink-0 ${
             isOpen && !disabled ? 'rotate-180' : ''
           }`}
-        />
+        >
+          <path
+            fillRule="evenodd"
+            clipRule="evenodd"
+            d="M11.4691 15.5339L6.5297 10.5936C6.23096 10.2948 6.21791 9.81458 6.5 9.5C6.81291 9.2197 7.29033 9.23284 7.58735 9.52992L11.9994 13.9429L16.4107 9.53076C16.7135 9.22789 17.1966 9.19773 17.5 9.5C17.8048 9.80369 17.7737 10.2891 17.4694 10.5934L12.5298 15.5339C12.3892 15.6746 12.1984 15.7537 11.9994 15.7537C11.8005 15.7537 11.6097 15.6746 11.4691 15.5339Z"
+            fill="currentColor"
+          />
+        </svg>
       </button>
 
       {isOpen && !disabled && createPortal(dropdownList, document.body)}

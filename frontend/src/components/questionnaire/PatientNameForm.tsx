@@ -44,7 +44,9 @@ export const PatientNameForm = ({
       }}
       className="q-screen flex flex-col px-4 pt-[calc(env(safe-area-inset-top)+24px)]"
     >
-      <h1 className="text-[24px] font-bold">Как вас зовут?</h1>
+      <h1 className="text-[length:var(--ui-font-size-26)] font-bold">
+        Как вас зовут?
+      </h1>
 
       <input
         type="text"
@@ -55,10 +57,11 @@ export const PatientNameForm = ({
         placeholder="Имя*"
         aria-label="Имя"
         aria-required="true"
-        className={`${FIELD_CLASS} mt-6 min-h-[52px] w-full`}
+        aria-invalid={touched && !nameValid}
+        className={`${FIELD_CLASS} mt-6 w-full`}
       />
       {touched && !nameValid ? (
-        <p role="alert" className="mt-1 text-sm text-[#C2334D]">
+        <p role="alert" className="mt-1 text-sm text-[var(--ui-color-red-700)]">
           Укажите имя
         </p>
       ) : null}
@@ -71,14 +74,11 @@ export const PatientNameForm = ({
         maxLength={PATIENT_NAME_MAX_LENGTH}
         placeholder="Отчество"
         aria-label="Отчество"
-        className={`${FIELD_CLASS} mt-3 min-h-[52px] w-full`}
+        className={`${FIELD_CLASS} mt-3 w-full`}
       />
 
       <div className="mt-auto pb-[calc(env(safe-area-inset-bottom)+16px)] pt-8">
-        <button
-          type="submit"
-          className="min-h-[52px] w-full rounded-xl bg-[var(--q-brand)] px-4 text-base font-medium text-[var(--q-brand-contrast)]"
-        >
+        <button type="submit" className="q-button w-full">
           Продолжить
         </button>
       </div>

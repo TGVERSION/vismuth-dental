@@ -151,7 +151,7 @@ export function FieldRow({
         isDragging
           ? 'opacity-30 border-transparent shadow-none'
           : showControls
-            ? 'border-gray-200 shadow-md'
+            ? 'border-gray-200 shadow-[var(--ui-shadow-md)]'
             : 'border-transparent'
       }`}
       onMouseEnter={() => setIsHovered(true)}
@@ -206,21 +206,23 @@ export function FieldRow({
             e.stopPropagation();
             onDragStart();
           }}
-          className={`text-[#9CA3AF] text-xs transition-opacity mr-1 cursor-grab active:cursor-grabbing ${
+          className={`text-[var(--ui-color-alabaster-800)] text-xs transition-opacity mr-1 cursor-grab active:cursor-grabbing ${
             showControls ? 'opacity-100' : 'opacity-0'
           }`}
           onClick={(e) => e.stopPropagation()}
         >
           <Image src="/drag.svg" alt="delete" width={20} height={20} />
         </span>
-        <span className="text-md text-[#202020] shrink-0">{index + 1}.</span>
-        <span className="text-md font-medium text-[#202020] ml-1">
+        <span className="text-md text-[var(--ui-color-alabaster-dark-800)] shrink-0">
+          {index + 1}.
+        </span>
+        <span className="text-md font-medium text-[var(--ui-color-alabaster-dark-800)] ml-1">
           {field.field_label || 'Без названия'}
         </span>
         {!isPreset && field.field_type && (
-          <span className="ml-1 text-sm text-[#6C757D] truncate">
+          <span className="ml-1 text-sm text-[var(--ui-color-alabaster-950)] truncate">
             &#183;{' '}
-            <span className="ml-1 text-sm text-[#6C757D] truncate">
+            <span className="ml-1 text-sm text-[var(--ui-color-alabaster-950)] truncate">
               {getTypeLabel(field.field_type)}
             </span>
           </span>
@@ -237,7 +239,7 @@ export function FieldRow({
             onClick={onMoveUp}
             disabled={index === 0}
             title="Переместить вверх"
-            className="flex items-center justify-center w-6 h-6 text-[#9CA3AF] hover:text-[#374151] disabled:opacity-30 transition-colors cursor-pointer"
+            className="flex items-center justify-center w-6 h-6 text-[var(--ui-color-alabaster-800)] hover:text-[var(--ui-color-slate-700)] disabled:opacity-30 transition-colors cursor-pointer"
           >
             <Image src="/arrow-top.svg" alt="back" width={20} height={20} />
           </button>
@@ -246,7 +248,7 @@ export function FieldRow({
             onClick={onMoveDown}
             disabled={index === total - 1}
             title="Переместить вниз"
-            className="flex items-center justify-center w-6 h-6 text-[#9CA3AF] hover:text-[#374151] disabled:opacity-30 transition-colors cursor-pointer"
+            className="flex items-center justify-center w-6 h-6 text-[var(--ui-color-alabaster-800)] hover:text-[var(--ui-color-slate-700)] disabled:opacity-30 transition-colors cursor-pointer"
           >
             <Image src="/arrow-bottom.svg" alt="back" width={20} height={20} />
           </button>
@@ -265,9 +267,9 @@ export function FieldRow({
         <div className="px-4 pb-5 flex flex-col gap-4">
           {isPreset ? (
             <div className="flex flex-col gap-4">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div>
-                  <label className="block text-xs text-[#6C757D] mb-1.5">
+                  <label className="block text-xs text-[var(--ui-color-alabaster-950)] mb-[var(--ui-space-6)]">
                     Заголовок поля
                   </label>
                   <div className="flex items-center gap-2 bg-gray-100 rounded-lg px-3 h-10">
@@ -278,13 +280,13 @@ export function FieldRow({
                       height={13}
                       className="opacity-40 shrink-0"
                     />
-                    <span className="text-sm text-[#202020] truncate">
+                    <span className="text-sm text-[var(--ui-color-alabaster-dark-800)] truncate">
                       {field.field_label}
                     </span>
                   </div>
                 </div>
                 <div>
-                  <label className="block text-xs text-[#6C757D] mb-1.5">
+                  <label className="block text-xs text-[var(--ui-color-alabaster-950)] mb-[var(--ui-space-6)]">
                     Справочник для поля
                   </label>
                   <CustomDropdown
@@ -302,9 +304,9 @@ export function FieldRow({
             </div>
           ) : (
             <>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div>
-                  <label className="block text-xs text-[#6C757D] mb-1.5">
+                  <label className="block text-xs text-[var(--ui-color-alabaster-950)] mb-[var(--ui-space-6)]">
                     Заголовок поля
                   </label>
                   <input
@@ -312,11 +314,11 @@ export function FieldRow({
                     value={field.field_label}
                     onChange={(e) => onUpdate({ field_label: e.target.value })}
                     placeholder="Заголовок поля"
-                    className="w-full h-10 px-3 py-2 bg-gray-50 rounded-lg text-sm text-[#202020] border-0 outline-none focus:ring-2 focus:ring-[#5D8CF1] transition-shadow"
+                    className="vismuth-input w-full"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs text-[#6C757D] mb-1.5">
+                  <label className="block text-xs text-[var(--ui-color-alabaster-950)] mb-[var(--ui-space-6)]">
                     Тип поля
                   </label>
                   <CustomDropdown
@@ -329,9 +331,9 @@ export function FieldRow({
               </div>
 
               {!isOptionsType(field.field_type) && (
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                   <div>
-                    <label className="block text-xs text-[#6C757D] mb-1.5">
+                    <label className="block text-xs text-[var(--ui-color-alabaster-950)] mb-[var(--ui-space-6)]">
                       Справочник для поля
                     </label>
                     <CustomDropdown
@@ -346,11 +348,10 @@ export function FieldRow({
                     />
                   </div>
                   <div>
-                    <label className="block text-xs text-[#6C757D] mb-1.5">
+                    <label className="block text-xs text-[var(--ui-color-alabaster-950)] mb-[var(--ui-space-6)]">
                       Значение по умолчанию
                     </label>
-                    {field.field_type === 'multiselect' &&
-                    field.dictionary ? (
+                    {field.field_type === 'multiselect' && field.dictionary ? (
                       <CustomDropdown<string, true>
                         key={field.dictionary}
                         options={dictEntries}
@@ -399,9 +400,7 @@ export function FieldRow({
                           ...dictEntries,
                         ]}
                         value={field.default_value || ''}
-                        onChange={(v) =>
-                          onUpdate({ default_value: v || null })
-                        }
+                        onChange={(v) => onUpdate({ default_value: v || null })}
                         placeholder="Не выбрано"
                         showCheckIcon
                         onSearch={setDictSearchInput}
@@ -418,7 +417,7 @@ export function FieldRow({
                         }
                         placeholder="Сначала выберите справочник"
                         disabled
-                        className="w-full h-10 px-3 py-2 bg-gray-50 rounded-lg text-sm text-[#202020] border-0 outline-none focus:ring-2 focus:ring-[#5D8CF1] transition-shadow disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="vismuth-input w-full"
                       />
                     )}
                   </div>
@@ -432,10 +431,10 @@ export function FieldRow({
                       {dropOptTarget?.localId === opt.localId &&
                         dropOptTarget.side === 'before' &&
                         draggedOptId !== opt.localId && (
-                          <div className="h-0.5 mx-2 bg-[#5D8CF1] rounded-full" />
+                          <div className="h-0.5 mx-2 bg-[var(--ui-color-blue-600)] rounded-full" />
                         )}
                       <div
-                        className={`flex items-center gap-2 py-1.5 transition-opacity ${
+                        className={`flex items-center gap-2 py-[var(--ui-space-6)] transition-opacity ${
                           draggedOptId === opt.localId ? 'opacity-30' : ''
                         }`}
                         onDragOver={(e) => {
@@ -466,7 +465,7 @@ export function FieldRow({
                             e.dataTransfer.effectAllowed = 'move';
                             setDraggedOptId(opt.localId);
                           }}
-                          className="text-[#9CA3AF] text-xs cursor-grab active:cursor-grabbing shrink-0"
+                          className="text-[var(--ui-color-alabaster-800)] text-xs cursor-grab active:cursor-grabbing shrink-0"
                         >
                           <Image
                             src="/drag.svg"
@@ -507,7 +506,7 @@ export function FieldRow({
                             onUpdateOption(opt.localId, e.target.value)
                           }
                           placeholder="Введите текст"
-                          className="flex-1 h-8 px-3 bg-gray-50 rounded-lg text-sm text-[#202020] border-0 outline-none focus:ring-2 focus:ring-[#5D8CF1] transition-shadow"
+                          className="flex-1 h-8 px-3 bg-gray-50 rounded-lg text-sm text-[var(--ui-color-alabaster-dark-800)] border-0 outline-none focus:ring-2 focus:ring-[var(--ui-color-blue-600)] transition-shadow"
                         />
 
                         {opt.isDefault && (
@@ -526,10 +525,12 @@ export function FieldRow({
                                 onClearDefault();
                               }
                             }}
-                            className="flex items-center gap-1 text-xs text-[#6C757D] shrink-0 cursor-pointer"
+                            className="flex items-center gap-1 text-xs text-[var(--ui-color-alabaster-950)] shrink-0 cursor-pointer"
                           >
                             по умолчанию
-                            <span className="text-[#9CA3AF]">✕</span>
+                            <span className="text-[var(--ui-color-alabaster-800)]">
+                              ✕
+                            </span>
                           </button>
                         )}
 
@@ -549,11 +550,11 @@ export function FieldRow({
                       {dropOptTarget?.localId === opt.localId &&
                         dropOptTarget.side === 'after' &&
                         draggedOptId !== opt.localId && (
-                          <div className="h-0.5 mx-2 bg-[#5D8CF1] rounded-full" />
+                          <div className="h-0.5 mx-2 bg-[var(--ui-color-blue-600)] rounded-full" />
                         )}
                     </Fragment>
                   ))}
-                  <div className="flex items-center gap-3 py-1.5">
+                  <div className="flex items-center gap-3 py-[var(--ui-space-6)]">
                     {field.field_type === 'radio' ? (
                       <RadioButton
                         id={`placeholder-${field.localId}`}
@@ -580,7 +581,7 @@ export function FieldRow({
                     <button
                       type="button"
                       onClick={onAddOption}
-                      className="shrink-0 w-6 h-6 flex items-center justify-center text-[#9CA3AF] hover:text-[#374151] cursor-pointer text-lg transition-colors"
+                      className="shrink-0 w-6 h-6 flex items-center justify-center text-[var(--ui-color-alabaster-800)] hover:text-[var(--ui-color-slate-700)] cursor-pointer text-lg transition-colors"
                       title="Добавить вариант"
                     >
                       +

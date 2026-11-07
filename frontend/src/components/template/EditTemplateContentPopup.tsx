@@ -153,20 +153,24 @@ export const EditTemplateContentPopup: React.FC<
 
   return (
     <div
-      className="modal-overlay fixed inset-0 flex items-start justify-center z-1003 pt-10 pb-10 overflow-y-auto"
+      className="modal-overlay px-4 fixed inset-0 flex items-start justify-center z-[calc(var(--ui-z-modal)+3)] pt-10 pb-10 overflow-y-auto"
       onClick={onClose}
     >
       <div
-        className="bg-white rounded-2xl w-full max-w-2xl p-5 shadow-2xl animate-fade-in"
+        className="bg-white rounded-2xl w-full max-w-2xl p-5 shadow-[var(--ui-shadow)] animate-fade-in"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex justify-end">
-          <button type="button" onClick={onClose} className="cursor-pointer">
+          <button
+            type="button"
+            onClick={onClose}
+            className="vismuth-icon-button cursor-pointer"
+          >
             <Image alt="close" src="/close.svg" width={25} height={25} />
           </button>
         </div>
 
-        <h2 className="text-[32px] font-medium mb-7.5 px-5">
+        <h2 className="text-[length:var(--ui-font-size-31)] font-medium mb-[var(--ui-space-32)] px-5">
           Измените содержимое шаблона протокола
         </h2>
         <div className="mb-6 pb-4 px-5">
@@ -175,20 +179,20 @@ export const EditTemplateContentPopup: React.FC<
           </label>
 
           {loadingStructure ? (
-            <div className="flex items-center gap-2 px-4 py-2.5 bg-gray-50 rounded-lg">
-              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-[#5D8CF1]"></div>
+            <div className="flex items-center gap-2 px-4 py-[var(--ui-space-10)] bg-gray-50 rounded-lg">
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-[var(--ui-color-blue-600)]"></div>
             </div>
           ) : currentStructure ? (
-            <div className="px-4 py-2.5 bg-gray-50 rounded-lg flex items-center gap-2">
+            <div className="px-4 py-[var(--ui-space-10)] bg-gray-50 rounded-lg flex items-center gap-2">
               <Image alt="lock" src="/lock.svg" width={20} height={20} />
               <div>
-                <span className="text-sm font-regular text-[#6C757D]">
+                <span className="text-sm font-regular text-[var(--ui-color-alabaster-950)]">
                   {currentStructure.structure_name}
                 </span>
               </div>
             </div>
           ) : (
-            <div className="px-4 py-2.5 bg-yellow-50 rounded-lg border border-yellow-200">
+            <div className="px-4 py-[var(--ui-space-10)] bg-yellow-50 rounded-lg border border-yellow-200">
               <span className="text-sm text-yellow-800">
                 Шаблон не привязан к структуре
               </span>
@@ -199,7 +203,7 @@ export const EditTemplateContentPopup: React.FC<
         <div className="space-y-6 mb-6 px-5 max-h-96 overflow-y-auto custom-scrollbar">
           {loadingStructure ? (
             <div className="text-center py-12">
-              <div className="animate-spin mx-auto mb-3 rounded-full h-6 w-6 border-b-2 border-[#5D8CF1]"></div>
+              <div className="animate-spin mx-auto mb-3 rounded-full h-6 w-6 border-b-2 border-[var(--ui-color-blue-600)]"></div>
               <p className="text-sm text-gray-600">Загрузка полей...</p>
             </div>
           ) : currentStructureFields.length === 0 ? (
@@ -220,7 +224,7 @@ export const EditTemplateContentPopup: React.FC<
           ) : (
             currentStructureFields.map((field) => (
               <div key={field.id} className="flex flex-col gap-2">
-                <label className="text-lg font-medium text-[#202020] flex items-center gap-2">
+                <label className="text-lg font-medium text-[var(--ui-color-alabaster-dark-800)] flex items-center gap-2">
                   {field.field_label}
                   {field.is_required && (
                     <span className="text-red-500 text-sm">*</span>
@@ -237,7 +241,7 @@ export const EditTemplateContentPopup: React.FC<
                   }
                   placeholder={field.description || 'Введите текст...'}
                   rows={3}
-                  className="w-full px-4 py-3 bg-gray-50 border-0 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#5D8CF1] resize-none text-sm"
+                  className="w-full px-4 py-3 bg-gray-50 border-0 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--ui-color-blue-600)] resize-none text-sm"
                 />
               </div>
             ))
@@ -251,7 +255,8 @@ export const EditTemplateContentPopup: React.FC<
             disabled={
               saving || loadingStructure || currentStructureFields.length === 0
             }
-            className="h-12 bg-[#5D8CF1] text-white rounded-[15px] cursor-pointer hover:bg-[#769CEF] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="vismuth-button bg-[var(--ui-color-blue-600)] text-white cursor-pointer hover:bg-[var(--ui-color-blue-700)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            data-variant="primary"
           >
             {saving ? 'Сохранение...' : 'Сохранить'}
           </button>
@@ -259,7 +264,8 @@ export const EditTemplateContentPopup: React.FC<
             type="button"
             onClick={onClose}
             disabled={saving}
-            className="h-12 rounded-[15px] hover:bg-[#F0F5FF] text-[#202020] cursor-pointer bg-[#DCE7FF] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="vismuth-button hover:bg-[var(--ui-color-blue-50)] cursor-pointer bg-[var(--ui-color-blue-100)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            data-variant="secondary"
           >
             Отменить
           </button>

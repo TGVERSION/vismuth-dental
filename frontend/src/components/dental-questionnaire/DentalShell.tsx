@@ -63,10 +63,15 @@ export const DentalShell = ({
       question.focus({ preventScroll: true });
     const revealField = () => {
       const field = document.activeElement;
-      if (field instanceof HTMLElement && field.matches('textarea[aria-label="Ваш ответ"]')) {
+      if (
+        field instanceof HTMLElement &&
+        field.matches('textarea[aria-label="Ваш ответ"]')
+      ) {
         // Редактор закреплён вне ленты. При открытии клавиатуры лента
         // сжимается: сохраняем в ней активный вопрос, а не старую историю.
-        list.scrollTop += current.getBoundingClientRect().top - list.getBoundingClientRect().top;
+        list.scrollTop +=
+          current.getBoundingClientRect().top -
+          list.getBoundingClientRect().top;
         return;
       }
       if (
@@ -106,7 +111,9 @@ export const DentalShell = ({
       }
     >
       <header className="flex shrink-0 flex-col items-start gap-1 px-4 pt-[calc(env(safe-area-inset-top)+12px)] pb-3">
-        <h1 className="text-[24px] font-bold">Чат с Ассистентом</h1>
+        <h1 className="text-[length:var(--ui-font-size-26)] font-bold">
+          Чат с Ассистентом
+        </h1>
         <div className="max-w-full text-sm text-[var(--q-muted)]">
           {clinic.logo_url ? (
             <ClinicLogo url={clinic.logo_url} clinicName={clinic.name} />
@@ -123,7 +130,7 @@ export const DentalShell = ({
             <ChatProgress value={progress.current / progress.total} />
           </div>
           <p
-            className="shrink-0 text-[13px] text-[var(--q-muted)]"
+            className="shrink-0 text-[length:var(--ui-font-size-13)] text-[var(--q-muted)]"
             aria-label={`Шаг ${progress.current} из ${progress.total}: ${progress.label}`}
           >
             {progress.current} из {progress.total}
@@ -194,11 +201,8 @@ export const DentalButton = ({
     onClick={onClick}
     disabled={isBusy}
     aria-busy={isBusy}
-    className={`flex min-h-[52px] w-full items-center justify-center rounded-xl px-4 text-base font-semibold disabled:opacity-60 ${
-      variant === 'primary'
-        ? 'bg-[var(--q-brand)] text-[var(--q-brand-contrast)]'
-        : 'bg-[var(--q-surface)] text-[var(--q-brand)]'
-    }`}
+    data-variant={variant === 'soft' ? 'secondary' : 'primary'}
+    className="q-button w-full"
   >
     {isBusy ? (
       <>
@@ -219,7 +223,7 @@ export const DentalButton = ({
 /** Ошибка отправки под кнопкой. */
 export const DentalError = ({ message }: { message: string | null }) =>
   message ? (
-    <p role="alert" className="text-sm text-[#C2334D]">
+    <p role="alert" className="text-sm text-[var(--ui-color-red-700)]">
       {message}
     </p>
   ) : null;

@@ -87,7 +87,7 @@ export const PickerShell = ({
       ref={panelRef}
       role="dialog"
       aria-label={title}
-      className={`animate-fade-in absolute top-full right-0 left-0 z-50 mt-2 flex flex-col overflow-hidden rounded-xl border border-gray-200 bg-white shadow-lg ${
+      className={`animate-fade-in absolute top-full right-0 left-0 z-[var(--ui-z-dropdown)] mt-1 flex flex-col overflow-hidden rounded-[var(--ui-radius-xl)] border border-[var(--ui-color-alabaster-500)] bg-[var(--q-bg)] shadow-[var(--ui-shadow)] ${
         size === 'list' ? 'max-h-60' : ''
       }`}
     >

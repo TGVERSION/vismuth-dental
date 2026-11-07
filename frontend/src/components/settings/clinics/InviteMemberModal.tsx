@@ -4,8 +4,10 @@ import { useState, type FormEvent } from 'react';
 import { toast } from 'react-toastify';
 import type { ClinicInvitationCreated, SpecializationRead } from '@/api';
 import { CustomDropdown } from '@/components/CustomDropdown';
+import { useStaffRoles } from '@/hooks/useStaffRoles';
+import { roleFromValues, memberRoleValues } from '@/lib/staff-role';
+import type { MembershipRole } from '@/api/user-membership-api';
 import {
-  MEMBER_ROLE_OPTIONS,
   filterOptions,
   isValidEmail,
   memberRolesToFlags,
@@ -40,7 +42,9 @@ export const InviteMemberModal = ({
 }: InviteMemberModalProps) => {
   const [email, setEmail] = useState('');
   const [roles, setRoles] = useState<MemberRole[]>(() =>
-    defaultRoles.filter((role) => role !== 'doctor' || canAddDoctor),
+    defaultRoles.some((role) => role !== 'doctor' || canAddDoctor)
+      ? defaultRoles.filter((role) => role !== 'doctor' || canAddDoctor)
+      : ['operator'],
   );
   const [specializationIds, setSpecializationIds] = useState<number[]>([]);
   const [specQuery, setSpecQuery] = useState('');
@@ -49,15 +53,19 @@ export const InviteMemberModal = ({
   const [result, setResult] = useState<ClinicInvitationCreated | null>(null);
 
   const isDoctor = roles.includes('doctor');
+  const availableRoles = useStaffRoles();
   const canSubmit =
     isValidEmail(email) &&
     roles.length > 0 &&
+    availableRoles.length > 0 &&
     (!isDoctor || specializationIds.length > 0) &&
     !submitting;
 
-  const roleOptions = MEMBER_ROLE_OPTIONS.map((option) => ({
+  const roleOptions = availableRoles.map((option) => ({
     ...option,
-    disabled: option.value === 'doctor' && !canAddDoctor,
+    disabled:
+      (option.value === 'doctor' || option.value === 'clinic_admin_doctor') &&
+      !canAddDoctor,
   }));
 
   const specOptions = filterOptions(
@@ -103,19 +111,19 @@ export const InviteMemberModal = ({
           <button
             type="button"
             onClick={onClose}
-            className={`mt-7.5 ${PRIMARY_BUTTON_CLASS}`}
+            className={`mt-[var(--ui-space-32)] ${PRIMARY_BUTTON_CLASS}`}
           >
             Готово
           </button>
         </>
       ) : (
         <form onSubmit={handleSubmit} noValidate>
-          <p className="mb-7.5 text-[18px] text-[#6C757D]">
+          <p className="mb-[var(--ui-space-32)] text-[length:var(--ui-font-size-18)] text-[var(--ui-color-alabaster-950)]">
             На указанную почту придёт письмо со ссылкой. Сотрудник перейдёт по
             ней, задаст пароль и сможет войти. Ссылка действует 7 дней
           </p>
 
-          <div className="flex gap-5">
+          <div className="flex flex-col gap-5 sm:flex-row">
             <input
               type="email"
               value={email}
@@ -125,22 +133,23 @@ export const InviteMemberModal = ({
               autoFocus
               className={`${INPUT_CLASS} ${fieldFillClass(email)}`}
             />
-            <div className="w-35 shrink-0">
-              <CustomDropdown<MemberRole, true>
-                multiple
+            <div className="w-full sm:w-72 shrink-0">
+              <CustomDropdown<MembershipRole>
+                disabled={submitting || !availableRoles.length}
                 options={roleOptions}
-                value={roles}
-                onChange={setRoles}
+                value={roleFromValues(roles)}
+                onChange={(role) => setRoles(memberRoleValues(role))}
                 triggerClassName={fieldFillClass(roles)}
                 placeholder="Роль"
-                aria-label="Роль сотрудника"
+                aria-label="Роль"
               />
             </div>
           </div>
 
           {!canAddDoctor && (
-            <p className="mt-2 text-xs text-[#6C757D]">
-              Достигнут лимит врачей — пригласить можно только администратора
+            <p className="mt-2 text-xs text-[var(--ui-color-alabaster-950)]">
+              Достигнут лимит врачей — доступны админ и оператор контакт-центра
+              / регистратор
             </p>
           )}
 
@@ -160,12 +169,15 @@ export const InviteMemberModal = ({
           )}
 
           {error && (
-            <p role="alert" className="mt-3 text-sm text-[#E53E3E]">
+            <p
+              role="alert"
+              className="mt-3 text-sm text-[var(--ui-color-red-600)]"
+            >
               {error}
             </p>
           )}
 
-          <div className="mt-7.5 flex flex-col gap-3">
+          <div className="mt-[var(--ui-space-32)] flex flex-col gap-3">
             <button
               type="submit"
               disabled={!canSubmit}

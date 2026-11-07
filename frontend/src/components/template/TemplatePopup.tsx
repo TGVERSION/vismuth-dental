@@ -458,30 +458,31 @@ export const TemplatePopup: React.FC<TemplatePopupProps> = ({
   return (
     <>
       <div
-        className="modal-overlay fixed inset-0 flex items-start justify-center z-50 pt-10 pb-10 overflow-y-auto"
+        className="modal-overlay px-4 fixed inset-0 flex items-start justify-center z-50 pt-10 pb-10 overflow-y-auto"
         onClick={closeModal}
       >
         <div
-          className="bg-white rounded-2xl w-full max-w-334.5 flex flex-col shadow-2xl min-h-[calc(100vh-80px)] animate-fade-in"
+          className="bg-white rounded-2xl w-full max-w-334.5 flex flex-col shadow-[var(--ui-shadow)] min-h-[calc(100vh-80px)] animate-fade-in"
           onClick={(e) => e.stopPropagation()}
         >
-          <div className="flex flex-1">
-            <div className="border-r border-gray-200 p-8 flex gap-4 flex-col max-w-102.25">
-              <h2 className="text-2xl font-semibold text-[#202020]">
+          <div className="flex min-w-0 flex-1 flex-col md:flex-row">
+            <div className="flex shrink-0 flex-col gap-4 border-b border-[var(--ui-color-alabaster-500)] p-4 md:w-80 md:border-r md:border-b-0 md:p-6">
+              <h2 className="text-2xl font-semibold text-[var(--ui-color-alabaster-dark-800)]">
                 Шаблоны протокола
               </h2>
               {!loading && (
-                <div className="relative w-102.2">
+                <div className="relative w-full">
                   <button
                     type="button"
                     data-create-menu-trigger
                     onClick={() => setShowCreateMenu(!showCreateMenu)}
-                    className="px-4 py-2 text-sm h-12 cursor-pointer bg-[#5D8CF1] text-white rounded-lg hover:bg-[#769CEF] transition-colors w-full"
+                    className="vismuth-button cursor-pointer bg-[var(--ui-color-blue-600)] text-white hover:bg-[var(--ui-color-blue-700)] transition-colors w-full"
+                    data-variant="primary"
                   >
                     Создать шаблон или группу
                   </button>
                   {showCreateMenu && (
-                    <div className="absolute p-1.5 right-0 top-full bg-white border-0 rounded-lg shadow-lg py-2 mt-1.25 z-10 template-create-menu w-full">
+                    <div className="absolute p-[var(--ui-space-6)] right-0 top-full bg-white border-0 rounded-lg shadow-[var(--ui-shadow)] py-2 mt-[var(--ui-space-4)] z-10 template-create-menu w-full">
                       <button
                         type="button"
                         onClick={(e) => {
@@ -489,7 +490,7 @@ export const TemplatePopup: React.FC<TemplatePopupProps> = ({
                           e.preventDefault();
                           handleCreate('template');
                         }}
-                        className="w-full cursor-pointer px-2.5 py-1.5 rounded-md text-left text-md hover:bg-[#F0F5FF] transition-colors"
+                        className="w-full cursor-pointer px-[var(--ui-space-10)] py-[var(--ui-space-6)] rounded-md text-left text-md hover:bg-[var(--ui-color-blue-50)] transition-colors"
                       >
                         Создать шаблон
                       </button>
@@ -500,7 +501,7 @@ export const TemplatePopup: React.FC<TemplatePopupProps> = ({
                           e.preventDefault();
                           handleCreate('group');
                         }}
-                        className="w-full px-2.5 cursor-pointer py-1.5 rounded-md text-left text-md hover:bg-[#F0F5FF] transition-colors"
+                        className="w-full px-[var(--ui-space-10)] cursor-pointer py-[var(--ui-space-6)] rounded-md text-left text-md hover:bg-[var(--ui-color-blue-50)] transition-colors"
                       >
                         Создать группу
                       </button>
@@ -515,7 +516,7 @@ export const TemplatePopup: React.FC<TemplatePopupProps> = ({
               ) : !hasItems ? (
                 <div className="text-center text-md">Шаблоны не найдены</div>
               ) : (
-                <div className="space-y-4.5">
+                <div className="space-y-[var(--ui-space-16)]">
                   {groups.length > 0 && (
                     <div>
                       {' '}
@@ -527,7 +528,7 @@ export const TemplatePopup: React.FC<TemplatePopupProps> = ({
                             className={`rounded-lg hover:bg-white shadow-custom-hover ${expandedGroups.has(group.id) && 'bg-white shadow-md'}`}
                           >
                             <div
-                              className="flex items-center justify-between px-3.75 py-3 cursor-pointer transition-all"
+                              className="flex items-center justify-between px-[var(--ui-space-14)] py-3 cursor-pointer transition-all"
                               onMouseEnter={() =>
                                 setHoveredItem(`group-${group.id}`)
                               }
@@ -542,12 +543,12 @@ export const TemplatePopup: React.FC<TemplatePopupProps> = ({
                                   height={19}
                                   className={`transition-transform ${expandedGroups.has(group.id) ? 'rotate-180' : ''}`}
                                 />
-                                <span className="text-[#202020]">
+                                <span className="text-[var(--ui-color-alabaster-dark-800)]">
                                   {group.name}
                                 </span>
                               </div>
                               {expandedGroups.has(group.id) && (
-                                <div className="flex items-center gap-3.75 relative group">
+                                <div className="flex items-center gap-[var(--ui-space-14)] relative group">
                                   <button
                                     type="button"
                                     onClick={(e) => {
@@ -609,13 +610,13 @@ export const TemplatePopup: React.FC<TemplatePopupProps> = ({
                             </div>
                             {expandedGroups.has(group.id) &&
                               group.templates && (
-                                <div className="mt-0.75 mb-3.75 flex flex-col gap-3.75 mx-3.75">
+                                <div className="mt-[var(--ui-space-2)] mb-[var(--ui-space-14)] flex flex-col gap-[var(--ui-space-14)] mx-[var(--ui-space-14)]">
                                   {group.templates.length > 0 ? (
                                     <>
                                       {group.templates.map((template) => (
                                         <div
                                           key={template.id}
-                                          className={`px-3.75 py-3 rounded-lg cursor-pointer transition-all hover:bg-white shadow-custom-hover  ${
+                                          className={`px-[var(--ui-space-14)] py-3 rounded-lg cursor-pointer transition-all hover:bg-white shadow-custom-hover  ${
                                             selectedTemplate?.id ===
                                               template.id &&
                                             'bg-white shadow-md'
@@ -634,17 +635,17 @@ export const TemplatePopup: React.FC<TemplatePopupProps> = ({
                                         >
                                           <div className="flex items-center gap-2">
                                             <span
-                                              className={`text-sm px-2 py-0.75 rounded-full ${
+                                              className={`text-sm px-2 py-[var(--ui-space-2)] rounded-full ${
                                                 template.type === 'personal'
-                                                  ? 'bg-[#FFD6BF]'
-                                                  : 'bg-[#CFE5E6]'
+                                                  ? 'bg-[var(--ui-color-red-200)]'
+                                                  : 'bg-[var(--ui-color-slate-300)]'
                                               }`}
                                             >
                                               {template.type === 'personal'
                                                 ? 'Личный'
                                                 : 'Общий'}
                                             </span>
-                                            <span className="text-sm text-[#202020]">
+                                            <span className="text-sm text-[var(--ui-color-alabaster-dark-800)]">
                                               {template.name}
                                             </span>
                                           </div>
@@ -652,7 +653,7 @@ export const TemplatePopup: React.FC<TemplatePopupProps> = ({
                                       ))}
                                     </>
                                   ) : (
-                                    <p className="px-3.75 py-3 text-sm text-[#6C757D]">
+                                    <p className="px-[var(--ui-space-14)] py-3 text-sm text-[var(--ui-color-alabaster-950)]">
                                       Шаблонов пока нет
                                     </p>
                                   )}
@@ -671,7 +672,7 @@ export const TemplatePopup: React.FC<TemplatePopupProps> = ({
                       {templates.map((template) => (
                         <div
                           key={template.id}
-                          className={`px-3.75 py-3 rounded-lg cursor-pointer hover:bg-white shadow-custom-hover transition-all ${
+                          className={`px-[var(--ui-space-14)] py-3 rounded-lg cursor-pointer hover:bg-white shadow-custom-hover transition-all ${
                             selectedTemplate?.id === template.id &&
                             'bg-white shadow-md'
                           }`}
@@ -683,17 +684,17 @@ export const TemplatePopup: React.FC<TemplatePopupProps> = ({
                         >
                           <div className="flex items-center gap-2">
                             <span
-                              className={`text-sm px-2 py-0.75 rounded-full ${
+                              className={`text-sm px-2 py-[var(--ui-space-2)] rounded-full ${
                                 template.type === 'personal'
-                                  ? 'bg-[#FFD6BF]'
-                                  : 'bg-[#CFE5E6]'
+                                  ? 'bg-[var(--ui-color-red-200)]'
+                                  : 'bg-[var(--ui-color-slate-300)]'
                               }`}
                             >
                               {template.type === 'personal'
                                 ? 'Личный'
                                 : 'Общий'}
                             </span>
-                            <span className="text-sm text-[#202020]">
+                            <span className="text-sm text-[var(--ui-color-alabaster-dark-800)]">
                               {template.name}
                             </span>
                           </div>
@@ -705,12 +706,12 @@ export const TemplatePopup: React.FC<TemplatePopupProps> = ({
               )}
             </div>
 
-            <div className="flex-1">
+            <div className="min-w-0 flex-1">
               <div className="flex justify-end">
                 <button
                   type="button"
                   onClick={closeModal}
-                  className="mt-2.5 mr-2.5 cursor-pointer transition-colors"
+                  className="vismuth-icon-button mt-[var(--ui-space-10)] mr-[var(--ui-space-10)] cursor-pointer transition-colors"
                 >
                   <Image alt="close" src="/close.svg" width={25} height={25} />
                 </button>
@@ -727,17 +728,17 @@ export const TemplatePopup: React.FC<TemplatePopupProps> = ({
                   <div className="flex items-center justify-between pb-6 border-b px-8 border-gray-200">
                     <div className="flex items-center gap-3">
                       <span
-                        className={`text-md px-2.5 py-1.25 rounded-full ${
+                        className={`text-md px-[var(--ui-space-10)] py-[var(--ui-space-4)] rounded-full ${
                           selectedTemplate.type === 'personal'
-                            ? 'bg-[#FFD6BF]'
-                            : 'bg-[#CFE5E6]'
+                            ? 'bg-[var(--ui-color-red-200)]'
+                            : 'bg-[var(--ui-color-slate-300)]'
                         }`}
                       >
                         {selectedTemplate.type === 'personal'
                           ? 'Личный'
                           : 'Общий'}
                       </span>
-                      <h3 className="text-3xl font-medium text-[#202020]">
+                      <h3 className="text-3xl font-medium text-[var(--ui-color-alabaster-dark-800)]">
                         {selectedTemplate.name}
                       </h3>
                     </div>
@@ -765,7 +766,7 @@ export const TemplatePopup: React.FC<TemplatePopupProps> = ({
                           />
                         </button>
                         {openMenuId === selectedTemplate.id && (
-                          <div className="absolute right-0 top-full mt-1 bg-white border-0 rounded-lg shadow-lg p-1.5 z-10 template-actions-menu min-w-37.5">
+                          <div className="absolute right-0 top-full mt-1 bg-white border-0 rounded-lg shadow-[var(--ui-shadow)] p-[var(--ui-space-6)] z-10 template-actions-menu min-w-37.5">
                             <button
                               type="button"
                               onClick={(e) => {
@@ -773,7 +774,7 @@ export const TemplatePopup: React.FC<TemplatePopupProps> = ({
                                 handleEditConfirm();
                                 setOpenMenuId(null);
                               }}
-                              className="w-full px-4 py-2 text-left text-sm rounded-md cursor-pointer hover:bg-[#F0F5FF] transition-colors"
+                              className="w-full px-4 py-2 text-left text-sm rounded-md cursor-pointer hover:bg-[var(--ui-color-blue-50)] transition-colors"
                             >
                               Редактировать
                             </button>
@@ -784,7 +785,7 @@ export const TemplatePopup: React.FC<TemplatePopupProps> = ({
                                 setOpenRename(true);
                                 setOpenMenuId(null);
                               }}
-                              className="w-full px-4 py-2 text-left text-sm rounded-md cursor-pointer hover:bg-[#F0F5FF] transition-colors"
+                              className="w-full px-4 py-2 text-left text-sm rounded-md cursor-pointer hover:bg-[var(--ui-color-blue-50)] transition-colors"
                             >
                               Переименовать
                             </button>
@@ -795,7 +796,7 @@ export const TemplatePopup: React.FC<TemplatePopupProps> = ({
                                 setOpenMove(true);
                                 setOpenMenuId(null);
                               }}
-                              className="w-full px-4 py-2 text-left text-sm rounded-md cursor-pointer hover:bg-[#F0F5FF] transition-colors"
+                              className="w-full px-4 py-2 text-left text-sm rounded-md cursor-pointer hover:bg-[var(--ui-color-blue-50)] transition-colors"
                             >
                               Переместить
                             </button>
@@ -808,7 +809,7 @@ export const TemplatePopup: React.FC<TemplatePopupProps> = ({
                                   selectedTemplate.name,
                                 );
                               }}
-                              className="w-full px-4 py-2 text-left text-sm rounded-md cursor-pointer hover:bg-[#F0F5FF] transition-colors"
+                              className="w-full px-4 py-2 text-left text-sm rounded-md cursor-pointer hover:bg-[var(--ui-color-blue-50)] transition-colors"
                             >
                               Удалить
                             </button>
@@ -818,7 +819,9 @@ export const TemplatePopup: React.FC<TemplatePopupProps> = ({
                       <button
                         type="button"
                         onClick={handleApply}
-                        className="px-6 py-2 h-9.5 bg-[#5D8CF1] cursor-pointer text-white rounded-lg hover:bg-[#769CEF] transition-colors"
+                        className="vismuth-button bg-[var(--ui-color-blue-600)] cursor-pointer text-white hover:bg-[var(--ui-color-blue-700)] transition-colors"
+                        data-variant="primary"
+                        data-size="s"
                       >
                         Применить
                       </button>
@@ -826,7 +829,7 @@ export const TemplatePopup: React.FC<TemplatePopupProps> = ({
                   </div>
                   <div
                     onDoubleClick={handleDoubleClick}
-                    className="py-5.25 pl-14 pr-8 flex flex-col gap-9"
+                    className="py-[var(--ui-space-20)] pl-14 pr-8 flex flex-col gap-9"
                   >
                     {selectedTemplate.content &&
                       Object.entries(selectedTemplate.content).map(
@@ -838,7 +841,7 @@ export const TemplatePopup: React.FC<TemplatePopupProps> = ({
                           if (!value) return null;
                           return (
                             <div key={fieldKey} className="flex flex-col gap-3">
-                              <h4 className="text-3xl font-medium text-[#202020]">
+                              <h4 className="text-3xl font-medium text-[var(--ui-color-alabaster-dark-800)]">
                                 {fieldLabel}
                               </h4>
                               <p className="text-md whitespace-pre-wrap">

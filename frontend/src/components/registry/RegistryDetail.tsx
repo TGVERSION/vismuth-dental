@@ -162,11 +162,11 @@ export const RegistryDetail = ({
   return (
     <article className="flex flex-col gap-9">
       {/* Шапка — как у карточки анкеты врача. */}
-      <header className="flex flex-wrap items-baseline gap-x-9 gap-y-2 text-[#6C757D]">
-        <h2 className="min-w-0 flex-1 truncate text-[20px] font-normal">
+      <header className="flex flex-wrap items-baseline gap-x-9 gap-y-2 text-[var(--ui-color-alabaster-950)]">
+        <h2 className="min-w-0 flex-1 truncate text-[length:var(--ui-font-size-20)] font-normal">
           {patientFullName(questionnaire)}
         </h2>
-        <span className="shrink-0 text-[14px]">
+        <span className="shrink-0 text-[length:var(--ui-font-size-14)]">
           {registryWhenLine(questionnaire)}
         </span>
         <RegistryStatusBadge status={questionnaire.status} />
@@ -178,7 +178,7 @@ export const RegistryDetail = ({
             type="button"
             onClick={print}
             disabled={isBusy}
-            className="flex h-13 cursor-pointer items-center justify-center rounded-xl bg-[#DCE7FF] px-6 text-[#5D8CF1] transition-colors hover:bg-[#F0F5FF] disabled:cursor-not-allowed disabled:opacity-60"
+            className="vismuth-button vismuth-button--secondary"
           >
             Распечатать
           </button>
@@ -206,7 +206,7 @@ export const RegistryDetail = ({
         {actions.canDelete ? (
           <button
             type="button"
-            className="cursor-pointer text-sm text-[#D91528] hover:underline disabled:opacity-50"
+            className="cursor-pointer text-sm text-[var(--ui-color-red-600)] hover:underline disabled:opacity-50"
             disabled={isBusy}
             onClick={() => setConfirmDelete(true)}
           >
@@ -217,7 +217,7 @@ export const RegistryDetail = ({
       {sheet && sheet.continuation.length > 0 ? (
         <p
           role="status"
-          className="rounded-lg bg-[#FFF7E5] px-3 py-2 text-sm text-[#654B16]"
+          className="rounded-lg bg-[var(--ui-color-yellow-50)] px-3 py-2 text-sm text-[var(--ui-color-yellow-900)]"
         >
           В анкете есть длинные ответы. Они будут полностью напечатаны на листе
           продолжения вместе с основным бланком. Проверьте и подпишите все
@@ -225,7 +225,7 @@ export const RegistryDetail = ({
         </p>
       ) : null}
       {error ? (
-        <p role="alert" className="text-sm text-[#D91528]">
+        <p role="alert" className="text-sm text-[var(--ui-color-red-600)]">
           {error}
         </p>
       ) : null}
@@ -236,7 +236,7 @@ export const RegistryDetail = ({
           gaps={questionnaire.gaps}
         />
       ) : (
-        <p className="py-10 text-center text-[#8B8B8B]">
+        <p className="py-10 text-center text-[var(--ui-color-alabaster-950)]">
           {questionnaire.status === 'invited'
             ? 'Пациент ещё не открывал ссылку'
             : 'Пациент заполняет анкету'}
@@ -251,7 +251,7 @@ export const RegistryDetail = ({
           onClose={() => setNewUrl(null)}
           closeDisabled
         >
-          <p className="mb-4 text-sm text-[#6C757D]">
+          <p className="mb-4 text-sm text-[var(--ui-color-alabaster-950)]">
             Прежняя ссылка больше не работает.
           </p>
           <LinkQrCard
@@ -275,7 +275,7 @@ export const RegistryDetail = ({
           onClose={() => setConfirmDelete(false)}
           closeDisabled={isBusy}
         >
-          <p className="text-[#202020]">
+          <p className="text-[var(--ui-color-alabaster-dark-800)]">
             Анкета {patientFullName(questionnaire)} будет удалена, ссылка
             перестанет работать.
           </p>
@@ -289,7 +289,7 @@ export const RegistryDetail = ({
             </button>
             <button
               type="button"
-              className="cursor-pointer text-sm font-medium text-[#D91528] hover:underline disabled:opacity-50"
+              className="cursor-pointer text-sm font-medium text-[var(--ui-color-red-600)] hover:underline disabled:opacity-50"
               disabled={isBusy}
               onClick={remove}
             >

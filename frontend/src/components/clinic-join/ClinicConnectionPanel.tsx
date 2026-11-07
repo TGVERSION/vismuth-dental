@@ -70,11 +70,11 @@ export function ClinicConnectionPanel({
           aria-label={label}
           readOnly
           value={value}
-          className="min-w-0 flex-1 rounded-lg bg-[#F3F4F8] p-2 text-sm"
+          className="vismuth-input min-w-0 flex-1"
         />
         <button
           onClick={() => void copy(value)}
-          className="text-sm text-[#5D8CF1]"
+          className="vismuth-function-button text-sm"
         >
           {copied === value ? 'Скопировано' : 'Копировать'}
         </button>
@@ -99,7 +99,7 @@ export function ClinicConnectionPanel({
       )}
       {dental && (
         <Link
-          className="inline-block text-[#5D8CF1]"
+          className="inline-block text-[var(--ui-color-blue-600)]"
           href={'/registry?clinic_id=' + encodeURIComponent(clinicId)}
         >
           Создать персональную стоматологическую ссылку
@@ -120,11 +120,11 @@ export function ClinicConnectionPanel({
           </p>
         </>
       )}
-      <div className="flex gap-5">
+      <div className="flex flex-wrap gap-4">
         <button
           disabled={busy}
           onClick={() => void act()}
-          className="text-[#5D8CF1] disabled:opacity-50"
+          className="vismuth-button vismuth-button--secondary"
         >
           {active ? 'Перевыпустить ссылку' : 'Создать ссылку'}
         </button>
@@ -132,7 +132,7 @@ export function ClinicConnectionPanel({
           <button
             disabled={busy}
             onClick={() => void act(true)}
-            className="text-red-700 disabled:opacity-50"
+            className="vismuth-button vismuth-button--danger"
           >
             Отключить
           </button>

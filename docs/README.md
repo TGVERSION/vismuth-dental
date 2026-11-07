@@ -27,4 +27,8 @@
 
 1. Перед правкой frontend API-клиента / settings — прочитай `contracts/overview.md` и нужный файл в `contracts/`.
 2. Перед правкой backend router/schema — обнови соответствующий `contracts/*.md` в той же задаче.
-3. Роли не хардкодить на UI: справочник `GET /roles` (`name` + `name_ru`).
+3. Роли сотрудников не хардкодить на UI: `GET /clinic-roles` (`value` + `label`), одно поле «Роль». `GET /roles` — служебная совместимость.
+
+## Интерфейс
+
+[Дизайн-система VISMUTH и проверка компонентов](frontend/design-system.md).

@@ -35,7 +35,7 @@ export function FieldPickerDropdown({
         left: rect.left,
         width: rect.width,
         maxHeight: Math.min(spaceAbove - gap * 2, 420),
-        zIndex: 9999,
+        zIndex: 'var(--ui-z-popover)',
       });
     } else {
       setStyle({
@@ -44,7 +44,7 @@ export function FieldPickerDropdown({
         left: rect.left,
         width: rect.width,
         maxHeight: Math.min(spaceBelow - gap * 2, 420),
-        zIndex: 9999,
+        zIndex: 'var(--ui-z-popover)',
       });
     }
   }, [anchorRef]);
@@ -63,19 +63,21 @@ export function FieldPickerDropdown({
     <div
       ref={dropdownRef}
       style={style}
-      className="bg-white border border-gray-200 rounded-xl shadow-lg overflow-y-auto animate-fade-in"
+      className="bg-white border border-gray-200 rounded-xl shadow-[var(--ui-shadow-lg)] overflow-y-auto animate-fade-in"
     >
       {mainFields.length > 0 && (
         <>
           <div className="px-4 pt-3 pb-1">
-            <span className="text-xs text-[#6C757D]">Готовые поля</span>
+            <span className="text-xs text-[var(--ui-color-alabaster-950)]">
+              Готовые поля
+            </span>
           </div>
           {mainFields.map((f) => (
             <button
               key={f.id}
               type="button"
               onClick={() => onSelectPreset(f)}
-              className="w-full py-3 px-6 text-left text-sm text-[#202020] hover:bg-gray-50 transition-colors cursor-pointer"
+              className="w-full py-3 px-6 text-left text-sm text-[var(--ui-color-alabaster-dark-800)] hover:bg-gray-50 transition-colors cursor-pointer"
             >
               {f.field_label || f.field_name}
             </button>
@@ -84,12 +86,14 @@ export function FieldPickerDropdown({
         </>
       )}
       <div className="px-4 pt-3 pb-1">
-        <span className="text-xs text-[#6C757D]">Другое</span>
+        <span className="text-xs text-[var(--ui-color-alabaster-950)]">
+          Другое
+        </span>
       </div>
       <button
         type="button"
         onClick={onSelectCustom}
-        className="w-full py-3 px-6 text-left text-sm text-[#202020] hover:bg-gray-50 transition-colors cursor-pointer"
+        className="w-full py-3 px-6 text-left text-sm text-[var(--ui-color-alabaster-dark-800)] hover:bg-gray-50 transition-colors cursor-pointer"
       >
         Своё поле
       </button>

@@ -80,7 +80,7 @@ export function JoinRequestsScreen() {
     <section className="custom-scrollbar w-full overflow-auto p-8">
       <h1 className="mb-6 text-2xl font-medium">
         Заявки на подключение{' '}
-        <span className="text-[#5D8CF1]">{count} ожидают</span>
+        <span className="text-[var(--ui-color-blue-600)]">{count} ожидают</span>
       </h1>
       <div className="mb-6 flex flex-wrap gap-3">
         <CustomDropdown
@@ -109,7 +109,10 @@ export function JoinRequestsScreen() {
             setPage(1);
           }}
         />
-        <button onClick={() => void reload()} className="text-[#5D8CF1]">
+        <button
+          onClick={() => void reload()}
+          className="text-[var(--ui-color-blue-600)]"
+        >
           Обновить
         </button>
       </div>
@@ -134,9 +137,7 @@ export function JoinRequestsScreen() {
                 {r.clinic_name} · {r.email}
               </p>
               <p className="text-sm text-gray-500">
-                {r.requested_role === 'doctor'
-                  ? 'Врач'
-                  : 'Оператор контакт-центра'}
+                {r.requested_role_label ?? r.requested_role}
                 {r.specialization_ids.length
                   ? ' · ' +
                     r.specialization_ids.map((id) => specs[id] ?? id).join(', ')
@@ -152,14 +153,16 @@ export function JoinRequestsScreen() {
                 <button
                   disabled={!!busy}
                   onClick={() => void decide(r.id, 'approve')}
-                  className="text-[#5D8CF1] disabled:opacity-50"
+                  className="vismuth-button vismuth-button--primary"
+                  data-size="s"
                 >
                   Подтвердить
                 </button>
                 <button
                   disabled={!!busy}
                   onClick={() => void decide(r.id, 'reject')}
-                  className="text-red-700 disabled:opacity-50"
+                  className="vismuth-button vismuth-button--danger"
+                  data-size="s"
                 >
                   Отклонить
                 </button>
@@ -176,7 +179,8 @@ export function JoinRequestsScreen() {
           <button
             disabled={page === 1}
             onClick={() => setPage((p) => p - 1)}
-            className="text-[#5D8CF1] disabled:opacity-40"
+            className="vismuth-button vismuth-button--secondary"
+            data-size="s"
           >
             Назад
           </button>
@@ -186,7 +190,8 @@ export function JoinRequestsScreen() {
           <button
             disabled={page * 50 >= total}
             onClick={() => setPage((p) => p + 1)}
-            className="text-[#5D8CF1] disabled:opacity-40"
+            className="vismuth-button vismuth-button--secondary"
+            data-size="s"
           >
             Вперёд
           </button>

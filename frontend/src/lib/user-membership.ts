@@ -5,7 +5,7 @@ import type {
 } from '@/api/user-membership-api';
 
 export function canEditMembership(actor: RoleName, target: RoleName): boolean {
-  return actor === 'super_admin' && target === 'doctor';
+  return actor === 'super_admin' && target !== 'super_admin';
 }
 
 export function buildMembershipUpdate(

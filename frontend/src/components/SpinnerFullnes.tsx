@@ -1,6 +1,8 @@
 export const Spinner = () => (
   <svg
-    className="animate-spin h-4 w-4 text-[#909090]"
+    role="status"
+    aria-label="Загрузка"
+    className="animate-spin h-[var(--ui-size-control-xs)] w-[var(--ui-size-control-xs)] text-[var(--ui-color-blue-600)]"
     xmlns="http://www.w3.org/2000/svg"
     fill="none"
     viewBox="0 0 24 24"

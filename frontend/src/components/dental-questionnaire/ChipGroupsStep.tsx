@@ -119,7 +119,7 @@ const ChipGroup = ({
             {group.question}
           </h2>
           {showMultipleHint ? (
-            <p className="mt-1 text-[13px] text-[var(--q-muted)]">
+            <p className="mt-1 text-[length:var(--ui-font-size-13)] text-[var(--q-muted)]">
               Можно несколько
             </p>
           ) : null}
@@ -138,7 +138,7 @@ const ChipGroup = ({
                 aria-pressed={isOn}
                 onClick={() => onToggle(option.value)}
                 // Кнопка-вариант — как быстрые ответы в чате общей анкеты.
-                className={`inline-flex min-h-[44px] items-center gap-1.5 rounded-full border border-[var(--q-brand)] px-4 py-2 text-base leading-tight transition-colors ${
+                className={`q-choice inline-flex items-center gap-[var(--ui-space-6)] rounded-full border border-[var(--q-brand)] px-4 py-2 text-base leading-tight transition-colors ${
                   isOn
                     ? 'bg-[var(--q-brand)] text-[var(--q-brand-contrast)]'
                     : 'bg-[var(--q-bg)] text-[var(--q-brand)]'
@@ -192,7 +192,7 @@ const ChipGroup = ({
                     setRawInput(true);
                     onText(choice);
                   }}
-                  className={`min-h-[44px] rounded-full border border-[var(--q-brand)] px-4 text-[15px] ${text === choice ? 'bg-[var(--q-brand)] text-[var(--q-brand-contrast)]' : 'text-[var(--q-brand)]'}`}
+                  className={`q-choice rounded-full border border-[var(--q-brand)] px-4 text-[length:var(--ui-font-size-15)] ${text === choice ? 'bg-[var(--q-brand)] text-[var(--q-brand-contrast)]' : 'text-[var(--q-brand)]'}`}
                 >
                   {choice}
                 </button>
@@ -216,7 +216,7 @@ const ChipGroup = ({
                 maxLength={group.text.max_length ?? ANSWER_MAX_LENGTH}
                 placeholder={group.text.placeholder}
                 onChange={(event) => onText(event.target.value)}
-                className={`${FIELD_CLASS} min-h-[52px] w-full py-3 focus:ring-2 focus:ring-[var(--q-brand)]`}
+                className={`${FIELD_CLASS} w-full`}
               />
               <button
                 type="button"
@@ -253,7 +253,11 @@ const ChipGroup = ({
       ) : null}
 
       {problem ? (
-        <p id={problemId} role="alert" className="text-sm text-[#C2334D]">
+        <p
+          id={problemId}
+          role="alert"
+          className="text-sm text-[var(--ui-color-red-700)]"
+        >
           {PROBLEM_TEXT[problem]}
         </p>
       ) : null}
@@ -294,7 +298,7 @@ export const ChipGroupsStep = ({
     <>
       {intro}
       {step.dental?.page?.kind === 'details' && step.title ? (
-        <p className="text-center text-[13px] text-[var(--q-muted)]">
+        <p className="text-center text-[length:var(--ui-font-size-13)] text-[var(--q-muted)]">
           {step.title}
         </p>
       ) : null}

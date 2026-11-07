@@ -126,7 +126,7 @@ export const RegistryScreen = () => {
   }
   if (!clinicId) {
     return (
-      <p className="mx-auto mt-40 max-w-md text-center text-[#8B8B8B]">
+      <p className="mx-auto mt-40 max-w-md text-center text-[var(--ui-color-alabaster-950)]">
         {superAdmin
           ? clinicListError || 'Нет доступных стоматологических клиник'
           : 'Раздел доступен администратору или оператору стоматологической клиники'}
@@ -163,7 +163,7 @@ export const RegistryScreen = () => {
   const renderDetail = () => {
     if (!selectedId) {
       return (
-        <p className="mt-40 text-center text-[#8B8B8B]">
+        <p className="mt-40 text-center text-[var(--ui-color-alabaster-950)]">
           Выберите анкету в списке
         </p>
       );
@@ -171,7 +171,9 @@ export const RegistryScreen = () => {
     let content: React.ReactNode;
     if (detail.error === 'not_found')
       content = (
-        <p className="my-40 text-center text-[#8B8B8B]">Анкета не найдена</p>
+        <p className="my-40 text-center text-[var(--ui-color-alabaster-950)]">
+          Анкета не найдена
+        </p>
       );
     else if (!detail.data && detail.isLoading) content = <Spinner />;
     else if (!detail.data)
@@ -196,7 +198,7 @@ export const RegistryScreen = () => {
       );
     }
     return (
-      <div className="custom-scrollbar max-h-[calc(100vh-100px)] w-full max-w-246 self-start overflow-y-auto rounded-[15px] bg-white px-8 py-6">
+      <div className="custom-scrollbar max-h-[calc(100vh-100px)] w-full max-w-246 self-start overflow-y-auto rounded-2xl bg-white px-8 py-6">
         {content}
       </div>
     );
@@ -210,7 +212,7 @@ export const RegistryScreen = () => {
           фильтров, заголовок списка. */}
       <aside
         aria-label="Анкеты для стоматологии"
-        className="custom-height fixed top-20 left-0 ml-3 mr-5 flex w-85.75 flex-col bg-[#F3F4F8]"
+        className="custom-height fixed top-20 left-0 ml-3 mr-5 flex w-85.75 flex-col bg-[var(--ui-color-slate-100)]"
       >
         {superAdmin && (
           <label className="mb-3 block text-sm">
@@ -233,12 +235,12 @@ export const RegistryScreen = () => {
           type="button"
           aria-haspopup="dialog"
           onClick={() => setIsCreating(true)}
-          className="h-13 w-full shrink-0 cursor-pointer rounded-xl bg-white px-6 text-[#5D8CF1] transition-colors hover:bg-[#F0F5FF]"
+          className="vismuth-button vismuth-button--secondary w-full shrink-0"
         >
           Новая ссылка
         </button>
 
-        <div className="mt-6 flex shrink-0 flex-col gap-3 rounded-[15px] bg-white p-3">
+        <div className="mt-6 flex shrink-0 flex-col gap-3 rounded-2xl bg-white p-3">
           <label className="relative block">
             <span className="sr-only">Фамилия или имя пациента</span>
             <Image
@@ -255,7 +257,7 @@ export const RegistryScreen = () => {
               placeholder="Фамилия или имя пациента"
               autoComplete="off"
               maxLength={100}
-              className={`h-10 w-full rounded-xl ${fieldFillClass(name)} pr-3 pl-10 text-sm text-[#202020] placeholder:text-[#A0A7B0] focus:ring-2 focus:ring-[#5D8CF1] focus:outline-none`}
+              className={`h-10 w-full rounded-xl ${fieldFillClass(name)} pr-3 pl-10 text-sm text-[var(--ui-color-alabaster-dark-800)] placeholder:text-[var(--ui-color-alabaster-800)] focus:ring-2 focus:ring-[var(--ui-color-blue-600)] focus:outline-none`}
             />
           </label>
           <CustomDropdown<RegistryStatus | ''>
@@ -269,25 +271,27 @@ export const RegistryScreen = () => {
             renderTrigger={(option) => {
               const selected = Array.isArray(option) ? option[0] : option;
               return selected?.value ? (
-                <span className="truncate text-sm text-[#202020]">
+                <span className="truncate text-sm text-[var(--ui-color-alabaster-dark-800)]">
                   {selected.label}
                 </span>
               ) : (
-                <span className="truncate text-sm text-[#A0A7B0]">Статус</span>
+                <span className="truncate text-sm text-[var(--ui-color-alabaster-800)]">
+                  Статус
+                </span>
               );
             }}
           />
         </div>
 
         <div className="custom-scrollbar mt-6 flex-1 overflow-x-hidden overflow-y-auto">
-          <h2 className="px-0 py-2.25 text-[14px] font-medium">
+          <h2 className="px-0 py-[var(--ui-space-8)] text-[length:var(--ui-font-size-14)] font-medium">
             Анкеты для стоматологии
           </h2>
           {renderList()}
         </div>
       </aside>
 
-      <div className="ml-93.5 flex min-w-0 flex-1 justify-center pr-5">
+      <div className="ml-[var(--ui-space-64)] flex min-w-0 flex-1 justify-center pr-5">
         {renderDetail()}
       </div>
 

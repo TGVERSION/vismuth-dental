@@ -1,0 +1,216 @@
+/* React adaptation of VISMUTH UiButton / UiInput. Layout remains with callers. */
+.vismuth-button,
+.vismuth-button--primary,
+.vismuth-button--secondary,
+.vismuth-button--danger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--ui-space-8);
+  min-height: var(--ui-size-btn-m);
+  padding: var(--ui-space-12) var(--ui-space-16);
+  border: var(--ui-border-width-sm) solid transparent;
+  border-radius: var(--ui-radius-xl);
+  font-family: inherit;
+  font-size: var(--ui-font-size-16);
+  font-weight: var(--ui-font-weight-regular);
+  line-height: var(--ui-line-height);
+  cursor: pointer;
+  transition:
+    background-color var(--ui-duration-fast) var(--ui-easing-standard),
+    color var(--ui-duration-fast) var(--ui-easing-standard),
+    box-shadow var(--ui-duration-fast) var(--ui-easing-standard);
+}
+.vismuth-button,
+.vismuth-button--primary {
+  background: var(--ui-color-blue-600);
+  color: var(--ui-color-blue-50);
+}
+.vismuth-button:hover:not(:disabled),
+.vismuth-button--primary:hover:not(:disabled) {
+  background: var(--ui-color-blue-700);
+}
+.vismuth-button:active:not(:disabled),
+.vismuth-button--primary:active:not(:disabled) {
+  background: var(--ui-color-blue-800);
+}
+.vismuth-button[data-variant='secondary'],
+.vismuth-button--secondary {
+  background: var(--ui-color-blue-100);
+  color: var(--ui-color-blue-600);
+}
+.vismuth-button[data-variant='secondary']:hover:not(:disabled),
+.vismuth-button--secondary:hover:not(:disabled) {
+  background: var(--ui-color-blue-100);
+  color: var(--ui-color-blue-700);
+}
+.vismuth-button[data-variant='outline'] {
+  background: transparent;
+  color: var(--ui-color-blue-600);
+  border-color: var(--ui-color-blue-600);
+}
+.vismuth-button[data-variant='outline']:hover:not(:disabled) {
+  background: var(--ui-color-blue-100);
+}
+.vismuth-button[data-variant='ghost'] {
+  background: transparent;
+  color: var(--ui-color-blue-600);
+}
+.vismuth-button[data-variant='ghost']:hover:not(:disabled) {
+  background: var(--ui-color-blue-100);
+}
+.vismuth-button[data-variant='danger'],
+.vismuth-button--danger {
+  background: var(--ui-color-red-100);
+  color: var(--ui-color-red-600);
+}
+.vismuth-button[data-variant='danger']:hover:not(:disabled),
+.vismuth-button--danger:hover:not(:disabled) {
+  background: var(--ui-color-red-200);
+  color: var(--ui-color-red-700);
+}
+.vismuth-button[data-size='xs'] {
+  min-height: var(--ui-size-btn-xs);
+  padding: var(--ui-space-4) var(--ui-space-8);
+  font-size: var(--ui-font-size-12);
+}
+.vismuth-button[data-size='s'] {
+  min-height: var(--ui-size-btn-s);
+  padding: var(--ui-space-8) var(--ui-space-12);
+  font-size: var(--ui-font-size-14);
+}
+.vismuth-button[data-size='l'] {
+  min-height: var(--ui-size-btn-l);
+  padding: var(--ui-space-16) var(--ui-space-20);
+}
+.vismuth-button:disabled,
+.vismuth-button--primary:disabled,
+.vismuth-button--secondary:disabled,
+.vismuth-button--danger:disabled {
+  color: var(--ui-color-alabaster-700);
+  background: var(--ui-color-alabaster-500);
+  border-color: transparent;
+  cursor: not-allowed;
+  opacity: 1;
+}
+.vismuth-input {
+  min-height: var(--ui-size-textarea-no-label-l);
+  width: 100%;
+  border: 0;
+  border-radius: var(--ui-radius-lg);
+  padding: var(--ui-space-10) var(--ui-space-14);
+  color: var(--ui-color-alabaster-dark-800);
+  background: var(--ui-color-alabaster-500);
+  font: inherit;
+  font-size: var(--ui-font-size-16);
+  line-height: var(--ui-line-height);
+  outline: none;
+  transition:
+    background-color var(--ui-duration-fast) var(--ui-easing-standard),
+    box-shadow var(--ui-duration-fast) var(--ui-easing-standard);
+}
+.vismuth-input:hover:not(:disabled):not([readonly]) {
+  background: var(--ui-color-slate-200);
+}
+.vismuth-input:focus:not(:disabled) {
+  background: var(--ui-color-slate-200);
+}
+.vismuth-input::placeholder {
+  color: var(--ui-color-alabaster-800);
+}
+.vismuth-input:disabled {
+  color: var(--ui-color-alabaster-700);
+  background: var(--ui-color-alabaster-500);
+  cursor: not-allowed;
+}
+.vismuth-input[aria-invalid='true'] {
+  background: var(--ui-color-red-100);
+  border-color: var(--ui-color-red-600);
+}
+.vismuth-function-button {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ui-space-4);
+  color: var(--ui-color-blue-600);
+  font-size: var(--ui-font-size-14);
+  line-height: var(--ui-line-height);
+  cursor: pointer;
+}
+.vismuth-function-button:hover:not(:disabled) {
+  color: var(--ui-color-blue-700);
+}
+.vismuth-function-button:disabled {
+  color: var(--ui-color-alabaster-700);
+  cursor: not-allowed;
+}
+.vismuth-icon-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--ui-size-btn-s);
+  height: var(--ui-size-btn-s);
+  border-radius: var(--ui-radius-xl);
+  color: var(--ui-color-alabaster-950);
+  cursor: pointer;
+}
+.vismuth-icon-button:hover:not(:disabled) {
+  background: var(--ui-color-alabaster-500);
+  color: var(--ui-color-alabaster-dark-400);
+}
+.vismuth-icon-button:disabled {
+  color: var(--ui-color-alabaster-700);
+  cursor: not-allowed;
+}
+
+@media screen {
+  :where(
+    button,
+    a,
+    input,
+    textarea,
+    select,
+    [role='combobox'],
+    [role='switch']
+  ):focus-visible {
+    outline: var(--ui-border-width-lg) solid var(--ui-color-blue-600);
+    outline-offset: var(--ui-space-2);
+    box-shadow: var(--ui-focus-ring);
+  }
+  :where(input[type='checkbox'], input[type='radio']) {
+    accent-color: var(--ui-color-blue-600);
+  }
+}
+
+/* Third-party feedback belongs to the same palette and typography. */
+:root {
+  --toastify-color-success: var(--ui-color-green-600);
+  --toastify-color-error: var(--ui-color-red-600);
+  --toastify-color-warning: var(--ui-color-yellow-600);
+  --toastify-color-info: var(--ui-color-blue-600);
+  --toastify-font-family: var(--ui-font-family);
+  --toastify-toast-bd-radius: var(--ui-radius-xl);
+  --toastify-z-index: var(--ui-z-toast);
+}
+.Toastify__toast {
+  box-shadow: var(--ui-shadow-md);
+}
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+.vismuth-input[data-filled='true'] {
+  background: var(--ui-color-slate-200);
+}
+button.vismuth-input {
+  height: var(--ui-size-textarea-no-label-l);
+  min-height: 0;
+}
+.vismuth-input[class~='bg-[var(--ui-color-slate-200)]'] {
+  background: var(--ui-color-slate-200);
+}

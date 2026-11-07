@@ -266,12 +266,13 @@ async def create_invitation(
     is_clinic_admin: bool,
     is_doctor: bool,
     specialization_ids: list[int],
+    is_operator: bool = False,
 ) -> tuple[ClinicInvitation, str, bool, str | None]:
     clinic = await get_clinic_or_404(db, clinic.id)
-    if not is_clinic_admin and not is_doctor:
+    if (not is_clinic_admin and not is_doctor and not is_operator) or (is_operator and (is_clinic_admin or is_doctor or specialization_ids)):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invitation must have is_clinic_admin or is_doctor",
+            detail="Выберите одну роль сотрудника; оператор не совмещается с другими ролями",
         )
 
     email_norm = normalize_email(email)
@@ -303,6 +304,8 @@ async def create_invitation(
 
     await ensure_doctors_limit(db, clinic, adding_doctor=is_doctor)
     validated_specs = await validate_specialization_ids(db, specialization_ids)
+    if not is_doctor and validated_specs:
+        raise HTTPException(status_code=400, detail='Специализации доступны только роли врача')
     if is_doctor and not validated_specs:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,

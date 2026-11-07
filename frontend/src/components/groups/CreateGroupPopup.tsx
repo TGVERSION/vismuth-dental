@@ -152,24 +152,24 @@ export const CreateGroupPopup: React.FC<CreateGroupPopupProps> = ({
 
   return (
     <div
-      className="modal-overlay fixed inset-0 bg-black/50 flex items-center justify-center z-1002"
+      className="modal-overlay px-4 fixed inset-0 bg-black/50 flex items-center justify-center z-[calc(var(--ui-z-modal)+2)]"
       onClick={handleClose}
     >
       <div
-        className="bg-white rounded-2xl w-full max-w-xl p-5 shadow-2xl animate-fade-in"
+        className="bg-white rounded-2xl w-full max-w-xl p-5 shadow-[var(--ui-shadow)] animate-fade-in"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex justify-end">
           <button
             type="button"
             onClick={handleClose}
-            className="cursor-pointer"
+            className="vismuth-icon-button cursor-pointer"
           >
             <Image alt="close" src="/close.svg" width={25} height={25} />
           </button>
         </div>
 
-        <h2 className="text-[32px] font-medium mb-7.5 px-5">
+        <h2 className="text-[length:var(--ui-font-size-31)] font-medium mb-[var(--ui-space-32)] px-5">
           Создание группы шаблонов
         </h2>
         <div className="mb-6 px-5">
@@ -181,7 +181,7 @@ export const CreateGroupPopup: React.FC<CreateGroupPopupProps> = ({
             value={groupName}
             onChange={(e) => setGroupName(e.target.value)}
             placeholder="Введите название"
-            className="w-full h-10 px-4 py-2.5 bg-gray-50 border-0 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#5D8CF1]"
+            className="vismuth-input w-full h-10 px-4 py-[var(--ui-space-10)] bg-gray-50 border-0 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--ui-color-blue-600)]"
             autoFocus
           />
         </div>
@@ -201,18 +201,18 @@ export const CreateGroupPopup: React.FC<CreateGroupPopupProps> = ({
                     type="checkbox"
                     checked={selectedTemplates.has(template.id)}
                     onChange={() => toggleTemplate(template.id)}
-                    className="w-5 h-5 rounded cursor-pointer border-gray-300 text-[#5D8CF1] focus:ring-[#5D8CF1]"
+                    className="w-5 h-5 rounded cursor-pointer border-gray-300 text-[var(--ui-color-blue-600)] focus:ring-[var(--ui-color-blue-600)]"
                   />
                   <span
-                    className={`text-sm px-2 py-0.75 rounded-full ${
+                    className={`text-sm px-2 py-[var(--ui-space-2)] rounded-full ${
                       template.type === 'personal'
-                        ? 'bg-[#FFD6BF]'
-                        : 'bg-[#CFE5E6]'
+                        ? 'bg-[var(--ui-color-red-200)]'
+                        : 'bg-[var(--ui-color-slate-300)]'
                     }`}
                   >
                     {template.type === 'personal' ? 'Личный' : 'Общий'}
                   </span>
-                  <span className="text-sm text-[#202020] flex-1">
+                  <span className="text-sm text-[var(--ui-color-alabaster-dark-800)] flex-1">
                     {template.name}
                   </span>
                 </label>
@@ -226,7 +226,8 @@ export const CreateGroupPopup: React.FC<CreateGroupPopupProps> = ({
             type="button"
             onClick={handleSave}
             disabled={saving}
-            className="h-12 bg-[#5D8CF1] text-white rounded-[15px] cursor-pointer hover:bg-[#769CEF] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="vismuth-button bg-[var(--ui-color-blue-600)] text-white cursor-pointer hover:bg-[var(--ui-color-blue-700)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            data-variant="primary"
           >
             {saving ? 'Сохранение...' : 'Сохранить'}
           </button>
@@ -234,7 +235,8 @@ export const CreateGroupPopup: React.FC<CreateGroupPopupProps> = ({
             type="button"
             onClick={handleClose}
             disabled={saving}
-            className="h-12 hover:bg-[#F0F5FF] text-[#202020] cursor-pointer bg-[#DCE7FF] rounded-[15px] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="vismuth-button hover:bg-[var(--ui-color-blue-50)] cursor-pointer bg-[var(--ui-color-blue-100)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            data-variant="secondary"
           >
             Отменить
           </button>

@@ -2,11 +2,9 @@
 
 import type { ReactNode } from 'react';
 
-export const INPUT_CLASS =
-  'h-10 w-full rounded-xl px-3.5 text-sm text-[#202020] outline-none placeholder:text-[#A0A7B0] focus:ring-2 focus:ring-[#5D8CF1] disabled:cursor-not-allowed disabled:text-[#8A9199]';
+export const INPUT_CLASS = 'vismuth-input w-full';
 
-export const LINK_BUTTON_CLASS =
-  'cursor-pointer text-sm text-[#5D8CF1] hover:underline disabled:cursor-not-allowed disabled:opacity-50';
+export const LINK_BUTTON_CLASS = 'vismuth-function-button text-sm';
 
 interface FieldRowProps {
   label: string;
@@ -26,21 +24,32 @@ export const FieldRow = ({
   note,
   children,
 }: FieldRowProps) => (
-  <div className="flex items-start justify-between gap-6 py-3">
-    <div className="min-w-0 pt-2.5">
-      <label htmlFor={htmlFor} className="block text-base text-[#202020]">
+  <div className="grid min-w-0 grid-cols-1 items-start gap-2 py-3 sm:grid-cols-[minmax(0,1fr)_minmax(210px,270px)] sm:gap-6">
+    <div className="min-w-0 pt-[var(--ui-space-10)]">
+      <label
+        htmlFor={htmlFor}
+        className="block text-base text-[var(--ui-color-alabaster-dark-800)]"
+      >
         {label}
       </label>
-      {hint && <p className="mt-0.5 text-sm text-[#6C757D]">{hint}</p>}
+      {hint && (
+        <p className="mt-[var(--ui-space-2)] text-sm text-[var(--ui-color-alabaster-950)]">
+          {hint}
+        </p>
+      )}
     </div>
-    <div className="w-67.5 shrink-0">
+    <div className="min-w-0">
       {children}
       {error ? (
-        <p role="alert" className="mt-1 text-xs text-[#E53E3E]">
+        <p role="alert" className="mt-1 text-xs text-[var(--ui-color-red-600)]">
           {error}
         </p>
       ) : (
-        note && <p className="mt-1 text-xs text-[#6C757D]">{note}</p>
+        note && (
+          <p className="mt-1 text-xs text-[var(--ui-color-alabaster-950)]">
+            {note}
+          </p>
+        )
       )}
     </div>
   </div>
@@ -50,7 +59,7 @@ export const Spinner = () => (
   <div
     role="status"
     aria-label="Загрузка"
-    className="mx-auto my-20 h-10 w-10 animate-spin rounded-full border-b-2 border-[#5D8CF1]"
+    className="mx-auto my-20 h-10 w-10 animate-spin rounded-full border-b-2 border-[var(--ui-color-blue-600)]"
   />
 );
 
@@ -61,7 +70,7 @@ interface ErrorStateProps {
 
 export const ErrorState = ({ text, onRetry }: ErrorStateProps) => (
   <div className="py-16 text-center">
-    <p className="text-[#6C757D]">{text}</p>
+    <p className="text-[var(--ui-color-alabaster-950)]">{text}</p>
     <button
       type="button"
       onClick={onRetry}

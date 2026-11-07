@@ -1,3 +1,4 @@
+import type { MembershipRole } from './user-membership-api';
 import { ApiClient, type RequestOptions } from './base-client';
 import { apiClient } from './main-api';
 import type { SpecializationRead, TokenResponse } from './index';
@@ -15,7 +16,8 @@ export interface JoinRequest {
   first_name: string | null;
   last_name: string | null;
   middle_name: string | null;
-  requested_role: 'operator' | 'doctor';
+  requested_role: MembershipRole;
+  requested_role_label?: string;
   specialization_ids: number[];
   status: 'pending' | 'approved' | 'rejected';
   created_at: string;
@@ -28,12 +30,12 @@ export interface JoinState {
 export interface JoinPreview {
   clinic_id: string;
   clinic_name: string;
-  roles: { value: 'operator' | 'doctor'; label: string }[];
+  roles: { value: MembershipRole; label: string }[];
   specializations: SpecializationRead[];
 }
 export interface JoinSelection {
   token: string;
-  requested_role: 'operator' | 'doctor';
+  requested_role: MembershipRole;
   specialization_ids: number[];
 }
 export const clinicJoinApi = {

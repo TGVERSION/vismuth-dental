@@ -57,11 +57,11 @@ export const RenameTemplate: React.FC<RenameTemplateProps> = ({
 
   return (
     <div
-      className="modal-overlay fixed inset-0 bg-black/50 flex items-center justify-center z-1002"
+      className="modal-overlay px-4 fixed inset-0 bg-black/50 flex items-center justify-center z-[calc(var(--ui-z-modal)+2)]"
       onClick={handleClose}
     >
       <div
-        className="bg-white rounded-2xl w-full max-w-lg p-5 shadow-2xl animate-fade-in"
+        className="bg-white rounded-2xl w-full max-w-lg p-5 shadow-[var(--ui-shadow)] animate-fade-in"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Кнопка закрытия */}
@@ -69,13 +69,13 @@ export const RenameTemplate: React.FC<RenameTemplateProps> = ({
           <button
             type="button"
             onClick={handleClose}
-            className="cursor-pointer"
+            className="vismuth-icon-button cursor-pointer"
           >
             <Image alt="close" src="/close.svg" width={25} height={25} />
           </button>
         </div>
 
-        <h2 className="text-[34px] font-medium text-left mb-8 px-5">
+        <h2 className="text-[length:var(--ui-font-size-34)] font-medium text-left mb-8 px-5">
           Переименуйте шаблон
         </h2>
         <div className="px-5">
@@ -87,23 +87,25 @@ export const RenameTemplate: React.FC<RenameTemplateProps> = ({
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
             placeholder="Введите название"
-            className="w-full h-10 px-4 py-2.5 bg-gray-50 border-0 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#5D8CF1]"
+            className="vismuth-input w-full h-10 px-4 py-[var(--ui-space-10)] bg-gray-50 border-0 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--ui-color-blue-600)]"
             autoFocus
           />
         </div>
 
-        <div className="flex flex-col gap-3 px-5 pb-5 mt-7.5">
+        <div className="flex flex-col gap-3 px-5 pb-5 mt-[var(--ui-space-32)]">
           <button
             type="button"
             onClick={handleRename}
-            className="cursor-pointer h-12 w-full py-3 bg-[#5D8CF1] hover:bg-[#769CEF] text-white rounded-xl transition-colors"
+            className="vismuth-button cursor-pointer w-full bg-[var(--ui-color-blue-600)] hover:bg-[var(--ui-color-blue-700)] text-white transition-colors"
+            data-variant="primary"
           >
             Сохранить
           </button>
           <button
             type="button"
             onClick={handleClose}
-            className="cursor-pointer h-12 w-full py-3 bg-[#DCE7FF] hover:bg-[#F0F5FF] rounded-xl transition-colors"
+            className="vismuth-button cursor-pointer w-full bg-[var(--ui-color-blue-100)] hover:bg-[var(--ui-color-blue-50)] transition-colors"
+            data-variant="secondary"
           >
             Отмена
           </button>

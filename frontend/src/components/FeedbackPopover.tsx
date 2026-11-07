@@ -12,9 +12,18 @@ export const FeedbackPopover = ({
   style?: React.CSSProperties;
 }) => {
   const colorMap = {
-    green: { header: 'text-[#459F49]', border: 'border-[#459F49]' },
-    yellow: { header: 'text-[#F29100]', border: 'border-[#F29100]' },
-    red: { header: 'text-[#D91528]', border: 'border-[#D91528]' },
+    green: {
+      header: 'text-[var(--ui-color-green-600)]',
+      border: 'border-[var(--ui-color-green-600)]',
+    },
+    yellow: {
+      header: 'text-[var(--ui-color-yellow-600)]',
+      border: 'border-[var(--ui-color-yellow-600)]',
+    },
+    red: {
+      header: 'text-[var(--ui-color-red-600)]',
+      border: 'border-[var(--ui-color-red-600)]',
+    },
   };
 
   const statusTitles = {
@@ -31,7 +40,7 @@ export const FeedbackPopover = ({
     return parts.map((part, index) => {
       if (part.startsWith('[') && part.endsWith(']')) {
         return (
-          <span key={index} className="text-[#5D8CF1]">
+          <span key={index} className="text-[var(--ui-color-blue-600)]">
             {part}
           </span>
         );
@@ -45,8 +54,10 @@ export const FeedbackPopover = ({
       className="absolute z-50 mb-1 w-fit max-w-2xl animate-fade-in"
       style={style}
     >
-      <div className={`bg-white rounded-2xl shadow-2xl overflow-hidden`}>
-        <div className="p-1.5">
+      <div
+        className={`bg-white rounded-2xl shadow-[var(--ui-shadow)] overflow-hidden`}
+      >
+        <div className="p-[var(--ui-space-6)]">
           <div className="flex items-center justify-between">
             <h3 className={`text-xs font-medium ${styles.header}`}>
               {statusTitle}
@@ -54,14 +65,16 @@ export const FeedbackPopover = ({
           </div>
           {color !== 'green' && (
             <>
-              <p className="text-sm mt-1.5 mb-1.5">
+              <p className="text-sm mt-[var(--ui-space-6)] mb-[var(--ui-space-6)]">
                 {highlightText(suggestedText)}
               </p>
               <div className="flex justify-start">
                 <button
                   type="button"
                   onClick={onApply}
-                  className="px-3 py-1.25 bg-[#5D8CF1] hover:bg-[#769CEF] cursor-pointer text-white text-sm rounded-xl transition-all"
+                  className="vismuth-button bg-[var(--ui-color-blue-600)] hover:bg-[var(--ui-color-blue-700)] cursor-pointer text-white transition-all"
+                  data-variant="primary"
+                  data-size="s"
                 >
                   Применить
                 </button>

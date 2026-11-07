@@ -19,8 +19,7 @@ interface VisitRecorderButtonProps {
   onCancel: () => void;
 }
 
-const BUTTON_CLASS =
-  'cursor-pointer rounded-xl hover:bg-white shadow-custom-hover flex flex-row items-center gap-2 py-3 px-3.75 disabled:opacity-50 disabled:cursor-not-allowed';
+const BUTTON_CLASS = 'vismuth-button';
 
 /** Кнопка записи приёма в тулбаре протокола. */
 export const VisitRecorderButton: React.FC<VisitRecorderButtonProps> = ({
@@ -41,7 +40,7 @@ export const VisitRecorderButton: React.FC<VisitRecorderButtonProps> = ({
   if (state === 'unsupported') {
     return (
       <span
-        className="text-[14px] text-[#6C757D]"
+        className="text-[length:var(--ui-font-size-14)] text-[var(--ui-color-alabaster-950)]"
         title="Нужен HTTPS или localhost"
       >
         Запись приёма недоступна в этом браузере
@@ -55,17 +54,17 @@ export const VisitRecorderButton: React.FC<VisitRecorderButtonProps> = ({
     return isConnectionLost ? (
       <span
         role="status"
-        className="flex items-center gap-2 py-3 px-3.75 text-[14px] text-[#F29100]"
+        className="flex items-center gap-2 py-3 px-[var(--ui-space-14)] text-[length:var(--ui-font-size-14)] text-[var(--ui-color-yellow-600)]"
       >
-        <span className="h-4 w-4 animate-spin rounded-full border-b-2 border-[#F29100]" />
+        <span className="h-4 w-4 animate-spin rounded-full border-b-2 border-[var(--ui-color-yellow-600)]" />
         Нет связи с сервером, продолжаем ждать…
       </span>
     ) : (
       <span
         role="status"
-        className="flex items-center gap-2 py-3 px-3.75 text-[14px] text-[#6C757D]"
+        className="flex items-center gap-2 py-3 px-[var(--ui-space-14)] text-[length:var(--ui-font-size-14)] text-[var(--ui-color-alabaster-950)]"
       >
-        <span className="h-4 w-4 animate-spin rounded-full border-b-2 border-[#5D8CF1]" />
+        <span className="h-4 w-4 animate-spin rounded-full border-b-2 border-[var(--ui-color-blue-600)]" />
         Расшифровываем приём…
       </span>
     );
@@ -83,6 +82,7 @@ export const VisitRecorderButton: React.FC<VisitRecorderButtonProps> = ({
           disabledReason ?? 'Записать приём и заполнить протокол по расшифровке'
         }
         className={BUTTON_CLASS}
+        data-variant="secondary"
       >
         <Image alt="" src="/mic.svg" width={20} height={20} />
         {state === 'starting' ? 'Подготовка…' : 'Записать приём'}
@@ -97,6 +97,7 @@ export const VisitRecorderButton: React.FC<VisitRecorderButtonProps> = ({
         onClick={onStop}
         disabled={state === 'finishing'}
         className={BUTTON_CLASS}
+        data-variant="secondary"
       >
         <Image alt="" src="/mic-stop.svg" width={20} height={20} />
         {state === 'finishing'
@@ -109,14 +110,14 @@ export const VisitRecorderButton: React.FC<VisitRecorderButtonProps> = ({
           <button
             type="button"
             onClick={state === 'paused' ? onResume : onPause}
-            className="cursor-pointer text-[14px] text-[#5D8CF1] hover:underline"
+            className="vismuth-function-button cursor-pointer text-[length:var(--ui-font-size-14)] text-[var(--ui-color-blue-600)] hover:underline"
           >
             {state === 'paused' ? 'Продолжить' : 'Пауза'}
           </button>
           <button
             type="button"
             onClick={onCancel}
-            className="cursor-pointer text-[14px] text-[#6C757D] hover:underline"
+            className="cursor-pointer text-[length:var(--ui-font-size-14)] text-[var(--ui-color-alabaster-950)] hover:underline"
             title="Прервать запись и удалить её"
           >
             Отменить
@@ -125,7 +126,7 @@ export const VisitRecorderButton: React.FC<VisitRecorderButtonProps> = ({
       )}
 
       {pendingChunks > 0 && (
-        <span className="text-[13px] text-[#F29100]">
+        <span className="text-[length:var(--ui-font-size-13)] text-[var(--ui-color-yellow-600)]">
           не отправлено фрагментов: {pendingChunks}
         </span>
       )}

@@ -11,7 +11,7 @@ from app.deps import get_current_user
 
 
 def test_join_roles_cannot_assign_platform_or_admin():
-    for role in ['super_admin', 'admin', 'clinic_admin']:
+    for role in ['super_admin', 'admin', 'patient']:
         with pytest.raises(ValidationError):
             JoinSubmission(token='x'*43, requested_role=role)
 

@@ -33,7 +33,7 @@ export const ConfirmDeactivateModal = ({
       onClose={onClose}
       closeDisabled={submitting}
     >
-      <p className="mb-7.5 text-[18px] text-[#6C757D]">
+      <p className="mb-[var(--ui-space-32)] text-[length:var(--ui-font-size-18)] text-[var(--ui-color-alabaster-950)]">
         {name} больше не сможет войти в сервис, место в лимите врачей
         освободится
       </p>

@@ -19,11 +19,11 @@ export const DentalBlock = ({
     <section aria-labelledby={headingId} className="flex flex-col gap-4">
       <h2
         id={headingId}
-        className="pl-6 text-[32px] font-medium text-[#202020]"
+        className="pl-6 text-[length:var(--ui-font-size-31)] font-medium text-[var(--ui-color-alabaster-dark-800)]"
       >
         {title}
       </h2>
-      <div className="flex flex-col gap-2 pl-8 text-base text-[#202020]">
+      <div className="flex flex-col gap-2 pl-8 text-base text-[var(--ui-color-alabaster-dark-800)]">
         {children}
       </div>
     </section>
@@ -37,18 +37,18 @@ const lowerFirst = (text: string): string =>
 /** «Самое важное»: красные строки или зелёная «ничего опасного». */
 export const DentalImportant = ({ important }: { important: string[] }) =>
   important.length > 0 ? (
-    <ul className="flex flex-col gap-1.5">
+    <ul className="flex flex-col gap-[var(--ui-space-6)]">
       {important.map((line) => (
         <li
           key={line}
-          className="rounded-[15px] bg-[#FDECEC] px-3 py-2.5 text-[14px] text-[#D91528]"
+          className="rounded-2xl bg-[var(--ui-color-red-50)] px-3 py-[var(--ui-space-10)] text-[length:var(--ui-font-size-14)] text-[var(--ui-color-red-600)]"
         >
           {line}
         </li>
       ))}
     </ul>
   ) : (
-    <p className="w-fit rounded-[15px] bg-[#F3F4F8] px-3 py-2.5 text-[14px] text-[#6C757D]">
+    <p className="w-fit rounded-2xl bg-[var(--ui-color-slate-100)] px-3 py-[var(--ui-space-10)] text-[length:var(--ui-font-size-14)] text-[var(--ui-color-alabaster-950)]">
       Ничего опасного для лечения не отмечено
     </p>
   );
@@ -69,12 +69,12 @@ export const DentalHealth = ({ health }: { health: DentalHealthRow[] }) => {
         </p>
       ))}
       {hasNot.length > 0 ? (
-        <p className="text-sm text-[#6C757D]">
+        <p className="text-sm text-[var(--ui-color-alabaster-950)]">
           Нет: {hasNot.map((row) => lowerFirst(row.label)).join(', ')}
         </p>
       ) : null}
       {uncertain.length > 0 ? (
-        <p className="rounded-lg bg-[#FFF7E5] px-3 py-2 text-sm text-[#654B16]">
+        <p className="rounded-lg bg-[var(--ui-color-yellow-50)] px-3 py-2 text-sm text-[var(--ui-color-yellow-900)]">
           Нужно уточнить:{' '}
           {uncertain.map((row) => lowerFirst(row.label)).join(', ')}. Пациент не
           уверен в ответе.
@@ -93,8 +93,14 @@ export const DentalClarifications = ({
   <dl className="flex flex-col gap-2">
     {items.map((item) => (
       <div key={item.question}>
-        <dt className="text-sm text-[#6C757D]">{item.question}</dt>
-        <dd className={item.answer ? '' : 'text-sm text-[#8B8B8B]'}>
+        <dt className="text-sm text-[var(--ui-color-alabaster-950)]">
+          {item.question}
+        </dt>
+        <dd
+          className={
+            item.answer ? '' : 'text-sm text-[var(--ui-color-alabaster-950)]'
+          }
+        >
           {item.answer || 'Пациент пропустил вопрос'}
         </dd>
       </div>

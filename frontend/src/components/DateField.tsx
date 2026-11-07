@@ -110,9 +110,16 @@ export const DateField = ({
         aria-haspopup="dialog"
         aria-expanded={isOpen}
         aria-label={ariaLabel}
-        className={`flex h-10 w-full cursor-pointer items-center justify-between gap-2 rounded-xl ${fieldFillClass(value)} px-3.5 text-left text-sm focus:outline-none focus:ring-2 focus:ring-[#5D8CF1]`}
+        data-filled={Boolean(value) || undefined}
+        className={`vismuth-input flex w-full cursor-pointer items-center justify-between gap-2 ${fieldFillClass(value)} text-left`}
       >
-        <span className={value ? 'text-[#202020]' : 'text-[#A0A7B0]'}>
+        <span
+          className={
+            value
+              ? 'text-[var(--ui-color-alabaster-dark-800)]'
+              : 'text-[var(--ui-color-alabaster-800)]'
+          }
+        >
           {value ? formatValue(value) : placeholder}
         </span>
         <Image src="/calendar.svg" alt="" width={18} height={18} />
@@ -122,7 +129,7 @@ export const DateField = ({
         <div
           role="dialog"
           aria-label="Выбор даты"
-          className={`absolute ${popoverAlign === 'left' ? 'left-0' : 'right-0'} z-20 mt-2 w-72 rounded-xl bg-white p-3 shadow-custom`}
+          className={`absolute ${popoverAlign === 'left' ? 'left-0' : 'right-0'} z-[var(--ui-z-popover)] mt-2 w-72 max-w-[calc(100vw-32px)] rounded-[var(--ui-radius-lg)] bg-[var(--ui-color-alabaster-50)] p-3 shadow-[var(--ui-shadow)]`}
         >
           <div className="mb-2 flex items-center justify-between">
             <button
@@ -130,11 +137,13 @@ export const DateField = ({
               onClick={() => setMonthIndex((index) => Math.max(0, index - 1))}
               disabled={monthIndex === 0}
               aria-label="Предыдущий месяц"
-              className="h-8 w-8 cursor-pointer rounded-lg hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40"
+              className="vismuth-icon-button disabled:cursor-not-allowed"
             >
               ‹
             </button>
-            <span className="text-sm font-medium text-[#202020]">{title}</span>
+            <span className="text-sm font-medium text-[var(--ui-color-alabaster-dark-800)]">
+              {title}
+            </span>
             <button
               type="button"
               onClick={() =>
@@ -142,13 +151,13 @@ export const DateField = ({
               }
               disabled={monthIndex >= months.length - 1}
               aria-label="Следующий месяц"
-              className="h-8 w-8 cursor-pointer rounded-lg hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40"
+              className="vismuth-icon-button disabled:cursor-not-allowed"
             >
               ›
             </button>
           </div>
 
-          <div className="grid grid-cols-7 gap-1 text-center text-xs text-[#6C757D]">
+          <div className="grid grid-cols-7 gap-1 text-center text-xs text-[var(--ui-color-alabaster-950)]">
             {WEEKDAY_LABELS.map((label) => (
               <span key={label}>{label}</span>
             ))}
@@ -166,10 +175,10 @@ export const DateField = ({
                     setIsOpen(false);
                   }}
                   aria-pressed={day.date === value}
-                  className={`h-8 cursor-pointer rounded-lg disabled:cursor-not-allowed disabled:text-[#C5CAD1] disabled:hover:bg-transparent ${
+                  className={`h-8 cursor-pointer rounded-lg disabled:cursor-not-allowed disabled:text-[var(--ui-color-slate-300)] disabled:hover:bg-transparent ${
                     day.date === value
-                      ? 'bg-[#5D8CF1] text-white'
-                      : 'text-[#202020] hover:bg-gray-100'
+                      ? 'bg-[var(--ui-color-blue-600)] text-white'
+                      : 'text-[var(--ui-color-alabaster-dark-800)] hover:bg-gray-100'
                   }`}
                 >
                   {day.day}

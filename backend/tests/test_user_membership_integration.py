@@ -21,7 +21,12 @@ TEST_URL = os.getenv('CLINIC_JOIN_TEST_DATABASE_URL')
 pytestmark = pytest.mark.skipif(not TEST_URL, reason='Requires isolated PostgreSQL CLINIC_JOIN_TEST_DATABASE_URL')
 
 
-def test_super_admin_transfers_preserve_history_and_enforce_operator_rights():
+def test_super_admin_transfers_preserve_history_and_enforce_operator_rights(monkeypatch):
+    from unittest.mock import AsyncMock
+    from app.services import clinic_members
+    from app.routers import clinic_join
+    monkeypatch.setattr(clinic_members, 'send_invite_email', AsyncMock(return_value=(True, None)))
+    monkeypatch.setattr(clinic_join, 'check_join_rate', AsyncMock())
     asyncio.run(_exercise())
 
 
@@ -42,9 +47,9 @@ async def _exercise():
         db.add_all([Role(name=name, name_ru=name) for name in ['doctor', 'super_admin', 'admin', 'patient'] if name not in existing_roles])
         await db.flush()
         users = {}
-        for key, role in [('root', 'super_admin'), ('legacy', 'admin'), ('patient', 'patient'), ('worker', 'doctor'), ('rival', 'doctor')]:
+        for key, role in [('root', 'super_admin'), ('legacy', 'admin'), ('patient', 'patient'), ('worker', 'doctor'), ('rival', 'doctor'), ('applicant','doctor')]:
             user = ServiceUser(login=f'{key}-{suffix}@example.test', password_hash='unused',
-                               first_name='Иван', last_name='Тестовый', middle_name='Иванович')
+                               first_name='Иван', last_name='Тестовый', middle_name='Иванович', clinic_join_restricted=key=='applicant')
             db.add(user)
             await db.flush()
             await set_user_role(db, user, role)
@@ -77,7 +82,42 @@ async def _exercise():
             assert (await client.get('/super-admin/users', headers=headers('legacy'))).status_code == 403
             roles = await client.get('/super-admin/user-membership-roles', headers=headers('root'))
             assert roles.status_code == 200
-            assert any(row['value'] == 'operator' and row['label'] == 'Оператор контакт-центра' for row in roles.json())
+            assert [row['label'] for row in roles.json()] == ['Админ', 'Админ и врач', 'Врач', 'Оператор контакт-центра / Регистратор']
+            join_link = (await client.post(f'/super-admin/clinics/{first}/join-link', headers=headers('root'))).json()['url'].rsplit('/',1)[-1]
+            own_root_request = await client.post('/clinic-join/requests', headers=headers('root'), json={
+                'token':join_link, 'requested_role':'clinic_admin', 'specialization_ids':[],
+            })
+            assert own_root_request.status_code == 409
+            from app.models import ClinicJoinRequest
+            async with sessions() as db:
+                stale_request = ClinicJoinRequest(clinic_id=first, user_id=users['root'], requested_role='clinic_admin', specialization_ids=[])
+                db.add(stale_request); await db.commit(); stale_id=stale_request.id
+            protected = await client.post(f'/super-admin/join-requests/{stale_id}/approve', headers=headers('root'))
+            assert protected.status_code == 409
+            assert (await client.get('/super-admin/users',headers=headers('root'))).status_code == 200
+            admin_request = await client.post('/clinic-join/requests', headers=headers('applicant'), json={
+                'token':join_link, 'requested_role':'clinic_admin', 'specialization_ids':[],
+            })
+            assert admin_request.status_code in (200,201), admin_request.text
+            assert (await client.get(f'/clinics/{first}/members', headers=headers('applicant'))).status_code == 403
+            approved = await client.post(f"/super-admin/join-requests/{admin_request.json()['id']}/approve", headers=headers('root'))
+            assert approved.status_code == 200, approved.text
+            assert (await client.get(f'/clinics/{first}/members', headers=headers('applicant'))).status_code == 200
+            assert (await client.get('/protocols', headers=headers('applicant'))).status_code == 403
+            invited = await client.post(f'/super-admin/clinics/{first}/invitations', headers=headers('root'), json={
+                'email':f'operator-invite-{suffix}@example.org', 'is_clinic_admin':False, 'is_doctor':False,
+                'is_operator':True, 'specialization_ids':[],
+            })
+            assert invited.status_code == 201, invited.text
+            from urllib.parse import urlparse, parse_qs
+            invite_token = parse_qs(urlparse(invited.json()['invite_url']).query)['token'][0]
+            accepted = await client.post('/auth/invitations/accept', json={'token':invite_token, 'password':'Operator-test-password-123'})
+            assert accepted.status_code == 200, accepted.text
+            invited_headers = {'Authorization':'Bearer '+accepted.json()['access_token']}
+            invited_member = (await client.get('/me/clinic', headers=invited_headers)).json()
+            assert invited_member['is_operator'] and not invited_member['is_doctor'] and not invited_member['is_clinic_admin']
+            assert (await client.get('/protocols', headers=invited_headers)).status_code == 403
+            assert (await client.get(f'/clinics/{first}/completed-questionnaires', headers=invited_headers)).status_code == 200
             endpoint = f"/super-admin/users/{users['worker']}/membership"
             payload = {'clinic_id': str(second), 'clinic_role': 'operator', 'specialization_ids': []}
             assert (await client.put(endpoint, headers=headers('legacy'), json=payload)).status_code == 403
@@ -131,9 +171,18 @@ async def _exercise():
             assert same_clinic.status_code == 200 and same_clinic.json()['membership_id'] == str(old_id)
             assert (await client.get('/protocols', headers=headers('worker'))).status_code == 403
             # Assignment cannot quietly bypass the operator barrier through a privileged platform role.
-            for key in ['root','legacy','patient']:
+            for key in ['root']:
                 rejected = await client.put(f"/super-admin/users/{users[key]}/membership", headers=headers('root'), json=payload)
                 assert rejected.status_code == 409, rejected.text
+            for key in ['legacy', 'patient']:
+                converted = await client.put(f"/super-admin/users/{users[key]}/membership", headers=headers('root'), json=payload)
+                assert converted.status_code == 200 and converted.json()['role'] == 'doctor', converted.text
+                assert (await client.get('/protocols', headers=headers(key))).status_code == 403
+                assert (await client.get('/service_user_ids', headers=headers(key))).status_code == 403
+            admin_only = await client.put(endpoint, headers=headers('root'), json={**payload, 'clinic_role':'clinic_admin'})
+            assert admin_only.status_code == 200
+            assert (await client.get('/protocols', headers=headers('worker'))).status_code == 403
+            assert (await client.get(f'/clinics/{second}/members', headers=headers('worker'))).status_code == 200
             # A target that expired or does not exist cannot gain an assignment.
             async with sessions() as db:
                 expired = await db.get(Clinic, first)

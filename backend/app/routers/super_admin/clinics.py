@@ -255,6 +255,7 @@ async def create_invitation_endpoint(
         photo_url=payload.photo_url,
         is_clinic_admin=payload.is_clinic_admin,
         is_doctor=payload.is_doctor,
+        is_operator=payload.is_operator,
         specialization_ids=payload.specialization_ids,
     )
     base = ClinicInvitationRead.model_validate(invitation)

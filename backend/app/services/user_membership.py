@@ -13,7 +13,7 @@ from ..models.service_user import ServiceUser
 from ..schemas.user_membership import UserMembershipRead, UserMembershipUpdate
 from .clinic_join import ensure_join_available, lock_clinic
 from .clinic_members import ensure_doctors_limit, load_specializations_map, set_membership_specializations, unique_membership_public_slug, validate_specialization_ids
-from .roles import user_role_load_options
+from .roles import user_role_load_options, set_user_role
 
 
 def membership_role(membership):
@@ -65,8 +65,8 @@ async def assign_user_membership(db: AsyncSession, user_id: UUID, payload: UserM
     ).with_for_update().execution_options(populate_existing=True))).scalar_one_or_none()
     if user is None:
         raise HTTPException(404, 'Пользователь не найден')
-    if user.role != 'doctor':
-        raise HTTPException(409, 'Сначала назначьте пользователю платформенную роль «Врач»; супер-администратору клиника не назначается')
+    if user.role == 'super_admin':
+        raise HTTPException(409, 'Супер-администратору не назначается роль сотрудника')
     if not user.is_active:
         raise HTTPException(409, 'Учётная запись отключена')
     memberships = (await db.execute(select(ClinicMembership).where(
@@ -96,6 +96,8 @@ async def assign_user_membership(db: AsyncSession, user_id: UUID, payload: UserM
         await db.flush()
         await set_membership_specializations(db, target.id, ids)
     user.clinic_join_restricted = clinic is None
+    # A staff role must never retain legacy platform administration privileges.
+    await set_user_role(db, user, 'doctor')
     user.updated_at = now
     await db.commit()
     return (await list_user_memberships(db, user_id))[0]

@@ -74,16 +74,16 @@ export const DoctorsHelpers: React.FC<DoctorsHelpersProps> = ({
       return {
         applyButtonText: isActive ? 'Выключить' : 'Применить',
         applyButtonClass: isActive
-          ? 'bg-[#FFDCDC] hover:bg-[#FFC0C0] text-[#CE3E3E]'
-          : 'bg-[#5D8CF1] hover:bg-[#6FA3F5] text-white',
+          ? 'vismuth-button--danger'
+          : 'vismuth-button--primary',
       };
     }
 
     return {
       applyButtonText: isActive ? 'Выключить' : 'Применить',
       applyButtonClass: isActive
-        ? 'bg-[#FFDCDC] hover:bg-[#FFDCDC] text-[#CE3E3E]'
-        : 'bg-[#5D8CF1] hover:bg-[#769CEF] text-white',
+        ? 'vismuth-button--danger'
+        : 'vismuth-button--primary',
     };
   }, [
     selectedHelper,
@@ -144,16 +144,16 @@ export const DoctorsHelpers: React.FC<DoctorsHelpersProps> = ({
   return (
     <>
       <div
-        className="modal-overlay fixed inset-0 flex items-start justify-center z-50 pt-10 pb-10 overflow-y-auto"
+        className="modal-overlay px-4 fixed inset-0 flex items-start justify-center z-50 pt-10 pb-10 overflow-y-auto"
         onClick={closeModal}
       >
         <div
-          className="bg-white rounded-2xl w-full max-w-334.5 flex flex-col shadow-2xl min-h-[calc(100vh-80px)] animate-fade-in"
+          className="bg-white rounded-2xl w-full max-w-334.5 flex flex-col shadow-[var(--ui-shadow)] min-h-[calc(100vh-80px)] animate-fade-in"
           onClick={(e) => e.stopPropagation()}
         >
-          <div className="flex flex-1">
-            <div className="border-r border-[#E9ECEF] p-8 flex gap-4 flex-col max-w-102.25">
-              <h2 className="text-[34px] font-semibold text-[#202020]">
+          <div className="flex min-w-0 flex-1 flex-col md:flex-row">
+            <div className="flex shrink-0 flex-col gap-4 border-b border-[var(--ui-color-alabaster-500)] p-4 md:w-64 md:border-r md:border-b-0 md:p-6">
+              <h2 className="text-[length:var(--ui-font-size-34)] font-semibold text-[var(--ui-color-alabaster-dark-800)]">
                 Помощники
               </h2>
               <div className="space-y-2">
@@ -164,14 +164,14 @@ export const DoctorsHelpers: React.FC<DoctorsHelpersProps> = ({
                   return (
                     <div
                       key={helperId}
-                      className={`px-3.75 py-3 rounded-lg cursor-pointer transition-all hover:bg-white shadow-custom-hover ${
+                      className={`px-[var(--ui-space-14)] py-3 rounded-lg cursor-pointer transition-all hover:bg-white shadow-custom-hover ${
                         helperId === selectedHelper
                           ? 'bg-white shadow-custom'
                           : ''
                       }`}
                       onClick={() => setSelectedHelper(helperId)}
                     >
-                      <div className="flex items-center gap-3.75">
+                      <div className="flex items-center gap-[var(--ui-space-14)]">
                         <Image
                           alt={helperId}
                           src={meta.icon}
@@ -180,11 +180,11 @@ export const DoctorsHelpers: React.FC<DoctorsHelpersProps> = ({
                         />
                         <div className="flex flex-col gap-1">
                           <div className="flex items-center gap-2">
-                            <span className="text-md text-[#202020]">
+                            <span className="text-md text-[var(--ui-color-alabaster-dark-800)]">
                               {meta.name}
                             </span>
                           </div>
-                          <span className="text-sm text-[#6C757D]">
+                          <span className="text-sm text-[var(--ui-color-alabaster-950)]">
                             {meta.provider}
                           </span>
                         </div>
@@ -194,19 +194,19 @@ export const DoctorsHelpers: React.FC<DoctorsHelpersProps> = ({
                 })}
               </div>
             </div>
-            <div className="flex-1">
+            <div className="min-w-0 flex-1">
               <div className="flex justify-end">
                 <button
                   type="button"
                   onClick={closeModal}
-                  className="mt-2.5 mr-2.5 cursor-pointer transition-colors"
+                  className="vismuth-icon-button mt-[var(--ui-space-10)] mr-[var(--ui-space-10)] cursor-pointer transition-colors"
                 >
                   <Image alt="close" src="/close.svg" width={25} height={25} />
                 </button>
               </div>
 
               <div>
-                <div className="flex items-center justify-between pb-6 px-8">
+                <div className="flex flex-wrap items-start justify-between gap-4 pb-6 px-4 md:px-8">
                   <div className="flex items-center gap-3">
                     <Image
                       alt={currentHelper.id}
@@ -215,22 +215,22 @@ export const DoctorsHelpers: React.FC<DoctorsHelpersProps> = ({
                       height={90}
                     />
                     <div className="flex flex-col gap-1">
-                      <h3 className="text-3xl text-[#202020]">
+                      <h3 className="text-3xl text-[var(--ui-color-alabaster-dark-800)]">
                         {currentHelper.name}
                       </h3>
-                      <div className="flex flex-row gap-3 items-center">
-                        <p className="text-[#6C757D] text-sm">
+                      <div className="flex flex-wrap gap-3 items-center">
+                        <p className="text-[var(--ui-color-alabaster-950)] text-sm">
                           {currentHelper.provider}
                         </p>
                         <a
                           href={currentHelper.url}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="text-[#5D8CF1] text-sm"
+                          className="text-[var(--ui-color-blue-600)] text-sm"
                         >
                           {currentHelper.url.replace('https://', '')}
                         </a>
-                        <div className="border-r border-[#E9ECEF] h-5" />
+                        <div className="border-r border-[var(--ui-color-slate-200)] h-5" />
                         <div className="flex flex-row gap-2 items-center">
                           <Image
                             alt="like"
@@ -238,14 +238,14 @@ export const DoctorsHelpers: React.FC<DoctorsHelpersProps> = ({
                             width={20}
                             height={20}
                           />
-                          <p className="text-[#909090] text-sm">
+                          <p className="text-[var(--ui-color-alabaster-950)] text-sm">
                             {currentHelper.likes}
                           </p>
                         </div>
                       </div>
                     </div>
                   </div>
-                  <div className="flex items-center justify-end gap-2">
+                  <div className="flex flex-wrap items-center justify-end gap-2">
                     {selectedHelper === 'autocomplete' && (
                       <div className="w-48">
                         <CustomDropdown<AutocompleteProvider, false>
@@ -270,7 +270,7 @@ export const DoctorsHelpers: React.FC<DoctorsHelpersProps> = ({
                           autocompleteProvider === 'off' &&
                           userSettings?.autocomplete === 'off')
                       }
-                      className={`px-5.5 w-29.75 h-10 py-2.5 flex text-sm items-center h-9.5 cursor-pointer rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${applyButtonClass}`}
+                      className={`min-w-28 ${applyButtonClass}`}
                     >
                       {isApplying ? <SpinnerButton /> : applyButtonText}
                     </button>
@@ -280,19 +280,23 @@ export const DoctorsHelpers: React.FC<DoctorsHelpersProps> = ({
                 <div className="px-8 pb-8 space-y-6">
                   {currentHelper.howItWorks && (
                     <div className="flex flex-col gap-3">
-                      <h4 className="text-[24px] font-medium">Как работает</h4>
+                      <h4 className="text-[length:var(--ui-font-size-23)] font-medium">
+                        Как работает
+                      </h4>
                       <p className="text-md">{currentHelper.howItWorks}</p>
                     </div>
                   )}
                   {currentHelper.whenUseful && (
                     <div className="flex flex-col gap-3">
-                      <h4 className="text-[24px] font-medium">Когда полезен</h4>
+                      <h4 className="text-[length:var(--ui-font-size-23)] font-medium">
+                        Когда полезен
+                      </h4>
                       <p className="text-md">{currentHelper.whenUseful}</p>
                     </div>
                   )}
                   {currentHelper.whenNotToRely && (
                     <div className="flex flex-col gap-3">
-                      <h4 className="text-[24px] font-medium">
+                      <h4 className="text-[length:var(--ui-font-size-23)] font-medium">
                         Когда не стоит полагаться
                       </h4>
                       <p className="text-md">{currentHelper.whenNotToRely}</p>

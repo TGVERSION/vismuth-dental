@@ -1,3 +1,7 @@
 export const SpinnerButton = () => (
-  <div className="animate-spin mx-auto my- rounded-full h-5 w-5 border-b-2 border-white"></div>
+  <span
+    role="status"
+    aria-label="Загрузка"
+    className="mx-auto inline-block h-[var(--ui-size-control-s)] w-[var(--ui-size-control-s)] animate-spin rounded-full border-2 border-current border-t-transparent"
+  />
 );

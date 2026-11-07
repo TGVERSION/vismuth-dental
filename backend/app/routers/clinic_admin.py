@@ -31,6 +31,7 @@ from ..services.clinic_access import clinic_to_read_fields
 from ..services.clinic_members import (
     create_invitation,
     deactivate_membership,
+    ensure_doctors_limit,
     doctors_count,
     get_clinic_or_404,
     load_specializations_map,
@@ -39,8 +40,15 @@ from ..services.clinic_members import (
     validate_specialization_ids,
 )
 from ..services.questionnaire_statistics import clinic_statistics, resolve_period
+from ..services.roles import user_role_load_options, set_user_role
 
 router = APIRouter(tags=["clinic-admin"])
+
+
+@router.get('/clinic-roles', summary='Роли сотрудников')
+async def staff_roles(_: ServiceUser = Depends(get_current_user)):
+    from ..services.staff_roles import STAFF_ROLES
+    return STAFF_ROLES
 
 
 def _public_url(slug: str) -> str:
@@ -307,6 +315,7 @@ async def list_members(
                 photo_url=invitation.photo_url,
                 is_clinic_admin=invitation.is_clinic_admin,
                 is_doctor=invitation.is_doctor,
+        is_operator=invitation.is_operator,
                 specializations=[
                     SpecializationRead(**item)
                     for item in invitation_map.get(invitation.id, [])
@@ -341,6 +350,7 @@ async def invite_member(
         photo_url=payload.photo_url,
         is_clinic_admin=payload.is_clinic_admin,
         is_doctor=payload.is_doctor,
+        is_operator=payload.is_operator,
         specialization_ids=payload.specialization_ids,
     )
     _, invitation_map = await load_specializations_map(
@@ -357,6 +367,7 @@ async def invite_member(
         photo_url=invitation.photo_url,
         is_clinic_admin=invitation.is_clinic_admin,
         is_doctor=invitation.is_doctor,
+        is_operator=invitation.is_operator,
         expires_at=invitation.expires_at,
         used_at=invitation.used_at,
         created_by_user_id=invitation.created_by_user_id,
@@ -417,6 +428,7 @@ async def resend_member_invitation(
         photo_url=invitation.photo_url,
         is_clinic_admin=invitation.is_clinic_admin,
         is_doctor=invitation.is_doctor,
+        is_operator=invitation.is_operator,
         expires_at=invitation.expires_at,
         used_at=invitation.used_at,
         created_by_user_id=invitation.created_by_user_id,
@@ -463,6 +475,12 @@ async def patch_member(
         )
     membership, user = row
     data = payload.model_dump(exclude_unset=True)
+    was_doctor = membership.is_doctor
+    if any(key in data for key in ('is_doctor', 'is_clinic_admin', 'is_operator')):
+        await db.execute(select(ServiceUser).options(*user_role_load_options()).where(ServiceUser.id == user.id).with_for_update().execution_options(populate_existing=True))
+        if user.role == 'super_admin':
+            raise HTTPException(409, 'Супер-администратору не назначается роль сотрудника')
+        await set_user_role(db, user, 'doctor')
 
     if "first_name" in data:
         user.first_name = data["first_name"]
@@ -476,20 +494,34 @@ async def patch_member(
         membership.is_clinic_admin = bool(data["is_clinic_admin"])
     if "is_doctor" in data:
         membership.is_doctor = bool(data["is_doctor"])
+    if "is_operator" in data:
+        membership.is_operator = bool(data["is_operator"])
+    if membership.is_operator and (membership.is_doctor or membership.is_clinic_admin):
+        raise HTTPException(400, 'Оператор не совмещается с другими ролями')
     if not membership.is_clinic_admin and not membership.is_doctor and not membership.is_operator:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Member must have is_clinic_admin or is_doctor",
         )
+    if membership.is_doctor and not was_doctor:
+        with db.no_autoflush:
+            clinic = await get_clinic_or_404(db, clinic_id)
+            await ensure_doctors_limit(db, clinic, adding_doctor=True)
+        if not data.get('specialization_ids'):
+            raise HTTPException(400, 'Выберите специализации врача')
 
     if "specialization_ids" in data and data["specialization_ids"] is not None:
         specs = await validate_specialization_ids(db, data["specialization_ids"])
+        if not membership.is_doctor and specs:
+            raise HTTPException(400, 'Специализации доступны только роли врача')
         if membership.is_doctor and not specs:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Doctor requires at least one specialization",
             )
         await set_membership_specializations(db, membership.id, specs)
+    elif not membership.is_doctor and any(key in data for key in ('is_doctor', 'is_clinic_admin', 'is_operator')):
+        await set_membership_specializations(db, membership.id, [])
 
     now = datetime.now(timezone.utc)
     user.updated_at = now

@@ -29,10 +29,10 @@ export const VoiceFillBanner: React.FC<VoiceFillBannerProps> = ({
   return (
     <div
       data-print-hide
-      className="ml-6 mr-2 mb-2 rounded-xl border border-[#5D8CF1] bg-[#F0F5FF] px-4 py-3"
+      className="ml-6 mr-2 mb-2 rounded-xl border border-[var(--ui-color-blue-600)] bg-[var(--ui-color-blue-50)] px-4 py-3"
     >
       <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-        <span className="text-[14px] text-[#202020]">
+        <span className="text-[length:var(--ui-font-size-14)] text-[var(--ui-color-alabaster-dark-800)]">
           Протокол заполнен из записи приёма: полей — {entries.length}
           {appended > 0 && `, из них дописано к вашему тексту — ${appended}`}
         </span>
@@ -41,21 +41,21 @@ export const VoiceFillBanner: React.FC<VoiceFillBannerProps> = ({
           <button
             type="button"
             onClick={onShowTranscript}
-            className="cursor-pointer text-[14px] text-[#5D8CF1] hover:underline"
+            className="vismuth-function-button cursor-pointer text-[length:var(--ui-font-size-14)] text-[var(--ui-color-blue-600)] hover:underline"
           >
             Показать расшифровку
           </button>
           <button
             type="button"
             onClick={onRevertAll}
-            className="cursor-pointer text-[14px] text-[#D91528] hover:underline"
+            className="cursor-pointer text-[length:var(--ui-font-size-14)] text-[var(--ui-color-red-600)] hover:underline"
           >
             Отменить всё
           </button>
           <button
             type="button"
             onClick={onDismiss}
-            className="cursor-pointer text-[14px] text-[#6C757D] hover:underline"
+            className="cursor-pointer text-[length:var(--ui-font-size-14)] text-[var(--ui-color-alabaster-950)] hover:underline"
             title="Убрать подсказку и оставить текст как есть"
           >
             Готово

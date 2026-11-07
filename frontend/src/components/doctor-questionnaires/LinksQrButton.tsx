@@ -23,7 +23,7 @@ export const LinksQrButton = () => {
         type="button"
         aria-haspopup="dialog"
         onClick={() => setOpen(true)}
-        className="h-13 w-full shrink-0 cursor-pointer rounded-xl bg-white px-6 text-[#5D8CF1] transition-colors hover:bg-[#F0F5FF]"
+        className="vismuth-button vismuth-button--secondary w-full shrink-0"
       >
         Ссылки и QR-код
       </button>

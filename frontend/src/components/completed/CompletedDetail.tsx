@@ -83,9 +83,9 @@ export function CompletedDetail({
         </h2>
       </header>
       {sheet && (
-        <div className="flex gap-5">
+        <div className="flex flex-wrap gap-4">
           <button
-            className="text-[#5D8CF1]"
+            className="vismuth-button vismuth-button--secondary"
             onClick={() => {
               flushSync(() => setPrinting(true));
               document.documentElement.setAttribute(
@@ -99,7 +99,7 @@ export function CompletedDetail({
           </button>
           <button
             disabled={busy || !!data.signed_at}
-            className="text-[#5D8CF1] disabled:opacity-50"
+            className="vismuth-button vismuth-button--secondary"
             onClick={() => void signed()}
           >
             {data.signed_at ? 'Подписана' : 'Отметить подписанной'}
@@ -136,7 +136,7 @@ export function CompletedDetail({
         </>
       )}
       <details>
-        <summary className="cursor-pointer text-[#5D8CF1]">
+        <summary className="cursor-pointer text-[var(--ui-color-blue-600)]">
           Сохранённые ответы
         </summary>
         <dl className="mt-4 space-y-4">

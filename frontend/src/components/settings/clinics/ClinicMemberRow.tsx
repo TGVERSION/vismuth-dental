@@ -10,8 +10,10 @@ import type {
   SpecializationRead,
 } from '@/api';
 import { CustomDropdown } from '@/components/CustomDropdown';
+import { useStaffRoles } from '@/hooks/useStaffRoles';
+import { staffRole, roleFromValues, memberRoleValues } from '@/lib/staff-role';
+import type { MembershipRole } from '@/api/user-membership-api';
 import {
-  MEMBER_ROLE_OPTIONS,
   buildMemberRolesPatch,
   filterOptions,
   formatMemberName,
@@ -24,11 +26,6 @@ import type { InviteResult } from '@/hooks/useClinicMembers';
 import { fieldFillClass } from '@/lib/field-fill';
 import { FieldRow, INPUT_CLASS, LINK_BUTTON_CLASS } from './fields';
 import { InviteLinkResult } from './InviteLinkResult';
-
-const ROLE_COLOR: Record<MemberRole, string> = {
-  admin: 'text-[#E4478C]',
-  doctor: 'text-[#3AA0E0]',
-};
 
 interface ClinicMemberRowProps {
   member: ClinicMemberRead;
@@ -51,11 +48,13 @@ export const ClinicMemberRow = ({
   const [expanded, setExpanded] = useState(false);
   const isInvited = member.kind === 'invitation';
   const name = formatMemberName(member);
-  const roles = memberFlagsToRoles(member);
+  const roleLabel = useStaffRoles().find(
+    (option) => option.value === staffRole(member),
+  )?.label;
 
   return (
     <li
-      className={`rounded-xl px-3.75 py-3 transition-all ${
+      className={`rounded-xl px-[var(--ui-space-14)] py-3 transition-all ${
         expanded ? 'bg-white shadow-custom' : 'shadow-custom-hover'
       }`}
     >
@@ -72,26 +71,23 @@ export const ClinicMemberRow = ({
             alt=""
             width={12}
             height={12}
-            className={`mt-1.5 shrink-0 transition-transform ${
+            className={`mt-[var(--ui-space-6)] shrink-0 transition-transform ${
               expanded ? 'rotate-180' : ''
             }`}
           />
           <span className="min-w-0">
-            <span className="block truncate text-base text-[#202020]">
+            <span className="block truncate text-base text-[var(--ui-color-alabaster-dark-800)]">
               {name}
             </span>
-            <span className="mt-0.5 block text-sm">
+            <span className="mt-[var(--ui-space-2)] block text-sm">
               {isInvited ? (
-                <span className="text-[#A0A7B0]">Приглашение отправлено</span>
+                <span className="text-[var(--ui-color-alabaster-800)]">
+                  Приглашение отправлено
+                </span>
               ) : (
-                roles.map((role, index) => (
-                  <span key={role}>
-                    {index > 0 && <span className="text-[#202020]">, </span>}
-                    <span className={ROLE_COLOR[role]}>
-                      {MEMBER_ROLE_OPTIONS.find((o) => o.value === role)?.label}
-                    </span>
-                  </span>
-                ))
+                <span className="text-[var(--ui-color-blue-600)]">
+                  {roleLabel}
+                </span>
               )}
             </span>
           </span>
@@ -236,9 +232,12 @@ const ActiveDetails = ({
     await save('specs', { specialization_ids: ids });
   };
 
-  const roleOptions = MEMBER_ROLE_OPTIONS.map((option) => ({
+  const roleOptions = useStaffRoles().map((option) => ({
     ...option,
-    disabled: option.value === 'doctor' && !member.is_doctor && !canAddDoctor,
+    disabled:
+      (option.value === 'doctor' || option.value === 'clinic_admin_doctor') &&
+      !member.is_doctor &&
+      !canAddDoctor,
   }));
 
   const specOptions = filterOptions(
@@ -272,7 +271,7 @@ const ActiveDetails = ({
       </FieldRow>
 
       <FieldRow
-        label="Роль сотрудника"
+        label="Роль"
         hint="Какие права доступны сотруднику на сервисе"
         error={errors.roles}
         note={
@@ -283,13 +282,12 @@ const ActiveDetails = ({
               : null
         }
       >
-        <CustomDropdown<MemberRole, true>
-          multiple
+        <CustomDropdown<MembershipRole>
           options={roleOptions}
-          value={currentRoles}
-          onChange={changeRoles}
+          value={roleFromValues(currentRoles)}
+          onChange={(role) => void changeRoles(memberRoleValues(role))}
           triggerClassName={fieldFillClass(currentRoles)}
-          aria-label="Роль сотрудника"
+          aria-label="Роль"
         />
       </FieldRow>
 
@@ -333,7 +331,9 @@ const ActiveDetails = ({
       >
         <div
           className={
-            pendingRoles ? 'rounded-lg ring-2 ring-[#F2B84B]' : undefined
+            pendingRoles
+              ? 'rounded-lg ring-2 ring-[var(--ui-color-yellow-300)]'
+              : undefined
           }
         >
           <CustomDropdown<number, true>
@@ -373,13 +373,13 @@ const InvitedDetails = ({ member, baseId, onResend }: InvitedDetailsProps) => {
     else setError(response.message);
   };
 
-  const roleLabels = memberFlagsToRoles(member)
-    .map((role) => MEMBER_ROLE_OPTIONS.find((o) => o.value === role)?.label)
-    .join(', ');
+  const roleLabels =
+    useStaffRoles().find((option) => option.value === staffRole(member))
+      ?.label ?? '';
 
   return (
     <>
-      <FieldRow label="Роль сотрудника" htmlFor={`${baseId}-role`}>
+      <FieldRow label="Роль" htmlFor={`${baseId}-role`}>
         <input
           id={`${baseId}-role`}
           value={roleLabels}
@@ -423,7 +423,10 @@ const InvitedDetails = ({ member, baseId, onResend }: InvitedDetailsProps) => {
           </button>
         )}
         {error && (
-          <p role="alert" className="mt-1 text-xs text-[#E53E3E]">
+          <p
+            role="alert"
+            className="mt-1 text-xs text-[var(--ui-color-red-600)]"
+          >
             {error}
           </p>
         )}

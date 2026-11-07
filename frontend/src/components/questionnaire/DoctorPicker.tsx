@@ -70,7 +70,9 @@ export const DoctorPicker = ({
 
   return (
     <div className="q-screen flex flex-col px-4 pt-8">
-      <h1 className="text-[24px] font-bold">Выберите врача</h1>
+      <h1 className="text-[length:var(--ui-font-size-26)] font-bold">
+        Выберите врача
+      </h1>
 
       <div className="mt-6 flex gap-2">
         <div
@@ -127,13 +129,9 @@ export const DoctorPicker = ({
 
         {error && !isSelecting ? (
           <div role="alert" className="rounded-2xl bg-[var(--q-surface)] p-4">
-            <p className="text-sm text-[#C2334D]">{error}</p>
+            <p className="text-sm text-[var(--ui-color-red-700)]">{error}</p>
             {onRetry ? (
-              <button
-                type="button"
-                onClick={onRetry}
-                className="mt-3 min-h-[44px] rounded-xl bg-[var(--q-brand)] px-4 font-medium text-[var(--q-brand-contrast)]"
-              >
+              <button type="button" onClick={onRetry} className="q-button mt-3">
                 Повторить
               </button>
             ) : null}

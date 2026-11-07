@@ -51,7 +51,7 @@ export const ClinicMembers = ({
       <div className="flex items-center justify-between">
         <h4
           id="clinic-members-title"
-          className="text-[30px] font-medium text-[#202020]"
+          className="text-[length:var(--ui-font-size-31)] font-medium text-[var(--ui-color-alabaster-dark-800)]"
         >
           Сотрудники
         </h4>
@@ -74,7 +74,7 @@ export const ClinicMembers = ({
           onChange={(event) => setQuery(event.target.value)}
           placeholder="Поиск"
           aria-label="Поиск сотрудников"
-          className={`h-10 w-full rounded-xl ${fieldFillClass(query)} pr-3.5 pl-10 text-sm outline-none focus:ring-2 focus:ring-[#5D8CF1]`}
+          className={`h-10 w-full rounded-xl ${fieldFillClass(query)} pr-[var(--ui-space-14)] pl-10 text-sm outline-none focus:ring-2 focus:ring-[var(--ui-color-blue-600)]`}
         />
       </div>
 
@@ -87,11 +87,13 @@ export const ClinicMembers = ({
             onRetry={state.reload}
           />
         ) : visible.length === 0 ? (
-          <p className="py-10 text-center text-[#6C757D]">
+          <p className="py-10 text-center text-[var(--ui-color-alabaster-950)]">
             Сотрудников пока нет
           </p>
         ) : found.length === 0 ? (
-          <p className="py-10 text-center text-[#6C757D]">Никого не нашли</p>
+          <p className="py-10 text-center text-[var(--ui-color-alabaster-950)]">
+            Никого не нашли
+          </p>
         ) : (
           <ul className="flex flex-col gap-2">
             {found.map((member) => (

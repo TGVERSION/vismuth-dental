@@ -57,7 +57,7 @@ export const ChecklistStep = ({
         <h2 id="health-question" className="text-base leading-snug font-medium">
           {step.title ?? 'Здоровье сейчас и раньше'}
         </h2>
-        <p className="mt-2 text-[14px] leading-snug text-[var(--q-muted)]">
+        <p className="mt-2 text-[length:var(--ui-font-size-14)] leading-snug text-[var(--q-muted)]">
           {step.text ??
             (healthPage && step.dental?.page?.current !== 1
               ? 'Отметьте подходящее. Без отметки — «Нет».'
@@ -82,18 +82,18 @@ export const ChecklistStep = ({
               </h3>
             ) : null}
             <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-2 px-3 py-1">
-              <label className="flex min-h-[52px] min-w-0 cursor-pointer items-center gap-3 py-2.5">
+              <label className="flex min-h-[var(--ui-size-btn-m)] min-w-0 cursor-pointer items-center gap-3 py-[var(--ui-space-10)]">
                 <input
                   type="checkbox"
                   checked={checked.includes(item.value)}
                   onChange={() => toggle(item.value, false)}
                   disabled={isSubmitting || !restored}
-                  className="h-[22px] w-[22px] shrink-0 accent-[var(--q-brand)]"
+                  className="h-[var(--ui-size-checkbox-m)] w-[var(--ui-size-checkbox-m)] shrink-0 accent-[var(--q-brand)]"
                 />
-                <span className="text-[15px] leading-snug">
+                <span className="text-[length:var(--ui-font-size-15)] leading-snug">
                   {item.label}
                   {item.hint ? (
-                    <span className="block text-[13px] text-[var(--q-muted)]">
+                    <span className="block text-[length:var(--ui-font-size-13)] text-[var(--q-muted)]">
                       {item.hint}
                     </span>
                   ) : null}

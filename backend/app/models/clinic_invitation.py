@@ -12,6 +12,11 @@ from ..db import Base
 class ClinicInvitation(Base):
     __tablename__ = "clinic_invitation"
 
+    @property
+    def is_operator(self) -> bool:
+        # Four staff roles are encoded by the existing two invitation flags.
+        return not self.is_clinic_admin and not self.is_doctor
+
     id: Mapped[UUID] = mapped_column(
         PG_UUID(as_uuid=True),
         primary_key=True,

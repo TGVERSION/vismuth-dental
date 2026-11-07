@@ -7,6 +7,7 @@ from ...db import get_db
 from ...deps import require_roles
 from ...schemas.user_membership import UserMembershipRead, UserMembershipUpdate
 from ...services.user_membership import assign_user_membership, list_user_memberships
+from ...services.staff_roles import STAFF_ROLES
 
 
 router = APIRouter(prefix='/super-admin', tags=['super-admin-users'], dependencies=[Depends(require_roles('super_admin'))])
@@ -14,12 +15,7 @@ router = APIRouter(prefix='/super-admin', tags=['super-admin-users'], dependenci
 
 @router.get('/user-membership-roles')
 async def membership_roles():
-    return [
-        {'value':'doctor', 'label':'Врач'},
-        {'value':'operator', 'label':'Оператор контакт-центра'},
-        {'value':'clinic_admin', 'label':'Администратор клиники'},
-        {'value':'clinic_admin_doctor', 'label':'Администратор клиники и врач'},
-    ]
+    return STAFF_ROLES
 
 
 @router.get('/users', response_model=list[UserMembershipRead])

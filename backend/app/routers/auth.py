@@ -428,6 +428,7 @@ async def preview_invitation(
         last_name=invitation.last_name,
         is_clinic_admin=invitation.is_clinic_admin,
         is_doctor=invitation.is_doctor,
+        is_operator=invitation.is_operator,
         expires_at=invitation.expires_at,
     )
 
@@ -503,6 +504,7 @@ async def accept_invitation(
         user_id=user.id,
         is_clinic_admin=invitation.is_clinic_admin,
         is_doctor=invitation.is_doctor,
+        is_operator=invitation.is_operator,
         status="active",
         photo_url=invitation.photo_url,
         public_slug=await unique_membership_public_slug(db),

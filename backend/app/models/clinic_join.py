@@ -29,7 +29,7 @@ class ClinicJoinRequest(Base):
     reviewed_at: Mapped[datetime | None] = mapped_column(TIMESTAMP(timezone=True))
     reviewed_by: Mapped[UUID | None] = mapped_column(ForeignKey('service_user.id'))
     __table_args__ = (
-        CheckConstraint("requested_role IN ('operator', 'doctor')", name='ck_join_role'),
+        CheckConstraint("requested_role IN ('operator', 'doctor', 'clinic_admin', 'clinic_admin_doctor')", name='ck_join_role'),
         CheckConstraint("status IN ('pending', 'approved', 'rejected')", name='ck_join_status'),
         Index('uq_clinic_join_pending', 'clinic_id', 'user_id', unique=True, postgresql_where=text("status = 'pending'")),
     )

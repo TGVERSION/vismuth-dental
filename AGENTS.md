@@ -33,8 +33,8 @@
 ### Frontend (API-клиент, settings, auth store)
 
 - Перед правкой прочитай `docs/contracts/overview.md` и профильный contract.
-- **Не хардкодить** список ролей и кириллические подписи: `GET /roles` → `name` / `name_ru`.
-- В PATCH роли отправляй код (`role`), для отображения используй `role_name_ru` или label из `/roles`.
+- **Не хардкодить** роли сотрудников и подписи: `GET /clinic-roles` → `value` / `label`; одно поле «Роль». `GET /roles` — служебный справочник совместимости.
+- Роль сотрудника меняй атомарной операцией членства; показывай label из `/clinic-roles`. Служебный `role_name_ru` не заменяет эффективную роль членства.
 - Access control на UI — удобство; источник правды — backend.
 - Публичная анкета: state machine на backend (`/public/*`); UI только рендерит `step` и шлёт answer + headers `X-Device-Id` / `X-Questionnaire-Token`.
 

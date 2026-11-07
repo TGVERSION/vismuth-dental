@@ -86,7 +86,7 @@ const Wheel = ({ label, items, value, compact, onChange }: WheelProps) => {
               // Ховер вешается только на невыбранные: у выбранного он
               // перекрыл бы фирменный фон, а светлый текст остался бы —
               // значение становилось нечитаемым под курсором.
-              className={`q-select-option flex w-full snap-center items-center justify-center rounded-xl ${
+              className={`flex w-full snap-center items-center justify-center rounded-xl ${
                 compact ? 'h-9 text-sm' : 'h-12 text-lg'
               } ${
                 selected
@@ -132,7 +132,7 @@ export const TimeSheet = ({
           <button
             type="button"
             onClick={() => onApply(`${draft.hour}:${draft.minute}`)}
-            className="q-button w-full"
+            className="min-h-[52px] w-full rounded-xl bg-[var(--q-brand)] px-4 text-base font-medium text-[var(--q-brand-contrast)]"
           >
             Готово
           </button>

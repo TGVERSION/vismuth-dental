@@ -100,16 +100,8 @@ const PatientInfoStep = ({
 export const QuestionnaireApp = ({ slug, link }: QuestionnaireAppProps) => {
   const flow = useQuestionnaireFlow(slug, link);
   const clinic = clinicBranding(link);
-  const gastroEntry = (
-    link?.doctor ? [link.doctor] : (link?.doctors ?? [])
-  ).some((doctor) =>
-    doctor.specializations.some(
-      (specialty) =>
-        /гастро/i.test(specialty.name) && !/детск/i.test(specialty.name),
-    ),
-  );
-
   const [consentOpen, setConsentOpen] = useState(false);
+  const [continueLegacy, setContinueLegacy] = useState(false);
   // Возврат из чата к выбору врача — экран поверх шага: прежняя анкета
   // активна, пока не выбран другой врач.
   const [pickingDoctor, setPickingDoctor] = useState(false);
@@ -192,6 +184,19 @@ export const QuestionnaireApp = ({ slug, link }: QuestionnaireAppProps) => {
     if (step) {
       switch (screenForStep(step)) {
         case 'gastro':
+          if (!continueLegacy) return (
+            <div className="q-screen flex flex-col gap-5 px-4 py-8">
+              <h1 className="text-[24px] font-bold">Вернуться к обычному чату</h1>
+              <p>Вы начали анкету в прежнем расширенном формате. Можно начать обычный опрос с выбора врача. Ранее отправленные ответы останутся сохранены отдельно.</p>
+              <button type="button" disabled={flow.isStarting} className="min-h-[52px] rounded-xl bg-[var(--q-brand)] px-4 text-base font-medium text-[var(--q-brand-contrast)]" onClick={() => {
+                const doctors = backDoctors.length ? backDoctors : link?.doctor ? [link.doctor] : link?.doctors ?? [];
+                if (doctors.length === 1) restartWithDoctor(doctors[0].membership_id);
+                else setPickingDoctor(true);
+              }}>Начать обычный опрос</button>
+              <button type="button" className="min-h-11 underline" onClick={() => setContinueLegacy(true)}>Продолжить ранее начатую анкету</button>
+              {flow.startError && <p role="alert">{flow.startError}</p>}
+            </div>
+          );
           return (
             <GastroQuestionnaireStep
               key={flow.questionnaireId}
@@ -299,7 +304,6 @@ export const QuestionnaireApp = ({ slug, link }: QuestionnaireAppProps) => {
     return (
       <WelcomeScreen
         clinic={clinic}
-        gastroEntry={gastroEntry}
         isStarting={flow.isStarting || flow.isResuming}
         error={flow.startError}
         onStart={handleStart}

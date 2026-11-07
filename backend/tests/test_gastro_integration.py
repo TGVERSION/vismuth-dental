@@ -16,7 +16,7 @@ from app.services.gastro.summary import build_summary
 
 
 @pytest.mark.parametrize("specialty,visit,kind,next_step", [
-    ("Гастроэнтеролог", "primary", "gastro", "gastro_reason"),
+    ("Гастроэнтеролог", "primary", "general", "complaint"),
     ("Гастроэнтеролог", "repeat", "general", "repeat_change"),
     ("Детский гастроэнтеролог", "primary", "general", "complaint"),
     ("Терапевт", "primary", "general", "complaint"),

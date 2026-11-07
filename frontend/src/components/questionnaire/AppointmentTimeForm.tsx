@@ -56,9 +56,7 @@ export const AppointmentTimeForm = ({
       }}
       className="q-screen flex flex-col px-4 pt-[calc(env(safe-area-inset-top)+24px)]"
     >
-      <h1 className="text-[length:var(--ui-font-size-26)] font-bold">
-        Когда у вас приём?
-      </h1>
+      <h1 className="text-[24px] font-bold">Когда у вас приём?</h1>
 
       {/* relative — опора для выпадающего списка на десктопе. */}
       <div className="relative mt-6">
@@ -68,7 +66,7 @@ export const AppointmentTimeForm = ({
           ariaLabel="Дата приёма"
           onClick={() => setDateSheetOpen((open) => !open)}
           icon={<CalendarIcon className="h-5 w-5" />}
-          className="w-full"
+          className="min-h-[52px] w-full"
         />
 
         {dateSheetOpen && dateMin && dateMax ? (
@@ -85,11 +83,11 @@ export const AppointmentTimeForm = ({
         ) : null}
       </div>
       {!hasDateRange ? (
-        <p role="alert" className="mt-1 text-sm text-[var(--ui-color-red-700)]">
+        <p role="alert" className="mt-1 text-sm text-[#C2334D]">
           Нет доступных дат, обратитесь в клинику
         </p>
       ) : touched && !dateValid ? (
-        <p role="alert" className="mt-1 text-sm text-[var(--ui-color-red-700)]">
+        <p role="alert" className="mt-1 text-sm text-[#C2334D]">
           Выберите дату в ближайшие 30 дней
         </p>
       ) : null}
@@ -101,7 +99,7 @@ export const AppointmentTimeForm = ({
           ariaLabel="Время приёма"
           onClick={() => setTimeSheetOpen((open) => !open)}
           icon={<ClockIcon className="h-5 w-5" />}
-          className="w-full"
+          className="min-h-[52px] w-full"
         />
 
         {timeSheetOpen ? (
@@ -119,13 +117,13 @@ export const AppointmentTimeForm = ({
         ) : null}
       </div>
       {hasDateRange && touched && !timeValid ? (
-        <p role="alert" className="mt-1 text-sm text-[var(--ui-color-red-700)]">
+        <p role="alert" className="mt-1 text-sm text-[#C2334D]">
           Выберите время
         </p>
       ) : null}
 
       {error ? (
-        <p role="alert" className="mt-4 text-sm text-[var(--ui-color-red-700)]">
+        <p role="alert" className="mt-4 text-sm text-[#C2334D]">
           {error}
         </p>
       ) : null}
@@ -134,7 +132,7 @@ export const AppointmentTimeForm = ({
         <button
           type="submit"
           disabled={isSubmitting || !hasDateRange}
-          className="q-button w-full"
+          className="min-h-[52px] w-full rounded-xl bg-[var(--q-brand)] px-4 text-base font-medium text-[var(--q-brand-contrast)] disabled:opacity-60"
         >
           {isSubmitting ? <SpinnerButton /> : 'Подтвердить'}
         </button>

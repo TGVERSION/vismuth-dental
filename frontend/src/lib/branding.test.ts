@@ -123,3 +123,16 @@ describe('isExternalImageUrl', () => {
     expect(isExternalImageUrl('/logo.svg')).toBe(false);
   });
 });
+
+
+describe('readable clinic accent', () => {
+  it('keeps near-white clinic fill but uses readable text and outlines on white', () => {
+    const style = brandStyle({name:'Клиника',phone:'',logo_url:null,brand_color:'#F3F8FD'}) as Record<string,string>;
+    expect(style['--q-brand']).toBe('#F3F8FD');
+    expect(style['--q-accent']).toBe(NEUTRAL_BRAND_COLOR);
+    expect(style['--q-brand-contrast']).toBe(DEFAULT_TEXT_COLOR);
+  });
+  it('retains a dark clinic accent', () => {
+    expect((brandStyle({name:'Клиника',phone:'',logo_url:null,brand_color:'#1B4B8F'}) as Record<string,string>)['--q-accent']).toBe('#1B4B8F');
+  });
+});

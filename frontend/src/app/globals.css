@@ -241,12 +241,13 @@ body {
 [data-questionnaire] {
   --q-brand: #1b4b8f;
   --q-brand-contrast: #ffffff;
-  --q-bg: var(--ui-color-alabaster-50);
-  --q-surface: var(--ui-color-slate-100);
-  --q-text: var(--ui-color-alabaster-dark-800);
-  --q-border: var(--ui-color-slate-200);
-  --q-muted: var(--ui-color-alabaster-950);
-  --q-bubble-in: var(--ui-color-slate-100);
+  --q-accent: #1b4b8f;
+  --q-bg: #ffffff;
+  --q-surface: #f1f2f6;
+  --q-text: #202020;
+  --q-border: #d7dce3;
+  --q-muted: #8b8b8b;
+  --q-bubble-in: #f1f2f6;
   --q-bubble-out: var(--q-brand);
 
   color: var(--q-text);

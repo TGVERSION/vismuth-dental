@@ -190,7 +190,7 @@ export const ChatComposer = ({
               onMouseDown={keepInputFocus}
               onClick={() => handleChip(chip)}
               disabled={isAwaiting}
-              className="q-choice min-h-[44px] rounded-full border border-[var(--q-brand)] bg-[var(--q-bg)] px-4 text-base text-[var(--q-brand)] transition-colors active:bg-[var(--q-brand)] active:text-[var(--q-brand-contrast)] disabled:opacity-60"
+              className="min-h-[44px] rounded-full border border-[var(--q-accent)] bg-[var(--q-bg)] px-4 text-base text-[var(--q-accent)] transition-colors active:bg-[var(--q-brand)] active:text-[var(--q-brand-contrast)] disabled:opacity-60"
             >
               {chip.label}
             </button>
@@ -203,7 +203,7 @@ export const ChatComposer = ({
           event.preventDefault();
           submit();
         }}
-        className="q-composer flex items-end gap-2 bg-[var(--q-surface)] px-4 py-1"
+        className="flex items-end gap-2 rounded-2xl bg-[var(--q-surface)] px-4 py-1"
       >
         <textarea
           ref={textareaRef}
@@ -241,7 +241,7 @@ export const ChatComposer = ({
           onMouseDown={keepInputFocus}
           disabled={!canSend}
           aria-label="Отправить"
-          className="q-icon-button mb-1 flex shrink-0 items-center justify-center text-[var(--q-brand)] disabled:opacity-40"
+          className="mb-1 flex h-11 w-11 shrink-0 items-center justify-center text-[var(--q-accent)] disabled:opacity-40"
         >
           <SendIcon className="h-6 w-6" />
         </button>

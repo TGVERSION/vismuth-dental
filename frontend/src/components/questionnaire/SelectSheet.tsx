@@ -59,7 +59,7 @@ export const SelectSheet = ({
           <button
             type="button"
             onClick={() => onApply(draft)}
-            className="q-button w-full"
+            className="min-h-[52px] w-full rounded-xl bg-[var(--q-brand)] px-4 text-base font-medium text-[var(--q-brand-contrast)]"
           >
             Готово
           </button>
@@ -79,10 +79,10 @@ export const SelectSheet = ({
                 onClick={() => choose(option.value)}
                 className={
                   isDesktop
-                    ? `q-select-option flex w-full items-center px-4 py-3 text-left text-sm transition-colors hover:bg-gray-50 ${
+                    ? `flex w-full items-center px-4 py-3 text-left text-sm transition-colors hover:bg-gray-50 ${
                         selected ? 'bg-gray-50' : ''
                       }`
-                    : 'q-select-option flex min-h-[var(--ui-size-btn-m)] w-full items-center justify-between gap-3 px-4 py-2 text-left'
+                    : 'flex min-h-[52px] w-full items-center justify-between gap-3 px-4 py-2 text-left'
                 }
               >
                 <span>{option.label}</span>
@@ -92,7 +92,7 @@ export const SelectSheet = ({
                     aria-hidden="true"
                     className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 ${
                       selected
-                        ? 'border-[var(--q-brand)]'
+                        ? 'border-[var(--q-accent)]'
                         : 'border-[var(--q-muted)]'
                     }`}
                   >

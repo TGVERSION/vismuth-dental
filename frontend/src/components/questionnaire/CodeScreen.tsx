@@ -66,9 +66,7 @@ export const CodeScreen = ({
 
   return (
     <div className="q-screen flex flex-col px-4 pt-[calc(env(safe-area-inset-top)+24px)]">
-      <h1 className="text-[length:var(--ui-font-size-26)] font-bold">
-        Готово!
-      </h1>
+      <h1 className="text-[24px] font-bold">Готово!</h1>
 
       <p className="mt-3 text-[var(--q-muted)]">
         Назовите этот код врачу в начале приёма — так он сразу найдёт ваши
@@ -94,13 +92,16 @@ export const CodeScreen = ({
         <button
           type="button"
           onClick={handleCopy}
-          data-variant="secondary"
-          className="q-button w-full"
+          className="min-h-[52px] w-full rounded-xl bg-[var(--q-surface)] px-4 text-base font-medium"
         >
           {copied ? 'Код скопирован' : 'Скопировать код'}
         </button>
 
-        <button type="button" onClick={handleClose} className="q-button w-full">
+        <button
+          type="button"
+          onClick={handleClose}
+          className="min-h-[52px] w-full rounded-xl bg-[var(--q-brand)] px-4 text-base font-medium text-[var(--q-brand-contrast)]"
+        >
           Закрыть
         </button>
       </div>

@@ -34,7 +34,7 @@ export const DoctorCard = ({
       onClick={() => onSelect(doctor)}
       disabled={disabled}
       aria-busy={isPending || undefined}
-      className="q-doctor-card flex w-full items-center gap-3 rounded-[var(--ui-radius-2xl)] bg-[var(--q-surface)] p-3 text-left disabled:opacity-60"
+      className="flex w-full items-center gap-3 rounded-2xl bg-[var(--q-surface)] p-3 text-left disabled:opacity-60"
     >
       <SafeImage
         src={doctor.photo_url}
@@ -54,7 +54,7 @@ export const DoctorCard = ({
 
       <span className="min-w-0 flex-1">
         <span className="block font-medium">{fullName}</span>
-        <span className="mt-1 block text-sm text-[var(--q-brand)]">
+        <span className="mt-1 block text-sm text-[var(--q-accent)]">
           {doctorSpecializationNames(doctor).join(', ')}
         </span>
       </span>
@@ -62,7 +62,7 @@ export const DoctorCard = ({
       {isPending ? (
         <span
           aria-hidden="true"
-          className="h-5 w-5 shrink-0 animate-spin rounded-full border-2 border-[var(--q-brand)] border-t-transparent"
+          className="h-5 w-5 shrink-0 animate-spin rounded-full border-2 border-[var(--q-accent)] border-t-transparent"
         />
       ) : null}
     </button>

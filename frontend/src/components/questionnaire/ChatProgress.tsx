@@ -24,7 +24,7 @@ export const ChatProgress = ({ value }: ChatProgressProps) => {
     >
       <div
         style={{ width: `${Math.max(percent, 12)}%` }}
-        className="flex h-full items-center justify-center rounded-full bg-[var(--q-brand)] text-[length:var(--ui-font-size-11)] font-medium text-[var(--q-brand-contrast)] transition-[width] duration-300"
+        className="flex h-full items-center justify-center rounded-full bg-[var(--q-brand)] text-[11px] font-medium text-[var(--q-brand-contrast)] transition-[width] duration-300"
       >
         {percent}%
       </div>

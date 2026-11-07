@@ -133,5 +133,6 @@ export const brandStyle = (
   return {
     '--q-brand': brand,
     '--q-brand-contrast': pickContrastColor(brand),
+    '--q-accent': apcaContrast(brand, '#FFFFFF') >= 60 ? brand : NEUTRAL_BRAND_COLOR,
   } as CSSProperties;
 };

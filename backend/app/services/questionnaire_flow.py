@@ -21,7 +21,6 @@ from ..services.questionnaire_code import allocate_code
 from ..services.questionnaire_limits import ensure_clinic_subscription_active
 from .dental_questionnaire import apply_dental, build_dental_descriptor, open_invite
 from .questionnaire_step import StepDescriptor
-from .gastro.flow import route_gastro
 from .gastro_questionnaire import apply_gastro, build_gastro_descriptor, submission_fingerprint
 
 _APPOINTMENT_TIME_RE = re.compile(r"^([01]\d|2[0-3]):([0-5]\d)$")
@@ -604,12 +603,7 @@ async def apply_answer(
             )
         questionnaire.visit_type = choice
         if choice == "primary":
-            if route_gastro(await specialization_name(db, questionnaire.specialization_id), choice):
-                questionnaire.kind = "gastro"
-                questionnaire.gastro_answers = questionnaire.gastro_answers or {"revision": 0}
-                questionnaire.current_step = "gastro_reason"
-            else:
-                questionnaire.current_step = "complaint"
+            questionnaire.current_step = "complaint"
         else:
             questionnaire.current_step = "repeat_change"
 

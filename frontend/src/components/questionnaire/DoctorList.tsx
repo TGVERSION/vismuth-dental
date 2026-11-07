@@ -37,7 +37,7 @@ export const DoctorList = ({
           <button
             type="button"
             onClick={onEmptyAction}
-            className="q-button mt-3"
+            className="mt-3 min-h-[44px] rounded-xl bg-[var(--q-brand)] px-4 font-medium text-[var(--q-brand-contrast)]"
           >
             {emptyActionLabel}
           </button>

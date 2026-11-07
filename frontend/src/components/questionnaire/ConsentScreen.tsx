@@ -48,7 +48,7 @@ export const ConsentScreen = ({ clinic, onAccept }: ConsentScreenProps) => {
           type="button"
           onClick={onAccept}
           disabled={!accepted}
-          className="q-button w-full"
+          className="min-h-[52px] w-full rounded-xl bg-[var(--q-brand)] px-4 text-base font-medium text-[var(--q-brand-contrast)] disabled:opacity-60"
         >
           Продолжить
         </button>

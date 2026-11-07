@@ -14,6 +14,7 @@ interface Props {
   disabled: boolean;
   dateMin?: string | null;
   dateMax?: string | null;
+  hideLabel?: boolean;
 }
 
 const inputClass = 'q-field w-full outline-none';
@@ -26,10 +27,11 @@ export function GastroFieldControl({
   disabled,
   dateMin,
   dateMax,
+  hideLabel = false,
 }: Props) {
   const id = useId();
   const describedBy =
-    [field.help ? `${id}-help` : '', error ? `${id}-error` : '']
+    [field.help && !hideLabel ? `${id}-help` : '', error ? `${id}-error` : '']
       .filter(Boolean)
       .join(' ') || undefined;
   const label = (
@@ -51,10 +53,14 @@ export function GastroFieldControl({
       className="min-w-0 space-y-3"
       aria-describedby={describedBy}
     >
-      <legend className="mb-2 text-base font-semibold leading-relaxed">
+      <legend
+        className={
+          hideLabel ? 'sr-only' : 'mb-2 text-base font-semibold leading-relaxed'
+        }
+      >
         {label}
       </legend>
-      {field.help ? (
+      {field.help && !hideLabel ? (
         <p
           id={`${id}-help`}
           className="text-sm leading-relaxed text-[var(--q-muted)]"
@@ -139,7 +145,8 @@ export function GastroFieldControl({
           value={textValue}
           onChange={(event) => onChange(event.target.value)}
           placeholder={field.placeholder}
-          rows={(field.max_length ?? 1000) > 1000 ? 9 : 3}
+          rows={hideLabel ? 1 : (field.max_length ?? 1000) > 1000 ? 9 : 3}
+          onInput={hideLabel ? (event) => { const element = event.currentTarget; element.style.height = 'auto'; element.style.height = `${Math.min(element.scrollHeight, 144)}px`; } : undefined}
           className={inputClass}
         />
       ) : (

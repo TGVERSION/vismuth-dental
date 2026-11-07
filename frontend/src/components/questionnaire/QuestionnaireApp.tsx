@@ -25,7 +25,6 @@ import { CodeScreen } from './CodeScreen';
 import { QuestionnaireStub } from './QuestionnaireStub';
 import { QuestionnaireThemeProvider } from './QuestionnaireTheme';
 import { GastroQuestionnaireStep } from '@/components/gastro-questionnaire/GastroQuestionnaireStep';
-import { gastroMeta } from '@/lib/gastro-questionnaire';
 
 interface QuestionnaireAppProps {
   /** Slug ссылки из адреса страницы. */
@@ -195,7 +194,7 @@ export const QuestionnaireApp = ({ slug, link }: QuestionnaireAppProps) => {
         case 'gastro':
           return (
             <GastroQuestionnaireStep
-              key={`${flow.questionnaireId}:${step.step_key}:${gastroMeta(step)?.revision ?? 0}`}
+              key={flow.questionnaireId}
               step={step}
               submit={flow.submit}
               isSubmitting={flow.isSubmitting}

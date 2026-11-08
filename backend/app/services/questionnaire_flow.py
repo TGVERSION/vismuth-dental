@@ -21,6 +21,7 @@ from ..services.questionnaire_code import allocate_code
 from ..services.questionnaire_limits import ensure_clinic_subscription_active
 from .dental_questionnaire import apply_dental, build_dental_descriptor, open_invite
 from .questionnaire_step import StepDescriptor
+from .questionnaire_dedup import answered_fixed_topics, question_was_asked
 from .gastro_chat_questions import GASTRO_CHAT_QUESTIONS
 from .gastro_questionnaire import apply_gastro, build_gastro_descriptor, submission_fingerprint
 
@@ -393,6 +394,26 @@ def build_collect_messages(
     return messages
 
 
+async def step_after_allergy(db: AsyncSession, questionnaire: Questionnaire) -> str:
+    if questionnaire.visit_type != "primary":
+        return "patient_info"
+    specialty = (await specialization_name(db, questionnaire.specialization_id) or "").casefold()
+    return "stool_changes" if "гастро" in specialty and "детск" not in specialty else "patient_info"
+
+
+async def next_unanswered_general_step(
+    db: AsyncSession, questionnaire: Questionnaire, step: str,
+) -> str:
+    if questionnaire.visit_type != "primary" or not questionnaire.id or step not in {"medications", "allergy"}:
+        return step
+    answered = answered_fixed_topics(await load_answers(db, questionnaire.id))
+    if step == "medications" and "medications" in answered:
+        return "chronic"
+    if step == "allergy" and "allergy" in answered:
+        return await step_after_allergy(db, questionnaire)
+    return step
+
+
 async def request_ai_question(
     db: AsyncSession,
     questionnaire: Questionnaire,
@@ -464,6 +485,15 @@ async def request_ai_question(
         if isinstance(new_state, dict):
             questionnaire.collect_form_state = new_state
 
+    # В первичной анкете лекарства и аллергия принадлежат фиксированным
+    # шагам. Без явной цели ML не показываем вопрос неизвестной тематики.
+    if questionnaire.visit_type == "primary":
+        target = response.get("next_field")
+        if not isinstance(target, str) or target not in {"complaints", "complaints_detail"}:
+            return None
+    if question_was_asked(str(text), answers):
+        return None
+
     await add_answer(
         db,
         questionnaire,
@@ -483,7 +513,7 @@ async def enter_ai_or_next(
     question = await request_ai_question(db, questionnaire)
     if question:
         return "ai_clarify"
-    return after_ai_next
+    return await next_unanswered_general_step(db, questionnaire, after_ai_next)
 
 
 async def apply_answer(
@@ -676,10 +706,10 @@ async def apply_answer(
 
         after = "medications" if questionnaire.visit_type == "primary" else "patient_info"
         if questionnaire.ai_questions_count >= ai_max_for(questionnaire.visit_type):
-            questionnaire.current_step = after
+            questionnaire.current_step = await next_unanswered_general_step(db, questionnaire, after)
         else:
             question = await request_ai_question(db, questionnaire)
-            questionnaire.current_step = "ai_clarify" if question else after
+            questionnaire.current_step = "ai_clarify" if question else await next_unanswered_general_step(db, questionnaire, after)
 
     elif step_key in GASTRO_CHAT_QUESTIONS:
         question = GASTRO_CHAT_QUESTIONS[step_key]
@@ -719,13 +749,9 @@ async def apply_answer(
         if step_key == "medications":
             questionnaire.current_step = "chronic"
         elif step_key == "chronic":
-            questionnaire.current_step = "allergy"
+            questionnaire.current_step = await next_unanswered_general_step(db, questionnaire, "allergy")
         elif step_key == "allergy":
-            specialty = (await specialization_name(db, questionnaire.specialization_id) or "").casefold()
-            questionnaire.current_step = (
-                "stool_changes" if questionnaire.visit_type == "primary"
-                and "гастро" in specialty and "детск" not in specialty else "patient_info"
-            )
+            questionnaire.current_step = await step_after_allergy(db, questionnaire)
         else:
             questionnaire.current_step = await enter_ai_or_next(
                 db,

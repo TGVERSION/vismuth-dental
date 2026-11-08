@@ -28,6 +28,7 @@ from ..services.questionnaire_flow import (
     build_step_descriptor,
     list_active_doctors,
     resolve_initial_step,
+    next_unanswered_general_step,
 )
 from ..services.questionnaire_limits import (
     check_clinic_daily_limit,
@@ -425,6 +426,19 @@ async def get_step(
             questionnaire.visit_type = "primary"
             questionnaire.current_step = "complaint"
             await db.commit()
+    # Не задаём заново известный вопрос старой сессии; после блокировки
+    # перечитываем состояние и историю, не откатывая конкурентный ответ.
+    if (questionnaire.kind == "general" and questionnaire.status == "in_progress"
+            and questionnaire.current_step in {"medications", "allergy"}):
+        candidate = await next_unanswered_general_step(db, questionnaire, questionnaire.current_step)
+        if candidate != questionnaire.current_step:
+            await db.refresh(questionnaire, with_for_update=True)
+            if (questionnaire.kind == "general" and questionnaire.status == "in_progress"
+                    and questionnaire.current_step in {"medications", "allergy"}):
+                candidate = await next_unanswered_general_step(db, questionnaire, questionnaire.current_step)
+                if candidate != questionnaire.current_step:
+                    questionnaire.current_step = candidate
+                    await db.commit()
     descriptor = await build_step_descriptor(db, questionnaire)
     return _step_response(descriptor)
 

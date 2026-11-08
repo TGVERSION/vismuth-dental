@@ -50,7 +50,7 @@ export const QuestionnaireFilters = ({
   const range = useMemo(() => doctorDateRange(), []);
 
   return (
-    <div className="flex shrink-0 flex-col gap-3 rounded-2xl bg-white p-3">
+    <div className="flex shrink-0 flex-col gap-3 rounded-[15px] bg-white p-3">
       <label className="relative block">
         <span className="sr-only">Код или имя пациента</span>
         <Image
@@ -67,7 +67,7 @@ export const QuestionnaireFilters = ({
           placeholder="Код или имя пациента"
           autoComplete="off"
           maxLength={100}
-          className={`h-10 w-full rounded-xl ${fieldFillClass(search)} pr-3 pl-10 text-sm text-[var(--ui-color-alabaster-dark-800)] placeholder:text-[var(--ui-color-alabaster-800)] focus:ring-2 focus:ring-[var(--ui-color-blue-600)] focus:outline-none`}
+          className={`h-10 w-full rounded-xl ${fieldFillClass(search)} pr-3 pl-10 text-sm text-[#202020] placeholder:text-[#A0A7B0] focus:ring-2 focus:ring-[#5D8CF1] focus:outline-none`}
         />
       </label>
 
@@ -96,11 +96,11 @@ export const QuestionnaireFilters = ({
           renderTrigger={(option) => {
             const selected = Array.isArray(option) ? option[0] : option;
             return selected?.value ? (
-              <span className="truncate text-sm text-[var(--ui-color-alabaster-dark-800)]">
+              <span className="truncate text-sm text-[#202020]">
                 {selected.label}
               </span>
             ) : (
-              <span className="truncate text-sm text-[var(--ui-color-alabaster-800)]">
+              <span className="truncate text-sm text-[#A0A7B0]">
                 Тип приёма
               </span>
             );

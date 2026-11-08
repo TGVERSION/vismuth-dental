@@ -32,24 +32,20 @@ export const QuestionnaireListItem = ({
       href={`/questionnaires?id=${encodeURIComponent(item.id)}`}
       scroll={false}
       aria-current={selected ? 'true' : undefined}
-      className={`flex items-center gap-3 rounded-2xl px-3 py-[var(--ui-space-10)] transition-colors ${
+      className={`flex items-center gap-3 rounded-[15px] px-3 py-2.5 transition-colors ${
         selected ? 'bg-white' : 'hover:bg-white'
-      } ${isPast ? 'text-[var(--ui-color-alabaster-950)]' : 'text-[var(--ui-color-alabaster-dark-800)]'}`}
+      } ${isPast ? 'text-[#8B8B8B]' : 'text-[#202020]'}`}
     >
-      <span className="w-15 shrink-0 text-[length:var(--ui-font-size-21)]">
+      <span className="w-15 shrink-0 text-[22px]">
         {formatAppointmentTime(item.appointment_time)}
       </span>
-      <span className="min-w-0 text-[length:var(--ui-font-size-14)]">
+      <span className="min-w-0 text-[14px]">
         <span className="block truncate">
           {item.code && <span className="font-semibold">{item.code}</span>}
           {item.code && name && ' · '}
           {name}
         </span>
-        {typeLabel && (
-          <span className="block text-[var(--ui-color-alabaster-950)]">
-            {typeLabel}
-          </span>
-        )}
+        {typeLabel && <span className="block text-[#8B8B8B]">{typeLabel}</span>}
       </span>
     </Link>
   );

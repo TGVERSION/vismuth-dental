@@ -31,7 +31,7 @@ export const QuestionnairesScreen = () => {
   const renderDetail = () => {
     if (!selectedId) {
       return (
-        <p className="mt-40 text-center text-[var(--ui-color-alabaster-950)]">
+        <p className="mt-40 text-center text-[#8B8B8B]">
           Выберите анкету в списке
         </p>
       );
@@ -40,30 +40,26 @@ export const QuestionnairesScreen = () => {
     let content: React.ReactNode;
     if (questionnaire.isLoading) {
       content = (
-        <div className="mx-auto my-40 h-10 w-10 animate-spin rounded-full border-b-2 border-[var(--ui-color-blue-600)]" />
+        <div className="mx-auto my-40 h-10 w-10 animate-spin rounded-full border-b-2 border-[#5D8CF1]" />
       );
     } else if (questionnaire.error === 'forbidden') {
       content = (
-        <p className="my-40 text-center text-[var(--ui-color-alabaster-950)]">
+        <p className="my-40 text-center text-[#8B8B8B]">
           Раздел доступен врачам клиники
         </p>
       );
     } else if (questionnaire.error === 'not_found') {
       content = (
-        <p className="my-40 text-center text-[var(--ui-color-alabaster-950)]">
-          Анкета не найдена
-        </p>
+        <p className="my-40 text-center text-[#8B8B8B]">Анкета не найдена</p>
       );
     } else if (questionnaire.error || !questionnaire.data) {
       content = (
         <div className="my-40 flex flex-col items-center gap-3 text-center">
-          <p className="text-[var(--ui-color-red-600)]">
-            Не удалось загрузить анкету
-          </p>
+          <p className="text-[#D91528]">Не удалось загрузить анкету</p>
           <button
             type="button"
             onClick={questionnaire.reload}
-            className="cursor-pointer text-[var(--ui-color-blue-600)] hover:text-[var(--ui-color-blue-700)]"
+            className="cursor-pointer text-[#5D8CF1] hover:text-[#769CEF]"
           >
             Повторить
           </button>
@@ -76,7 +72,7 @@ export const QuestionnairesScreen = () => {
     // Своя прокрутка карточки: в защищённой зоне прокрутка `body`
     // заблокирована, и без неё кнопка протокола на длинной анкете недостижима.
     return (
-      <div className="custom-scrollbar max-h-[calc(100vh-100px)] w-full max-w-246 self-start overflow-y-auto rounded-2xl bg-white px-8 py-6">
+      <div className="custom-scrollbar max-h-[calc(100vh-100px)] w-full max-w-246 self-start overflow-y-auto rounded-[15px] bg-white px-8 py-6">
         {content}
       </div>
     );
@@ -102,7 +98,7 @@ export const QuestionnairesScreen = () => {
         now={now}
       />
 
-      <div className="ml-[var(--ui-space-64)] flex min-w-0 flex-1 justify-center pr-5">
+      <div className="ml-93.5 flex min-w-0 flex-1 justify-center pr-5">
         {renderDetail()}
       </div>
     </>

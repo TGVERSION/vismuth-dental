@@ -57,11 +57,12 @@ function WorkingLayout({ children }: { children: React.ReactNode }) {
   }, []);
   useEffect(() => {
     if (
+      !isClinicLoading &&
       hideTools &&
       !['/completed-questionnaires', '/registry'].includes(pathname)
     )
       router.replace('/completed-questionnaires');
-  }, [hideTools, pathname, router]);
+  }, [hideTools, isClinicLoading, pathname, router]);
   if (isClinicLoading)
     return (
       <p role="status" className="p-16">

@@ -35,20 +35,16 @@ export const QuestionnaireCard = ({
 
   return (
     <article className="flex flex-col gap-9">
-      <header className="flex items-baseline gap-9 text-[var(--ui-color-alabaster-950)]">
-        <span className="shrink-0 text-[length:var(--ui-font-size-20)]">
+      <header className="flex items-baseline gap-9 text-[#6C757D]">
+        <span className="shrink-0 text-[20px]">
           {formatAppointmentTime(questionnaire.appointment_time)}
         </span>
-        <span className="min-w-0 flex-1 truncate text-[length:var(--ui-font-size-20)]">
+        <span className="min-w-0 flex-1 truncate text-[20px]">
           {questionnaire.code}
           {questionnaire.code && name && ' · '}
           {name}
         </span>
-        {typeLabel && (
-          <span className="shrink-0 text-[length:var(--ui-font-size-14)]">
-            {typeLabel}
-          </span>
-        )}
+        {typeLabel && <span className="shrink-0 text-[14px]">{typeLabel}</span>}
       </header>
 
       {isReady ? (
@@ -63,7 +59,7 @@ export const QuestionnaireCard = ({
             questionnaire.kind === 'gastro' && section.text.length > 3000 ? (
               <details
                 key={section.key}
-                className="rounded-xl border border-[var(--ui-color-slate-200)] p-4"
+                className="rounded-xl border border-[#D7DCE3] p-4"
               >
                 <summary className="cursor-pointer py-2 font-medium">
                   {section.title} — полный текст
@@ -88,7 +84,7 @@ export const QuestionnaireCard = ({
           />
         </>
       ) : (
-        <p className="py-10 text-center text-[var(--ui-color-alabaster-950)]">
+        <p className="py-10 text-center text-[#8B8B8B]">
           {notReadyMessage(questionnaire.processing_status)}
         </p>
       )}

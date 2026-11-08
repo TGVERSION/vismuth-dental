@@ -9,7 +9,7 @@ export function GastroDoctorHighlights({
   return (
     <>
       {structured.important?.length ? (
-        <section className="space-y-3 rounded-xl border border-[var(--ui-color-red-500)] bg-[var(--ui-color-yellow-50)] p-5 text-[var(--ui-color-yellow-900)]">
+        <section className="space-y-3 rounded-xl border border-[#C46A36] bg-[#FFF6EC] p-5 text-[#713B1C]">
           <h2 className="text-lg font-semibold">
             Обратить внимание — со слов пациента
           </h2>
@@ -21,7 +21,7 @@ export function GastroDoctorHighlights({
         </section>
       ) : null}
       {structured.safety ? (
-        <details className="rounded-xl border border-[var(--ui-color-slate-200)] p-4">
+        <details className="rounded-xl border border-[#D7DCE3] p-4">
           <summary className="cursor-pointer py-2 font-medium">
             Ответы о значимых признаках
           </summary>
@@ -58,7 +58,7 @@ export function GastroDoctorHistory({
     <section className="space-y-4">
       <h2 className="text-lg font-semibold">История проблемы</h2>
       {history.chronology.length ? (
-        <dl className="space-y-3 border-l-2 border-[var(--ui-color-slate-200)] pl-4">
+        <dl className="space-y-3 border-l-2 border-[#D7DCE3] pl-4">
           {history.chronology.map((item, i) => (
             <div key={i}>
               <dt className="font-medium">{item.label}</dt>
@@ -69,12 +69,12 @@ export function GastroDoctorHistory({
           ))}
         </dl>
       ) : (
-        <p className="text-sm text-[var(--ui-color-alabaster-950)]">
+        <p className="text-sm text-[#6C757D]">
           Хронология отдельно не установлена. Исходный рассказ сохранён ниже.
         </p>
       )}
       {history.raw.length ? (
-        <details className="rounded-xl border border-[var(--ui-color-slate-200)] p-4">
+        <details className="rounded-xl border border-[#D7DCE3] p-4">
           <summary className="cursor-pointer py-2 font-medium">
             Полная история — как написал пациент
           </summary>
@@ -102,7 +102,7 @@ export function GastroPatientQuestions({
   const questions = readPatientQuestions(structured.patient_questions);
   if (!questions.length) return null;
   return (
-    <section className="rounded-xl border border-[var(--ui-color-slate-200)] bg-[var(--ui-color-slate-50)] p-5">
+    <section className="rounded-xl border border-[#D7DCE3] bg-[#FAFAFC] p-5">
       <h2 className="text-lg font-semibold">Вопросы пациента врачу</h2>
       <ol className="mt-4 list-decimal space-y-3 pl-5">
         {questions.map((question, i) => (

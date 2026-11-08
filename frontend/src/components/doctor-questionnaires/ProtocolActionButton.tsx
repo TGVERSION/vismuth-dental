@@ -9,7 +9,8 @@ import {
 } from '@/hooks/useCreateProtocolFromQuestionnaire';
 import { useProtocolStructuresStore } from '@/store/protocolStructuresStore';
 
-const BUTTON_CLASS = 'vismuth-button vismuth-button--secondary w-full gap-2';
+const BUTTON_CLASS =
+  'flex h-13 w-full items-center justify-center gap-2 rounded-xl bg-[#DCE7FF] px-6 text-[#5D8CF1] transition-colors hover:bg-[#F0F5FF] disabled:cursor-not-allowed disabled:opacity-60';
 
 interface ProtocolActionButtonProps {
   questionnaireId: string;
@@ -116,7 +117,7 @@ export const ProtocolActionButton = ({
         className={`${BUTTON_CLASS} cursor-pointer`}
       >
         {isBusy && (
-          <span className="h-4 w-4 animate-spin rounded-full border-b-2 border-[var(--ui-color-blue-600)]" />
+          <span className="h-4 w-4 animate-spin rounded-full border-b-2 border-[#5D8CF1]" />
         )}
         Создать протокол
       </button>
@@ -137,13 +138,13 @@ export const ProtocolActionButton = ({
                   setIsMenuOpen(false);
                   void create(questionnaireId, structure.id);
                 }}
-                className="w-full cursor-pointer rounded-lg px-3 py-2 text-left text-sm transition-colors hover:bg-[var(--ui-color-blue-50)]"
+                className="w-full cursor-pointer rounded-lg px-3 py-2 text-left text-sm transition-colors hover:bg-[#F0F5FF]"
               >
                 <span className="block font-medium text-gray-800">
                   {structure.structure_name}
                 </span>
                 {structure.description && (
-                  <span className="mt-[var(--ui-space-2)] line-clamp-1 block text-xs text-gray-500">
+                  <span className="mt-0.5 line-clamp-1 block text-xs text-gray-500">
                     {structure.description}
                   </span>
                 )}

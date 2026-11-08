@@ -6,7 +6,12 @@ import { mainApi, type RegistryQuestionnaireDetail } from '@/api';
 import { DentalCardBody } from '@/components/registry/DentalCardBody';
 import { AnketaPrintSheet } from '@/components/registry/AnketaPrintSheet';
 import { printSheet } from '@/lib/registry-print';
-import { buildSections } from '@/lib/doctor-questionnaires';
+import {
+  buildSections,
+  formatAppointmentTime,
+  patientName,
+  visitTypeLabel,
+} from '@/lib/doctor-questionnaires';
 import { QuestionnaireSection } from '@/components/doctor-questionnaires/QuestionnaireSection';
 import {
   GastroDoctorHighlights,
@@ -64,23 +69,27 @@ export function CompletedDetail({
     }
   };
   return (
-    <article className="space-y-6">
-      <header>
-        <p className="text-sm text-gray-500">
+    <article className="space-y-9">
+      <header className="space-y-3">
+        <div className="flex flex-wrap items-baseline gap-3 text-[#6C757D] lg:gap-9">
+          <span className="shrink-0 text-[20px]">
+            {formatAppointmentTime(data.appointment_time)}
+          </span>
+          <h2 className="min-w-0 flex-1 truncate text-[20px]">
+            {data.code}
+            {data.code && ' · '}
+            {patientName(data) || 'Пациент'}
+          </h2>
+          <span className="shrink-0 text-[14px]">
+            {visitTypeLabel(data.visit_type)}
+          </span>
+        </div>
+        <p className="text-sm text-[#8B8B8B]">
           {data.clinic_name} ·{' '}
           {data.completed_at
             ? new Date(data.completed_at).toLocaleString('ru-RU')
             : ''}
         </p>
-        <h2 className="mt-2 text-2xl">
-          {[
-            data.patient_last_name,
-            data.patient_first_name,
-            data.patient_middle_name,
-          ]
-            .filter(Boolean)
-            .join(' ') || 'Пациент'}
-        </h2>
       </header>
       {sheet && (
         <div className="flex flex-wrap gap-4">

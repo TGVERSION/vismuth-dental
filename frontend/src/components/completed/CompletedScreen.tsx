@@ -10,6 +10,11 @@ import { completedQuery, type CompletedFilters } from '@/lib/clinic-access';
 import { useAuthStore } from '@/store/authStore';
 import { useMyClinic } from '@/hooks/useMyClinic';
 import { CompletedDetail } from './CompletedDetail';
+import {
+  formatAppointmentTime,
+  patientName,
+  visitTypeLabel,
+} from '@/lib/doctor-questionnaires';
 import { CustomDropdown } from '@/components/CustomDropdown';
 const kinds: Record<string, string> = {
   general: 'Общая',
@@ -105,71 +110,76 @@ export function CompletedScreen() {
       </p>
     );
   return (
-    <section className="custom-scrollbar max-h-[calc(100vh-80px)] w-full overflow-auto p-6">
-      <h1 className="mb-5 text-2xl font-medium">Заполненные анкеты</h1>
-      <div className="mb-5 flex flex-wrap gap-3">
-        {superAdmin && (
+    <section className="custom-scrollbar flex max-h-[calc(100vh-80px)] w-full flex-col gap-5 overflow-y-auto lg:max-h-none lg:flex-row lg:gap-0 lg:overflow-visible">
+      <aside
+        aria-label={superAdmin ? 'Анкеты для врачей' : 'Заполненные анкеты'}
+        className="custom-scrollbar mx-3 flex shrink-0 flex-col bg-[#F3F4F8] lg:fixed lg:top-20 lg:left-0 lg:mx-0 lg:ml-3 lg:h-[calc(100vh-100px)] lg:w-85.75 lg:overflow-y-auto"
+      >
+        <h1 className="sr-only">
+          {superAdmin ? 'Анкеты для врачей' : 'Заполненные анкеты'}
+        </h1>
+        <div className="flex shrink-0 flex-col gap-3 rounded-[15px] bg-white p-3">
+          {superAdmin && (
+            <CustomDropdown
+              aria-label="Клиника"
+              className="w-full"
+              options={[
+                { value: '', label: 'Все клиники' },
+                ...clinics.map((c) => ({ value: c.id, label: c.name })),
+              ]}
+              value={filters.clinic_id}
+              onChange={(value) => filter('clinic_id', value)}
+            />
+          )}
           <CustomDropdown
-            aria-label="Клиника"
-            className="max-w-sm"
+            aria-label="Вид анкеты"
+            className="w-full"
             options={[
-              { value: '', label: 'Все клиники' },
-              ...clinics.map((c) => ({ value: c.id, label: c.name })),
+              { value: '', label: 'Все виды' },
+              ...Object.entries(kinds).map(([value, label]) => ({
+                value,
+                label,
+              })),
             ]}
-            value={filters.clinic_id}
-            onChange={(value) => filter('clinic_id', value)}
+            value={filters.kind}
+            onChange={(value) => filter('kind', value)}
           />
+          <input
+            aria-label="ФИО пациента"
+            placeholder="ФИО пациента"
+            className="vismuth-input"
+            value={filters.name}
+            onChange={(e) => filter('name', e.target.value)}
+          />
+          <label className="text-sm">
+            Заполнена с
+            <input
+              type="date"
+              className="vismuth-input mt-1"
+              value={filters.date_from}
+              onChange={(e) => filter('date_from', e.target.value)}
+            />
+          </label>
+          <label className="text-sm">
+            по
+            <input
+              type="date"
+              className="vismuth-input mt-1"
+              value={filters.date_to}
+              min={filters.date_from}
+              onChange={(e) => filter('date_to', e.target.value)}
+            />
+          </label>
+          <button onClick={changed} className="vismuth-function-button">
+            Обновить
+          </button>
+        </div>
+        {error && (
+          <p role="alert" className="mb-4 text-red-700">
+            {error}
+          </p>
         )}
-        <CustomDropdown
-          aria-label="Вид анкеты"
-          className="max-w-64"
-          options={[
-            { value: '', label: 'Все виды' },
-            ...Object.entries(kinds).map(([value, label]) => ({
-              value,
-              label,
-            })),
-          ]}
-          value={filters.kind}
-          onChange={(value) => filter('kind', value)}
-        />
-        <input
-          aria-label="ФИО пациента"
-          placeholder="ФИО пациента"
-          className="vismuth-input"
-          value={filters.name}
-          onChange={(e) => filter('name', e.target.value)}
-        />
-        <label className="text-sm">
-          Заполнена с
-          <input
-            type="date"
-            className="vismuth-input ml-2"
-            value={filters.date_from}
-            onChange={(e) => filter('date_from', e.target.value)}
-          />
-        </label>
-        <label className="text-sm">
-          по
-          <input
-            type="date"
-            className="vismuth-input ml-2"
-            value={filters.date_to}
-            min={filters.date_from}
-            onChange={(e) => filter('date_to', e.target.value)}
-          />
-        </label>
-        <button onClick={changed} className="vismuth-function-button">
-          Обновить
-        </button>
-      </div>
-      {error && (
-        <p role="alert" className="mb-4 text-red-700">
-          {error}
-        </p>
-      )}
-      <div className="grid gap-5 lg:grid-cols-2">
-        <div>
+        <div className="mt-6 flex flex-1 flex-col">
           <p role="status" className="mb-3 text-sm text-gray-500">
             {loading ? 'Загрузка…' : 'Найдено: ' + total}
           </p>
@@ -182,30 +192,26 @@ export function CompletedScreen() {
                   setSelected(i.id);
                   setDetail(null);
                 }}
+                aria-pressed={selected === i.id}
                 className={
-                  'block w-full rounded-xl border bg-white p-4 text-left ' +
-                  (selected === i.id
-                    ? 'border-[var(--ui-color-blue-600)]'
-                    : 'border-transparent')
+                  'flex w-full items-center gap-3 rounded-[15px] px-3 py-2.5 text-left text-[#202020] transition-colors ' +
+                  (selected === i.id ? 'bg-white' : 'hover:bg-white')
                 }
               >
-                <p className="font-medium">
-                  {[
-                    i.patient_last_name,
-                    i.patient_first_name,
-                    i.patient_middle_name,
-                  ]
-                    .filter(Boolean)
-                    .join(' ') || 'Пациент'}
-                </p>
-                <p className="mt-1 text-sm text-gray-500">
-                  {i.clinic_name} · {kinds[i.kind]}
-                </p>
-                <p className="text-sm text-gray-500">
-                  {i.completed_at
-                    ? new Date(i.completed_at).toLocaleString('ru-RU')
-                    : ''}
-                </p>
+                <span className="w-15 shrink-0 text-[22px]">
+                  {formatAppointmentTime(i.appointment_time)}
+                </span>
+                <span className="min-w-0 text-[14px]">
+                  <span className="block truncate">
+                    <strong>{i.code}</strong>
+                    {i.code && ' · '}
+                    {patientName(i) || 'Пациент'}
+                  </span>
+                  <span className="block truncate text-[#8B8B8B]">
+                    {i.clinic_name} ·{' '}
+                    {visitTypeLabel(i.visit_type) || kinds[i.kind]}
+                  </span>
+                </span>
               </button>
             ))}
           </div>
@@ -249,7 +255,9 @@ export function CompletedScreen() {
             <OperatorLinks clinicId={clinic.clinic_id} />
           )}
         </div>
-        <div className="rounded-2xl bg-white p-6">
+      </aside>
+      <div className="mx-3 flex min-w-0 flex-1 justify-center lg:mx-0 lg:ml-93.5 lg:pr-5">
+        <div className="custom-scrollbar w-full max-w-246 self-start rounded-[15px] bg-white px-4 py-6 lg:max-h-[calc(100vh-100px)] lg:overflow-y-auto lg:px-8">
           {detail ? (
             <CompletedDetail
               key={detail.id}

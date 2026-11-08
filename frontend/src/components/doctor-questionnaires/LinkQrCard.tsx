@@ -46,7 +46,7 @@ const TRANSIENT_MS = 2000;
 const COPY_UNSUPPORTED = 'Браузер не умеет копировать картинки — скачайте QR';
 
 const DISABLED_LINK_CLASS =
-  'cursor-not-allowed text-sm text-[var(--ui-color-blue-600)] opacity-50';
+  'cursor-not-allowed text-sm text-[#5D8CF1] opacity-50';
 
 interface LinkQrCardProps {
   item: QuestionnaireLinkItem;
@@ -149,15 +149,15 @@ export const LinkQrCard = ({ item, onPrint }: LinkQrCardProps) => {
   const message = status === 'idle' ? '' : STATUS_TEXT[status];
   const messageColor =
     status === 'qr_failed' || status === 'download_failed'
-      ? 'text-[var(--ui-color-red-600)]'
+      ? 'text-[#D91528]'
       : status === 'link_manual'
-        ? 'text-[var(--ui-color-alabaster-950)]'
-        : 'text-[var(--ui-color-green-600)]';
+        ? 'text-[#6C757D]'
+        : 'text-[#22A06B]';
 
   return (
     <section
       aria-labelledby={titleId}
-      className="flex gap-5 rounded-2xl bg-[var(--ui-color-slate-100)] p-4"
+      className="flex gap-5 rounded-2xl bg-[#F3F4F8] p-4"
     >
       {matrix ? (
         <QrCode
@@ -168,15 +168,10 @@ export const LinkQrCard = ({ item, onPrint }: LinkQrCardProps) => {
       ) : null}
 
       <div className="flex min-w-0 flex-1 flex-col gap-2">
-        <h3
-          id={titleId}
-          className="text-lg font-medium text-[var(--ui-color-alabaster-dark-800)]"
-        >
+        <h3 id={titleId} className="text-lg font-medium text-[#202020]">
           {item.title}
         </h3>
-        <p className="text-sm text-[var(--ui-color-alabaster-950)]">
-          {item.description}
-        </p>
+        <p className="text-sm text-[#6C757D]">{item.description}</p>
 
         <input
           ref={inputRef}
@@ -189,7 +184,7 @@ export const LinkQrCard = ({ item, onPrint }: LinkQrCardProps) => {
         />
 
         {localOnly ? (
-          <p className="text-xs text-[var(--ui-color-red-600)]">
+          <p className="text-xs text-[#D91528]">
             Ссылка ведёт на локальный адрес — пациент не откроет её с телефона.
             Сообщите администратору: не задан публичный адрес сервиса.
           </p>

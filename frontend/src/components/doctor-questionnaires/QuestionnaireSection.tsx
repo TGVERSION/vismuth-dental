@@ -37,41 +37,39 @@ export const QuestionnaireSection = ({
     <section aria-labelledby={headingId} className="flex flex-col gap-4">
       <h2
         id={headingId}
-        className="pl-6 text-[length:var(--ui-font-size-31)] font-medium text-[var(--ui-color-alabaster-dark-800)]"
+        className="pl-6 text-[32px] font-medium text-[#202020]"
       >
         {section.title}
       </h2>
 
       <div className="flex items-center">
-        <div className="flex w-8 shrink-0 justify-start pl-[var(--ui-space-6)]">
+        <div className="flex w-8 shrink-0 justify-start pl-1.5">
           {!section.isEmpty && (
             <button
               type="button"
               onClick={handleCopy}
               aria-label={`Скопировать раздел «${section.title}»`}
-              className="-mx-[var(--ui-space-4)] cursor-pointer rounded px-[var(--ui-space-4)] opacity-70 transition-opacity hover:opacity-100"
+              className="-mx-1.25 cursor-pointer rounded px-1.25 opacity-70 transition-opacity hover:opacity-100"
             >
               <Image src="/copy.svg" alt="" width={16} height={16} />
             </button>
           )}
         </div>
         {section.isEmpty ? (
-          <p className="text-base text-[var(--ui-color-alabaster-950)]">
-            Пациент не ответил
-          </p>
+          <p className="text-base text-[#8B8B8B]">Пациент не ответил</p>
         ) : (
-          <p className="text-base whitespace-pre-line text-[var(--ui-color-alabaster-dark-800)]">
+          <p className="text-base whitespace-pre-line text-[#202020]">
             {section.text}
           </p>
         )}
       </div>
 
       {section.gaps.length > 0 && (
-        <div className="ml-8 w-fit max-w-full rounded-2xl bg-[var(--ui-color-slate-100)] px-3 py-[var(--ui-space-10)]">
-          <p className="text-[length:var(--ui-font-size-14)] font-medium text-[var(--ui-color-blue-600)]">
+        <div className="ml-8 w-fit max-w-full rounded-[15px] bg-[#F3F4F8] px-3 py-2.5">
+          <p className="text-[14px] font-medium text-[#5D8CF1]">
             Что доспросить?
           </p>
-          <ul className="mt-1 list-disc pl-5 text-[length:var(--ui-font-size-13)] text-[var(--ui-color-alabaster-950)] marker:text-[var(--ui-color-alabaster-950)]">
+          <ul className="mt-1 list-disc pl-5 text-[13px] text-[#6C757D] marker:text-[#8B8B8B]">
             {section.gaps.map((question, index) => (
               <li key={index}>{question}</li>
             ))}

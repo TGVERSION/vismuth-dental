@@ -179,6 +179,12 @@
   :where(input[type='checkbox'], input[type='radio']) {
     accent-color: var(--ui-color-blue-600);
   }
+  /* Text inputs match :focus-visible after a touch, too. The restored chat
+     composer uses its surface and caret instead of an inner focus rectangle. */
+  [data-questionnaire] textarea.q-chat-input:focus-visible {
+    outline: none;
+    box-shadow: none;
+  }
 }
 
 /* Third-party feedback belongs to the same palette and typography. */

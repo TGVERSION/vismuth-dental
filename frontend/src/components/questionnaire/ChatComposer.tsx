@@ -233,7 +233,7 @@ export const ChatComposer = ({
           // Шрифт не меньше 16px (`text-base`): мельче iOS при фокусе
           // масштабирует страницу, и подстройка экрана под клавиатуру
           // выключается (см. useVisualViewport).
-          className="custom-scrollbar flex-1 resize-none bg-transparent py-3 text-base outline-none disabled:opacity-60"
+          className="q-chat-input custom-scrollbar flex-1 resize-none bg-transparent py-3 text-base outline-none disabled:opacity-60"
         />
 
         <button

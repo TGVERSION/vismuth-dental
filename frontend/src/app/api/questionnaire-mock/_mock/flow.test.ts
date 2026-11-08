@@ -459,3 +459,33 @@ it('stale visit-type choice is treated as primary', () => {
     expect(result.value.step.step_key).toBe('complaint');
   }
 });
+
+it('adds only three small chat questions for an adult primary gastro visit', () => {
+  const doctor = {
+    ...oneSpec,
+    specializations: [{ id: 8, code: 'gastro', name: 'Гастроэнтеролог' }],
+  };
+  const env = makeEnv({ doctors: [doctor] });
+  const q = {
+    ...initialStep(fresh(), doctor),
+    currentStep: 'allergy' as const,
+  };
+  const { step, questionnaire } = run(
+    q,
+    [{ step_key: 'allergy', none: true }],
+    env,
+  );
+  expect(step.step_key).toBe('stool_changes');
+  expect(step.step_type).toBe('text');
+  expect(step.choices).toHaveLength(2);
+  const completed = run(
+    questionnaire,
+    [
+      { step_key: 'stool_changes', value: 'Жидкий стул неделю' },
+      { step_key: 'weight_changes', choice: 'unknown' },
+      { step_key: 'family_history', value: 'У сестры целиакия' },
+    ],
+    env,
+  );
+  expect(completed.step.step_key).toBe('patient_info');
+});

@@ -21,6 +21,7 @@ from ..services.questionnaire_code import allocate_code
 from ..services.questionnaire_limits import ensure_clinic_subscription_active
 from .dental_questionnaire import apply_dental, build_dental_descriptor, open_invite
 from .questionnaire_step import StepDescriptor
+from .gastro_chat_questions import GASTRO_CHAT_QUESTIONS
 from .gastro_questionnaire import apply_gastro, build_gastro_descriptor, submission_fingerprint
 
 _APPOINTMENT_TIME_RE = re.compile(r"^([01]\d|2[0-3]):([0-5]\d)$")
@@ -34,6 +35,9 @@ StepKey = Literal[
     "medications",
     "chronic",
     "allergy",
+    "stool_changes",
+    "weight_changes",
+    "family_history",
     "repeat_change",
     "repeat_compliance",
     "repeat_side_effects",
@@ -202,6 +206,18 @@ async def build_step_descriptor(
             choices=[
                 {"value": "primary", "label": "Первичный"},
                 {"value": "repeat", "label": "Повторный"},
+            ],
+        )
+
+    if step in GASTRO_CHAT_QUESTIONS:
+        question = GASTRO_CHAT_QUESTIONS[step]
+        return StepDescriptor(
+            step_key=step,
+            step_type="text",
+            text=question['text'],
+            choices=[
+                {"value": "none", "label": question['negative_label']},
+                {"value": "unknown", "label": "Не знаю"},
             ],
         )
 
@@ -665,6 +681,25 @@ async def apply_answer(
             question = await request_ai_question(db, questionnaire)
             questionnaire.current_step = "ai_clarify" if question else after
 
+    elif step_key in GASTRO_CHAT_QUESTIONS:
+        question = GASTRO_CHAT_QUESTIONS[step_key]
+        if skip or (choice is not None and choice not in {"none", "unknown"}):
+            raise HTTPException(status_code=400, detail="Invalid answer")
+        if ((choice is not None or none_answer) and text_value) or (none_answer and choice == "unknown"):
+            raise HTTPException(status_code=400, detail="Choose a quick reply or send text")
+        if choice == "unknown":
+            answer_text = "Не знаю"
+        elif choice == "none" or none_answer:
+            answer_text = question['negative_text']
+        elif text_value:
+            answer_text = text_value
+        else:
+            raise HTTPException(status_code=400, detail="Answer required")
+        await add_answer(db, questionnaire, step_key=step_key, kind="answer",
+                         question_text=question['text'], answer_text=answer_text,
+                         choice=choice or ("none" if none_answer else None))
+        questionnaire.current_step = question['next']
+
     elif step_key in {"medications", "chronic", "allergy", "repeat_side_effects"}:
         answer_text = "нет" if none_answer else text_value
         if answer_text is None:
@@ -686,7 +721,11 @@ async def apply_answer(
         elif step_key == "chronic":
             questionnaire.current_step = "allergy"
         elif step_key == "allergy":
-            questionnaire.current_step = "patient_info"
+            specialty = (await specialization_name(db, questionnaire.specialization_id) or "").casefold()
+            questionnaire.current_step = (
+                "stool_changes" if questionnaire.visit_type == "primary"
+                and "гастро" in specialty and "детск" not in specialty else "patient_info"
+            )
         else:
             questionnaire.current_step = await enter_ai_or_next(
                 db,

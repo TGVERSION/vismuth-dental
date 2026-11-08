@@ -19,6 +19,7 @@ from .dental.summary import build_dental_summary
 from .gastro.summary import build_summary as build_gastro_summary
 from .ml_proxy import proxy_post_to_ml
 from .questionnaire_flow import load_answers, specialization_name
+from .gastro_chat_questions import append_gastro_chat_answers
 
 logger = logging.getLogger(__name__)
 
@@ -160,6 +161,7 @@ async def run_questionnaire_processing(questionnaire_id: UUID) -> None:
                 "allergy_anamnesis": str(response.get("allergy_anamnesis") or ""),
                 "life_anamnesis": extract_chronic_text(answers),
             }
+            append_gastro_chat_answers(structured, answers)
             questionnaire.structured = structured
             if "gaps" in response:
                 gaps_value = response["gaps"]

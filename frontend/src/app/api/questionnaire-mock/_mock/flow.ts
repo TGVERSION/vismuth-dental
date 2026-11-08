@@ -31,6 +31,9 @@ export type MockStepKey =
   | 'medications'
   | 'chronic'
   | 'allergy'
+  | 'stool_changes'
+  | 'weight_changes'
+  | 'family_history'
   | 'repeat_change'
   | 'repeat_compliance'
   | 'repeat_side_effects'
@@ -83,6 +86,24 @@ const FIXED_TEXTS: Partial<Record<MockStepKey, string>> = {
   repeat_compliance: 'Выполняли ли назначения врача?',
   repeat_side_effects: 'Были ли побочные эффекты или новые жалобы?',
 };
+
+const GASTRO_FOLLOWUPS = {
+  stool_changes: {
+    text: 'Изменился ли стул: как часто вы ходите в туалет и каким он стал? Если да — как давно?',
+    negative: 'Без изменений',
+    next: 'weight_changes',
+  },
+  weight_changes: {
+    text: 'Менялся ли вес за последние 6 месяцев без намерения его менять? Если да — на сколько килограммов и за какой срок?',
+    negative: 'Без изменений',
+    next: 'family_history',
+  },
+  family_history: {
+    text: 'Известны ли у кровных родственников рак желудка или кишечника, болезнь Крона, язвенный колит или целиакия? Если да — у кого и что именно?',
+    negative: 'Нет',
+    next: 'patient_info',
+  },
+} as const;
 
 /** QUESTIONNAIRE_ANSWER_MAX_LEN backend по умолчанию. */
 const ANSWER_MAX_LEN = 1000;
@@ -225,6 +246,20 @@ export const describeStep = (
           { value: 'no', label: 'Нет' },
         ],
       };
+
+    case 'stool_changes':
+    case 'weight_changes':
+    case 'family_history': {
+      const question = GASTRO_FOLLOWUPS[step];
+      return {
+        ...emptyStep(step, 'text'),
+        text: question.text,
+        choices: [
+          { value: 'none', label: question.negative },
+          { value: 'unknown', label: 'Не знаю' },
+        ],
+      };
+    }
 
     case 'complaint':
       return { ...emptyStep(step, 'text'), text: FIXED_TEXTS[step] ?? null };
@@ -392,6 +427,28 @@ export const applyAnswer = (
       break;
     }
 
+    case 'stool_changes':
+    case 'weight_changes':
+    case 'family_history': {
+      if (
+        answer.skip ||
+        (answer.choice != null && !['none', 'unknown'].includes(answer.choice))
+      )
+        return fail(400, 'Invalid answer');
+      if (
+        ((answer.choice != null || answer.none) && text) ||
+        (answer.none && answer.choice === 'unknown')
+      )
+        return fail(400, 'Choose a quick reply or send text');
+      if (!text && !answer.none && !answer.choice)
+        return fail(400, 'Answer required');
+      next = {
+        ...questionnaire,
+        currentStep: GASTRO_FOLLOWUPS[questionnaire.currentStep].next,
+      };
+      break;
+    }
+
     case 'medications':
     case 'chronic':
     case 'allergy':
@@ -404,7 +461,23 @@ export const applyAnswer = (
           : step === 'chronic'
             ? { ...questionnaire, currentStep: 'allergy' }
             : step === 'allergy'
-              ? { ...questionnaire, currentStep: 'patient_info' }
+              ? {
+                  ...questionnaire,
+                  currentStep:
+                    questionnaire.visitType === 'primary' &&
+                    (() => {
+                      const name =
+                        doctorById(
+                          env,
+                          questionnaire.doctorMembershipId,
+                        )?.specializations.find(
+                          (spec) => spec.id === questionnaire.specializationId,
+                        )?.name ?? '';
+                      return /гастро/i.test(name) && !/детск/i.test(name);
+                    })()
+                      ? 'stool_changes'
+                      : 'patient_info',
+                }
               : enterAiOrNext(questionnaire, env, 'patient_info');
       break;
     }

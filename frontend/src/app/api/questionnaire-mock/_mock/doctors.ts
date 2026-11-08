@@ -34,6 +34,7 @@ const SPECIALIZATIONS = {
   ophthalmo: { id: 5, code: 'ophthalmo', name: 'Офтальмолог' },
   trauma: { id: 6, code: 'trauma', name: 'Травматолог' },
   endo: { id: 7, code: 'endo', name: 'Эндокринолог' },
+  gastro: { id: 8, code: 'gastro', name: 'Гастроэнтеролог' },
 } satisfies Record<string, PublicSpecialization>;
 
 const doctor = (
@@ -111,6 +112,7 @@ export const mockDoctors: PublicLinkDoctor[] = [
     [SPECIALIZATIONS.surgeon, SPECIALIZATIONS.trauma],
     true,
   ),
+  doctor(0, 'Тестов', 'Иван', 'Иванович', [SPECIALIZATIONS.gastro], false),
   doctor(7, 'Соколова', 'Анна', 'Викторовна', [SPECIALIZATIONS.endo], true),
 ];
 

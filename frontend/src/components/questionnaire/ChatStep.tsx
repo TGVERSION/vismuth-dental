@@ -58,15 +58,22 @@ export const ChatStep = ({
     const list = listRef.current;
     if (!list) return;
 
+    bottomGapRef.current = 0;
     list.scrollTop = list.scrollHeight;
-  }, [chat.entries.length, chat.isAwaiting, submitError]);
+  }, [
+    chat.entries.length,
+    chat.isAwaiting,
+    submitError,
+    isDesktop,
+    viewportFit?.height,
+  ]);
 
   // Лента привязана к низу, как в мессенджере. Когда выезжает клавиатура
   // (или растёт поле ввода), лента становится ниже, а браузер сохраняет
   // отступ от верха — и последний вопрос уходит под клавиатуру. Поэтому
-  // после каждого изменения высоты восстанавливаем отступ от низа: кто был
-  // в конце переписки, в конце и остаётся, а кто листал историю — видит то же
-  // место.
+  // после изменения высоты поля восстанавливаем отступ от низа. Новый
+  // вопрос и смена видимой области выше сбрасывают отступ: устаревшее
+  // значение не должно вернуть текущий вопрос под панель ввода.
   useEffect(() => {
     const list = listRef.current;
     if (!list) return;

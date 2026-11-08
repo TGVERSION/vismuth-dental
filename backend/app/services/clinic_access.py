@@ -68,6 +68,7 @@ def clinic_to_read_fields(clinic: Clinic, doctors_count: int = 0) -> dict:
         "email": clinic.email,
         "logo_url": clinic.logo_url,
         "brand_color": clinic.brand_color,
+        "button_color": getattr(clinic, "button_color", None),
         "doctors_limit": clinic.doctors_limit,
         "access_until": clinic.access_until,
         "access_type": clinic.access_type,

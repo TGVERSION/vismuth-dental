@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   DEFAULT_TEXT_COLOR,
-  NEUTRAL_BRAND_COLOR,
+  DEFAULT_BUTTON_COLOR,
   brandStyle,
   pickContrastColor,
   sanitizeBrandColor,
@@ -94,7 +94,8 @@ describe('brandStyle', () => {
       name: 'Клиника',
       phone: '+7 900 000-00-00',
       logo_url: '/logo.svg',
-      brand_color: '#FFE500',
+      brand_color: '#FFFFFF',
+      button_color: '#FFE500',
     }) as Record<string, string>;
 
     expect(style['--q-brand']).toBe('#FFE500');
@@ -103,7 +104,7 @@ describe('brandStyle', () => {
 
   it('падает в нейтральный цвет, когда брендинга нет или он мусорный', () => {
     expect((brandStyle(null) as Record<string, string>)['--q-brand']).toBe(
-      NEUTRAL_BRAND_COLOR,
+      DEFAULT_BUTTON_COLOR,
     );
 
     const broken = brandStyle({
@@ -113,7 +114,7 @@ describe('brandStyle', () => {
       brand_color: '#fff; background: url(x)',
     }) as Record<string, string>;
 
-    expect(broken['--q-brand']).toBe(NEUTRAL_BRAND_COLOR);
+    expect(broken['--q-brand']).toBe(DEFAULT_BUTTON_COLOR);
   });
 });
 
@@ -124,15 +125,61 @@ describe('isExternalImageUrl', () => {
   });
 });
 
-
 describe('readable clinic accent', () => {
   it('keeps near-white clinic fill but uses readable text and outlines on white', () => {
-    const style = brandStyle({name:'Клиника',phone:'',logo_url:null,brand_color:'#F3F8FD'}) as Record<string,string>;
-    expect(style['--q-brand']).toBe('#F3F8FD');
-    expect(style['--q-accent']).toBe(NEUTRAL_BRAND_COLOR);
-    expect(style['--q-brand-contrast']).toBe(DEFAULT_TEXT_COLOR);
+    const style = brandStyle({
+      name: 'Клиника',
+      phone: '',
+      logo_url: null,
+      brand_color: '#F3F8FD',
+    }) as Record<string, string>;
+    expect(style['--q-brand']).toBe(DEFAULT_BUTTON_COLOR);
+    expect(style['--q-logo-bg']).toBe('#F3F8FD');
+    expect(style['--q-accent']).toBe(DEFAULT_BUTTON_COLOR);
+    expect(style['--q-brand-contrast']).toBe('#FFFFFF');
   });
   it('retains a dark clinic accent', () => {
-    expect((brandStyle({name:'Клиника',phone:'',logo_url:null,brand_color:'#1B4B8F'}) as Record<string,string>)['--q-accent']).toBe('#1B4B8F');
+    expect(
+      (
+        brandStyle({
+          name: 'Клиника',
+          phone: '',
+          logo_url: null,
+          brand_color: '#FFFFFF',
+          button_color: '#1B4B8F',
+        }) as Record<string, string>
+      )['--q-accent'],
+    ).toBe('#1B4B8F');
+  });
+});
+
+describe('independent button and logo colors', () => {
+  it('does not turn buttons pale when only logo background changes', () => {
+    const clinic = {
+      name: 'Клиника',
+      phone: null,
+      logo_url: null,
+      brand_color: '#F3F8FD',
+      button_color: '#1B4B8F',
+    };
+    const first = brandStyle(clinic) as Record<string, string>;
+    const second = brandStyle({ ...clinic, brand_color: '#FFFFFF' }) as Record<
+      string,
+      string
+    >;
+    expect(first['--q-brand']).toBe('#1B4B8F');
+    expect(first['--q-logo-bg']).toBe('#F3F8FD');
+    expect(second['--q-brand']).toBe(first['--q-brand']);
+    expect(second['--q-logo-bg']).toBe('#FFFFFF');
+  });
+  it('uses dark buttons by default and preserves the existing logo background', () => {
+    const style = brandStyle({
+      name: 'Клиника',
+      phone: null,
+      logo_url: null,
+      brand_color: '#F3F8FD',
+    }) as Record<string, string>;
+    expect(style['--q-brand']).toBe(DEFAULT_BUTTON_COLOR);
+    expect(style['--q-logo-bg']).toBe('#F3F8FD');
   });
 });

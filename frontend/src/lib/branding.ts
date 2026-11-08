@@ -118,6 +118,9 @@ export const pickContrastColor = (hex: string): string => {
 /** Нейтральная тема: применяется, когда брендинг не пришёл или не прошёл проверку. */
 export const NEUTRAL_BRAND_COLOR = '#1B4B8F';
 
+/** Default button fill, independent of the logo background. */
+export const DEFAULT_BUTTON_COLOR = '#202020';
+
 /**
  * CSS-переменные темы для контейнера анкеты.
  *
@@ -128,11 +131,16 @@ export const NEUTRAL_BRAND_COLOR = '#1B4B8F';
 export const brandStyle = (
   clinic: ClinicBranding | null | undefined,
 ): CSSProperties => {
-  const brand = sanitizeBrandColor(clinic?.brand_color) ?? NEUTRAL_BRAND_COLOR;
+  const brand =
+    sanitizeBrandColor(clinic?.button_color) ?? DEFAULT_BUTTON_COLOR;
+  const logoBackground = sanitizeBrandColor(clinic?.brand_color) ?? '#FFFFFF';
 
   return {
     '--q-brand': brand,
+    '--q-logo-bg': logoBackground,
+    '--q-logo-contrast': pickContrastColor(logoBackground),
     '--q-brand-contrast': pickContrastColor(brand),
-    '--q-accent': apcaContrast(brand, '#FFFFFF') >= 60 ? brand : NEUTRAL_BRAND_COLOR,
+    '--q-accent':
+      apcaContrast(brand, '#FFFFFF') >= 60 ? brand : NEUTRAL_BRAND_COLOR,
   } as CSSProperties;
 };

@@ -21,7 +21,8 @@ class ClinicAdminPatch(BaseModel):
     name: Optional[str] = Field(default=None, min_length=1, max_length=255)
     phone: Optional[str] = Field(default=None, max_length=64)
     logo_url: Optional[str] = None
-    brand_color: Optional[str] = Field(default=None, max_length=32)
+    brand_color: Optional[str] = Field(default=None, max_length=32, description="Фон за логотипом")
+    button_color: Optional[str] = Field(default=None, pattern=r"^#[0-9a-fA-F]{6}$", description="Цвет кнопок; null — стандартный графитовый #202020")
 
 
 class ClinicMemberInviteCreate(BaseModel):
@@ -72,6 +73,7 @@ class ClinicAdminRead(BaseModel):
     phone: Optional[str]
     logo_url: Optional[str]
     brand_color: Optional[str]
+    button_color: Optional[str] = None
     public_slug: str
     public_url: str
     doctors_limit: int

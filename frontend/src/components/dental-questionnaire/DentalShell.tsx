@@ -114,7 +114,13 @@ export const DentalShell = ({
         <h1 className="text-[length:var(--ui-font-size-26)] font-bold">
           Чат с Ассистентом
         </h1>
-        <div className="max-w-full text-sm text-[var(--q-muted)]">
+        <div
+          className="max-w-full rounded-xl px-3 py-2 text-sm"
+          style={{
+            backgroundColor: 'var(--q-logo-bg)',
+            color: 'var(--q-logo-contrast)',
+          }}
+        >
           {clinic.logo_url ? (
             <ClinicLogo url={clinic.logo_url} clinicName={clinic.name} />
           ) : (

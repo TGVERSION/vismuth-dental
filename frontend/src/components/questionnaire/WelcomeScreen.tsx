@@ -23,7 +23,13 @@ export const WelcomeScreen = ({
     className="q-screen flex min-h-[100dvh] flex-col bg-cover bg-center bg-no-repeat"
     style={{ backgroundImage: "url('/welcome-bg.webp')" }}
   >
-    <header className="flex items-center justify-center bg-white px-4 py-2">
+    <header
+      className="flex items-center justify-center px-4 py-2"
+      style={{
+        backgroundColor: 'var(--q-logo-bg)',
+        color: 'var(--q-logo-contrast)',
+      }}
+    >
       <ClinicLogo url={clinic.logo_url} clinicName={clinic.name} />
     </header>
     <div className="bg-gradient-to-b from-[rgba(28,28,28,0)] via-[rgba(18,18,18,0.44)] to-[#000000] flex flex-1 flex-col">

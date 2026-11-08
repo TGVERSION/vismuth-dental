@@ -24,6 +24,7 @@ class PublicLinkResponse(BaseModel):
     phone: Optional[str] = None
     logo_url: Optional[str] = None
     brand_color: Optional[str] = None
+    button_color: Optional[str] = None
     clinic_public_slug: str
     doctor: Optional[PublicLinkDoctor] = None
     doctors: list[PublicLinkDoctor] = Field(default_factory=list)
@@ -121,6 +122,7 @@ class PublicInviteResponse(BaseModel):
     phone: Optional[str] = None
     logo_url: Optional[str] = None
     brand_color: Optional[str] = None
+    button_color: Optional[str] = None
     patient_first_name: Optional[str] = None
     patient_middle_name: Optional[str] = None
     blocked: bool = False

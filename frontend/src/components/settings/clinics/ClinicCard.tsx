@@ -236,41 +236,55 @@ export const ClinicCard = ({ clinicId }: ClinicCardProps) => {
           )}
         </FieldRow>
 
-        <FieldRow
-          label="Цвет на фон за логотипом"
-          htmlFor={`${baseId}-color`}
-          error={errors.brand_color}
-        >
-          <div
-            className={`flex h-10 items-center gap-2 rounded-xl ${fieldFillClass(draft.brand_color)} px-[var(--ui-space-14)] focus-within:ring-2 focus-within:ring-[var(--ui-color-blue-600)]`}
+        {(
+          [
+            {
+              field: 'brand_color',
+              label: 'Фон за логотипом',
+              fallback: '#FFFFFF',
+            },
+            {
+              field: 'button_color',
+              label: 'Цвет кнопок',
+              fallback: '#202020',
+            },
+          ] as const
+        ).map(({ field, label, fallback }) => (
+          <FieldRow
+            key={field}
+            label={label}
+            htmlFor={`${baseId}-${field}`}
+            error={errors[field]}
           >
-            <input
-              type="color"
-              value={brandColor ?? '#FFFFFF'}
-              onChange={(event) =>
-                card.setField('brand_color', event.target.value.toUpperCase())
-              }
-              onBlur={() => card.commitField('brand_color')}
-              aria-label="Выбрать цвет"
-              // Образец цвета 16×16 без рамки: у нативного поля цвета вокруг
-              // заливки есть отступ и серая обводка — снимаем их.
-              className="h-4 w-4 shrink-0 cursor-pointer rounded border-0 bg-transparent p-0 [&::-moz-color-swatch]:rounded [&::-moz-color-swatch]:border-0 [&::-webkit-color-swatch]:rounded [&::-webkit-color-swatch]:border-0 [&::-webkit-color-swatch-wrapper]:p-0"
-            />
-            <input
-              id={`${baseId}-color`}
-              type="text"
-              value={draft.brand_color}
-              onChange={(event) =>
-                card.setField('brand_color', event.target.value)
-              }
-              onBlur={() => card.commitField('brand_color')}
-              onKeyDown={blurOnEnter}
-              placeholder="#C9CAFF"
-              maxLength={7}
-              className="min-w-0 flex-1 bg-transparent text-sm text-[var(--ui-color-alabaster-dark-800)] outline-none placeholder:text-[var(--ui-color-alabaster-800)]"
-            />
-          </div>
-        </FieldRow>
+            <div
+              className={`flex h-10 items-center gap-2 rounded-xl ${fieldFillClass(draft[field])} px-[var(--ui-space-14)] focus-within:ring-2 focus-within:ring-[var(--ui-color-blue-600)]`}
+            >
+              <input
+                type="color"
+                value={sanitizeBrandColor(draft[field]) ?? fallback}
+                onChange={(event) =>
+                  card.setField(field, event.target.value.toUpperCase())
+                }
+                onBlur={() => card.commitField(field)}
+                aria-label={`Выбрать: ${label}`}
+                // Образец цвета 16×16 без рамки: у нативного поля цвета вокруг
+                // заливки есть отступ и серая обводка — снимаем их.
+                className="h-4 w-4 shrink-0 cursor-pointer rounded border-0 bg-transparent p-0 [&::-moz-color-swatch]:rounded [&::-moz-color-swatch]:border-0 [&::-webkit-color-swatch]:rounded [&::-webkit-color-swatch]:border-0 [&::-webkit-color-swatch-wrapper]:p-0"
+              />
+              <input
+                id={`${baseId}-${field}`}
+                type="text"
+                value={draft[field]}
+                onChange={(event) => card.setField(field, event.target.value)}
+                onBlur={() => card.commitField(field)}
+                onKeyDown={blurOnEnter}
+                placeholder={fallback}
+                maxLength={7}
+                className="min-w-0 flex-1 bg-transparent text-sm text-[var(--ui-color-alabaster-dark-800)] outline-none placeholder:text-[var(--ui-color-alabaster-800)]"
+              />
+            </div>
+          </FieldRow>
+        ))}
       </section>
 
       {saved && (

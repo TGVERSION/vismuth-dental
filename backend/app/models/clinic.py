@@ -25,6 +25,7 @@ class Clinic(Base):
     email: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     logo_url: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     brand_color: Mapped[Optional[str]] = mapped_column(String(32), nullable=True)
+    button_color: Mapped[Optional[str]] = mapped_column(String(7), nullable=True)
     doctors_limit: Mapped[int] = mapped_column(Integer, nullable=False, default=10)
     access_until: Mapped[date] = mapped_column(Date, nullable=False)
     access_type: Mapped[str] = mapped_column(String(20), nullable=False)

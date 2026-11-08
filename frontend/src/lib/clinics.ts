@@ -100,6 +100,7 @@ export interface ClinicDraft {
   phone: string;
   logo_url: string;
   brand_color: string;
+  button_color: string;
 }
 
 export type ClinicField = keyof ClinicDraft;
@@ -113,6 +114,7 @@ export const EMPTY_CLINIC_DRAFT: ClinicDraft = {
   phone: '',
   logo_url: '',
   brand_color: '',
+  button_color: '',
 };
 
 export const clinicToDraft = (clinic: ClinicRead): ClinicDraft => ({
@@ -124,6 +126,7 @@ export const clinicToDraft = (clinic: ClinicRead): ClinicDraft => ({
   phone: clinic.phone ? formatPhone(clinic.phone) : '',
   logo_url: clinic.logo_url ?? '',
   brand_color: clinic.brand_color ?? '',
+  button_color: clinic.button_color ?? '',
 });
 
 // --- Проверка полей ---------------------------------------------------------
@@ -187,8 +190,8 @@ export const validateClinicField = (
         ? null
         : 'Ссылка вида https://… или /путь/к/файлу.png';
     case 'brand_color':
-      return draft.brand_color.trim() === '' ||
-        sanitizeBrandColor(draft.brand_color)
+    case 'button_color':
+      return draft[field].trim() === '' || sanitizeBrandColor(draft[field])
         ? null
         : 'Цвет в формате #C9CAFF';
   }
@@ -215,9 +218,8 @@ const toApiValue = (
     case 'logo_url':
       return draft.logo_url.trim() || null;
     case 'brand_color':
-      return draft.brand_color.trim()
-        ? sanitizeBrandColor(draft.brand_color)
-        : null;
+    case 'button_color':
+      return draft[field].trim() ? sanitizeBrandColor(draft[field]) : null;
   }
 };
 
@@ -226,6 +228,7 @@ const OPTIONAL_FIELDS: ClinicField[] = [
   'phone',
   'logo_url',
   'brand_color',
+  'button_color',
 ];
 
 export const canCreateClinic = (draft: ClinicDraft): boolean =>

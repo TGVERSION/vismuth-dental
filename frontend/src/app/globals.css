@@ -239,9 +239,11 @@ body {
    нейтральные умолчания; --q-brand и --q-brand-contrast перекрываются
    атрибутом style из brandStyle(), когда брендинг пришёл и прошёл проверку. */
 [data-questionnaire] {
-  --q-brand: #1b4b8f;
+  --q-brand: #202020;
   --q-brand-contrast: #ffffff;
-  --q-accent: #1b4b8f;
+  --q-accent: #202020;
+  --q-logo-bg: #ffffff;
+  --q-logo-contrast: #202020;
   --q-bg: #ffffff;
   --q-surface: #f1f2f6;
   --q-text: #202020;

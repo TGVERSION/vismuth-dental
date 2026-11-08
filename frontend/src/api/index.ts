@@ -676,6 +676,7 @@ export interface PublicLink {
   logo_url: string | null;
   /** Недоверенное значение: валидируется до попадания в CSS. */
   brand_color: string | null;
+  button_color?: string | null;
   clinic_public_slug: string;
   /** Заполнен только для ссылки активного врача. */
   doctor: PublicLinkDoctor | null;
@@ -816,6 +817,7 @@ export interface PublicInvite {
   phone: string | null;
   logo_url: string | null;
   brand_color: string | null;
+  button_color?: string | null;
   patient_first_name: string | null;
   patient_middle_name: string | null;
   blocked: boolean;
@@ -989,6 +991,7 @@ export interface ClinicRead {
   email: string | null;
   logo_url: string | null;
   brand_color: string | null;
+  button_color?: string | null;
   doctors_limit: number;
   /** `YYYY-MM-DD`. */
   access_until: string;
@@ -1008,6 +1011,7 @@ export interface ClinicCreate {
   phone?: string | null;
   logo_url?: string | null;
   brand_color?: string | null;
+  button_color?: string | null;
   doctors_limit?: number;
   access_until: string;
   access_type: ClinicAccessType;

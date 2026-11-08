@@ -27,6 +27,7 @@ const inviteBranding = (invite: PublicInvite): ClinicBranding => ({
   phone: invite.phone,
   logo_url: invite.logo_url,
   brand_color: invite.brand_color,
+  button_color: invite.button_color,
 });
 
 /**

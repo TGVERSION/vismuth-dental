@@ -19,7 +19,8 @@ class ClinicCreate(BaseModel):
     phone: Optional[str] = Field(default=None, max_length=64)
     email: Optional[EmailStr] = None
     logo_url: Optional[str] = None
-    brand_color: Optional[str] = Field(default=None, max_length=32)
+    brand_color: Optional[str] = Field(default=None, max_length=32, description="Фон за логотипом")
+    button_color: Optional[str] = Field(default=None, pattern=r"^#[0-9a-fA-F]{6}$", description="Цвет кнопок; null — стандартный графитовый #202020")
     doctors_limit: int = Field(
         default=10,
         ge=0,
@@ -38,7 +39,8 @@ class ClinicPatch(BaseModel):
     phone: Optional[str] = Field(default=None, max_length=64)
     email: Optional[EmailStr] = None
     logo_url: Optional[str] = None
-    brand_color: Optional[str] = Field(default=None, max_length=32)
+    brand_color: Optional[str] = Field(default=None, max_length=32, description="Фон за логотипом")
+    button_color: Optional[str] = Field(default=None, pattern=r"^#[0-9a-fA-F]{6}$", description="Цвет кнопок; null — стандартный графитовый #202020")
     doctors_limit: Optional[int] = Field(
         default=None,
         ge=0,
@@ -65,6 +67,7 @@ class ClinicRead(BaseModel):
     email: Optional[str]
     logo_url: Optional[str]
     brand_color: Optional[str]
+    button_color: Optional[str] = None
     doctors_limit: int = Field(description="Лимит активных врачей.")
     access_until: date
     access_type: AccessType

@@ -42,6 +42,7 @@ export interface ClinicBranding {
   logo_url: string | null;
   /** Недоверенное значение: перед попаданием в CSS проходит проверку. */
   brand_color: string | null;
+  button_color?: string | null;
 }
 
 /**
@@ -55,6 +56,7 @@ export const clinicBranding = (link: PublicLink | null): ClinicBranding =>
         phone: link.phone,
         logo_url: link.logo_url,
         brand_color: link.brand_color,
+        button_color: link.button_color,
       }
     : { name: 'Клиника', phone: null, logo_url: null, brand_color: null };
 
@@ -202,7 +204,12 @@ export const parseDoctorOptions = (options: unknown): PublicLinkDoctor[] => {
 // Шаги анкеты
 
 /** Какой экран показать на шаге сервера. */
-export type QuestionnaireScreen = 'doctor' | 'chat' | 'patient_info' | 'code' | 'gastro';
+export type QuestionnaireScreen =
+  | 'doctor'
+  | 'chat'
+  | 'patient_info'
+  | 'code'
+  | 'gastro';
 
 /**
  * Экран по шагу. Всё, что не выбор врача, не данные приёма и не код, —
@@ -238,7 +245,8 @@ export const isSameStep = (
   a.step_key === b.step_key &&
   a.step_type === b.step_type &&
   (a.text ?? '') === (b.text ?? '') &&
-  (!a.step_key.startsWith('gastro_') || JSON.stringify(a.gastro) === JSON.stringify(b.gastro));
+  (!a.step_key.startsWith('gastro_') ||
+    JSON.stringify(a.gastro) === JSON.stringify(b.gastro));
 
 /**
  * Вопрос о типе приёма. У backend на этом шаге только заголовок «Тип приёма»

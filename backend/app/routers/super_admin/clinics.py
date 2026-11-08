@@ -86,6 +86,7 @@ async def create_clinic(
         email=_normalize_email(str(payload.email)) if payload.email else None,
         logo_url=payload.logo_url,
         brand_color=payload.brand_color,
+        button_color=payload.button_color,
         doctors_limit=payload.doctors_limit,
         access_until=payload.access_until,
         access_type=payload.access_type,

@@ -431,3 +431,12 @@ describe('filterOptions', () => {
     expect(filterOptions(withFlag, 'ан', [])[0].disabled).toBe(true);
   });
 });
+
+
+it('сохраняет два цвета независимо и сбрасывает только выбранную настройку', () => {
+  const draft = {...clinicToDraft(clinic),brand_color:'#F3F8FD',button_color:'#125d38'};
+  expect(nextClinicSave(clinic,draft,'button_color')).toEqual({kind:'patch',data:{button_color:'#125D38'}});
+  expect(nextClinicSave(clinic,draft,'brand_color')).toEqual({kind:'patch',data:{brand_color:'#F3F8FD'}});
+  expect(validateClinicField('button_color',{...draft,button_color:'url(x)'})).toBeTruthy();
+  expect(nextClinicSave({...clinic,button_color:'#125D38'},{...draft,button_color:''},'button_color')).toEqual({kind:'patch',data:{button_color:null}});
+});

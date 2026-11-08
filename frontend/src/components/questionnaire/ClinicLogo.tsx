@@ -21,7 +21,7 @@ export const ClinicLogo = ({ url, clinicName }: ClinicLogoProps) => (
     className="h-13 w-auto object-contain"
     priority
     fallback={
-      <span className="text-lg font-semibold text-[var(--q-brand)]">
+      <span className="text-lg font-semibold text-[var(--q-logo-contrast)]">
         {clinicName}
       </span>
     }

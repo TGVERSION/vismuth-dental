@@ -261,8 +261,16 @@ export const describeStep = (
       };
     }
 
-    case 'complaint':
-      return { ...emptyStep(step, 'text'), text: FIXED_TEXTS[step] ?? null };
+    case 'complaint': {
+      const specialty = doctorById(env, questionnaire.doctorMembershipId)
+        ?.specializations.find((item) => item.id === questionnaire.specializationId);
+      return {
+        ...emptyStep(step, 'text'),
+        text: /гастро/i.test(specialty?.name ?? '')
+          ? 'С чем вы обращаетесь к гастроэнтерологу?\n\nНапример, с болью в животе, вздутием, изжогой, тошнотой или другими жалобами на пищеварение.'
+          : FIXED_TEXTS[step] ?? null,
+      };
+    }
 
     case 'medications':
     case 'chronic':

@@ -62,6 +62,17 @@ FIXED_TEXTS: dict[str, str] = {
 }
 
 
+async def complaint_question(db: AsyncSession, questionnaire: Questionnaire) -> str:
+    specialty = (await specialization_name(db, questionnaire.specialization_id) or "").casefold()
+    if "гастро" in specialty:
+        return (
+            "С чем вы обращаетесь к гастроэнтерологу?\n\n"
+            "Например, с болью в животе, вздутием, изжогой, тошнотой "
+            "или другими жалобами на пищеварение."
+        )
+    return FIXED_TEXTS["complaint"]
+
+
 def truncate_answer(value: str) -> tuple[str, bool]:
     max_len = settings.questionnaire_answer_max_len
     if len(value) <= max_len:
@@ -270,7 +281,7 @@ async def _build_step_descriptor(
         return StepDescriptor(
             step_key=step,
             step_type=step_type,
-            text=FIXED_TEXTS[step],
+            text=await complaint_question(db, questionnaire) if step == "complaint" else FIXED_TEXTS[step],
             allow_none=allow_none,
             choices=choices,
         )
@@ -720,7 +731,7 @@ async def apply_answer(
             questionnaire,
             step_key=step_key,
             kind="answer",
-            question_text=FIXED_TEXTS[step_key],
+            question_text=await complaint_question(db, questionnaire),
             answer_text=text_value,
         )
         questionnaire.current_step = await enter_ai_or_next(

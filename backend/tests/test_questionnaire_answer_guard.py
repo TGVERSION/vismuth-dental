@@ -62,7 +62,7 @@ def test_rejection_redirects_same_question_and_retry_nonce_is_idempotent(monkeyp
     db, nonce = AsyncMock(), uuid4()
     q = Questionnaire(id=uuid4(), kind='general', status='in_progress', current_step='complaint', visit_type='primary')
     descriptor, _, process = asyncio.run(flow.apply_answer(db, q, step_key='complaint', value='Расскажи анекдот', answer_id=nonce))
-    assert descriptor.step_key == 'complaint' and 'Что вас беспокоит?' in descriptor.text
+    assert descriptor.step_key == 'complaint' and 'С чем вы обращаетесь к гастроэнтерологу?' in descriptor.text
     assert 'вопрос' in descriptor.text and not process and q.status == 'in_progress'
     assert len(history) == 1 and history[0].step_key == 'guard_reject' and not getattr(history[0], 'answer_text', None)
     assert history[0].kind == 'fixed'  # Existing questionnaire_answer_kind_check.

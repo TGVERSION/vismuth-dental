@@ -3,13 +3,16 @@ import base64
 import hashlib
 import hmac
 import json
+import secrets
 from datetime import date, timedelta
 from uuid import UUID
 
 from fastapi import HTTPException
 from pydantic import BaseModel, ConfigDict, Field
+from sqlalchemy import select
 
 from ..config import settings
+from ..models.patient_link import PatientLink
 
 
 class PatientLinkSelection(BaseModel):
@@ -48,6 +51,34 @@ def decode_appointment(slug: str) -> SignedAppointment | None:
         return SignedAppointment.model_validate_json(base64.urlsafe_b64decode(body+'='*(-len(body)%4)))
     except Exception:
         raise HTTPException(404, 'Ссылка записи недоступна') from None
+
+
+async def create_short_appointment(db, clinic_id: UUID, selection: PatientLinkSelection) -> str:
+    """Caller holds the clinic row lock, serializing equal selections."""
+    context = SignedAppointment(clinic_id=clinic_id, **selection.model_dump())
+    data = context.model_dump(mode='json')
+    key = hashlib.sha256(json.dumps(data, sort_keys=True, separators=(',', ':')).encode()).hexdigest()
+    existing = (await db.execute(select(PatientLink).where(PatientLink.selection_key == key))).scalar_one_or_none()
+    if existing is not None:
+        return existing.slug
+    for _ in range(5):
+        slug = 's.' + secrets.token_urlsafe(12)
+        if await db.get(PatientLink, slug) is None:
+            db.add(PatientLink(slug=slug, clinic_id=clinic_id, selection_key=key, selection=data))
+            await db.flush()
+            return slug
+    raise HTTPException(503, 'Не удалось создать ссылку. Повторите попытку')
+
+
+async def load_appointment(db, slug: str) -> SignedAppointment | None:
+    if not slug.startswith('s.'):
+        return decode_appointment(slug)
+    if len(slug) != 18:
+        raise HTTPException(404, 'Ссылка записи недоступна')
+    link = await db.get(PatientLink, slug)
+    if link is None:
+        raise HTTPException(404, 'Ссылка записи недоступна')
+    return SignedAppointment.model_validate(link.selection)
 
 
 def merge_appointment(questionnaire, appointment_date, appointment_time):

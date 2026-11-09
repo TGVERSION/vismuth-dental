@@ -13,6 +13,31 @@ from app.services import questionnaire_flow as flow
 from app.models.questionnaire import Questionnaire
 
 
+def test_short_link_is_opaque_and_reused_for_same_selection():
+    from app.services.patient_link_context import create_short_appointment, load_appointment
+    from app.models.patient_link import PatientLink
+    from types import SimpleNamespace
+    class DB:
+        def __init__(self): self.links = {}
+        async def execute(self, stmt):
+            key = next(iter(stmt.compile().params.values()))
+            return SimpleNamespace(scalar_one_or_none=lambda: next((v for v in self.links.values() if v.selection_key == key), None))
+        async def get(self, model, slug): return self.links.get(slug)
+        def add(self, value): self.links[value.slug] = value
+        async def flush(self): pass
+    db=DB();clinic=uuid4();doctor=uuid4()
+    selection=PatientLinkSelection(doctor_membership_id=doctor,appointment_date=date.today(),appointment_time='12:30')
+    slug=asyncio.run(create_short_appointment(db,clinic,selection))
+    assert len(slug)==18 and slug.startswith('s.')
+    assert str(clinic) not in slug and str(doctor) not in slug and '12:30' not in slug
+    assert asyncio.run(create_short_appointment(db,clinic,selection))==slug and len(db.links)==1
+    assert asyncio.run(create_short_appointment(db,clinic,selection.model_copy(update={'appointment_time':'13:00'})))!=slug
+    assert asyncio.run(create_short_appointment(db,uuid4(),selection))!=slug
+    context=asyncio.run(load_appointment(db,slug))
+    assert context.clinic_id==clinic and context.doctor_membership_id==doctor and context.appointment_time=='12:30'
+    with pytest.raises(HTTPException):asyncio.run(load_appointment(db,'s.unknown-invalid!'))
+
+
 def test_link_is_deterministic_and_each_selection_changes_it():
     clinic=uuid4();selection=PatientLinkSelection(appointment_date=date.today(),appointment_time='12:30')
     token=encode_appointment(clinic,selection)

@@ -181,7 +181,7 @@ export const ChatComposer = ({
           Чип контурный и полностью скруглён: с серой заливкой и скруглением
           пузыря он выглядел как уже отправленное сообщение. При нажатии
           заливается цветом бренда — как ответ, который появится в ленте. */}
-      {prompt.chips.length ? (
+      {!isAwaiting && prompt.chips.length ? (
         <div className="mb-3 flex flex-wrap justify-end gap-2">
           {prompt.chips.map((chip) => (
             <button

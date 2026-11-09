@@ -9,7 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from ..config import settings
 from ..db import get_db
 from ..deps import get_current_user, require_clinic_admin, require_clinic_registry
-from ..services.patient_link_context import PatientLinkSelection, encode_appointment, validate_appointment_date
+from ..services.patient_link_context import PatientLinkSelection, validate_appointment_date
 from ..models.clinic import Clinic
 from ..models.clinic_invitation import ClinicInvitation
 from ..models.clinic_membership import ClinicMembership
@@ -734,5 +734,7 @@ async def create_patient_link(clinic_id: UUID, payload: PatientLinkSelection,
         ))).scalar_one_or_none()
         if member is None:
             raise HTTPException(400, 'Врач недоступен в этой клинике')
-    slug = clinic.public_slug if not any(payload.model_dump().values()) else encode_appointment(clinic_id, payload)
+    from ..services.patient_link_context import create_short_appointment
+    slug = clinic.public_slug if not any(payload.model_dump().values()) else await create_short_appointment(db, clinic_id, payload)
+    await db.commit()
     return {'url': _public_url(slug)}

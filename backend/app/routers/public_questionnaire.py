@@ -22,7 +22,7 @@ from ..schemas.questionnaire import (
     StepDescriptorResponse,
 )
 from ..services.clinic_access import compute_access_status
-from ..services.patient_link_context import decode_appointment, validate_appointment_date
+from ..services.patient_link_context import load_appointment, validate_appointment_date
 from ..services.clinic_members import load_specializations_map
 from ..services.questionnaire_flow import (
     apply_answer,
@@ -99,7 +99,7 @@ async def _resolve_slug(
     db: AsyncSession,
     slug: str,
 ) -> tuple[Clinic, ClinicMembership | None]:
-    context = decode_appointment(slug)
+    context = await load_appointment(db, slug)
     if context:
         clinic = (await db.execute(select(Clinic).where(Clinic.id == context.clinic_id, Clinic.deleted_at.is_(None)))).scalar_one_or_none()
         if clinic is None:
@@ -321,7 +321,7 @@ async def create_questionnaire(
         )
 
     clinic, membership = await _resolve_slug(db, payload.slug)
-    context = decode_appointment(payload.slug)
+    context = await load_appointment(db, payload.slug)
     if context:
         validate_appointment_date(context.appointment_date)
         if context.doctor_membership_id and payload.doctor_membership_id not in {None, context.doctor_membership_id}:

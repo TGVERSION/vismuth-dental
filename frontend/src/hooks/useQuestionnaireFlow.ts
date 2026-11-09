@@ -304,7 +304,7 @@ export const useQuestionnaireFlow = (
         // Другой врач выбирается только среди врачей клиники: slug врача
         // backend при неактивном враче отклоняет, даже если выбран другой.
         const requestSlug =
-          doctorMembershipId && link && !slug.startsWith('a1.') ? link.clinic_public_slug : slug;
+          doctorMembershipId && link && !slug.startsWith('a1.') && !slug.startsWith('s.') ? link.clinic_public_slug : slug;
 
         const response = await mainApi.questionnaire.start(
           doctorMembershipId

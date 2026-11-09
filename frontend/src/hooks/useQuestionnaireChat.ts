@@ -71,6 +71,10 @@ export const useQuestionnaireChat = ({
     assistantEntry(step, 0),
   );
   const [waitHint, setWaitHint] = useState<string | null>(null);
+  // Ждём не только запрос, но и добавление следующего вопроса в ленту:
+  // родитель может снять isSubmitting раньше, чем завершится deliver.
+  const [isDelivering, setIsDelivering] = useState(false);
+  const isAwaiting = isSubmitting || isDelivering;
 
   // Последний отправленный ответ: «Повторить» шлёт его без второго пузыря.
   const lastAnswerRef = useRef<QuestionnaireStepAnswer | null>(null);
@@ -83,7 +87,7 @@ export const useQuestionnaireChat = ({
 
   // Подсказки об ожидании. Таймеры живут только пока идёт запрос.
   useEffect(() => {
-    if (!isSubmitting) return;
+    if (!isAwaiting) return;
 
     const thinking = setTimeout(
       () => setWaitHint('Ассистент думает…'),
@@ -99,11 +103,12 @@ export const useQuestionnaireChat = ({
       clearTimeout(longer);
       setWaitHint(null);
     };
-  }, [isSubmitting]);
+  }, [isAwaiting]);
 
   const deliver = useCallback(
     async (answer: QuestionnaireStepAnswer) => {
       isSendingRef.current = true;
+      setIsDelivering(true);
       const identifiedAnswer = answer.answer_id
         ? answer
         : { ...answer, answer_id: crypto.randomUUID() };
@@ -121,6 +126,7 @@ export const useQuestionnaireChat = ({
         setEntries((prev) => [...prev, ...assistantEntry(next, prev.length)]);
       } finally {
         isSendingRef.current = false;
+        setIsDelivering(false);
       }
     },
     [submit],
@@ -128,7 +134,7 @@ export const useQuestionnaireChat = ({
 
   const send = useCallback(
     (action: ChatAction) => {
-      if (isSendingRef.current) return;
+      if (isSendingRef.current || isSubmitting) return;
 
       const text = patientReplyText(prompt, action);
       setEntries((prev) => [
@@ -137,7 +143,7 @@ export const useQuestionnaireChat = ({
       ]);
       void deliver(buildAnswer(step, action));
     },
-    [deliver, prompt, step],
+    [deliver, prompt, step, isSubmitting],
   );
 
   const retry = useCallback(() => {
@@ -153,7 +159,7 @@ export const useQuestionnaireChat = ({
   return {
     entries,
     prompt,
-    isAwaiting: isSubmitting,
+    isAwaiting,
     waitHint,
     // backend прогресс не отдаёт (ВЗ-3) — оценка по числу ответов.
     progress: estimateProgress(answered, false),

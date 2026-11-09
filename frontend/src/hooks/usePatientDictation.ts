@@ -14,6 +14,7 @@ import {
   type SpeechWindow,
 } from '@/lib/browser-dictation';
 import { appendDictation } from '@/lib/voice-input';
+import { createVoiceMeter } from '@/lib/voice-level';
 
 interface Props {
   value: string;
@@ -21,6 +22,7 @@ interface Props {
   maxLength: number;
   disabled: boolean;
   scope?: string;
+  onLevel?: (value: number) => void;
 }
 type Phase = 'idle' | 'holding' | 'locked' | 'stopping';
 const subscribe = () => () => {};
@@ -37,6 +39,7 @@ export function usePatientDictation(props: Props) {
   const current = useRef(props);
   const phaseRef = useRef<Phase>('idle');
   const session = useRef<ReturnType<typeof startDictation> | null>(null);
+  const meter = useRef<ReturnType<typeof createVoiceMeter> | null>(null);
   const startedAt = useRef<number | null>(null);
   const attempt = useRef<{
     scope?: string;
@@ -54,6 +57,7 @@ export function usePatientDictation(props: Props) {
   const cancel = useCallback(() => {
     if (attempt.current) attempt.current.discarded = true;
     session.current?.cancel();
+    meter.current?.stop();
     transition('idle');
     setListening(false);
     setMessage('');
@@ -68,6 +72,7 @@ export function usePatientDictation(props: Props) {
     return () => {
       if (attempt.current) attempt.current.discarded = true;
       session.current?.cancel();
+      meter.current?.stop();
       window.removeEventListener('pagehide', cancel);
       document.removeEventListener('visibilitychange', hide);
     };
@@ -99,6 +104,9 @@ export function usePatientDictation(props: Props) {
     setListening(false);
     setMessage('');
     transition(mode);
+    meter.current?.stop();
+    const audio = createVoiceMeter((level) => current.current.onLevel?.(level));
+    meter.current = audio;
     session.current = startDictation(
       Recognition,
       (text) => {
@@ -111,10 +119,12 @@ export function usePatientDictation(props: Props) {
           if (status !== 'Ожидаю микрофон…' && startedAt.current === null) {
             startedAt.current = Date.now();
             setListening(true);
+            void audio.start();
           }
           return;
         }
         transition('idle');
+        audio.stop();
         setListening(false);
         const latest = current.current;
         if (
@@ -148,6 +158,7 @@ export function usePatientDictation(props: Props) {
   const stop = () => {
     if (phaseRef.current === 'idle' || phaseRef.current === 'stopping') return;
     transition('stopping');
+    meter.current?.stop();
     session.current?.stop();
   };
   const lock = () => {

@@ -1,7 +1,16 @@
 import { describe, expect, it } from 'vitest';
-import { appendDictation, voiceGesture } from './voice-input';
+import { appendDictation, voiceDrag, voiceGesture } from './voice-input';
 
 describe('recording gestures', () => {
+  it('moves the animation progressively before a gesture completes', () => {
+    expect(voiceDrag(-40, 0)).toEqual({ x: -40, y: 0, cancel: 0.5, lock: 0 });
+    expect(voiceDrag(0, -32)).toEqual({ x: 0, y: -32, cancel: 0, lock: 0.5 });
+    expect(voiceDrag(100, 100)).toEqual({ x: 0, y: 0, cancel: 0, lock: 0 });
+  });
+  it('clamps animation movement and follows the dominant direction', () => {
+    expect(voiceDrag(-200, -10).x).toBe(-80);
+    expect(voiceDrag(-10, -200).y).toBe(-64);
+  });
   it('ignores small movements and dragging down or right', () => {
     expect(voiceGesture(-40, -20)).toBeNull();
     expect(voiceGesture(100, 100)).toBeNull();

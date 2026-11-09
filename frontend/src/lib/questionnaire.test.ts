@@ -298,6 +298,19 @@ describe('filterDoctors', () => {
     expect(filterDoctors(doctors, '', 'Хирург')).toHaveLength(1);
   });
 
+  it('единый поиск находит врача по части специализации', () => {
+    expect(
+      filterDoctors(doctors, ' КАРДИО ', '').map(
+        (doctor) => doctor.membership_id,
+      ),
+    ).toEqual(['1', '2']);
+    expect(
+      filterDoctors(doctors, 'хирург', 'Кардиолог').map(
+        (doctor) => doctor.membership_id,
+      ),
+    ).toEqual(['2']);
+  });
+
   it('применяет поиск и фильтр совместно', () => {
     expect(filterDoctors(doctors, 'никитин', 'Кардиолог')).toHaveLength(1);
     expect(filterDoctors(doctors, 'никитин', 'Терапевт')).toHaveLength(0);
@@ -425,6 +438,26 @@ describe('screenForStep', () => {
     expect(
       screenForStep(makeStep({ step_key: 'complaint', completed: true })),
     ).toBe('code');
+  });
+
+  it.each([
+    { step_key: 'guard_stopped', step_type: 'text' },
+    { step_key: 'new_terminal_step', step_type: 'stopped' },
+    { step_key: 'guard_stopped', step_type: 'stopped', completed: true },
+  ])('остановленный опрос не показывает ввод или код: %j', (step) => {
+    expect(screenForStep(makeStep(step))).toBe('stopped');
+  });
+
+  it('возврат к тому же вопросу с предупреждением остаётся в чате', () => {
+    expect(
+      screenForStep(
+        makeStep({
+          step_key: 'complaint',
+          step_type: 'text',
+          text: 'Вернёмся к вопросу. Что вас беспокоит?',
+        }),
+      ),
+    ).toBe('chat');
   });
 
   it('неизвестный шаг — вопрос в чате', () => {

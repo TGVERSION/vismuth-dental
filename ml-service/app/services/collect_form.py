@@ -5,6 +5,7 @@
 """
 
 import logging
+import json
 
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 from langchain_core.runnables import Runnable
@@ -22,7 +23,7 @@ from app.schemas import (
     FormProgress,
 )
 
-from .prompts import EXTRACT_SYSTEM_PROMPT, QUESTION_PROMPT, STATE_SECTION
+from .prompts import EXTRACT_SYSTEM_PROMPT, QUESTION_PROMPT
 
 logger = logging.getLogger(__name__)
 
@@ -147,10 +148,12 @@ class CollectFormService:
 
     async def _extract(self, request: CollectFormRequest) -> FormProgress:
         """Просит модель проверить состояние полей по всей истории чата."""
-        system = EXTRACT_SYSTEM_PROMPT
+        messages: list = [SystemMessage(content=EXTRACT_SYSTEM_PROMPT)]
         if request.state is not None:
-            system += STATE_SECTION.format(state=request.state.model_dump_json())
-        messages: list = [SystemMessage(content=system), *self._build_messages(request)]
+            messages.append(HumanMessage(content=json.dumps(
+                {"untrusted_state": request.state.model_dump(mode="json")}, ensure_ascii=False,
+            )))
+        messages.extend(self._build_messages(request))
         try:
             progress = await self._extractor.ainvoke(messages)
         except Exception:
@@ -173,9 +176,13 @@ class CollectFormService:
 
         goal, source = followup
         known = getattr(progress, source.value).value
-        system = QUESTION_PROMPT.format(goal=f"{goal}. Уже известно: {known}")
+        system = QUESTION_PROMPT.format(goal=goal)
         history = self._build_messages(request)
-        response = await self._llm.ainvoke([SystemMessage(content=system), *history])
+        response = await self._llm.ainvoke([
+            SystemMessage(content=system),
+            HumanMessage(content=json.dumps({"untrusted_known": known}, ensure_ascii=False)),
+            *history,
+        ])
         return str(response.content).strip()
 
     def _template(self, target: CollectionTarget, request: CollectFormRequest) -> str:

@@ -140,7 +140,11 @@ export const filterDoctors = (
 
   return doctors.filter((doctor) => {
     const matchesQuery =
-      needle === '' || normalize(doctorFullName(doctor)).includes(needle);
+      needle === '' ||
+      normalize(doctorFullName(doctor)).includes(needle) ||
+      doctorSpecializationNames(doctor).some((name) =>
+        normalize(name).includes(needle),
+      );
     const matchesSpec =
       spec === '' || doctorSpecializationNames(doctor).includes(spec);
 
@@ -209,6 +213,7 @@ export type QuestionnaireScreen =
   | 'chat'
   | 'patient_info'
   | 'code'
+  | 'stopped'
   | 'gastro';
 
 /**
@@ -217,6 +222,9 @@ export type QuestionnaireScreen =
  * с полем ввода лучше, чем пустой экран.
  */
 export const screenForStep = (step: QuestionnaireStep): QuestionnaireScreen => {
+  if (step.step_key === 'guard_stopped' || step.step_type === 'stopped') {
+    return 'stopped';
+  }
   if (step.completed || step.step_key === 'code' || step.step_type === 'code') {
     return 'code';
   }

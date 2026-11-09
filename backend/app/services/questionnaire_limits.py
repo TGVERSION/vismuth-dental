@@ -59,6 +59,13 @@ async def _incr_hourly(key: str, limit: int) -> int:
         await redis.aclose()
 
 
+async def check_answer_guard_limit(questionnaire_id: UUID) -> None:
+    """Ограничивает стоимость проверки даже при многократных ошибках ML."""
+    count = await _incr_hourly(f'questionnaire:answer-guard:{questionnaire_id}', 60)
+    if count > 60:
+        raise HTTPException(status_code=429, detail='Слишком много попыток проверки ответа. Попробуйте позже.')
+
+
 async def check_device_limit(device_id: str) -> None:
     key = f"q:device:{hash_device_id(device_id)}"
     count = await _incr_hourly(key, settings.questionnaire_device_limit_per_hour)

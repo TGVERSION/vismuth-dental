@@ -104,10 +104,13 @@ export const useQuestionnaireChat = ({
   const deliver = useCallback(
     async (answer: QuestionnaireStepAnswer) => {
       isSendingRef.current = true;
-      lastAnswerRef.current = answer;
+      const identifiedAnswer = answer.answer_id
+        ? answer
+        : { ...answer, answer_id: crypto.randomUUID() };
+      lastAnswerRef.current = identifiedAnswer;
 
       try {
-        const next = await submit(answer);
+        const next = await submit(identifiedAnswer);
         // Ошибка или ответ устаревшей анкеты — пузыря нет, ошибку и
         // «Повторить» показывает экран по состоянию хука анкеты.
         if (!next) return;

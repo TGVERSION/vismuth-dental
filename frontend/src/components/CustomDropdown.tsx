@@ -423,7 +423,7 @@ export function CustomDropdown<T = string, M extends boolean = false>({
   return (
     <div
       ref={containerRef}
-      className={`relative w-full ${className}`}
+      className={`vismuth-combobox relative w-full ${className}`}
       onKeyDown={handleKeyDown}
       tabIndex={disabled ? -1 : 0}
       role="combobox"

@@ -34,7 +34,8 @@ async def _answers_for_mapping(
 ) -> list[QuestionnaireAnswer]:
     result = await db.execute(
         select(QuestionnaireAnswer)
-        .where(QuestionnaireAnswer.questionnaire_id == questionnaire_id)
+        .where(QuestionnaireAnswer.questionnaire_id == questionnaire_id,
+               QuestionnaireAnswer.step_key != 'guard_reject')
         .order_by(QuestionnaireAnswer.seq),
     )
     return list(result.scalars().all())

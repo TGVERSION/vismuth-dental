@@ -22,6 +22,7 @@ def test_only_adult_primary_gastro_gets_extra_questions(monkeypatch,specialty,vi
 
 
 def test_three_answers_are_saved_in_order_and_return_to_patient_details(monkeypatch):
+    monkeypatch.setattr(flow,'load_answers',AsyncMock(return_value=[]))
     saved=AsyncMock();monkeypatch.setattr(flow,'add_answer',saved)
     q=Questionnaire(id=uuid4(),kind='general',status='in_progress',current_step='stool_changes',visit_type='primary',ai_unavailable=False)
     db=AsyncMock()

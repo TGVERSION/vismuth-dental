@@ -4,7 +4,7 @@ from .dis_anamnes_fullness import DIS_ANAMNES_SYSTEM_PROMPT
 from .life_anamnes_fullness import LIFE_ANAMNES_SYSTEM_PROMPT
 from .clinrec_checking import CLINREC_SYSTEM_PROMPT, CLINREC_HUMAN_PROMPT_TEMPLATE
 from .form_spec import FORM_FIELDS_SPEC
-from .collect_form import EXTRACT_SYSTEM_PROMPT, QUESTION_PROMPT, STATE_SECTION
+from .collect_form import EXTRACT_SYSTEM_PROMPT, QUESTION_PROMPT
 from .summarize_form import SUMMARIZE_FORM_SYSTEM_PROMPT
 from .check_dms import (
     CHECK_DMS_HUMAN_PROMPT_TEMPLATE,
@@ -22,7 +22,6 @@ __all__ = [
     "FORM_FIELDS_SPEC",
     "EXTRACT_SYSTEM_PROMPT",
     "QUESTION_PROMPT",
-    "STATE_SECTION",
     "SUMMARIZE_FORM_SYSTEM_PROMPT",
     "CHECK_DMS_HUMAN_PROMPT_TEMPLATE",
     "CHECK_DMS_SPLIT_PROMPT",

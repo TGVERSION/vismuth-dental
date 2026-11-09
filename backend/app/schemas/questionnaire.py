@@ -141,6 +141,7 @@ class QuestionnaireAnswerRequest(BaseModel):
     """Ответ на текущий шаг. Поля зависят от step_type / step_key."""
 
     step_key: str = Field(description="Должен совпадать с текущим шагом сервера.")
+    answer_id: Optional[UUID] = Field(default=None, description='Идентификатор отправки ответа; повтор сохраняет тот же UUID.')
     value: Optional[str] = Field(
         default=None,
         max_length=5000,

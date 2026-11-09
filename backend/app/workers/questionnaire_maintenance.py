@@ -2,7 +2,7 @@ import asyncio
 import logging
 from datetime import datetime, timedelta, timezone
 
-from sqlalchemy import delete, select
+from sqlalchemy import and_, delete, or_, select
 
 from app.config import settings
 from app.db import AsyncSessionLocal, engine
@@ -57,9 +57,14 @@ async def purge_old(now: datetime) -> int:
     async with AsyncSessionLocal() as db:
         result = await db.execute(
             select(Questionnaire).where(
-                Questionnaire.status == "completed",
-                Questionnaire.completed_at.is_not(None),
-                Questionnaire.completed_at < threshold,
+                or_(
+                    and_(Questionnaire.status == 'completed',
+                         Questionnaire.completed_at.is_not(None),
+                         Questionnaire.completed_at < threshold),
+                    and_(Questionnaire.status == 'abandoned',
+                         Questionnaire.current_step == 'guard_stopped',
+                         Questionnaire.last_activity_at < threshold),
+                ),
             ),
         )
         rows = list(result.scalars().all())

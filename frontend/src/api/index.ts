@@ -785,6 +785,8 @@ export interface QuestionnaireStartResponse {
  */
 export interface QuestionnaireStepAnswer {
   step_key: string;
+  /** Одна отправка и её повторы используют один UUID. */
+  answer_id?: string;
   /** Защита гастросценария от устаревшей вкладки и повторной отправки. */
   revision?: number;
   value?: string | null;

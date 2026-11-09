@@ -5,9 +5,8 @@ import type { PublicLinkDoctor } from '@/api';
 import { collectSpecializations, filterDoctors } from '@/lib/questionnaire';
 import { DoctorList } from './DoctorList';
 import { FIELD_CLASS } from './field-styles';
-import { SheetField } from './SheetField';
 import { SelectSheet } from './SelectSheet';
-import { SearchIcon } from './icons';
+import { ChevronDownIcon, SearchIcon } from './icons';
 
 interface DoctorPickerProps {
   doctors: PublicLinkDoctor[];
@@ -72,47 +71,61 @@ export const DoctorPicker = ({
     <div className="q-screen flex flex-col px-4 pt-8">
       <h1 className="text-[24px] font-bold">Выберите врача</h1>
 
-      <div className="mt-6 flex gap-2">
+      <div className="relative mt-6">
         <div
-          className={`${FIELD_CLASS} flex min-w-0 flex-1 items-center gap-2`}
+          className={`${FIELD_CLASS} q-field-group flex min-w-0 items-center gap-2`}
         >
           <SearchIcon className="h-5 w-5 shrink-0 text-[var(--q-muted)]" />
+          {specialization !== ALL_SPECIALIZATIONS && (
+            <button
+              type="button"
+              disabled={isSelecting}
+              onClick={() => setSpecialization(ALL_SPECIALIZATIONS)}
+              aria-label={`Сбросить специализацию ${specialization}`}
+              title={specialization}
+              className="flex max-w-[45%] min-w-0 items-center gap-1 rounded-lg bg-[var(--q-bg)] px-2 py-1 text-sm"
+            >
+              <span className="truncate">{specialization}</span>
+              <span aria-hidden="true">×</span>
+            </button>
+          )}
           <input
             type="search"
             value={query}
             onChange={(event) => setQuery(event.target.value)}
-            placeholder="Врач"
-            aria-label="Поиск врача по фамилии или имени"
+            disabled={isSelecting}
+            placeholder={
+              specialization === ALL_SPECIALIZATIONS
+                ? 'Врач или специализация'
+                : 'Врач'
+            }
+            aria-label="Поиск врача или специализации"
             className="min-w-0 flex-1 bg-transparent text-base outline-none"
           />
-        </div>
-
-        {/* relative нужен выпадающему списку на десктопе: он позиционируется
-            относительно этого контейнера. Ширина поля — из макета. */}
-        <div className="relative w-[184px] shrink-0">
-          <SheetField
-            value={specialization === ALL_SPECIALIZATIONS ? '' : specialization}
-            placeholder="Специализация"
-            ariaLabel="Фильтр по специализации"
+          <button
+            type="button"
+            aria-label="Выбрать специализацию"
+            aria-haspopup="dialog"
+            aria-expanded={sheetOpen}
+            disabled={isSelecting}
             onClick={() => setSheetOpen((open) => !open)}
-            className="w-full"
-          />
-
-          {/* Монтируется только когда открыт: состояние выбора начинается
-              заново при каждом открытии, без синхронизации эффектом. */}
-          {sheetOpen ? (
-            <SelectSheet
-              title="Специализация"
-              options={options}
-              value={specialization}
-              onClose={() => setSheetOpen(false)}
-              onApply={(next) => {
-                setSpecialization(next);
-                setSheetOpen(false);
-              }}
-            />
-          ) : null}
+            className="flex h-11 w-8 shrink-0 items-center justify-center rounded-lg text-[var(--q-muted)]"
+          >
+            <ChevronDownIcon className="h-5 w-5" />
+          </button>
         </div>
+        {sheetOpen ? (
+          <SelectSheet
+            title="Специализация"
+            options={options}
+            value={specialization}
+            onClose={() => setSheetOpen(false)}
+            onApply={(next) => {
+              setSpecialization(next);
+              setSheetOpen(false);
+            }}
+          />
+        ) : null}
       </div>
 
       <div className="mt-6 flex flex-1 flex-col gap-3 pb-[calc(env(safe-area-inset-bottom)+16px)]">

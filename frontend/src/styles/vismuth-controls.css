@@ -179,6 +179,40 @@
   :where(input[type='checkbox'], input[type='radio']) {
     accent-color: var(--ui-color-blue-600);
   }
+  /* Composite controls focus their rounded surface, not a square inner input. */
+  .vismuth-combobox:focus-visible {
+    outline: none;
+    box-shadow: none;
+  }
+  .vismuth-combobox:focus-visible > .vismuth-input,
+  .vismuth-combobox > .vismuth-input:focus-visible,
+  [data-questionnaire] .q-field:focus-visible,
+  [data-questionnaire] .q-field-group:focus-within {
+    outline: none;
+    box-shadow: var(--ui-focus-ring);
+  }
+  [data-questionnaire] .q-field-group :is(input, button):focus-visible {
+    outline: none;
+    box-shadow: none;
+  }
+  [data-questionnaire]
+    :is(
+      button,
+      a[href],
+      select,
+      [role='button'],
+      [role='radio'],
+      [role='checkbox'],
+      [role='switch'],
+      [role='option'],
+      [role='combobox']
+    ) {
+    cursor: pointer;
+  }
+  [data-questionnaire]
+    :is(button:disabled, select:disabled, [aria-disabled='true']) {
+    cursor: not-allowed;
+  }
   /* Text inputs match :focus-visible after a touch, too. The restored chat
      composer uses its surface and caret instead of an inner focus rectangle. */
   [data-questionnaire] textarea.q-chat-input:focus-visible {

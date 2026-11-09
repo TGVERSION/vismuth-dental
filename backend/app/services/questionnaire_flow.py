@@ -6,7 +6,7 @@ from typing import Any, Literal, Optional
 from uuid import UUID
 
 from fastapi import HTTPException, status
-from sqlalchemy import func, select
+from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..config import settings
@@ -22,6 +22,10 @@ from ..services.questionnaire_limits import ensure_clinic_subscription_active
 from .dental_questionnaire import apply_dental, build_dental_descriptor, open_invite
 from .questionnaire_step import StepDescriptor
 from .questionnaire_dedup import answered_fixed_topics, question_was_asked
+from .questionnaire_answer_guard import (
+    GUARDED_STEPS, MAX_CONSECUTIVE, MAX_TOTAL, classify_answer, guard_notice,
+    rejected_before, rejection_counts, stopped_descriptor,
+)
 from .gastro_chat_questions import GASTRO_CHAT_QUESTIONS
 from .gastro_questionnaire import apply_gastro, build_gastro_descriptor, submission_fingerprint
 
@@ -161,6 +165,21 @@ async def resolve_initial_step(
 
 
 async def build_step_descriptor(
+    db: AsyncSession,
+    questionnaire: Questionnaire,
+) -> StepDescriptor:
+    if questionnaire.kind == 'general' and questionnaire.current_step == 'guard_stopped':
+        return stopped_descriptor()
+    descriptor = await _build_step_descriptor(db, questionnaire)
+    if (questionnaire.kind == 'general' and questionnaire.id
+            and questionnaire.status == 'in_progress' and questionnaire.current_step in GUARDED_STEPS):
+        notice = guard_notice(await load_answers(db, questionnaire.id), questionnaire.current_step)
+        if notice:
+            descriptor.text = notice + '\n\n' + (descriptor.text or '')
+    return descriptor
+
+
+async def _build_step_descriptor(
     db: AsyncSession,
     questionnaire: Questionnaire,
 ) -> StepDescriptor:
@@ -534,8 +553,11 @@ async def apply_answer(
     selections: dict[str, list[str]] | None = None,
     texts: dict[str, str] | None = None,
     revision: int | None = None,
+    answer_id: UUID | None = None,
 ) -> tuple[StepDescriptor, bool, bool]:
     should_process = False
+    if questionnaire.kind == 'general' and questionnaire.current_step == 'guard_stopped':
+        return stopped_descriptor(), False, False
     if questionnaire.kind == "gastro":
         if questionnaire.status == "completed":
             saved = questionnaire.gastro_answers or {}
@@ -596,6 +618,36 @@ async def apply_answer(
     now = datetime.now(timezone.utc)
     questionnaire.last_activity_at = now
     questionnaire.updated_at = now
+
+    if (questionnaire.kind == 'general' and text_value and step_key in GUARDED_STEPS
+            and 'гастро' in (await specialization_name(db, questionnaire.specialization_id) or '').casefold()):
+        history = await load_answers(db, questionnaire.id)
+        if rejected_before(history, answer_id):
+            return await build_step_descriptor(db, questionnaire), truncated, False
+        current = await _build_step_descriptor(db, questionnaire)
+        if await classify_answer(current.text or '', text_value, step_key, questionnaire_id=questionnaire.id):
+            consecutive, total = rejection_counts(history)
+            await add_answer(db, questionnaire, step_key='guard_reject', kind='fixed',
+                             question_text=str(answer_id) if answer_id else None, choice=step_key)
+            if consecutive + 1 >= MAX_CONSECUTIVE or total + 1 >= MAX_TOTAL:
+                await db.execute(delete(QuestionnaireAnswer).where(QuestionnaireAnswer.questionnaire_id == questionnaire.id))
+                questionnaire.status = 'abandoned'
+                questionnaire.current_step = 'guard_stopped'
+                questionnaire.collect_form_state = None
+                questionnaire.gastro_answers = None
+                questionnaire.dental_answers = None
+                questionnaire.structured = None
+                questionnaire.gaps = None
+                questionnaire.patient_first_name = None
+                questionnaire.patient_middle_name = None
+                questionnaire.patient_last_name = None
+                questionnaire.appointment_date = None
+                questionnaire.appointment_time = None
+                questionnaire.code = None
+                questionnaire.processing_status = None
+                questionnaire.completed_at = None
+            await db.commit()
+            return await build_step_descriptor(db, questionnaire), truncated, False
 
     if step_key == "choose_doctor":
         if doctor_membership_id is None:

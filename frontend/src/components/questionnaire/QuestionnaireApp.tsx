@@ -183,20 +183,56 @@ export const QuestionnaireApp = ({ slug, link }: QuestionnaireAppProps) => {
     const { step } = flow;
     if (step) {
       switch (screenForStep(step)) {
-        case 'gastro':
-          if (!continueLegacy) return (
-            <div className="q-screen flex flex-col gap-5 px-4 py-8">
-              <h1 className="text-[24px] font-bold">Вернуться к обычному чату</h1>
-              <p>Вы начали анкету в прежнем расширенном формате. Можно начать обычный опрос с выбора врача. Ранее отправленные ответы останутся сохранены отдельно.</p>
-              <button type="button" disabled={flow.isStarting} className="min-h-[52px] rounded-xl bg-[var(--q-brand)] px-4 text-base font-medium text-[var(--q-brand-contrast)]" onClick={() => {
-                const doctors = backDoctors.length ? backDoctors : link?.doctor ? [link.doctor] : link?.doctors ?? [];
-                if (doctors.length === 1) restartWithDoctor(doctors[0].membership_id);
-                else setPickingDoctor(true);
-              }}>Начать обычный опрос</button>
-              <button type="button" className="min-h-11 underline" onClick={() => setContinueLegacy(true)}>Продолжить ранее начатую анкету</button>
-              {flow.startError && <p role="alert">{flow.startError}</p>}
+        case 'stopped':
+          return (
+            <div className="q-screen flex flex-col justify-center gap-4 px-4 py-8">
+              <h1 className="text-[24px] font-bold">
+                {step.title || 'Опрос завершён'}
+              </h1>
+              <p role="status" className="whitespace-pre-line">
+                {step.text || 'Для заполнения анкеты обратитесь в клинику.'}
+              </p>
             </div>
           );
+        case 'gastro':
+          if (!continueLegacy)
+            return (
+              <div className="q-screen flex flex-col gap-5 px-4 py-8">
+                <h1 className="text-[24px] font-bold">
+                  Вернуться к обычному чату
+                </h1>
+                <p>
+                  Вы начали анкету в прежнем расширенном формате. Можно начать
+                  обычный опрос с выбора врача. Ранее отправленные ответы
+                  останутся сохранены отдельно.
+                </p>
+                <button
+                  type="button"
+                  disabled={flow.isStarting}
+                  className="min-h-[52px] rounded-xl bg-[var(--q-brand)] px-4 text-base font-medium text-[var(--q-brand-contrast)]"
+                  onClick={() => {
+                    const doctors = backDoctors.length
+                      ? backDoctors
+                      : link?.doctor
+                        ? [link.doctor]
+                        : (link?.doctors ?? []);
+                    if (doctors.length === 1)
+                      restartWithDoctor(doctors[0].membership_id);
+                    else setPickingDoctor(true);
+                  }}
+                >
+                  Начать обычный опрос
+                </button>
+                <button
+                  type="button"
+                  className="min-h-11 underline"
+                  onClick={() => setContinueLegacy(true)}
+                >
+                  Продолжить ранее начатую анкету
+                </button>
+                {flow.startError && <p role="alert">{flow.startError}</p>}
+              </div>
+            );
           return (
             <GastroQuestionnaireStep
               key={flow.questionnaireId}

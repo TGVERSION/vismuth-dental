@@ -149,7 +149,15 @@ const nextConfig: NextConfig = {
     return {
       // Запросы к backend, которые перехватывают включённые заглушки.
       // Остальное уходит на настоящий сервер через afterFiles.
-      beforeFiles: MOCKS.flatMap((name) => MOCK_REWRITES[name]),
+      beforeFiles: [
+        // Внутренний классификатор вызывается backend напрямую. Сюда также
+        // направляем вложенные пути, до общего ML proxy в afterFiles.
+        {
+          source: '/api/ml/questionnaire_answer_guard/:path*',
+          destination: '/api/internal-ml-denied',
+        },
+        ...MOCKS.flatMap((name) => MOCK_REWRITES[name]),
+      ],
       afterFiles: [
         {
           source: '/api/main/:path*',

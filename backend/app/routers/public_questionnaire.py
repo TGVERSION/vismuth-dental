@@ -473,6 +473,7 @@ async def post_answer(
         db,
         questionnaire,
         step_key=payload.step_key,
+        answer_id=payload.answer_id,
         value=payload.value,
         choice=payload.choice,
         skip=payload.skip,

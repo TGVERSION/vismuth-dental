@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex,nofollow">
+  <title>Проверка голосового ввода — VISMUTH</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; padding: 24px 16px; background: #f3f4f8; color: #202020; font: 16px/1.5 system-ui, sans-serif; }
+    main { max-width: 560px; margin: 0 auto; padding: 24px; border-radius: 20px; background: #fff; }
+    h1 { margin: 0 0 12px; font-size: 24px; line-height: 1.25; }
+    p { margin: 12px 0; }
+    .muted { color: #68717d; font-size: 14px; }
+    .info { padding: 12px 16px; background: #f0f2f6; border-radius: 12px; overflow-wrap: anywhere; }
+    button { padding: 14px 16px; border: 0; border-radius: 12px; cursor: pointer; font: inherit; }
+    button:focus-visible,textarea:focus-visible { outline: 2px solid #4870f1; outline-offset: 3px; }
+    button:disabled { opacity: .5; cursor: default; }
+    #start { width: 100%; color: white; background: #202020; font-weight: 600; }
+    #start:hover:not(:disabled) { background: #080808; }
+    #stop { width: 100%; margin-top: 8px; color: #202020; background: #edf1f8; }
+    #copy { width: 100%; color: #4870f1; background: #e6eeff; }
+    textarea { width: 100%; min-height: 110px; padding: 14px; border: 0; border-radius: 12px; font: inherit; color: inherit; background: #f0f2f6; resize: vertical; }
+    label { display: block; margin: 20px 0 8px; font-weight: 600; }
+    #status { min-height: 48px; margin: 16px 0; padding: 12px 16px; border-radius: 12px; background: #edf1f8; }
+    #status[data-state="error"] { background: #fff0f2; color: #a72e42; }
+    #status[data-state="success"] { background: #eef8f0; color: #24663b; }
+    details { margin-top: 20px; }
+    summary { cursor: pointer; color: #68717d; }
+    #report { min-height: 230px; margin: 12px 0; font: 12px/1.5 ui-monospace, monospace; }
+  </style>
+</head>
+<body>
+<main>
+  <h1>Проверка голосового ввода</h1>
+  <p>Отдельный тест кнопки на сайте. Клавиатуру открывать и нажимать её микрофон не нужно.</p>
+  <p class="muted">На Android проверьте эту страницу сначала в Chrome, затем в Яндекс Браузере. На iPhone — в Safari. Открывайте её в самом браузере, а не внутри мессенджера.</p>
+  <div class="info"><strong id="browser">Определяю браузер…</strong><br><span id="availability"></span></div>
+  <p>Нажмите кнопку, разрешите микрофон, если появится запрос, и произнесите:</p>
+  <p class="info">«Проверяю голосовой ввод на телефоне».</p>
+  <button id="start" type="button" disabled>🎙 Начать голосовой ввод</button>
+  <button id="stop" type="button" disabled>Остановить</button>
+  <div id="status" role="status" aria-live="polite">Проверяю доступность…</div>
+  <label for="transcript">Распознанный текст</label>
+  <textarea id="transcript" readonly placeholder="Здесь появится то, что вы произнесли"></textarea>
+  <p class="muted">Этот тест не отправляет запись или распознанный текст на сервер VISMUTH и не сохраняет их. Сервис распознавания выбирает браузер. Для проверки используйте фразу выше.</p>
+  <button id="copy" type="button">Скопировать результат проверки</button>
+  <p id="copy-status" class="muted" role="status"></p>
+  <details id="details"><summary>Технический отчёт</summary><textarea id="report" readonly aria-label="Технический отчёт"></textarea></details>
+</main>
+<script>
+(() => {
+  'use strict';
+  const $ = id => document.getElementById(id);
+  const ua = navigator.userAgent;
+  const browser = /YaBrowser\//i.test(ua) ? 'Яндекс Браузер' : /EdgA?\//i.test(ua) ? 'Edge' : /(?:Chrome|CriOS)\//i.test(ua) ? 'Google Chrome' : /Safari\//i.test(ua) ? 'Safari' : 'Другой браузер';
+  const os = /Android/i.test(ua) ? 'Android' : /iPhone|iPad|iPod/i.test(ua) ? 'iPhone / iPad' : 'Компьютер или другое устройство';
+  const api = typeof window.SpeechRecognition === 'function' ? 'SpeechRecognition' : typeof window.webkitSpeechRecognition === 'function' ? 'webkitSpeechRecognition' : null;
+  const Recognition = api ? window[api] : null;
+  const report = { test: 'VISMUTH mobile voice v1', at: new Date().toISOString(), browser, os, userAgent: ua, secureContext: window.isSecureContext, api, attempts: [] };
+  let recognition = null, current = null, startedAt = 0, timer = null;
+  const renderReport = () => { $('report').value = JSON.stringify(report, null, 2); };
+  const status = (text, state = '') => { $('status').textContent = text; $('status').dataset.state = state; };
+  const record = (type, extra = {}) => {
+    if (current) current.events.push({ event: type, milliseconds: Math.round(performance.now() - startedAt), ...extra });
+    renderReport();
+  };
+  const resetControls = () => { clearTimeout(timer); timer = null; $('start').disabled = !Recognition || !window.isSecureContext; $('stop').disabled = true; };
+  const errors = {
+    'not-allowed': 'Браузер или настройки телефона не разрешили голосовой ввод. Проверьте разрешение микрофона для сайта и браузера.',
+    'service-not-allowed': 'Браузер не разрешил использовать свой сервис распознавания. Наличие микрофона само по себе не означает поддержку диктовки.',
+    'network': 'Сервис распознавания недоступен по сети. Проверьте интернет и повторите тест.',
+    'audio-capture': 'Не удалось получить звук с микрофона. Проверьте разрешения и закройте другие приложения, использующие микрофон.',
+    'no-speech': 'Речь не была обнаружена. Нажмите кнопку и повторите фразу.',
+    'language-not-supported': 'Этот сервис не поддерживает выбранный русский язык.',
+    'aborted': 'Голосовой ввод остановлен.',
+  };
+  $('browser').textContent = browser + ' · ' + os;
+  $('availability').textContent = api ? 'Браузер предоставляет функцию распознавания. Теперь нужно проверить реальный звук.' : 'Браузер не предоставляет функцию распознавания для сайта.';
+  if (!window.isSecureContext) status('Для проверки нужен защищённый адрес HTTPS.', 'error');
+  else if (!Recognition) status('Запустить голосовой ввод кнопкой сайта в этом браузере не получилось: функция отсутствует.', 'error');
+  else status('Готово к проверке. Нажмите «Начать голосовой ввод».');
+  resetControls(); renderReport();
+  $('start').addEventListener('click', () => {
+    if (!Recognition || recognition) return;
+    startedAt = performance.now();
+    current = { at: new Date().toISOString(), outcome: 'pending', error: null, recognizedCharacters: 0, events: [] };
+    report.attempts.push(current);
+    $('transcript').value = ''; $('copy-status').textContent = '';
+    $('start').disabled = true; $('stop').disabled = false;
+    status('Ожидаю запуск микрофона. Если браузер запросит разрешение — разрешите.');
+    let rec;
+    try { rec = new Recognition(); }
+    catch (error) {
+      current.outcome = 'error'; current.error = error.name || 'constructor-failed'; record('constructor-exception', { code: current.error });
+      resetControls(); status('Браузер не смог подготовить распознавание: ' + current.error, 'error'); return;
+    }
+    recognition = rec;
+    rec.lang = 'ru-RU'; rec.continuous = false; rec.interimResults = true; rec.maxAlternatives = 1;
+    rec.onstart = () => { if (recognition !== rec) return; record('start'); status('Слушаю. Произнесите тестовую фразу.'); };
+    rec.onaudiostart = () => { if (recognition !== rec) return; record('audiostart'); status('Микрофон включён. Говорите.'); };
+    rec.onspeechstart = () => { if (recognition === rec) record('speechstart'); };
+    rec.onresult = event => {
+      if (recognition !== rec) return;
+      let text = '', final = false;
+      for (let i = 0; i < event.results.length; i++) { text += event.results[i][0].transcript + ' '; final = final || event.results[i].isFinal; }
+      text = text.trim(); $('transcript').value = text;
+      current.recognizedCharacters = text.length;
+      current.outcome = text ? (final ? 'recognized' : 'interim') : 'empty';
+      record('result', { final, characters: text.length });
+      if (text) status(final ? 'Голосовой ввод работает: текст получен.' : 'Речь распознаётся…', final ? 'success' : '');
+    };
+    rec.onerror = event => {
+      if (recognition !== rec) return;
+      const code = event.error || 'unknown';
+      if (current.outcome === 'timeout') { record('error', { code }); return; }
+      current.error = code;
+      current.outcome = code === 'aborted' ? 'aborted' : 'error';
+      record('error', { code }); status(errors[code] || 'Распознавание завершилось с ошибкой: ' + code, code === 'aborted' ? '' : 'error');
+    };
+    rec.onend = () => {
+      if (recognition !== rec) return;
+      record('end'); recognition = null; resetControls();
+      if (!current.error && !current.recognizedCharacters) { current.outcome = 'no-result'; status('Распознавание завершилось без текста. Повторите тест и сохраните отчёт.', 'error'); }
+      else if (!current.error && current.recognizedCharacters) { current.outcome = 'recognized'; status('Голосовой ввод работает: текст получен.', 'success'); }
+      renderReport();
+    };
+    try {
+      record('start-click'); rec.start();
+      timer = setTimeout(() => { record('timeout'); current.outcome = 'timeout'; current.error = 'timeout'; status('За минуту тест не завершился. Распознавание остановлено. Скопируйте отчёт.', 'error'); try { rec.abort(); } catch {} recognition = null; resetControls(); }, 60000);
+    } catch (error) {
+      current.outcome = 'error'; current.error = error.name || 'start-failed'; record('start-exception', { code: current.error });
+      recognition = null; resetControls(); status('Браузер не смог запустить распознавание: ' + current.error, 'error');
+    }
+  });
+  $('stop').addEventListener('click', () => {
+    if (!recognition) return; record('stop-click'); status('Останавливаю и получаю текст…');
+    try { recognition.stop(); } catch { recognition = null; resetControls(); }
+  });
+  const abort = () => { if (recognition) { record('page-hidden'); try { recognition.abort(); } catch {} } };
+  window.addEventListener('pagehide', abort);
+  document.addEventListener('visibilitychange', () => { if (document.hidden) abort(); });
+  $('copy').addEventListener('click', async () => {
+    renderReport();
+    try { await navigator.clipboard.writeText($('report').value); $('copy-status').textContent = 'Отчёт скопирован. Пришлите его в чат.'; }
+    catch { $('details').open = true; $('report').focus(); $('report').select(); $('copy-status').textContent = 'Автоматическое копирование недоступно. Скопируйте выделенный отчёт вручную.'; }
+  });
+})();
+</script>
+</body>
+</html>

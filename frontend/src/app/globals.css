@@ -251,6 +251,10 @@ body {
   --q-muted: #8b8b8b;
   --q-bubble-in: #f1f2f6;
   --q-bubble-out: var(--q-brand);
+  --q-brand-hover: #1d1d1d;
+  --q-brand-hover-contrast: #ffffff;
+  --q-brand-active: #1a1a1a;
+  --q-brand-active-contrast: #ffffff;
 
   color: var(--q-text);
 }
@@ -293,7 +297,8 @@ body {
     display: flex;
     justify-content: center;
     align-items: flex-start;
-    padding: 40px 16px;
+    --q-desktop-height: calc(100dvh - 48px);
+    padding: 24px 16px;
     /* Фон вокруг карточки, чтобы она читалась как отдельная поверхность. */
     background: var(--q-surface);
   }
@@ -309,7 +314,7 @@ body {
 
   .q-screen,
   .q-screen-fixed {
-    min-height: 640px;
+    min-height: var(--q-desktop-height);
     height: auto;
   }
 
@@ -318,9 +323,28 @@ body {
      с телефона снимается — чат остаётся в потоке карточки. */
   .q-screen-fixed {
     position: static;
-    height: 640px;
+    height: var(--q-desktop-height);
     min-height: 0;
   }
+}
+
+/* Фирменные заливки получают собственный контраст и оттенок на каждом состоянии.
+   Только pointer-hover: касание на телефоне не оставляет кнопку затемнённой. */
+[data-questionnaire] button {
+  transition: background-color var(--ui-duration-fast), color var(--ui-duration-fast);
+}
+@media (hover: hover) {
+  [data-questionnaire] button[class~='bg-[var(--q-brand)]']:not(:disabled):hover {
+    background-color: var(--q-brand-hover);
+    color: var(--q-brand-hover-contrast);
+  }
+  [data-questionnaire] button:not([class~='bg-[var(--q-brand)]']):not(:disabled):hover {
+    background-color: color-mix(in srgb, var(--q-brand) 7%, var(--q-bg));
+  }
+}
+[data-questionnaire] button[class~='bg-[var(--q-brand)]']:not(:disabled):active {
+  background-color: var(--q-brand-active);
+  color: var(--q-brand-active-contrast);
 }
 
 /* Появление шторки выбора снизу в анкете. */

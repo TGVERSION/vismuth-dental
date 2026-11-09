@@ -1,5 +1,5 @@
 """Read-only completed questionnaires, shared by platform and clinic registry."""
-from datetime import date, datetime, time, timedelta, timezone
+from datetime import date
 from uuid import UUID
 
 from fastapi import HTTPException
@@ -34,12 +34,9 @@ def completed_query(*, clinic_id=None, kind=None, name=None, date_from=None, dat
                            Questionnaire.patient_middle_name, Questionnaire.patient_last_name).ilike(pattern, escape='\\'),
         ))
     if date_from:
-        stmt = stmt.where(Questionnaire.completed_at >= datetime.combine(date_from, time.min, timezone.utc))
+        stmt = stmt.where(Questionnaire.appointment_date >= date_from)
     if date_to:
-        # A half-open UTC interval includes the entire final date, without casting the indexed column.
-        end = datetime.combine(date_to, time.max, timezone.utc)
-        stmt = stmt.where(Questionnaire.completed_at <= end) if date_to == date.max else stmt.where(
-            Questionnaire.completed_at < datetime.combine(date_to + timedelta(days=1), time.min, timezone.utc))
+        stmt = stmt.where(Questionnaire.appointment_date <= date_to)
     return stmt
 
 
@@ -48,7 +45,7 @@ async def list_completed(db: AsyncSession, *, page=1, page_size=50, **filters):
         raise HTTPException(status_code=422, detail='Invalid pagination')
     stmt = completed_query(**filters)
     total = (await db.execute(select(func.count()).select_from(stmt.subquery()))).scalar_one()
-    rows = (await db.execute(stmt.order_by(Questionnaire.completed_at.desc().nulls_last(), Questionnaire.id.desc())
+    rows = (await db.execute(stmt.order_by(Questionnaire.appointment_date.desc().nulls_last(), Questionnaire.appointment_time.asc().nulls_last(), Questionnaire.id.desc())
                              .offset((page - 1) * page_size).limit(page_size))).all()
     items = [CompletedQuestionnaireItem(
         id=q.id, clinic_id=q.clinic_id, clinic_name=clinic_name, kind=q.kind,

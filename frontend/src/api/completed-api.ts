@@ -1,4 +1,5 @@
 import { apiClient } from './main-api';
+import type { RequestOptions } from './base-client';
 import type {
   DoctorQuestionnaireListItem,
   DoctorQuestionnaireDetail,
@@ -14,6 +15,11 @@ export interface CompletedMeta {
 }
 export type CompletedItem = DoctorQuestionnaireListItem & CompletedMeta;
 export type CompletedDetail = DoctorQuestionnaireDetail & CompletedMeta;
+export interface PatientLinkRequest {
+  doctor_membership_id?: string;
+  appointment_date?: string;
+  appointment_time?: string;
+}
 export interface PatientLinks {
   clinic_id: string;
   clinic_name: string;
@@ -28,15 +34,21 @@ export interface PatientLinks {
   }[];
 }
 export const completedApi = {
-  list: (scope: string, query: Record<string, string | number>) =>
+  list: (
+    scope: string,
+    query: Record<string, string | number>,
+    options?: RequestOptions,
+  ) =>
     apiClient.get<{
       items: CompletedItem[];
       total: number;
       page: number;
       page_size: number;
-    }>(scope, query),
+    }>(scope, query, options),
   detail: (scope: string, id: string) =>
     apiClient.get<CompletedDetail>(scope + '/' + id),
   links: (id: string) =>
     apiClient.get<PatientLinks>('/clinics/' + id + '/patient-links'),
+  createLink: (id: string, data: PatientLinkRequest) =>
+    apiClient.post<{ url: string }>('/clinics/' + id + '/patient-links', data),
 };

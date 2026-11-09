@@ -8,7 +8,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..config import settings
 from ..db import get_db
-from ..deps import get_current_user, require_clinic_admin, require_clinic_registry
+from ..deps import get_current_user, require_clinic_admin, require_clinic_registry, require_patient_link_staff
+from ..services.patient_link_context import PatientLinkSelection, encode_appointment, validate_appointment_date
 from ..models.clinic import Clinic
 from ..models.clinic_invitation import ClinicInvitation
 from ..models.clinic_membership import ClinicMembership
@@ -619,7 +620,7 @@ async def deactivate_member(
 @router.get('/clinics/{clinic_id}/patient-links', response_model=ClinicPatientLinks)
 async def clinic_patient_links(
     clinic_id: UUID,
-    _: ServiceUser = Depends(require_clinic_registry),
+    _: ServiceUser = Depends(require_patient_link_staff),
     db: AsyncSession = Depends(get_db),
 ) -> ClinicPatientLinks:
     clinic = await get_clinic_or_404(db, clinic_id)
@@ -641,3 +642,22 @@ async def clinic_patient_links(
             last_name=u.last_name, middle_name=u.middle_name, public_url=_public_url(m.public_slug),
             specializations=[SpecializationRead(**s) for s in specs.get(m.id, [])])
             for m, u in rows if m.public_slug and specs.get(m.id)])
+
+
+@router.post('/clinics/{clinic_id}/patient-links')
+async def create_patient_link(clinic_id: UUID, payload: PatientLinkSelection,
+    _: ServiceUser = Depends(require_patient_link_staff), db: AsyncSession = Depends(get_db)):
+    clinic = await get_clinic_or_404(db, clinic_id)
+    if clinic.questionnaire_kind not in {'general', 'mixed'}:
+        raise HTTPException(400, 'Для этого направления нужны стоматологические приглашения')
+    validate_appointment_date(payload.appointment_date)
+    if payload.doctor_membership_id:
+        member = (await db.execute(select(ClinicMembership).join(ServiceUser, ServiceUser.id == ClinicMembership.user_id).where(
+            ClinicMembership.id == payload.doctor_membership_id, ClinicMembership.clinic_id == clinic_id,
+            ClinicMembership.status == 'active', ClinicMembership.deleted_at.is_(None), ClinicMembership.is_doctor.is_(True),
+            ServiceUser.deleted_at.is_(None), ServiceUser.is_active.is_(True),
+        ))).scalar_one_or_none()
+        if member is None:
+            raise HTTPException(400, 'Врач недоступен в этой клинике')
+    slug = clinic.public_slug if not any(payload.model_dump().values()) else encode_appointment(clinic_id, payload)
+    return {'url': _public_url(slug)}

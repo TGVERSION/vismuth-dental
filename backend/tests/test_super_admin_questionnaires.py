@@ -24,7 +24,7 @@ def test_completed_query_all_dates_all_kinds_and_printed_signed():
     assert 'questionnaire.kind =' not in query
 
 
-def test_completed_query_filters_bound_name_and_clinic_and_utc_dates():
+def test_completed_query_filters_bound_name_and_clinic_and_appointment_dates():
     clinic_id = uuid4()
     stmt = completed_query(clinic_id=clinic_id, kind='gastro', name='Петров Иван',
                            date_from=date(2026, 11, 1), date_to=date(2026, 11, 6))
@@ -32,8 +32,8 @@ def test_completed_query_filters_bound_name_and_clinic_and_utc_dates():
     assert clinic_id in compiled.params.values()
     assert 'gastro' in compiled.params.values()
     assert '%Петров Иван%' in compiled.params.values()
-    assert datetime(2026, 11, 1, tzinfo=timezone.utc) in compiled.params.values()
-    assert datetime(2026, 11, 7, tzinfo=timezone.utc) in compiled.params.values()
+    assert date(2026, 11, 1) in compiled.params.values()
+    assert date(2026, 11, 6) in compiled.params.values()
     assert 'Петров' not in str(compiled)
 
 
@@ -53,7 +53,7 @@ def test_paging_stable_and_total():
     result = asyncio.run(list_completed(db, page=2, page_size=3))
     assert result.model_dump() == dict(items=[], total=8, page=2, page_size=3)
     compiled = db.statements[1].compile(dialect=postgresql.dialect())
-    assert 'completed_at DESC NULLS LAST, questionnaire.id DESC' in str(compiled)
+    assert 'appointment_date DESC NULLS LAST, questionnaire.appointment_time ASC NULLS LAST, questionnaire.id DESC' in str(compiled)
     assert compiled.params['param_1'] == 3
     assert compiled.params['param_2'] == 3
 

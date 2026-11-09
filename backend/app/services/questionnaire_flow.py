@@ -22,6 +22,7 @@ from ..services.questionnaire_limits import ensure_clinic_subscription_active
 from .dental_questionnaire import apply_dental, build_dental_descriptor, open_invite
 from .questionnaire_step import StepDescriptor
 from .questionnaire_dedup import answered_fixed_topics, question_was_asked
+from .patient_link_context import merge_appointment
 from .questionnaire_answer_guard import (
     GUARDED_STEPS, MAX_CONSECUTIVE, MAX_TOTAL, classify_answer, guard_notice,
     rejected_before, rejection_counts, stopped_descriptor,
@@ -298,6 +299,8 @@ async def _build_step_descriptor(
             step_key="patient_info",
             step_type="patient_info",
             title="Имя, отчество, дата и время приёма",
+            appointment_date=(questionnaire.gastro_answers or {}).get('appointment_context', {}).get('appointment_date'),
+            appointment_time=(questionnaire.gastro_answers or {}).get('appointment_context', {}).get('appointment_time'),
             date_min=today.isoformat(),
             date_max=(
                 today + timedelta(days=settings.questionnaire_appointment_days_ahead)
@@ -845,6 +848,7 @@ async def apply_answer(
         questionnaire.current_step = "repeat_side_effects"
 
     elif step_key == "patient_info":
+        appointment_date, appointment_time = merge_appointment(questionnaire, appointment_date, appointment_time)
         if not first_name or not appointment_date or not appointment_time:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,

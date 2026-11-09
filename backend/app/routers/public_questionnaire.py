@@ -22,6 +22,7 @@ from ..schemas.questionnaire import (
     StepDescriptorResponse,
 )
 from ..services.clinic_access import compute_access_status
+from ..services.patient_link_context import decode_appointment, validate_appointment_date
 from ..services.clinic_members import load_specializations_map
 from ..services.questionnaire_flow import (
     apply_answer,
@@ -83,6 +84,8 @@ def _step_response(descriptor) -> StepDescriptorResponse:
         groups=descriptor.groups,
         date_min=descriptor.date_min,
         date_max=descriptor.date_max,
+        appointment_date=descriptor.appointment_date,
+        appointment_time=descriptor.appointment_time,
         code=descriptor.code,
         completed=descriptor.completed,
         truncated=descriptor.truncated,
@@ -96,6 +99,21 @@ async def _resolve_slug(
     db: AsyncSession,
     slug: str,
 ) -> tuple[Clinic, ClinicMembership | None]:
+    context = decode_appointment(slug)
+    if context:
+        clinic = (await db.execute(select(Clinic).where(Clinic.id == context.clinic_id, Clinic.deleted_at.is_(None)))).scalar_one_or_none()
+        if clinic is None:
+            raise HTTPException(404, 'Link not found')
+        member = None
+        if context.doctor_membership_id:
+            member = (await db.execute(select(ClinicMembership).join(ServiceUser, ServiceUser.id == ClinicMembership.user_id).where(
+                ClinicMembership.id == context.doctor_membership_id, ClinicMembership.clinic_id == clinic.id,
+                ClinicMembership.status == 'active', ClinicMembership.deleted_at.is_(None), ClinicMembership.is_doctor.is_(True),
+                ServiceUser.deleted_at.is_(None), ServiceUser.is_active.is_(True),
+            ))).scalar_one_or_none()
+            if member is None:
+                raise HTTPException(404, 'Doctor not available')
+        return clinic, member
     clinic_result = await db.execute(
         select(Clinic).where(
             Clinic.public_slug == slug,
@@ -303,6 +321,11 @@ async def create_questionnaire(
         )
 
     clinic, membership = await _resolve_slug(db, payload.slug)
+    context = decode_appointment(payload.slug)
+    if context:
+        validate_appointment_date(context.appointment_date)
+        if context.doctor_membership_id and payload.doctor_membership_id not in {None, context.doctor_membership_id}:
+            raise HTTPException(409, 'Врач задан в ссылке')
     if clinic.questionnaire_kind == "dental":
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -316,12 +339,14 @@ async def create_questionnaire(
     doctor_membership = membership
     if payload.doctor_membership_id is not None:
         result = await db.execute(
-            select(ClinicMembership).where(
+            select(ClinicMembership).join(ServiceUser, ServiceUser.id == ClinicMembership.user_id).where(
                 ClinicMembership.id == payload.doctor_membership_id,
                 ClinicMembership.clinic_id == clinic.id,
                 ClinicMembership.is_doctor.is_(True),
                 ClinicMembership.status == "active",
                 ClinicMembership.deleted_at.is_(None),
+                ServiceUser.deleted_at.is_(None),
+                ServiceUser.is_active.is_(True),
             ),
         )
         doctor_membership = result.scalar_one_or_none()
@@ -348,6 +373,9 @@ async def create_questionnaire(
         device_id_hash=hash_device_id(x_device_id),
         ip_hash=hash_ip(_client_ip(request)),
         current_step="choose_doctor",
+        appointment_date=context.appointment_date if context else None,
+        appointment_time=context.appointment_time if context else None,
+        gastro_answers={'appointment_context': context.model_dump(mode='json')} if context else None,
     )
     db.add(questionnaire)
     await db.flush()

@@ -61,9 +61,19 @@ const PatientInfoStep = ({
       <PatientNameForm
         firstName={name.firstName}
         middleName={name.middleName}
+        isSubmitting={isSubmitting}
+        error={submitError}
         onSubmit={(data) => {
           setName(data);
-          setStage('appointment');
+          if (step.appointment_date && step.appointment_time) {
+            void submit({
+              step_key: step.step_key,
+              first_name: data.firstName,
+              middle_name: data.middleName || null,
+            });
+          } else {
+            setStage('appointment');
+          }
         }}
       />
     );
@@ -73,18 +83,18 @@ const PatientInfoStep = ({
     <AppointmentTimeForm
       dateMin={step.date_min}
       dateMax={step.date_max}
+      presetDate={step.appointment_date}
+      presetTime={step.appointment_time}
       isSubmitting={isSubmitting}
       error={submitError}
       onSubmit={({ date, time }) => {
-        void submit(
-          buildAnswer(step, {
-            type: 'patient_info',
-            firstName: name.firstName,
-            middleName: name.middleName,
-            date,
-            time,
-          }),
-        );
+        void submit({
+          step_key: step.step_key,
+          first_name: name.firstName,
+          middle_name: name.middleName || null,
+          ...(!step.appointment_date ? { appointment_date: date } : {}),
+          ...(!step.appointment_time ? { appointment_time: time } : {}),
+        });
       }}
     />
   );

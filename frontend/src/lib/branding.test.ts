@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   DEFAULT_TEXT_COLOR,
   DEFAULT_BUTTON_COLOR,
+  darkenButtonColor,
   brandStyle,
   pickContrastColor,
   sanitizeBrandColor,
@@ -154,6 +155,25 @@ describe('readable clinic accent', () => {
 });
 
 describe('independent button and logo colors', () => {
+  it('derives hover and active fills from the button color with their own readable text', () => {
+    const style = brandStyle({
+      name: 'Клиника',
+      phone: '',
+      logo_url: null,
+      brand_color: '#FFFFFF',
+      button_color: '#006B8F',
+    }) as Record<string, string>;
+    expect(style['--q-brand-hover']).toBe('#006081');
+    expect(style['--q-brand-active']).toBe('#005875');
+    expect(style['--q-brand-hover-contrast']).toBe(
+      pickContrastColor('#006081'),
+    );
+    expect(style['--q-brand-active-contrast']).toBe(
+      pickContrastColor('#005875'),
+    );
+    expect(darkenButtonColor('#FFFFFF')).toBe('#E6E6E6');
+    expect(darkenButtonColor('malformed')).toBe('#1D1D1D');
+  });
   it('does not turn buttons pale when only logo background changes', () => {
     const clinic = {
       name: 'Клиника',

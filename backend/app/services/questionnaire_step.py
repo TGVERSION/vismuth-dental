@@ -20,6 +20,8 @@ class StepDescriptor:
     groups: list[dict[str, Any]] = field(default_factory=list)
     date_min: Optional[str] = None
     date_max: Optional[str] = None
+    appointment_date: Optional[str] = None
+    appointment_time: Optional[str] = None
     code: Optional[str] = None
     completed: bool = False
     truncated: bool = False

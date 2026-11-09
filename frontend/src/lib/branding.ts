@@ -121,6 +121,19 @@ export const NEUTRAL_BRAND_COLOR = '#1B4B8F';
 /** Default button fill, independent of the logo background. */
 export const DEFAULT_BUTTON_COLOR = '#202020';
 
+/** Затемнение проверенного цвета кнопки: фон логотипа здесь не участвует. */
+export const darkenButtonColor = (hex: string, amount = 0.1): string => {
+  const safe = sanitizeBrandColor(hex) ?? DEFAULT_BUTTON_COLOR;
+  const factor = 1 - Math.max(0, Math.min(1, amount));
+  return `#${[1, 3, 5]
+    .map((offset) =>
+      Math.round(parseInt(safe.slice(offset, offset + 2), 16) * factor)
+        .toString(16)
+        .padStart(2, '0'),
+    )
+    .join('')}`.toUpperCase();
+};
+
 /**
  * CSS-переменные темы для контейнера анкеты.
  *
@@ -134,9 +147,15 @@ export const brandStyle = (
   const brand =
     sanitizeBrandColor(clinic?.button_color) ?? DEFAULT_BUTTON_COLOR;
   const logoBackground = sanitizeBrandColor(clinic?.brand_color) ?? '#FFFFFF';
+  const hover = darkenButtonColor(brand);
+  const active = darkenButtonColor(brand, 0.18);
 
   return {
     '--q-brand': brand,
+    '--q-brand-hover': hover,
+    '--q-brand-hover-contrast': pickContrastColor(hover),
+    '--q-brand-active': active,
+    '--q-brand-active-contrast': pickContrastColor(active),
     '--q-logo-bg': logoBackground,
     '--q-logo-contrast': pickContrastColor(logoBackground),
     '--q-brand-contrast': pickContrastColor(brand),

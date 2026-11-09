@@ -13,6 +13,8 @@ interface AppointmentTimeFormProps {
   /** Границы выбора даты из шага, `YYYY-MM-DD` по часам сервера. */
   dateMin: string | null;
   dateMax: string | null;
+  presetDate?: string | null;
+  presetTime?: string | null;
   isSubmitting: boolean;
   error: string | null;
   onSubmit: (data: { date: string; time: string }) => void;
@@ -28,20 +30,23 @@ interface AppointmentTimeFormProps {
 export const AppointmentTimeForm = ({
   dateMin,
   dateMax,
+  presetDate,
+  presetTime,
   isSubmitting,
   error,
   onSubmit,
 }: AppointmentTimeFormProps) => {
-  const [date, setDate] = useState('');
-  const [time, setTime] = useState('');
+  const [date, setDate] = useState(presetDate ?? '');
+  const [time, setTime] = useState(presetTime ?? '');
   const [touched, setTouched] = useState(false);
   const [dateSheetOpen, setDateSheetOpen] = useState(false);
   const [timeSheetOpen, setTimeSheetOpen] = useState(false);
 
   // Без диапазона дат календарь не открыть, и отправить форму нельзя.
   // Backend присылает диапазон всегда — проверка на всякий случай.
-  const hasDateRange = Boolean(dateMin && dateMax);
-  const dateValid = isDateInRange(date, dateMin, dateMax);
+  const hasDateRange = Boolean(presetDate || (dateMin && dateMax));
+  const dateValid =
+    Boolean(presetDate) || isDateInRange(date, dateMin, dateMax);
   const timeValid = isAppointmentTime(time);
   const canSubmit = dateValid && timeValid && !isSubmitting;
 
@@ -59,64 +64,69 @@ export const AppointmentTimeForm = ({
       <h1 className="text-[24px] font-bold">Когда у вас приём?</h1>
 
       {/* relative — опора для выпадающего списка на десктопе. */}
-      <div className="relative mt-6">
-        <SheetField
-          value={formatDateLabel(date)}
-          placeholder="Дата"
-          ariaLabel="Дата приёма"
-          onClick={() => setDateSheetOpen((open) => !open)}
-          icon={<CalendarIcon className="h-5 w-5" />}
-          className="min-h-[52px] w-full"
-        />
-
-        {dateSheetOpen && dateMin && dateMax ? (
-          <DateSheet
-            min={dateMin}
-            max={dateMax}
-            value={date}
-            onClose={() => setDateSheetOpen(false)}
-            onApply={(next) => {
-              setDate(next);
-              setDateSheetOpen(false);
-            }}
+      {!presetDate && (
+        <div className="relative mt-6">
+          <SheetField
+            value={formatDateLabel(date)}
+            placeholder="Дата"
+            ariaLabel="Дата приёма"
+            onClick={() => setDateSheetOpen((open) => !open)}
+            icon={<CalendarIcon className="h-5 w-5" />}
+            className="min-h-[52px] w-full"
           />
-        ) : null}
-      </div>
-      {!hasDateRange ? (
-        <p role="alert" className="mt-1 text-sm text-[#C2334D]">
-          Нет доступных дат, обратитесь в клинику
-        </p>
-      ) : touched && !dateValid ? (
-        <p role="alert" className="mt-1 text-sm text-[#C2334D]">
-          Выберите дату в ближайшие 30 дней
-        </p>
-      ) : null}
 
-      <div className="relative mt-3">
-        <SheetField
-          value={time}
-          placeholder="Время"
-          ariaLabel="Время приёма"
-          onClick={() => setTimeSheetOpen((open) => !open)}
-          icon={<ClockIcon className="h-5 w-5" />}
-          className="min-h-[52px] w-full"
-        />
+          {dateSheetOpen && dateMin && dateMax ? (
+            <DateSheet
+              min={dateMin}
+              max={dateMax}
+              value={date}
+              onClose={() => setDateSheetOpen(false)}
+              onApply={(next) => {
+                setDate(next);
+                setDateSheetOpen(false);
+              }}
+            />
+          ) : null}
+        </div>
+      )}
+      {!presetDate &&
+        (!hasDateRange ? (
+          <p role="alert" className="mt-1 text-sm text-[#C2334D]">
+            Нет доступных дат, обратитесь в клинику
+          </p>
+        ) : touched && !dateValid ? (
+          <p role="alert" className="mt-1 text-sm text-[#C2334D]">
+            Выберите дату в ближайшие 30 дней
+          </p>
+        ) : null)}
 
-        {timeSheetOpen ? (
-          <TimeSheet
+      {!presetTime && (
+        <div className="relative mt-3">
+          <SheetField
             value={time}
-            onClose={() => setTimeSheetOpen(false)}
-            onApply={(next) => {
-              setTime(next);
-              setTimeSheetOpen(false);
-            }}
-            // Десктоп: время складывается из двух значений, поэтому выбор
-            // применяется сразу, а список закроется кликом вне.
-            onChange={setTime}
+            placeholder="Время"
+            ariaLabel="Время приёма"
+            onClick={() => setTimeSheetOpen((open) => !open)}
+            icon={<ClockIcon className="h-5 w-5" />}
+            className="min-h-[52px] w-full"
           />
-        ) : null}
-      </div>
-      {hasDateRange && touched && !timeValid ? (
+
+          {timeSheetOpen ? (
+            <TimeSheet
+              value={time}
+              onClose={() => setTimeSheetOpen(false)}
+              onApply={(next) => {
+                setTime(next);
+                setTimeSheetOpen(false);
+              }}
+              // Десктоп: время складывается из двух значений, поэтому выбор
+              // применяется сразу, а список закроется кликом вне.
+              onChange={setTime}
+            />
+          ) : null}
+        </div>
+      )}
+      {!presetTime && hasDateRange && touched && !timeValid ? (
         <p role="alert" className="mt-1 text-sm text-[#C2334D]">
           Выберите время
         </p>

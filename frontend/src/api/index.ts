@@ -756,6 +756,9 @@ export interface QuestionnaireStep {
   /** YYYY-MM-DD по часам сервера. */
   date_min: string | null;
   date_max: string | null;
+  /** Данные приёма, уже заданные сотрудником в ссылке; пациент их не меняет. */
+  appointment_date?: string | null;
+  appointment_time?: string | null;
   /** Четыре цифры на шаге `code`. */
   code: string | null;
   completed: boolean;

@@ -11,6 +11,8 @@ interface PatientNameFormProps {
   firstName: string;
   middleName: string;
   onSubmit: (data: { firstName: string; middleName: string }) => void;
+  isSubmitting?: boolean;
+  error?: string | null;
 }
 
 /**
@@ -23,6 +25,8 @@ export const PatientNameForm = ({
   firstName: initialFirstName,
   middleName: initialMiddleName,
   onSubmit,
+  isSubmitting = false,
+  error,
 }: PatientNameFormProps) => {
   const [firstName, setFirstName] = useState(initialFirstName);
   const [middleName, setMiddleName] = useState(initialMiddleName);
@@ -35,7 +39,7 @@ export const PatientNameForm = ({
       onSubmit={(event) => {
         event.preventDefault();
         setTouched(true);
-        if (!nameValid) return;
+        if (!nameValid || isSubmitting) return;
 
         onSubmit({
           firstName: firstName.trim(),
@@ -55,6 +59,7 @@ export const PatientNameForm = ({
         placeholder="Имя*"
         aria-label="Имя"
         aria-required="true"
+        disabled={isSubmitting}
         className={`${FIELD_CLASS} mt-6 min-h-[52px] w-full`}
       />
       {touched && !nameValid ? (
@@ -71,15 +76,22 @@ export const PatientNameForm = ({
         maxLength={PATIENT_NAME_MAX_LENGTH}
         placeholder="Отчество"
         aria-label="Отчество"
+        disabled={isSubmitting}
         className={`${FIELD_CLASS} mt-3 min-h-[52px] w-full`}
       />
 
+      {error && (
+        <p role="alert" className="mt-4 text-sm text-[#C2334D]">
+          {error}
+        </p>
+      )}
       <div className="mt-auto pb-[calc(env(safe-area-inset-bottom)+16px)] pt-8">
         <button
           type="submit"
-          className="min-h-[52px] w-full rounded-xl bg-[var(--q-brand)] px-4 text-base font-medium text-[var(--q-brand-contrast)]"
+          disabled={isSubmitting}
+          className="min-h-[52px] w-full rounded-xl bg-[var(--q-brand)] px-4 text-base font-medium text-[var(--q-brand-contrast)] disabled:opacity-60"
         >
-          Продолжить
+          {isSubmitting ? 'Отправляется…' : 'Продолжить'}
         </button>
       </div>
     </form>

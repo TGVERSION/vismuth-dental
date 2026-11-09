@@ -43,7 +43,7 @@ class PublicLinkResponse(BaseModel):
 
 
 class QuestionnaireCreateRequest(BaseModel):
-    slug: str = Field(..., min_length=4, max_length=32)
+    slug: str = Field(..., min_length=4, max_length=1024)
     doctor_membership_id: Optional[UUID] = Field(
         default=None,
         description="Опционально: сразу выбрать врача (иначе шаг choose_doctor).",
@@ -85,6 +85,8 @@ class StepDescriptorResponse(BaseModel):
     )
     date_min: Optional[str] = None
     date_max: Optional[str] = None
+    appointment_date: Optional[str] = None
+    appointment_time: Optional[str] = None
     code: Optional[str] = Field(
         default=None,
         description="4-значный код пациенту на финальном шаге (после patient_info).",

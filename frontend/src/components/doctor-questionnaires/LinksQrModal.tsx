@@ -3,9 +3,9 @@
 import { useEffect, useRef, useState } from 'react';
 import { flushSync } from 'react-dom';
 import { ModalShell } from '@/components/settings/clinics/ModalShell';
-import { useQuestionnaireLinks } from '@/hooks/useQuestionnaireLinks';
+import { useMyClinic } from '@/hooks/useMyClinic';
 import type { QuestionnaireLinkItem } from '@/lib/questionnaire-links';
-import { LinkQrCard } from './LinkQrCard';
+import { PatientLinkGenerator } from './PatientLinkGenerator';
 import { QrPrintSheet } from './QrPrintSheet';
 
 /**
@@ -28,7 +28,7 @@ interface LinksQrModalProps {
  * бы до печати.
  */
 export const LinksQrModal = ({ onClose }: LinksQrModalProps) => {
-  const { links, isLoading, error, reload } = useQuestionnaireLinks();
+  const { clinic, isLoading, error } = useMyClinic();
   const [printItem, setPrintItem] = useState<QuestionnaireLinkItem | null>(
     null,
   );
@@ -80,13 +80,13 @@ export const LinksQrModal = ({ onClose }: LinksQrModalProps) => {
       );
     }
 
-    if (error || !links) {
+    if (error || !clinic) {
       return (
         <div className="my-12 flex flex-col items-center gap-3 text-center">
           <p className="text-[#D91528]">Не удалось загрузить ссылки</p>
           <button
             type="button"
-            onClick={reload}
+            onClick={() => window.location.reload()}
             className="cursor-pointer text-[#5D8CF1] hover:text-[#769CEF]"
           >
             Повторить
@@ -96,17 +96,7 @@ export const LinksQrModal = ({ onClose }: LinksQrModalProps) => {
     }
 
     return (
-      <>
-        <p className="mb-5 text-sm text-[#6C757D]">
-          По ссылке пациент заполнит анкету перед приёмом. Отправьте её или
-          распечатайте QR-код для кабинета.
-        </p>
-        <div className="flex flex-col gap-4">
-          {links.map((item) => (
-            <LinkQrCard key={item.kind} item={item} onPrint={handlePrint} />
-          ))}
-        </div>
-      </>
+      <PatientLinkGenerator clinicId={clinic.clinic_id} onPrint={handlePrint} />
     );
   };
 

@@ -86,7 +86,7 @@ export const DateSheet = ({
               onClick={() => setMonthIndex((index) => index - 1)}
               disabled={monthIndex === 0}
               aria-label="Предыдущий месяц"
-              className="flex h-8 w-8 items-center justify-center rounded-lg hover:bg-gray-50 disabled:opacity-30"
+              className="flex h-8 w-8 items-center justify-center rounded-[var(--ui-radius-lg)] hover:bg-[var(--ui-color-alabaster-100)] disabled:opacity-30"
             >
               <BackIcon className="h-4 w-4" />
             </button>
@@ -100,7 +100,7 @@ export const DateSheet = ({
               onClick={() => setMonthIndex((index) => index + 1)}
               disabled={monthIndex === months.length - 1}
               aria-label="Следующий месяц"
-              className="flex h-8 w-8 items-center justify-center rounded-lg hover:bg-gray-50 disabled:opacity-30"
+              className="flex h-8 w-8 items-center justify-center rounded-[var(--ui-radius-lg)] hover:bg-[var(--ui-color-alabaster-100)] disabled:opacity-30"
             >
               <BackIcon className="h-4 w-4 rotate-180" />
             </button>
@@ -140,13 +140,13 @@ export const DateSheet = ({
                     // Ховер — только у невыбранных дней: иначе он перекрыл
                     // бы фирменный фон выбранного, а светлый текст остался
                     // бы и число пропадало под курсором.
-                    className={`flex items-center justify-center rounded-xl disabled:opacity-30 ${
+                    className={`flex items-center justify-center rounded-[var(--ui-radius-lg)] disabled:opacity-30 ${
                       isDesktop ? 'h-9 text-sm' : 'h-11 text-base'
                     } ${
                       draft === day.date
                         ? 'bg-[var(--q-brand)] font-medium text-[var(--q-brand-contrast)]'
                         : isDesktop
-                          ? 'hover:bg-gray-50'
+                          ? 'hover:bg-[var(--ui-color-alabaster-100)]'
                           : ''
                     }`}
                   >

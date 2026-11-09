@@ -54,25 +54,12 @@ export function DirectoriesSection() {
     setModalKey((k) => k + 1);
   };
 
-  const createNew = () => {
-    setSelectedDict(null);
-    setIsModalOpen(true);
-    setModalKey((k) => k + 1);
-  };
-
   return (
     <>
       <div className="flex items-center justify-between pb-6 border-b px-8 border-gray-200">
         <h3 className="text-3xl font-medium text-[var(--ui-color-alabaster-dark-800)]">
           Справочники
         </h3>
-        <button
-          type="button"
-          onClick={createNew}
-          className="vismuth-button vismuth-button--primary"
-        >
-          Создать новый
-        </button>
       </div>
 
       <div className="px-8 py-5">

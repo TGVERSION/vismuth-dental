@@ -57,7 +57,7 @@ interface HelpersStoreState {
   updateHelperSetting: (
     userId: string,
     helperId: HelperId,
-    params?: { autocompleteProvider?: AutocompleteProvider },
+    params: { enabled: boolean; autocompleteProvider?: AutocompleteProvider },
   ) => Promise<{ success: boolean; message: string }>;
 
   isHelperActive: (helperId: HelperId) => boolean;
@@ -226,7 +226,10 @@ export const useHelpersStore = create<HelpersStoreState>()(
       updateHelperSetting: async (
         userId: string,
         helperId: HelperId,
-        params?: { autocompleteProvider?: AutocompleteProvider },
+        params: {
+          enabled: boolean;
+          autocompleteProvider?: AutocompleteProvider;
+        },
       ) => {
         const {
           userSettings,
@@ -237,6 +240,12 @@ export const useHelpersStore = create<HelpersStoreState>()(
           dmsEnabled,
         } = get();
 
+        if (get().isApplying) {
+          return {
+            success: false,
+            message: 'Предыдущее изменение ещё сохраняется',
+          };
+        }
         if (!userSettings) {
           return { success: false, message: 'Настройки не загружены' };
         }
@@ -251,7 +260,7 @@ export const useHelpersStore = create<HelpersStoreState>()(
 
           switch (helperId) {
             case 'mkb': {
-              const newValue = !mkbEnabled;
+              const newValue = params.enabled;
               settingsPayload.mkb_code = newValue;
               optimisticUpdate.mkbEnabled = newValue;
               toastMessage = newValue
@@ -261,30 +270,23 @@ export const useHelpersStore = create<HelpersStoreState>()(
             }
             case 'autocomplete': {
               const currentProvider =
-                params?.autocompleteProvider ?? autocompleteProvider;
-              const wasActive = userSettings.autocomplete !== 'off';
-
-              const initialProvider = userSettings.autocomplete;
-              const isTypeChanged =
-                wasActive && initialProvider !== currentProvider;
-
-              if (!wasActive) {
-                settingsPayload.autocomplete = currentProvider;
-                toastMessage = 'Помощник активирован';
-              } else if (isTypeChanged) {
-                settingsPayload.autocomplete = currentProvider;
-                toastMessage = 'Тип помощника успешно изменён';
-              } else {
-                settingsPayload.autocomplete = 'off';
-                toastMessage = 'Помощник выключен';
-              }
+                params.autocompleteProvider ??
+                (autocompleteProvider !== 'off'
+                  ? autocompleteProvider
+                  : 'dict_autocomplete');
+              settingsPayload.autocomplete = params.enabled
+                ? currentProvider
+                : 'off';
+              toastMessage = params.enabled
+                ? 'Настройка сохранена'
+                : 'Помощник выключен';
 
               optimisticUpdate.autocompleteProvider =
                 settingsPayload.autocomplete as AutocompleteProvider;
               break;
             }
             case 'fullness': {
-              const newValue = !fullnessEnabled;
+              const newValue = params.enabled;
               settingsPayload.fullness_complaints = newValue;
               optimisticUpdate.fullnessEnabled = newValue;
               toastMessage = newValue
@@ -295,7 +297,7 @@ export const useHelpersStore = create<HelpersStoreState>()(
             case 'voice': {
               // Сервер про этот помощник не знает: поля в `user_settings` нет.
               // Меняем только локальное состояние, запроса не будет.
-              const newValue = !voiceEnabled;
+              const newValue = params.enabled;
               optimisticUpdate.voiceEnabled = newValue;
               toastMessage = newValue
                 ? 'Помощник активирован'
@@ -304,7 +306,7 @@ export const useHelpersStore = create<HelpersStoreState>()(
             }
             case 'dms': {
               // Как и запись приёма: поля в `user_settings` нет, флаг локальный.
-              const newValue = !dmsEnabled;
+              const newValue = params.enabled;
               optimisticUpdate.dmsEnabled = newValue;
               toastMessage = newValue
                 ? 'Помощник активирован'
@@ -355,9 +357,20 @@ export const useHelpersStore = create<HelpersStoreState>()(
           logError('Failed to update helper setting:', error);
           toast.error('Не удалось применить настройки');
 
-          await get().fetchUserSettings(userId);
-
-          return { success: false, message: 'Ошибка при обновлении' };
+          // Откатываем оптимистическое отображение; повторное изменение
+          // отправляет то же целевое значение, а не переключает неизвестный флаг.
+          set({
+            userSettings,
+            mkbEnabled,
+            fullnessEnabled,
+            voiceEnabled,
+            dmsEnabled,
+            autocompleteProvider,
+          });
+          return {
+            success: false,
+            message: 'Не удалось сохранить настройку. Повторите изменение.',
+          };
         } finally {
           set({ isApplying: false });
         }

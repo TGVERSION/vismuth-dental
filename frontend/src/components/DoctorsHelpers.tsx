@@ -1,11 +1,10 @@
 'use client';
 
-import { useEffect, useMemo } from 'react';
+import { useEffect, useState } from 'react';
 import Image from 'next/image';
 import { CustomDropdown, DropdownOption } from './CustomDropdown';
 import { toast } from 'react-toastify';
 import { useAuthStore } from '@/store/authStore';
-import { SpinnerButton } from './SpinnerButton';
 import {
   useHelpersStore,
   HelperId,
@@ -44,7 +43,6 @@ export const DoctorsHelpers: React.FC<DoctorsHelpersProps> = ({
     dmsEnabled,
     autocompleteProvider,
     setSelectedHelper,
-    setAutocompleteProvider,
     fetchUserSettings,
     updateHelperSetting,
     getHelperMeta,
@@ -53,70 +51,20 @@ export const DoctorsHelpers: React.FC<DoctorsHelpersProps> = ({
   const closeModal = () => onClose();
   const currentHelper = getHelperMeta(selectedHelper);
 
-  const { applyButtonText, applyButtonClass } = useMemo(() => {
-    let isActive = false;
-
-    if (selectedHelper === 'mkb') {
-      isActive = mkbEnabled;
-    } else if (selectedHelper === 'fullness') {
-      isActive = fullnessEnabled;
-    } else if (selectedHelper === 'voice') {
-      isActive = voiceEnabled;
-    } else if (selectedHelper === 'dms') {
-      isActive = dmsEnabled;
-    } else if (selectedHelper === 'autocomplete') {
-      isActive =
-        autocompleteProvider !== 'off' &&
-        userSettings?.autocomplete === autocompleteProvider;
-    }
-
-    if (selectedHelper === 'autocomplete') {
-      return {
-        applyButtonText: isActive ? 'Выключить' : 'Применить',
-        applyButtonClass: isActive
-          ? 'vismuth-button--danger'
-          : 'vismuth-button--primary',
-      };
-    }
-
-    return {
-      applyButtonText: isActive ? 'Выключить' : 'Применить',
-      applyButtonClass: isActive
-        ? 'vismuth-button--danger'
-        : 'vismuth-button--primary',
-    };
-  }, [
-    selectedHelper,
-    mkbEnabled,
-    fullnessEnabled,
-    voiceEnabled,
-    dmsEnabled,
-    autocompleteProvider,
-    userSettings?.autocomplete,
-  ]);
-
-  useEffect(() => {
-    if (
-      isOpen &&
-      selectedHelper === 'autocomplete' &&
-      autocompleteProvider !== 'off' &&
-      userSettings?.autocomplete &&
-      userSettings.autocomplete !== 'off' &&
-      userSettings.autocomplete !== autocompleteProvider
-    ) {
-      const userId = user?.id;
-      if (userId) {
-        updateHelperSetting(userId, 'autocomplete', { autocompleteProvider });
-      }
-    }
-  }, [
-    isOpen,
-    selectedHelper,
-    autocompleteProvider,
-    userSettings?.autocomplete,
-    user?.id,
-    updateHelperSetting,
-  ]);
+  const [saveError, setSaveError] = useState<{
+    helperId: HelperId;
+    message: string;
+  } | null>(null);
+  const enabled =
+    selectedHelper === 'mkb'
+      ? mkbEnabled
+      : selectedHelper === 'fullness'
+        ? fullnessEnabled
+        : selectedHelper === 'voice'
+          ? voiceEnabled
+          : selectedHelper === 'dms'
+            ? dmsEnabled
+            : autocompleteProvider !== 'off';
 
   useEffect(() => {
     const userId = user?.id;
@@ -128,17 +76,22 @@ export const DoctorsHelpers: React.FC<DoctorsHelpersProps> = ({
   if (!isOpen) return null;
   if (!currentHelper) return null;
 
-  const handleApply = async () => {
+  const changeSetting = async (
+    enabled: boolean,
+    provider?: AutocompleteProvider,
+  ) => {
     const userId = user?.id;
     if (!userId) {
       toast.error('Пользователь не авторизован');
       return;
     }
-
-    await updateHelperSetting(userId, selectedHelper, {
-      autocompleteProvider:
-        selectedHelper === 'autocomplete' ? autocompleteProvider : undefined,
+    setSaveError(null);
+    const result = await updateHelperSetting(userId, selectedHelper, {
+      enabled,
+      autocompleteProvider: provider,
     });
+    if (!result.success)
+      setSaveError({ helperId: selectedHelper, message: result.message });
   };
 
   return (
@@ -250,30 +203,60 @@ export const DoctorsHelpers: React.FC<DoctorsHelpersProps> = ({
                       <div className="w-48">
                         <CustomDropdown<AutocompleteProvider, false>
                           options={
-                            AUTOCOMPLETE_OPTIONS as DropdownOption<AutocompleteProvider>[]
+                            [
+                              ...AUTOCOMPLETE_OPTIONS,
+                              { value: 'off', label: 'Выключено' },
+                            ] as DropdownOption<AutocompleteProvider>[]
                           }
                           value={autocompleteProvider}
-                          onChange={(value) => setAutocompleteProvider(value)}
-                          disabled={isApplying || isLoading}
+                          onChange={(value) =>
+                            void changeSetting(value !== 'off', value)
+                          }
+                          aria-label="Автодополнение текста"
+                          disabled={isApplying || isLoading || !userSettings}
                           className="h-10"
                           dropdownClassName="z-[10000]"
                         />
                       </div>
                     )}
-                    <button
-                      type="button"
-                      onClick={handleApply}
-                      disabled={
-                        isApplying ||
-                        isLoading ||
-                        (selectedHelper === 'autocomplete' &&
-                          autocompleteProvider === 'off' &&
-                          userSettings?.autocomplete === 'off')
-                      }
-                      className={`min-w-28 ${applyButtonClass}`}
+                    {selectedHelper !== 'autocomplete' && (
+                      <button
+                        type="button"
+                        role="switch"
+                        aria-label={currentHelper.name}
+                        aria-checked={enabled}
+                        onClick={() => void changeSetting(!enabled)}
+                        disabled={isApplying || isLoading || !userSettings}
+                        className="inline-flex cursor-pointer items-center gap-3 rounded-xl px-3 py-2 disabled:cursor-wait disabled:opacity-60"
+                      >
+                        <span
+                          className={`relative h-6 w-11 rounded-full transition-colors ${enabled ? 'bg-[var(--ui-color-blue-600)]' : 'bg-[var(--ui-color-alabaster-600)]'}`}
+                        >
+                          <span
+                            className={`absolute top-0.5 left-0 h-5 w-5 rounded-full bg-white transition-transform ${enabled ? 'translate-x-5' : 'translate-x-0.5'}`}
+                          />
+                        </span>
+                        <span>{enabled ? 'Включено' : 'Выключено'}</span>
+                      </button>
+                    )}
+                    <span
+                      role="status"
+                      className="text-sm text-[var(--ui-color-alabaster-950)]"
                     >
-                      {isApplying ? <SpinnerButton /> : applyButtonText}
-                    </button>
+                      {isApplying
+                        ? 'Сохраняется…'
+                        : isLoading
+                          ? 'Загрузка…'
+                          : ''}
+                    </span>
+                    {saveError?.helperId === selectedHelper && (
+                      <p
+                        role="alert"
+                        className="text-sm text-[var(--ui-color-red-600)]"
+                      >
+                        {saveError.message}
+                      </p>
+                    )}
                   </div>
                 </div>
 

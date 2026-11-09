@@ -41,20 +41,16 @@ describe('clinic staff access', () => {
   });
   it('completed list starts with all dates', () =>
     expect(
-      completedQuery(
-        { clinic_id: '', kind: '', name: '  ', date_from: '', date_to: '' },
-        1,
-      ),
+      completedQuery({ clinic_id: '', kind: '', name: '  ', date: '' }, 1),
     ).toEqual({ page: 1, page_size: 25 }));
-  it('keeps clinic and range on every page', () =>
+  it('keeps clinic and one complete day on every page', () =>
     expect(
       completedQuery(
         {
           clinic_id: 'a',
           kind: 'dental',
           name: ' Иван ',
-          date_from: '2026-11-01',
-          date_to: '',
+          date: '2026-11-01',
         },
         2,
       ),
@@ -63,6 +59,7 @@ describe('clinic staff access', () => {
       kind: 'dental',
       name: 'Иван',
       date_from: '2026-11-01',
+      date_to: '2026-11-01',
       page: 2,
       page_size: 25,
     }));

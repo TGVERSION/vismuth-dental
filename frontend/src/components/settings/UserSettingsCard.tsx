@@ -136,7 +136,6 @@ export function UserSettingsCard({
                 roles={membershipRoles}
                 disabled={pending}
                 onSaved={onMembershipSaved}
-                onClose={() => setExpanded(false)}
                 onSavingChange={setMembershipSaving}
               />
             ) : (

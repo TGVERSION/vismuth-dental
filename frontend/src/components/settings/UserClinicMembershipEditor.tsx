@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, type FormEvent } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { mainApi, type ClinicRead, type SpecializationRead } from '@/api';
 import {
   userMembershipApi,
@@ -20,7 +20,6 @@ interface Props {
   roles: MembershipRoleOption[];
   disabled?: boolean;
   onSaved: (user: UserMembershipRead) => void;
-  onClose: () => void;
   onSavingChange?: (saving: boolean) => void;
 }
 
@@ -29,7 +28,6 @@ export function UserClinicMembershipEditor({
   roles,
   disabled = false,
   onSaved,
-  onClose,
   onSavingChange,
 }: Props) {
   const [clinicId, setClinicId] = useState(user.clinic_id ?? '');
@@ -45,6 +43,8 @@ export function UserClinicMembershipEditor({
   );
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const inFlight = useRef(false);
+  const [saved, setSaved] = useState(false);
   const [error, setError] = useState('');
   const [loadFailed, setLoadFailed] = useState(false);
   const doctor = role === 'doctor' || role === 'clinic_admin_doctor';
@@ -76,18 +76,33 @@ export function UserClinicMembershipEditor({
     };
   }, []);
 
-  async function submit(event: FormEvent) {
-    event.preventDefault();
-    if (!payload || !changed || blocked) return;
+  async function applyChange(
+    nextClinicId: string,
+    nextRole: MembershipRole | null,
+    nextSpecializationIds: number[],
+  ) {
+    if (blocked || inFlight.current) return;
+    setClinicId(nextClinicId);
+    setRole(nextRole);
+    setSpecializationIds(nextSpecializationIds);
+    setSaved(false);
+    setError('');
+    const update = buildMembershipUpdate(
+      nextClinicId,
+      nextRole,
+      nextSpecializationIds,
+    );
+    if (!update || !membershipHasChanges(user, update)) return;
+    inFlight.current = true;
     setSaving(true);
     onSavingChange?.(true);
-    setError('');
     try {
-      const saved = await userMembershipApi.update(user.id, payload);
-      setClinicId(saved.clinic_id ?? '');
-      setRole(saved.clinic_role);
-      setSpecializationIds(saved.specialization_ids);
-      onSaved(saved);
+      const result = await userMembershipApi.update(user.id, update);
+      setClinicId(result.clinic_id ?? '');
+      setRole(result.clinic_role);
+      setSpecializationIds(result.specialization_ids);
+      setSaved(true);
+      onSaved(result);
     } catch (cause) {
       setError(
         cause instanceof Error
@@ -95,6 +110,7 @@ export function UserClinicMembershipEditor({
           : 'Не удалось изменить клинику и доступ',
       );
     } finally {
+      inFlight.current = false;
       setSaving(false);
       onSavingChange?.(false);
     }
@@ -124,8 +140,8 @@ export function UserClinicMembershipEditor({
   ];
 
   return (
-    <form
-      onSubmit={submit}
+    <div
+      role="group"
       aria-label={`Клиника и доступ ${user.login}`}
       className="flex min-w-0 flex-col gap-5"
     >
@@ -144,7 +160,7 @@ export function UserClinicMembershipEditor({
         <CustomDropdown
           options={clinicOptions}
           value={clinicId}
-          onChange={setClinicId}
+          onChange={(value) => void applyChange(value, role, specializationIds)}
           disabled={blocked}
           aria-label="Клиника"
           triggerClassName="bg-[var(--ui-color-slate-200)]"
@@ -164,7 +180,9 @@ export function UserClinicMembershipEditor({
           <CustomDropdown<MembershipRole | ''>
             options={roles}
             value={role ?? ''}
-            onChange={(value) => setRole(value || null)}
+            onChange={(value) =>
+              void applyChange(clinicId, value || null, specializationIds)
+            }
             disabled={blocked || !roles.length}
             aria-label="Роль"
             placeholder="Выберите роль"
@@ -184,7 +202,7 @@ export function UserClinicMembershipEditor({
               label: spec.name,
             }))}
             value={specializationIds}
-            onChange={setSpecializationIds}
+            onChange={(value) => void applyChange(clinicId, role, value)}
             disabled={blocked}
             aria-label="Специализации врача"
             placeholder="Выберите специализации"
@@ -198,23 +216,28 @@ export function UserClinicMembershipEditor({
           {error}
         </p>
       )}
-      <div className="flex flex-wrap items-center justify-end gap-3 pt-1">
+      <p
+        role="status"
+        className="text-right text-sm text-[var(--ui-color-alabaster-950)]"
+      >
+        {saving
+          ? 'Сохраняем…'
+          : !payload
+            ? 'Выберите специализацию для сохранения врачебной роли'
+            : saved && !changed
+              ? 'Сохранено'
+              : ''}
+      </p>
+      {error && !loadFailed && (
         <button
           type="button"
-          disabled={saving}
-          onClick={onClose}
-          className="vismuth-button--secondary"
+          disabled={blocked}
+          onClick={() => void applyChange(clinicId, role, specializationIds)}
+          className="self-end text-sm text-[var(--ui-color-blue-600)] disabled:opacity-50"
         >
-          Отмена
+          Повторить
         </button>
-        <button
-          type="submit"
-          disabled={!payload || !changed || blocked}
-          className="vismuth-button--primary"
-        >
-          {saving ? 'Сохраняем…' : 'Сохранить'}
-        </button>
-      </div>
-    </form>
+      )}
+    </div>
   );
 }

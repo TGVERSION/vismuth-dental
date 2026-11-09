@@ -25,15 +25,18 @@ export type CompletedFilters = {
   clinic_id: string;
   kind: string;
   name: string;
-  date_from: string;
-  date_to: string;
+  date: string;
 };
-export const completedQuery = (filters: CompletedFilters, page: number) => ({
+export const completedQuery = (
+  { date, ...filters }: CompletedFilters,
+  page: number,
+) => ({
   ...Object.fromEntries(
     Object.entries(filters)
       .map(([k, v]) => [k, v.trim()])
       .filter(([, v]) => v),
   ),
+  ...(date ? { date_from: date, date_to: date } : {}),
   page,
   page_size: 25,
 });

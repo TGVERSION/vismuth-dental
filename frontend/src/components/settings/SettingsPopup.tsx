@@ -106,7 +106,9 @@ export const SettingsPopup: React.FC<SettingsPopupProps> = ({
     }
   };
 
-  const protocolCloseRef = useRef<(() => void) | null>(null);
+  const protocolCloseRef = useRef<((afterClose?: () => void) => void) | null>(
+    null,
+  );
 
   const closeModal = () => {
     if (activeSection === 'protocols' && protocolCloseRef.current) {
@@ -120,7 +122,15 @@ export const SettingsPopup: React.FC<SettingsPopupProps> = ({
     if (section === 'clinics' && activeSection === 'clinics') {
       setClinicsResetKey((key) => key + 1);
     }
-    setSelectedSection(section);
+    if (
+      activeSection === 'protocols' &&
+      section !== 'protocols' &&
+      protocolCloseRef.current
+    ) {
+      protocolCloseRef.current(() => setSelectedSection(section));
+    } else {
+      setSelectedSection(section);
+    }
   };
 
   if (!isOpen) return null;

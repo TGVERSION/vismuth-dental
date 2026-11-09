@@ -375,7 +375,10 @@ export const mainApi = {
       apiClient.get<ProtocolStructures[]>('/protocol-structures'),
 
     postProtocolStructures: (data: ProtocolStructuresPost) =>
-      apiClient.post<ProtocolStructuresFields>('/protocol-structures', data),
+      mutationApiClient.post<ProtocolStructuresFields>(
+        '/protocol-structures',
+        data,
+      ),
 
     getProtocolStructuresById: (id: string) =>
       apiClient.get<ProtocolStructuresFields>(`/protocol-structures/${id}`),
@@ -387,7 +390,7 @@ export const mainApi = {
       ),
 
     patchProtocolStructuresById: (id: string, data: ProtocolStructuresPatch) =>
-      apiClient.patch<ProtocolStructuresFields>(
+      mutationApiClient.patch<ProtocolStructuresFields>(
         `/protocol-structures/${id}`,
         data,
       ),

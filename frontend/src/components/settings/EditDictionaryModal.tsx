@@ -1,27 +1,16 @@
 'use client';
 
 import { useState, useCallback, useEffect, useRef } from 'react';
-import { TableEditor, Column } from './TableEditor';
+
 import Image from 'next/image';
 import { mainApi } from '@/api';
 import type { DictionaryNames } from '@/api';
 
 const LIMIT = 100;
 
-const DEFAULT_COLUMNS: Column[] = [
-  { id: 'col-default-1', name: 'Колонка 1', width: 150 },
-  { id: 'col-default-2', name: 'Колонка 2', width: 150 },
-  { id: 'col-default-3', name: 'Колонка 3', width: 150 },
-];
-
-const DEFAULT_ROWS: string[][] = [
-  ['', '', ''],
-  ['', '', ''],
-];
-
 interface ModalData {
   dictionaryName: string;
-  columns: Column[];
+  columns: { id: string; name: string; width: number }[];
   rows: string[][];
   totalCount: number | null;
   loadedCount: number;
@@ -30,8 +19,8 @@ interface ModalData {
 
 const makeInitialData = (dictionary?: DictionaryNames | null): ModalData => ({
   dictionaryName: dictionary?.name ?? '',
-  columns: DEFAULT_COLUMNS,
-  rows: DEFAULT_ROWS,
+  columns: [],
+  rows: [],
   totalCount: null,
   loadedCount: 0,
   isLoadError: false,
@@ -52,6 +41,7 @@ export function EditDictionaryModal({
     makeInitialData(dictionary),
   );
   const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [loadMoreError, setLoadMoreError] = useState(false);
   const keysRef = useRef<string[]>([]);
 
   const isLoading =
@@ -106,6 +96,7 @@ export function EditDictionaryModal({
     if (data.totalCount !== null && data.loadedCount >= data.totalCount) return;
 
     setIsLoadingMore(true);
+    setLoadMoreError(false);
     mainApi.dictionary
       .getDictionaryRef(dictionary.name, {
         limit: LIMIT,
@@ -123,17 +114,9 @@ export function EditDictionaryModal({
           loadedCount: prev.loadedCount + newRows.length,
         }));
       })
-      .catch(() => {
-        /* ignore */
-      })
+      .catch(() => setLoadMoreError(true))
       .finally(() => setIsLoadingMore(false));
   }, [dictionary, isLoadingMore, isLoading, data.totalCount, data.loadedCount]);
-
-  const handleSave = useCallback(() => {
-    // Сохранение словаря не реализовано: обработчик только печатал
-    // содержимое в консоль. Вывод убран (данные справочника не должны
-    // попадать в консоль браузера), поведение прежнее — см. M15 в код-ревью.
-  }, []);
 
   const handleOverlayClick = useCallback(
     (e: React.MouseEvent<HTMLDivElement>) => {
@@ -165,27 +148,13 @@ export function EditDictionaryModal({
         </div>
         <div className="mr-5">
           <h2 className="mb-6 text-[length:var(--ui-font-size-31)] font-medium text-[var(--ui-color-alabaster-dark-800)]">
-            {dictionary ? 'Редактирование справочника' : 'Новый справочник'}
+            Справочник
           </h2>
 
-          <label className="block text-[length:var(--ui-font-size-14)] text-[var(--ui-color-alabaster-950)] mb-[var(--ui-space-4)]">
-            Название справочника
-          </label>
-          <input
-            type="text"
-            value={data.dictionaryName}
-            onChange={(e) =>
-              setData((prev) => ({ ...prev, dictionaryName: e.target.value }))
-            }
-            placeholder="Введите название"
-            readOnly={!!dictionary}
-            className={`vismuth-input mb-4 w-full ${
-              dictionary
-                ? 'opacity-60 cursor-default'
-                : 'focus:border-[var(--ui-color-blue-600)]'
-            }`}
-          />
-
+          <p className="mb-3 text-sm text-[var(--ui-color-alabaster-950)]">
+            Справочник доступен для просмотра.
+          </p>
+          <p className="mb-4 font-medium">{data.dictionaryName}</p>
           {data.totalCount !== null && (
             <p className="text-xs text-[var(--ui-color-alabaster-950)] mb-3">
               Показано{' '}
@@ -210,20 +179,66 @@ export function EditDictionaryModal({
               </p>
             ) : (
               <>
-                <TableEditor
-                  columns={data.columns}
-                  rows={data.rows}
-                  onColumnsChange={(columns) =>
-                    setData((prev) => ({ ...prev, columns }))
-                  }
-                  onRowsChange={(rows) =>
-                    setData((prev) => ({ ...prev, rows }))
-                  }
-                  onScrollNearBottom={hasMore ? loadMore : undefined}
-                />
+                <div
+                  className="max-h-96 overflow-auto rounded-lg border border-[var(--ui-color-slate-200)]"
+                  tabIndex={0}
+                  aria-label={`Данные справочника ${data.dictionaryName}`}
+                  onScroll={(e) => {
+                    const el = e.currentTarget;
+                    if (
+                      hasMore &&
+                      el.scrollHeight - el.scrollTop - el.clientHeight < 100
+                    )
+                      loadMore();
+                  }}
+                >
+                  <table className="w-full border-collapse text-sm">
+                    <thead className="sticky top-0 bg-[var(--ui-color-slate-100)]">
+                      <tr>
+                        {data.columns.map((column) => (
+                          <th
+                            key={column.id}
+                            className="border-b px-3 py-2 text-left font-medium"
+                          >
+                            {column.name}
+                          </th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {data.rows.map((row, index) => (
+                        <tr key={index}>
+                          {row.map((value, column) => (
+                            <td
+                              key={column}
+                              className="border-b px-3 py-2 align-top"
+                            >
+                              {value}
+                            </td>
+                          ))}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
                 {isLoadingMore && (
                   <p className="text-xs text-gray-400 text-center mt-2">
                     Загрузка...
+                  </p>
+                )}
+                {data.totalCount === 0 && (
+                  <p className="py-5 text-sm text-gray-500">Нет записей</p>
+                )}
+                {loadMoreError && (
+                  <p role="alert" className="mt-2 text-sm text-red-600">
+                    Не удалось загрузить следующие записи.{' '}
+                    <button
+                      type="button"
+                      onClick={loadMore}
+                      className="vismuth-function-button"
+                    >
+                      Повторить
+                    </button>
                   </p>
                 )}
               </>
@@ -233,17 +248,10 @@ export function EditDictionaryModal({
           <div className="flex flex-col gap-3">
             <button
               type="button"
-              onClick={handleSave}
-              className="vismuth-button vismuth-button--primary w-full"
-            >
-              Сохранить
-            </button>
-            <button
-              type="button"
               onClick={onClose}
               className="vismuth-button vismuth-button--secondary w-full"
             >
-              Отменить
+              Закрыть
             </button>
           </div>
         </div>

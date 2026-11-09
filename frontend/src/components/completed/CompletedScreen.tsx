@@ -34,8 +34,7 @@ export function CompletedScreen() {
       clinic_id: '',
       kind: '',
       name: '',
-      date_from: '',
-      date_to: '',
+      date: '',
     }),
     [page, setPage] = useState(1),
     [items, setItems] = useState<CompletedItem[]>([]),
@@ -152,27 +151,14 @@ export function CompletedScreen() {
             onChange={(e) => filter('name', e.target.value)}
           />
           <label className="text-sm">
-            Заполнена с
+            Дата заполнения
             <input
               type="date"
               className="vismuth-input mt-1"
-              value={filters.date_from}
-              onChange={(e) => filter('date_from', e.target.value)}
+              value={filters.date}
+              onChange={(e) => filter('date', e.target.value)}
             />
           </label>
-          <label className="text-sm">
-            по
-            <input
-              type="date"
-              className="vismuth-input mt-1"
-              value={filters.date_to}
-              min={filters.date_from}
-              onChange={(e) => filter('date_to', e.target.value)}
-            />
-          </label>
-          <button onClick={changed} className="vismuth-function-button">
-            Обновить
-          </button>
         </div>
         {error && (
           <p role="alert" className="mb-4 text-red-700">

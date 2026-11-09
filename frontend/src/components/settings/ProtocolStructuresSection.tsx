@@ -8,66 +8,66 @@ import type { DropdownOption } from '../CustomDropdown';
 import type {
   ProtocolStructures,
   ProtocolFcieldsMain,
-  ProtocolStructuresPost,
-  StructureProtocolsFieldsSmall,
   DictionaryNames,
 } from '@/api';
 import { FieldRow } from './structures/FieldRow';
 import { FieldPickerDropdown } from './structures/FieldPickerDropdown';
 import {
-  isOptionsType,
   parseOptions,
-  serializeOptions,
   slugify,
   uid,
   type LocalField,
 } from './structures/field-model';
+import { useStructureAutosave } from './structures/useStructureAutosave';
 
 export function ProtocolStructuresSection({
   onPopupClose,
   externalCloseRef,
 }: {
   onPopupClose?: () => void;
-  externalCloseRef?: React.MutableRefObject<(() => void) | null>;
+  externalCloseRef?: React.MutableRefObject<
+    ((afterClose?: () => void) => void) | null
+  >;
 } = {}) {
   const [view, setView] = useState<'list' | 'editor'>('list');
 
   const [structures, setStructures] = useState<ProtocolStructures[]>([]);
   const [isLoadingList, setIsLoadingList] = useState(false);
 
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [currentVersion, setCurrentVersion] = useState(1);
   const [structureName, setStructureName] = useState('');
-  const [structureCode, setStructureCode] = useState('');
   const [fields, setFields] = useState<LocalField[]>([]);
   const [expandedLocalId, setExpandedLocalId] = useState<string | null>(null);
   const [showFieldPicker, setShowFieldPicker] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
-  const [showConfirmClose, setShowConfirmClose] = useState(false);
-  const isDirtyRef = useRef(false);
-  const pendingCloseTypeRef = useRef<'back' | 'popup'>('back');
   const addFieldBtnRef = useRef<HTMLButtonElement>(null);
+  const autosave = useStructureAutosave(
+    { name: structureName, fields },
+    view === 'editor',
+  );
+  const { initialize, saveNow } = autosave;
 
+  const leaveEditor = useCallback(
+    async (afterClose: () => void) => {
+      if (view === 'editor' && !(await saveNow())) return;
+      afterClose();
+    },
+    [view, saveNow],
+  );
   const handleBack = () => {
-    if (isDirtyRef.current) {
-      pendingCloseTypeRef.current = 'back';
-      setShowConfirmClose(true);
-    } else {
+    void leaveEditor(() => {
       setView('list');
-    }
+      void loadStructures();
+    });
   };
 
   useEffect(() => {
     if (!externalCloseRef) return;
-    externalCloseRef.current = () => {
-      if (view !== 'editor' || !isDirtyRef.current) {
-        onPopupClose?.();
-        return;
-      }
-      pendingCloseTypeRef.current = 'popup';
-      setShowConfirmClose(true);
+    externalCloseRef.current = (afterClose) => {
+      void leaveEditor(afterClose || (() => onPopupClose?.()));
     };
-  }, [view, externalCloseRef, onPopupClose]);
+    return () => {
+      externalCloseRef.current = null;
+    };
+  }, [externalCloseRef, leaveEditor, onPopupClose]);
 
   const [draggedLocalId, setDraggedLocalId] = useState<string | null>(null);
   const [dropTarget, setDropTarget] = useState<{
@@ -77,7 +77,6 @@ export function ProtocolStructuresSection({
 
   const handleDrop = () => {
     if (!draggedLocalId || !dropTarget) return;
-    isDirtyRef.current = true;
     const { localId: targetLocalId, side } = dropTarget;
     if (draggedLocalId !== targetLocalId) {
       setFields((prev) => {
@@ -145,48 +144,44 @@ export function ProtocolStructuresSection({
         await mainApi.protocol_structures.getProtocolStructuresById(
           structure.id,
         );
-      setEditingId(structure.id);
-      setCurrentVersion(detail.version);
       setStructureName(detail.structure_name);
-      setStructureCode(detail.structure_code);
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const detailFields = (detail.fields || []) as any[];
-      setFields(
-        detailFields
-          .sort(
-            (a: { sort_order: number }, b: { sort_order: number }) =>
-              a.sort_order - b.sort_order,
-          )
-          .map(
-            (f: {
-              id: string;
-              field_name: string;
-              field_label: string | null;
-              field_type: string;
-              default_value: string | null;
-              default_value_jsonb: unknown;
-              dictionary: string | null;
-              protocol_fields_main_id: string | null;
-              is_required: boolean;
-              sort_order: number;
-            }) => ({
-              localId: uid(),
-              id: f.id,
-              field_name: f.field_name,
-              field_label: f.field_label || '',
-              field_type: f.field_type,
-              default_value: f.default_value,
-              default_value_jsonb: f.default_value_jsonb,
-              dictionary: f.dictionary,
-              protocol_fields_main_id: f.protocol_fields_main_id,
-              is_required: f.is_required,
-              sort_order: f.sort_order,
-              options: parseOptions(f.default_value_jsonb, f.field_type),
-            }),
-          ),
-      );
+      const localFields = detailFields
+        .sort(
+          (a: { sort_order: number }, b: { sort_order: number }) =>
+            a.sort_order - b.sort_order,
+        )
+        .map(
+          (f: {
+            id: string;
+            field_name: string;
+            field_label: string | null;
+            field_type: string;
+            default_value: string | null;
+            default_value_jsonb: unknown;
+            dictionary: string | null;
+            protocol_fields_main_id: string | null;
+            is_required: boolean;
+            sort_order: number;
+          }) => ({
+            localId: uid(),
+            id: f.id,
+            field_name: f.field_name,
+            field_label: f.field_label || '',
+            field_type: f.field_type,
+            default_value: f.default_value,
+            default_value_jsonb: f.default_value_jsonb,
+            dictionary: f.dictionary,
+            protocol_fields_main_id: f.protocol_fields_main_id,
+            is_required: f.is_required,
+            sort_order: f.sort_order,
+            options: parseOptions(f.default_value_jsonb, f.field_type),
+          }),
+        );
+      setFields(localFields);
+      initialize(detail, { name: detail.structure_name, fields: localFields });
       setExpandedLocalId(null);
-      isDirtyRef.current = false;
       setView('editor');
     } catch {
       toast.error('Не удалось загрузить структуру');
@@ -194,83 +189,11 @@ export function ProtocolStructuresSection({
   };
 
   const createNew = () => {
-    setEditingId(null);
-    setCurrentVersion(1);
     setStructureName('');
-    setStructureCode('');
     setFields([]);
+    initialize(null, { name: '', fields: [] });
     setExpandedLocalId(null);
-    isDirtyRef.current = false;
     setView('editor');
-  };
-
-  const save = async (afterSuccess?: () => void) => {
-    if (!structureName.trim()) {
-      toast.error('Введите название структуры');
-      return;
-    }
-
-    const code = structureCode || slugify(structureName);
-    const usedNames = new Set<string>();
-    const apiFields: StructureProtocolsFieldsSmall[] = fields.map((f, i) => {
-      const baseName =
-        f.field_name || (f.field_label ? slugify(f.field_label) : `field_${i}`);
-      let name = baseName;
-      if (usedNames.has(name)) {
-        let counter = 2;
-        while (usedNames.has(`${baseName}_${counter}`)) counter++;
-        name = `${baseName}_${counter}`;
-      }
-      usedNames.add(name);
-      return {
-        field_name: name,
-        field_label: f.field_label || null,
-        description: null,
-        field_type: f.field_type,
-        default_value: isOptionsType(f.field_type) ? null : f.default_value,
-        default_value_jsonb: isOptionsType(f.field_type)
-          ? serializeOptions(f.options, f.field_type)
-          : null,
-        dictionary: f.dictionary || null,
-        protocol_fields_main_id: f.protocol_fields_main_id || null,
-        is_required: f.is_required,
-        sort_order: i,
-      };
-    });
-
-    const body: ProtocolStructuresPost = {
-      structure_code: code,
-      structure_name: structureName,
-      description: '',
-      version: editingId ? currentVersion + 1 : 1,
-      is_active: true,
-      fields: apiFields,
-    };
-
-    setIsSaving(true);
-    try {
-      if (editingId) {
-        await mainApi.protocol_structures.updateProtocolStructuresById(
-          editingId,
-          body,
-        );
-        toast.success('Структура обновлена');
-      } else {
-        await mainApi.protocol_structures.postProtocolStructures(body as never);
-        toast.success('Структура создана');
-      }
-      isDirtyRef.current = false;
-      await loadStructures();
-      if (afterSuccess) {
-        afterSuccess();
-      } else {
-        setView('list');
-      }
-    } catch {
-      toast.error('Не удалось сохранить структуру');
-    } finally {
-      setIsSaving(false);
-    }
   };
 
   const deleteStructure = async (id: string) => {
@@ -284,7 +207,6 @@ export function ProtocolStructuresSection({
   };
 
   const moveField = (localId: string, dir: 'up' | 'down') => {
-    isDirtyRef.current = true;
     setFields((prev) => {
       const idx = prev.findIndex((f) => f.localId === localId);
       if (idx < 0) return prev;
@@ -297,20 +219,17 @@ export function ProtocolStructuresSection({
   };
 
   const removeField = (localId: string) => {
-    isDirtyRef.current = true;
     setFields((prev) => prev.filter((f) => f.localId !== localId));
     if (expandedLocalId === localId) setExpandedLocalId(null);
   };
 
   const updateField = (localId: string, updates: Partial<LocalField>) => {
-    isDirtyRef.current = true;
     setFields((prev) =>
       prev.map((f) => (f.localId === localId ? { ...f, ...updates } : f)),
     );
   };
 
   const addOption = (fieldLocalId: string) => {
-    isDirtyRef.current = true;
     setFields((prev) =>
       prev.map((f) =>
         f.localId === fieldLocalId
@@ -331,7 +250,6 @@ export function ProtocolStructuresSection({
     optLocalId: string,
     text: string,
   ) => {
-    isDirtyRef.current = true;
     setFields((prev) =>
       prev.map((f) =>
         f.localId === fieldLocalId
@@ -347,7 +265,6 @@ export function ProtocolStructuresSection({
   };
 
   const deleteOption = (fieldLocalId: string, optLocalId: string) => {
-    isDirtyRef.current = true;
     setFields((prev) =>
       prev.map((f) =>
         f.localId === fieldLocalId
@@ -358,7 +275,6 @@ export function ProtocolStructuresSection({
   };
 
   const setDefaultOption = (fieldLocalId: string, optLocalId: string) => {
-    isDirtyRef.current = true;
     setFields((prev) =>
       prev.map((f) =>
         f.localId === fieldLocalId
@@ -375,7 +291,6 @@ export function ProtocolStructuresSection({
   };
 
   const clearDefaultOption = (fieldLocalId: string) => {
-    isDirtyRef.current = true;
     setFields((prev) =>
       prev.map((f) =>
         f.localId === fieldLocalId
@@ -393,7 +308,6 @@ export function ProtocolStructuresSection({
       toast.info('Это поле уже добавлено');
       return;
     }
-    isDirtyRef.current = true;
     setFields((prev) => [
       ...prev,
       {
@@ -415,7 +329,6 @@ export function ProtocolStructuresSection({
   };
 
   const addCustomField = () => {
-    isDirtyRef.current = true;
     const newField: LocalField = {
       localId: uid(),
       field_name: '',
@@ -513,14 +426,52 @@ export function ProtocolStructuresSection({
           <Image src="/arrow-left.svg" alt="back" width={16} height={16} />
           Назад
         </button>
-        <button
-          type="button"
-          onClick={() => save()}
-          disabled={isSaving}
-          className="vismuth-button vismuth-button--primary"
-        >
-          {isSaving ? 'Сохранение...' : 'Сохранить'}
-        </button>
+        <div className="flex items-center gap-3 text-sm" aria-live="polite">
+          <span
+            role={autosave.status === 'error' ? 'alert' : 'status'}
+            className={
+              autosave.status === 'error' || autosave.status === 'invalid'
+                ? 'text-red-600'
+                : 'text-gray-500'
+            }
+          >
+            {autosave.status === 'saving'
+              ? 'Применяется…'
+              : autosave.status === 'pending'
+                ? 'Изменения применяются автоматически'
+                : autosave.status === 'error'
+                  ? 'Не удалось применить изменения'
+                  : autosave.status === 'invalid'
+                    ? 'Введите название структуры'
+                    : 'Изменения применены'}
+          </span>
+          {(autosave.status === 'error' || autosave.status === 'invalid') && (
+            <>
+              {autosave.status === 'error' && (
+                <button
+                  type="button"
+                  className="text-blue-600"
+                  onClick={() => void saveNow()}
+                >
+                  Повторить
+                </button>
+              )}
+              <button
+                type="button"
+                className="text-gray-500"
+                onClick={() => {
+                  const restored = autosave.discardChanges();
+                  setStructureName(restored.name);
+                  setFields(restored.fields);
+                  setView('list');
+                  void loadStructures();
+                }}
+              >
+                Вернуться к списку
+              </button>
+            </>
+          )}
+        </div>
       </div>
 
       <div className="px-8 py-8 overflow-y-auto flex-1">
@@ -528,7 +479,6 @@ export function ProtocolStructuresSection({
           type="text"
           value={structureName}
           onChange={(e) => {
-            isDirtyRef.current = true;
             setStructureName(e.target.value);
           }}
           placeholder="Введите название структуры"
@@ -651,57 +601,6 @@ export function ProtocolStructuresSection({
           onSelectCustom={addCustomField}
           onClose={() => setShowFieldPicker(false)}
         />
-      )}
-
-      {showConfirmClose && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-          <div className="animate-fade-in flex max-h-[calc(100dvh-32px)] w-full max-w-120 flex-col gap-5 overflow-y-auto rounded-2xl bg-white p-6 shadow-[var(--ui-shadow)] sm:p-8">
-            <div className="flex flex-col gap-[var(--ui-space-6)]">
-              <p className="text-[length:var(--ui-font-size-34)] font-medium text-center mb-5 ">
-                Вы действительно хотите закрыть?
-              </p>
-              <p className="mb-[var(--ui-space-32)]  text-[length:var(--ui-font-size-18)] text-center text-[var(--ui-color-alabaster-950)]">
-                Ваши изменения не сохранятся.
-              </p>
-            </div>
-            <div className="flex flex-col gap-3">
-              <button
-                type="button"
-                onClick={() => {
-                  setShowConfirmClose(false);
-                  if (pendingCloseTypeRef.current === 'popup') {
-                    save(() => onPopupClose?.());
-                  } else {
-                    save();
-                  }
-                }}
-                disabled={isSaving}
-                className="vismuth-button vismuth-button--primary w-full"
-              >
-                {isSaving ? (
-                  <div className="animate-spin mx-auto my- rounded-full h-5 w-5 border-b-2 border-white"></div>
-                ) : (
-                  'Сохранить'
-                )}
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setShowConfirmClose(false);
-                  isDirtyRef.current = false;
-                  if (pendingCloseTypeRef.current === 'popup') {
-                    onPopupClose?.();
-                  } else {
-                    setView('list');
-                  }
-                }}
-                className="vismuth-button vismuth-button--secondary w-full"
-              >
-                Закрыть без сохранения
-              </button>
-            </div>
-          </div>
-        </div>
       )}
     </>
   );

@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { toast } from 'react-toastify';
 import { mainApi, type ClinicRead } from '@/api';
+import { mutationApiClient } from '@/api/main-api';
 import { logWarn } from '@/lib/logger';
 import {
   EMPTY_CLINIC_DRAFT,
@@ -109,6 +110,7 @@ export const useClinicCard = (
       .finally(() => {
         if (mountedRef.current) setPending((count) => count - 1);
       });
+    return queueRef.current;
   }, []);
 
   const commitField = useCallback(
@@ -188,7 +190,36 @@ export const useClinicCard = (
     });
   }, [enqueue]);
 
+  const uploadLogo = useCallback(
+    (file: File) =>
+      enqueue(async () => {
+        const clinic = savedRef.current;
+        if (!clinic) return;
+        try {
+          const result = await mutationApiClient.put<{ logo_url: string }>(
+            `/clinics/${clinic.id}/logo`,
+            file,
+            { 'Content-Type': file.type },
+          );
+          savedRef.current = {
+            ...savedRef.current!,
+            logo_url: result.logo_url,
+          };
+          draftRef.current = { ...draftRef.current, logo_url: result.logo_url };
+          if (!mountedRef.current) return;
+          setSaved(savedRef.current);
+          setDraft(draftRef.current);
+          setFieldError('logo_url', null);
+        } catch {
+          if (mountedRef.current)
+            setFieldError('logo_url', 'Не удалось загрузить логотип');
+        }
+      }),
+    [enqueue],
+  );
+
   return {
+    uploadLogo,
     saved,
     draft,
     errors,

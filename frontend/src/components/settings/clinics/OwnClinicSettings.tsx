@@ -2,7 +2,9 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import type { MyClinicRead } from '@/api';
-import { apiClient } from '@/api/main-api';
+import { apiClient, mutationApiClient } from '@/api/main-api';
+import { ClinicLogoUpload } from './ClinicLogoUpload';
+import { SafeImage } from '@/components/SafeImage';
 import { useClinicMembers } from '@/hooks/useClinicMembers';
 import { useSpecializations } from '@/hooks/useSpecializations';
 import { ClinicMembers } from './ClinicMembers';
@@ -25,14 +27,18 @@ export function OwnClinicSettings({
     doctors_limit: number;
   } | null>(null);
   const [invite, setInvite] = useState(false);
+  const [logoUrl, setLogoUrl] = useState<string | null>(null);
   const [error, setError] = useState(false);
   const refresh = useCallback(() => {
     apiClient
-      .get<{ doctors_count: number; doctors_limit: number }>(
-        '/clinics/' + clinic.clinic_id,
-      )
+      .get<{
+        doctors_count: number;
+        doctors_limit: number;
+        logo_url: string | null;
+      }>('/clinics/' + clinic.clinic_id)
       .then((value) => {
         setLimit(value);
+        setLogoUrl(value.logo_url);
         setError(false);
       })
       .catch(() => setError(true));
@@ -58,6 +64,28 @@ export function OwnClinicSettings({
   };
   return (
     <ModalShell title={clinic.clinic_name} onClose={onClose}>
+      <div className="mb-6">
+        <h3 className="text-lg font-medium">Логотип клиники</h3>
+        {logoUrl && (
+          <SafeImage
+            src={logoUrl}
+            alt="Логотип клиники"
+            width={160}
+            height={64}
+            className="mt-2 h-16 w-auto object-contain"
+          />
+        )}
+        <ClinicLogoUpload
+          onUpload={async (file) => {
+            const result = await mutationApiClient.put<{ logo_url: string }>(
+              `/clinics/${clinic.clinic_id}/logo`,
+              file,
+              { 'Content-Type': file.type },
+            );
+            setLogoUrl(result.logo_url);
+          }}
+        />
+      </div>
       {onClinicalSettings && (
         <button
           type="button"

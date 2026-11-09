@@ -64,18 +64,6 @@ export interface TemplateUI extends ListsTemplatesResponse {
 
 const SIDEBAR_HIDE_THRESHOLD = 800;
 
-/**
- * Отступ колонки протокола, когда показано оглавление разделов.
- *
- * Оглавление — `fixed` шириной 250px с собственным отступом 25px, то есть
- * занимает первые 275px. Отступ колонки задаётся здесь целиком, без `gap`
- * у родителя: обёртка оглавления в потоке нулевой ширины, и разносить сдвиг
- * по двум свойствам значило бы считать зазор в двух местах сразу.
- *
- * 300px = 275px оглавления + 25px зазора. Прежние 339px плюс `gap-16`
- * складывались в 403px и оставляли около 128px пустоты, зря сужая текст.
- */
-const PROTOCOL_COLUMN_WITH_SIDEBAR = 'lg:ml-75 lg:w-full';
 const MIN_CLINREC_WIDTH = 300;
 const MAX_CLINREC_WIDTH = 900;
 const DEFAULT_CLINREC_WIDTH = 550;
@@ -709,7 +697,11 @@ export default function Home() {
     (sectionKey: string) => {
       const element = sectionRefs.current[sectionKey];
       if (element && sectionContainerEl) {
-        const offsetTop = element.offsetTop - 200;
+        const offsetTop =
+          sectionContainerEl.scrollTop +
+          element.getBoundingClientRect().top -
+          sectionContainerEl.getBoundingClientRect().top -
+          16;
         // Плавная прокрутка порождает поток событий scroll; без паузы
         // скролл-шпион тут же перебил бы явный выбор врача — особенно
         // в коротком протоколе, где нужный раздел не доходит до верха.
@@ -866,7 +858,8 @@ export default function Home() {
     <>
       <div
         data-print-hide
-        className="fixed ml-3 mr-5 left-0 top-20 custom-height w-85.75 flex flex-col bg-[var(--ui-color-slate-100)]"
+        data-protocol-list
+        className="fixed ml-3 mr-5 left-0 top-20 max-[1200px]:top-30 h-[calc(100dvh-100px)] max-[1200px]:h-[calc(100dvh-140px)] w-85.75 flex flex-col bg-[var(--ui-color-slate-100)]"
       >
         <div className="relative" ref={createMenuRef}>
           <button
@@ -1004,13 +997,13 @@ export default function Home() {
       </div>
 
       {isLoading && (
-        <div className="bg-white rounded-[var(--ui-radius-2xl)] ml-[var(--ui-space-64)] w-full max-w-372.75 py-[var(--ui-space-24)] flex flex-row gap-16">
+        <div className="bg-white rounded-[var(--ui-radius-2xl)] ml-93.5 mr-2 min-w-0 flex-1 py-[var(--ui-space-24)] flex flex-row gap-16">
           <div className="animate-spin mx-auto my-40 rounded-full h-10 w-10 border-b-2 border-[var(--ui-color-blue-600)]"></div>
         </div>
       )}
 
       {loadError && !isLoading && (
-        <div className="bg-white rounded-[var(--ui-radius-2xl)] ml-[var(--ui-space-64)] w-full max-w-372.75 py-[var(--ui-space-24)]">
+        <div className="bg-white rounded-[var(--ui-radius-2xl)] ml-93.5 mr-2 min-w-0 flex-1 py-[var(--ui-space-24)]">
           <p className="my-40 text-center text-[var(--ui-color-red-600)]">
             {loadError}
           </p>
@@ -1022,7 +1015,7 @@ export default function Home() {
           <div
             ref={setProtocolAreaEl}
             data-print-area
-            className={`bg-white rounded-[var(--ui-radius-2xl)] ml-[var(--ui-space-64)] flex-1 min-w-0 flex flex-col h-[calc(100vh-55px)] custom-scrollbar overflow-hidden ${showClinRecPanel || isTranscriptPanelOpen ? '' : 'mr-2'}`}
+            className={`bg-white rounded-[var(--ui-radius-2xl)] ml-93.5 flex-1 min-w-0 flex flex-col h-[calc(100dvh-100px)] max-[1200px]:h-[calc(100dvh-140px)] custom-scrollbar overflow-hidden ${showClinRecPanel || isTranscriptPanelOpen ? '' : 'mr-2'}`}
           >
             <div
               data-print-hide
@@ -1168,9 +1161,9 @@ export default function Home() {
               </div>
             </div>
 
-            <div className="py-[var(--ui-space-24)] flex flex-row pr-5 mr-2 overflow-hidden">
+            <div className="flex min-h-0 flex-1 flex-row py-[var(--ui-space-24)] pr-5 mr-2 overflow-hidden">
               {isSidebarVisible && (
-                <div data-print-hide>
+                <div data-print-hide className="w-75 shrink-0 px-6">
                   <Sidebar
                     sections={sidebarSections}
                     activeSection={activeSection}
@@ -1181,7 +1174,7 @@ export default function Home() {
               )}
 
               <div
-                className={`flex flex-col gap-9 overflow-x-hidden overflow-y-auto pr-2 ${isSidebarVisible ? PROTOCOL_COLUMN_WITH_SIDEBAR : 'w-full'}`}
+                className="flex min-w-0 flex-1 flex-col gap-9 overflow-x-hidden overflow-y-auto pr-2"
                 ref={setSectionContainerEl}
               >
                 <div className="text-[40px] pl-6 font-semibold bg-transparent border-0 focus:outline-none focus:ring-0 w-full">
@@ -1413,7 +1406,7 @@ export default function Home() {
               </div>
               <div
                 data-print-hide
-                className="mr-2 h-[calc(100vh-55px)] bg-white rounded-[var(--ui-radius-2xl)] flex flex-col overflow-hidden flex-shrink-0"
+                className="mr-2 h-[calc(100dvh-100px)] max-[1200px]:h-[calc(100dvh-140px)] bg-white rounded-[var(--ui-radius-2xl)] flex flex-col overflow-hidden flex-shrink-0"
                 style={{ width: clinRecPanelWidth }}
               >
                 <div className="flex items-start justify-between px-[var(--ui-space-24)] pt-5 border-[var(--ui-color-slate-200)]">
@@ -1519,7 +1512,7 @@ export default function Home() {
               </div>
               <div
                 data-print-hide
-                className="mr-2 h-[calc(100vh-55px)] bg-white rounded-[var(--ui-radius-2xl)] flex flex-col overflow-hidden flex-shrink-0"
+                className="mr-2 h-[calc(100dvh-100px)] max-[1200px]:h-[calc(100dvh-140px)] bg-white rounded-[var(--ui-radius-2xl)] flex flex-col overflow-hidden flex-shrink-0"
                 style={{ width: clinRecPanelWidth }}
               >
                 <TranscriptPanel

@@ -4,6 +4,7 @@ import { useId, useState, type KeyboardEvent } from 'react';
 import { ClinicConnectionPanel } from '@/components/clinic-join/ClinicConnectionPanel';
 import { CustomDropdown } from '@/components/CustomDropdown';
 import { SafeImage } from '@/components/SafeImage';
+import { ClinicLogoUpload } from './ClinicLogoUpload';
 import { useClinicCard } from '@/hooks/useClinicCard';
 import { useClinicMembers } from '@/hooks/useClinicMembers';
 import { useSpecializations } from '@/hooks/useSpecializations';
@@ -206,19 +207,24 @@ export const ClinicCard = ({ clinicId }: ClinicCardProps) => {
 
         <FieldRow
           label="Логотип"
-          hint="Ссылка на картинку"
+          hint="Загрузите файл или укажите ссылку на картинку"
           htmlFor={`${baseId}-logo`}
           error={errors.logo_url}
         >
           <input
             id={`${baseId}-logo`}
             type="url"
+            disabled={card.isSaving}
             value={draft.logo_url}
             onChange={(event) => card.setField('logo_url', event.target.value)}
             onBlur={() => card.commitField('logo_url')}
             onKeyDown={blurOnEnter}
             placeholder="https://…"
             className={`${INPUT_CLASS} ${fieldFillClass(draft.logo_url)}`}
+          />
+          <ClinicLogoUpload
+            onUpload={card.uploadLogo}
+            disabled={!saved || card.isSaving}
           />
           {saved?.logo_url && (
             <div

@@ -172,7 +172,7 @@ const SPEECH_TIMEOUT_MS = 60000;
 // отключение сотрудника. Без повторов: `retryCondition` повторяет сетевые
 // ошибки при любом методе, и обрыв связи создал бы вторую клинику или
 // отправил второе письмо.
-const mutationApiClient = new ApiClient({
+export const mutationApiClient = new ApiClient({
   baseUrl: '/api/main',
   timeout: 15000,
   retries: 0,

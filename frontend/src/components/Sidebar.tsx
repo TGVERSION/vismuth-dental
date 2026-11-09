@@ -34,8 +34,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
   };
 
   return (
-    <nav className="fixed w-62.5 flex-col ml-[var(--ui-space-24)] gap-6 hidden lg:flex">
-      <div className="sticky top-24">
+    <nav
+      aria-label="Разделы протокола"
+      className="custom-scrollbar flex h-full min-h-0 flex-col overflow-y-auto"
+    >
+      <div>
         <ul className="flex flex-col gap-4">
           {sections.map((section) => {
             const status = sectionStatus[section.id];

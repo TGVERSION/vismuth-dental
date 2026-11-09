@@ -2,7 +2,7 @@ from datetime import date, datetime, timezone
 from typing import List, Literal, Optional
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -44,6 +44,59 @@ from ..services.questionnaire_statistics import clinic_statistics, resolve_perio
 from ..services.roles import user_role_load_options, set_user_role
 
 router = APIRouter(tags=["clinic-admin"])
+
+
+@router.put('/clinics/{clinic_id}/logo')
+async def upload_clinic_logo(
+    clinic_id: UUID, request: Request,
+    _: ServiceUser = Depends(require_clinic_admin), db: AsyncSession = Depends(get_db),
+):
+    from asyncio import to_thread
+    from uuid import uuid4
+    from ..services.clinic_logo import MAX_LOGO_BYTES, normalize_logo, save_logo, logo_url, delete_logo
+    clinic = await get_clinic_or_404(db, clinic_id)
+    data = bytearray()
+    async for chunk in request.stream():
+        data.extend(chunk)
+        if len(data) > MAX_LOGO_BYTES:
+            raise HTTPException(413, 'Изображение должно быть не больше 5 МБ')
+    image = await to_thread(normalize_logo, bytes(data))
+    version = uuid4()
+    await to_thread(save_logo, clinic.id, version, image)
+    previous = clinic.logo_url
+    clinic.logo_url = logo_url(clinic.id, version)
+    clinic.updated_at = datetime.now(timezone.utc)
+    try:
+        await db.commit()
+    except Exception:
+        await to_thread(delete_logo, clinic_id, version)
+        raise
+    if previous:
+        try:
+            old_version = UUID(previous.rsplit('/', 1)[-1].removesuffix('.png'))
+        except ValueError:
+            old_version = None
+        if old_version and previous == logo_url(clinic_id, old_version):
+            await to_thread(delete_logo, clinic_id, old_version)
+    return {'logo_url': clinic.logo_url}
+
+
+@router.get('/public/clinic-logos/{clinic_id}/{version}.png')
+async def public_clinic_logo(clinic_id: UUID, version: UUID, db: AsyncSession = Depends(get_db)):
+    from asyncio import to_thread
+    from fastapi import Response
+    from ..models.clinic import Clinic
+    from ..services.clinic_logo import logo_url, read_logo
+    clinic = (await db.execute(select(Clinic).where(
+        Clinic.id == clinic_id, Clinic.deleted_at.is_(None),
+        Clinic.logo_url == logo_url(clinic_id, version),
+    ))).scalar_one_or_none()
+    if clinic is None:
+        raise HTTPException(404, 'Логотип недоступен')
+    image = await to_thread(read_logo, clinic_id, version)
+    return Response(image, media_type='image/png', headers={
+        'Cache-Control': 'public, max-age=86400', 'X-Content-Type-Options': 'nosniff',
+    })
 
 
 @router.get('/clinic-roles', summary='Роли сотрудников')

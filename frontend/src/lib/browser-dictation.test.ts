@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   DICTATION_TIMEOUT_MS,
+  DICTATION_RESTART_MS,
   recognitionConstructor,
   startDictation,
   type BrowserRecognition,
@@ -8,6 +9,7 @@ import {
 
 class Recognition implements BrowserRecognition {
   static latest: Recognition;
+  static session: ReturnType<typeof startDictation>;
   lang = '';
   continuous = true;
   interimResults = false;
@@ -27,17 +29,115 @@ class Recognition implements BrowserRecognition {
 }
 
 afterEach(() => {
-  Recognition.latest?.onend?.();
+  Recognition.session?.cancel();
   vi.useRealTimers();
 });
 const setup = () => {
   const text = vi.fn(),
     status = vi.fn();
   const session = startDictation(Recognition, text, status);
+  Recognition.session = session;
   return { text, status, session, rec: Recognition.latest };
 };
 
 describe('browser dictation', () => {
+  it('continues after a silence end without completing the recording', () => {
+    vi.useFakeTimers();
+    const { rec, text, status, session } = setup();
+    rec.result('Первая мысль');
+    const staleResult = rec.onresult,
+      staleEnd = rec.onend;
+    rec.onend?.();
+    expect(status).toHaveBeenLastCalledWith(expect.any(String), true);
+    vi.advanceTimersByTime(DICTATION_RESTART_MS);
+    const next = Recognition.latest;
+    expect(next).not.toBe(rec);
+    next.result('После паузы');
+    next.result('После паузы');
+    staleResult?.({
+      results: [{ isFinal: true, 0: { transcript: 'Не вставлять' } }],
+    });
+    staleEnd?.();
+    session.stop();
+    next.onend?.();
+    expect(text).toHaveBeenLastCalledWith('Первая мысль После паузы');
+    expect(status).toHaveBeenLastCalledWith(expect.any(String), false);
+  });
+
+  it('restarts after no-speech but backs off empty runs', () => {
+    vi.useFakeTimers();
+    const { rec, session, status } = setup();
+    rec.onerror?.({ error: 'no-speech' });
+    rec.onend?.();
+    vi.advanceTimersByTime(999);
+    expect(Recognition.latest).toBe(rec);
+    vi.advanceTimersByTime(1);
+    expect(Recognition.latest).not.toBe(rec);
+    expect(status).toHaveBeenLastCalledWith(expect.any(String), true);
+    session.cancel();
+  });
+
+  it.each(['stop', 'cancel'] as const)(
+    'does not restart after %s during a pause',
+    (action) => {
+      vi.useFakeTimers();
+      const { rec, session, status } = setup();
+      rec.result('Сохранённый фрагмент');
+      rec.onend?.();
+      session[action]();
+      vi.advanceTimersByTime(2000);
+      expect(Recognition.latest).toBe(rec);
+      expect(status).toHaveBeenLastCalledWith(expect.any(String), false);
+    },
+  );
+
+  it('preserves real repetitions across separate browser runs', () => {
+    vi.useFakeTimers();
+    const { rec, session, text } = setup();
+    rec.result('да');
+    rec.onend?.();
+    vi.advanceTimersByTime(DICTATION_RESTART_MS);
+    const next = Recognition.latest;
+    next.result('да');
+    session.stop();
+    next.onend?.();
+    expect(text).toHaveBeenLastCalledWith('да да');
+  });
+
+  it('keeps one overall deadline across restarts', () => {
+    vi.useFakeTimers();
+    const { rec, status } = setup();
+    vi.advanceTimersByTime(30_000);
+    rec.result('До паузы');
+    rec.onend?.();
+    vi.advanceTimersByTime(DICTATION_RESTART_MS);
+    const next = Recognition.latest;
+    vi.advanceTimersByTime(30_000 - DICTATION_RESTART_MS);
+    expect(next.abort).toHaveBeenCalledOnce();
+    expect(status).toHaveBeenLastCalledWith(
+      expect.stringContaining('времени'),
+      false,
+    );
+    vi.advanceTimersByTime(5000);
+    expect(Recognition.latest).toBe(next);
+  });
+
+  it('retains unconfirmed-tail warning across subsequent runs', () => {
+    vi.useFakeTimers();
+    const { rec, session, text, status } = setup();
+    rec.result('Первый фрагмент', false);
+    rec.onend?.();
+    vi.advanceTimersByTime(DICTATION_RESTART_MS);
+    const next = Recognition.latest;
+    next.result('продолжение');
+    session.stop();
+    next.onend?.();
+    expect(text).toHaveBeenLastCalledWith('Первый фрагмент продолжение');
+    expect(status).toHaveBeenLastCalledWith(
+      expect.stringContaining('не подтверждены'),
+      false,
+    );
+  });
   it('animates speech activity from the recognizer and clears it after cancel', () => {
     const activity = vi.fn();
     const session = startDictation(Recognition, vi.fn(), vi.fn(), activity);
@@ -67,7 +167,7 @@ describe('browser dictation', () => {
     ).toBe(Recognition);
   });
   it('starts synchronously in Russian, keeps interim separate and avoids repeated finals', () => {
-    const { text, status, rec } = setup();
+    const { text, status, rec, session } = setup();
     expect(rec.start).toHaveBeenCalledOnce();
     expect(rec.lang).toBe('ru-RU');
     expect(rec.continuous).toBe(true);
@@ -78,6 +178,7 @@ describe('browser dictation', () => {
     rec.result('Болит зуб');
     expect(text).toHaveBeenCalledOnce();
     expect(text).toHaveBeenCalledWith('Болит зуб');
+    session.stop();
     rec.onend?.();
     expect(status).toHaveBeenLastCalledWith(
       expect.stringContaining('Проверьте'),
@@ -141,7 +242,7 @@ describe('browser dictation', () => {
       });
     }
     const text = vi.fn();
-    startDictation(AndroidRecognition, text, vi.fn());
+    Recognition.session = startDictation(AndroidRecognition, text, vi.fn());
     expect(text).toHaveBeenCalledOnce();
     expect(text).toHaveBeenLastCalledWith(
       'верхние квадрат ничего не болит Нижний иногда побаливает где-то 3 месяца назад',
@@ -234,7 +335,6 @@ describe('browser dictation', () => {
     'network',
     'audio-capture',
     'service-not-allowed',
-    'no-speech',
     'unknown',
     'aborted',
   ])('recovers from %s without accepting late text', (error) => {
@@ -245,8 +345,9 @@ describe('browser dictation', () => {
     expect(status).toHaveBeenLastCalledWith(expect.any(String), false);
     expect(rec.abort).toHaveBeenCalledOnce();
   });
-  it('ends an empty session with a useful message', () => {
-    const { rec, status } = setup();
+  it('ends an explicitly stopped empty session with a useful message', () => {
+    const { rec, status, session } = setup();
+    session.stop();
     rec.onend?.();
     expect(status).toHaveBeenLastCalledWith(
       expect.stringContaining('услышать'),
@@ -271,7 +372,7 @@ describe('browser dictation', () => {
       }
     }
     const status = vi.fn();
-    startDictation(Broken, vi.fn(), status);
+    Recognition.session = startDictation(Broken, vi.fn(), status);
     expect(status).toHaveBeenLastCalledWith(
       expect.stringContaining('Не удалось'),
       false,
@@ -281,7 +382,7 @@ describe('browser dictation', () => {
         throw Error('failure');
       });
     }
-    startDictation(BrokenStart, vi.fn(), status);
+    Recognition.session = startDictation(BrokenStart, vi.fn(), status);
     expect(status).toHaveBeenLastCalledWith(
       expect.stringContaining('Не удалось'),
       false,

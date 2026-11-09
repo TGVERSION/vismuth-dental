@@ -45,7 +45,11 @@ const ERRORS: Record<string, string> = {
 let cancelActive: (() => void) | undefined;
 export const DICTATION_TIMEOUT_MS = 60_000;
 
-/** A user gesture starts dictation; the caller buffers final phrases until Stop. */
+export const DICTATION_RESTART_MS = 200;
+const EMPTY_RESTART_MS = 1000;
+const FINAL_WAIT_MS = 5000;
+
+/** One user recording may contain several browser runs, separated by silence. */
 export function startDictation(
   Recognition: RecognitionConstructor,
   onText: (text: string) => void,
@@ -54,121 +58,173 @@ export function startDictation(
 ) {
   cancelActive?.();
   let rec: BrowserRecognition | undefined;
-  let closed = false;
-  let transcript = '';
-  let hasInterim = false;
-  let published = '';
-  let stopping = false;
+  let closed = false,
+    stopping = false;
+  let prefix = '',
+    current = '',
+    published = '';
+  let prefixInterim = false,
+    currentInterim = false;
+  let restart: ReturnType<typeof setTimeout> | undefined;
+  let finalWait: ReturnType<typeof setTimeout> | undefined;
+  const transcript = () => [prefix, current].filter(Boolean).join(' ');
   const publish = () => {
-    if (transcript === published) return;
-    published = transcript;
-    onText(transcript);
+    const next = transcript();
+    if (next === published) return;
+    published = next;
+    onText(next);
   };
   const completedMessage = () =>
-    hasInterim && transcript
+    (prefixInterim || currentInterim) && transcript()
       ? 'Последние слова не подтверждены сервисом. Проверьте расшифровку перед отправкой.'
-      : transcript
+      : transcript()
         ? 'Текст добавлен. Проверьте ответ перед отправкой.'
         : ERRORS['no-speech'];
-  let timer: ReturnType<typeof setTimeout> | undefined;
+  const detach = (recognition: BrowserRecognition) => {
+    recognition.onstart =
+      recognition.onresult =
+      recognition.onerror =
+      recognition.onend =
+        null;
+    recognition.onspeechstart = recognition.onspeechend = null;
+  };
   const finish = (message: string, abort = false) => {
     if (closed) return;
-    // Cancel never publishes; other exits retain the latest draft for review.
     if (message) publish();
     if (closed) return;
     closed = true;
-    clearTimeout(timer);
+    clearTimeout(deadline);
+    clearTimeout(restart);
+    clearTimeout(finalWait);
     if (cancelActive === cancel) cancelActive = undefined;
     if (rec) {
-      rec.onstart = rec.onresult = rec.onerror = rec.onend = null;
-      rec.onspeechstart = rec.onspeechend = null;
+      detach(rec);
       if (abort) {
         try {
           rec.abort();
         } catch {
-          /* Already ended in the browser. */
+          /* Already ended. */
         }
       }
+      rec = undefined;
     }
     onSpeechActivity?.(false);
     onStatus(message, false);
   };
   const cancel = () => finish('', true);
-  cancelActive = cancel;
-  try {
-    rec = new Recognition();
-    rec.lang = 'ru-RU';
-    rec.continuous = true;
-    // Android continuous mode can label cumulative partials as final.
-    // The recording panel does not display partial words, so do not request them.
-    rec.interimResults = false;
-    rec.onstart = () => {
-      if (!closed) onStatus('Слушаю. Говорите.', true);
-    };
-    rec.onspeechstart = () => {
-      if (!closed) onSpeechActivity?.(true);
-    };
-    rec.onspeechend = () => {
-      if (!closed) onSpeechActivity?.(false);
-    };
-    rec.onresult = ({ results }) => {
-      if (closed) return;
-      const final: string[] = [],
-        interim: string[] = [];
-      for (let i = 0; i < results.length; i++) {
-        const result = results[i];
-        const phrase = result[0]?.transcript?.trim() ?? '';
-        (result.isFinal ? final : interim).push(phrase);
-      }
-      transcript = [...final, ...interim].filter(Boolean).join(' ');
-      hasInterim = interim.some(Boolean);
-      // The callback replaces the whole draft, never appends an event delta.
-      if (!hasInterim) publish();
-      if (closed) return;
-      onStatus(
-        stopping ? 'Завершаю распознавание…' : 'Слушаю. Говорите.',
-        true,
-      );
-    };
-    rec.onerror = ({ error }) =>
-      finish(
-        error === 'aborted'
-          ? 'Диктовка остановлена.'
-          : (ERRORS[error] ??
-              'Не удалось распознать речь. Введите ответ текстом.'),
-        true,
-      );
-    rec.onend = () => finish(completedMessage());
-    onStatus('Ожидаю микрофон…', true);
-    rec.start();
-    if (!closed)
-      timer = setTimeout(
-        () =>
-          finish(
-            'Диктовка завершена по времени. Можно запустить ещё раз.',
-            true,
-          ),
-        DICTATION_TIMEOUT_MS,
-      );
-  } catch {
-    finish(
-      'Не удалось запустить диктовку. Попробуйте ещё раз или введите ответ текстом.',
-      true,
+  const stop = () => {
+    if (closed || stopping) return;
+    stopping = true;
+    clearTimeout(restart);
+    clearTimeout(deadline);
+    onStatus('Завершаю распознавание…', true);
+    if (!rec) {
+      finish(completedMessage());
+      return;
+    }
+    finalWait = setTimeout(
+      () => finish(completedMessage(), true),
+      FINAL_WAIT_MS,
     );
-  }
-  return {
-    cancel,
-    stop: () => {
-      if (closed || stopping) return;
-      stopping = true;
-      onStatus('Завершаю распознавание…', true);
-      clearTimeout(timer);
-      timer = setTimeout(() => finish(completedMessage(), true), 5000);
-      try {
-        rec?.stop();
-      } catch {
-        finish('Диктовка остановлена.', true);
-      }
-    },
+    try {
+      rec.stop();
+    } catch {
+      finish('Диктовка остановлена.', true);
+    }
   };
+  const startRun = () => {
+    restart = undefined;
+    if (closed || stopping) return;
+    try {
+      const run = new Recognition();
+      rec = run;
+      current = '';
+      currentInterim = false;
+      const active = () => !closed && rec === run;
+      run.lang = 'ru-RU';
+      run.continuous = true;
+      // Android can mark cumulative partial hypotheses as separate final results.
+      run.interimResults = false;
+      run.onstart = () => {
+        if (active()) onStatus('Слушаю. Говорите.', true);
+      };
+      run.onspeechstart = () => {
+        if (active()) onSpeechActivity?.(true);
+      };
+      run.onspeechend = () => {
+        if (active()) onSpeechActivity?.(false);
+      };
+      run.onresult = ({ results }) => {
+        if (!active()) return;
+        const final: string[] = [],
+          interim: string[] = [];
+        for (let i = 0; i < results.length; i++) {
+          const result = results[i];
+          (result.isFinal ? final : interim).push(
+            result[0]?.transcript?.trim() ?? '',
+          );
+        }
+        current = [...final, ...interim].filter(Boolean).join(' ');
+        currentInterim = interim.some(Boolean);
+        if (!currentInterim) publish();
+        if (active())
+          onStatus(
+            stopping ? 'Завершаю распознавание…' : 'Слушаю. Говорите.',
+            true,
+          );
+      };
+      run.onerror = ({ error }) => {
+        if (!active()) return;
+        // Silence is an end of a browser run, not the user's recording.
+        if (error === 'no-speech') {
+          onSpeechActivity?.(false);
+          return;
+        }
+        finish(
+          error === 'aborted'
+            ? 'Диктовка остановлена.'
+            : (ERRORS[error] ??
+                'Не удалось распознать речь. Введите ответ текстом.'),
+          true,
+        );
+      };
+      run.onend = () => {
+        if (!active()) return;
+        detach(run);
+        rec = undefined;
+        onSpeechActivity?.(false);
+        if (stopping) {
+          finish(completedMessage());
+          return;
+        }
+        const hadText = Boolean(current);
+        prefix = transcript();
+        prefixInterim = prefixInterim || currentInterim;
+        current = '';
+        currentInterim = false;
+        publish();
+        if (closed || stopping) return;
+        onStatus('Слушаю. Можно продолжать после паузы.', true);
+        restart = setTimeout(
+          startRun,
+          hadText ? DICTATION_RESTART_MS : EMPTY_RESTART_MS,
+        );
+      };
+      onStatus('Ожидаю микрофон…', true);
+      run.start();
+    } catch {
+      finish(
+        'Не удалось запустить диктовку. Попробуйте ещё раз или введите ответ текстом.',
+        true,
+      );
+    }
+  };
+  cancelActive = cancel;
+  const deadline = setTimeout(
+    () =>
+      finish('Диктовка завершена по времени. Можно запустить ещё раз.', true),
+    DICTATION_TIMEOUT_MS,
+  );
+  startRun();
+  return { cancel, stop };
 }

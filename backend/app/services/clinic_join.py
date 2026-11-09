@@ -1,8 +1,11 @@
 from datetime import date, datetime, timezone
-from uuid import UUID
+from uuid import UUID, uuid4
+import hashlib
+import hmac
 from fastapi import HTTPException
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from ..config import settings
 from ..models.clinic import Clinic
 from ..models.clinic_join import ClinicJoinLink, ClinicJoinRequest
 from ..models.clinic_membership import ClinicMembership
@@ -37,11 +40,24 @@ async def lock_clinic(db, clinic_id):
     return clinic
 
 
+def displayed_join_token(link: ClinicJoinLink) -> str:
+    message = f'clinic-join-display:v1:{link.id}:{link.clinic_id}:{link.token_hash}'
+    signature = hmac.new(settings.jwt_secret.encode(), message.encode(), hashlib.sha256).hexdigest()
+    return f'{link.id.hex}.{signature}'
+
+
 async def load_join_link(db, token):
+    signed_id = None
+    if isinstance(token, str) and len(token) == 97 and token[32:33] == '.':
+        try:
+            signed_id = UUID(hex=token[:32])
+        except ValueError:
+            pass
     link = (await db.execute(select(ClinicJoinLink).where(
-        ClinicJoinLink.token_hash == hash_invite_token(token), ClinicJoinLink.revoked_at.is_(None),
+        (ClinicJoinLink.id == signed_id) if signed_id else (ClinicJoinLink.token_hash == hash_invite_token(token)),
+        ClinicJoinLink.revoked_at.is_(None),
     ))).scalar_one_or_none()
-    if link is None:
+    if link is None or (signed_id and not hmac.compare_digest(token.encode(), displayed_join_token(link).encode())):
         raise HTTPException(404, 'Ссылка подключения недоступна')
     clinic = await lock_clinic(db, link.clinic_id)
     # Lock in clinic -> link order, shared by rotation and request submission.
@@ -56,12 +72,26 @@ async def load_join_link(db, token):
 
 async def rotate_join_link(db, clinic_id, actor):
     clinic = await lock_clinic(db, clinic_id)
-    ensure_join_available(clinic)
+    if clinic.deleted_at is not None:
+        raise HTTPException(404, 'Клиника недоступна')
     await revoke_join_link(db, clinic_id, commit=False)
     token = generate_invite_token()
-    db.add(ClinicJoinLink(clinic_id=clinic_id, token_hash=hash_invite_token(token), created_by=actor.id))
+    link = ClinicJoinLink(id=uuid4(), clinic_id=clinic_id, token_hash=hash_invite_token(token), created_by=actor.id)
+    db.add(link)
     await db.commit()
-    return token
+    return displayed_join_token(link)
+
+
+async def current_join_token(db, clinic_id, actor):
+    clinic = await lock_clinic(db, clinic_id)
+    if clinic.deleted_at is not None:
+        raise HTTPException(404, 'Клиника недоступна')
+    link = (await db.execute(select(ClinicJoinLink).where(
+        ClinicJoinLink.clinic_id == clinic_id, ClinicJoinLink.revoked_at.is_(None),
+    ))).scalar_one_or_none()
+    if link is None:
+        return await rotate_join_link(db, clinic_id, actor)
+    return displayed_join_token(link)
 
 
 async def revoke_join_link(db, clinic_id, *, commit=True):

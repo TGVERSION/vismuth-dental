@@ -7,6 +7,7 @@ const publicClient = new ApiClient({
   auth: false,
   retries: 0,
 });
+const linkMutationClient = new ApiClient({ baseUrl: '/api/main', retries: 0 });
 export interface JoinRequest {
   id: string;
   clinic_id: string;
@@ -62,15 +63,13 @@ export const clinicJoinApi = {
   me: (options?: RequestOptions) =>
     apiClient.get<JoinState>('/clinic-join/me', undefined, options),
   link: (id: string) =>
-    apiClient.get<{ active: boolean }>(
+    apiClient.get<{ active: boolean; url: string }>(
       '/super-admin/clinics/' + id + '/join-link',
     ),
   issue: (id: string) =>
-    apiClient.post<{ active: boolean; url: string }>(
+    linkMutationClient.post<{ active: boolean; url: string }>(
       '/super-admin/clinics/' + id + '/join-link',
     ),
-  disable: (id: string) =>
-    apiClient.delete('/super-admin/clinics/' + id + '/join-link'),
   requests: (params: {
     clinic_id?: string;
     status?: string;

@@ -91,9 +91,9 @@ Accept / preview приглашения — публичные ручки в [au
 
 Только `super_admin` (без собственного membership):
 
-- `GET /super-admin/clinics/{clinic_id}/join-link` → active без raw token.
-- `POST .../join-link` → url и active=true; создаёт/перевыпускает ссылку, отключая прежнюю. URL доступен только в этом ответе; сервер хранит хэш.
-- `DELETE .../join-link` отключает ссылку. История заявок и memberships сохраняется.
+- `GET /super-admin/clinics/{clinic_id}/join-link` → active=true и url; под блокировкой создаёт отсутствующую ссылку, существующую не меняет. URL доступен после закрытия/перезагрузки.
+- `POST .../join-link` → url и active=true; явное обновление отключает прежние ссылки. Подписанный URL повторно доступен через GET; открытый токен в БД не хранится. Старые случайные ссылки сохраняются до обновления.
+- `DELETE .../join-link` удалён, кнопки «Отключить» нет. История заявок и memberships сохраняется.
 - `GET /super-admin/join-requests` → items/total; фильтры clinic_id, status (по умолчанию pending), page (1), page_size (50, максимум 100).
 - `POST /super-admin/join-requests/{id}/approve|reject` → рассмотренная заявка. Повтор того же решения идемпотентен, противоположное решение → `409`.
 

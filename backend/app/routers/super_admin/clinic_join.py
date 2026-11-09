@@ -9,28 +9,21 @@ from ...deps import require_roles
 from ...models.clinic_join import ClinicJoinLink, ClinicJoinRequest
 from ...models.service_user import ServiceUser
 from ...schemas.clinic_join import JoinRequestRead, JoinRequestList
-from ...services.clinic_join import lock_clinic, read_request, read_requests, review_join_request, revoke_join_link, rotate_join_link
+from ...services.clinic_join import current_join_token, read_request, read_requests, review_join_request, rotate_join_link
 
 router = APIRouter(prefix='/super-admin', tags=['super-admin-clinic-join'], dependencies=[Depends(require_roles('super_admin'))])
 
 
 @router.get('/clinics/{clinic_id}/join-link')
-async def link_status(clinic_id: UUID, db: AsyncSession = Depends(get_db)):
-    await lock_clinic(db, clinic_id)
-    link = (await db.execute(select(ClinicJoinLink.id).where(ClinicJoinLink.clinic_id == clinic_id, ClinicJoinLink.revoked_at.is_(None)))).scalar_one_or_none()
-    return {'active':link is not None}
+async def link_status(clinic_id: UUID, user: ServiceUser = Depends(require_roles('super_admin')), db: AsyncSession = Depends(get_db)):
+    token = await current_join_token(db, clinic_id, user)
+    return {'active':True, 'url':f'{settings.frontend_public_url.rstrip("/")}/clinic-join/{token}'}
 
 
 @router.post('/clinics/{clinic_id}/join-link')
 async def create_link(clinic_id: UUID, user: ServiceUser = Depends(require_roles('super_admin')), db: AsyncSession = Depends(get_db)):
     token = await rotate_join_link(db, clinic_id, user)
     return {'url':f'{settings.frontend_public_url.rstrip("/")}/clinic-join/{token}', 'active':True}
-
-
-@router.delete('/clinics/{clinic_id}/join-link')
-async def delete_link(clinic_id: UUID, db: AsyncSession = Depends(get_db)):
-    await revoke_join_link(db, clinic_id)
-    return {'active':False}
 
 
 @router.get('/join-requests', response_model=JoinRequestList)

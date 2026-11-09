@@ -99,6 +99,28 @@ async def public_clinic_logo(clinic_id: UUID, version: UUID, db: AsyncSession = 
     })
 
 
+@router.get('/public/doctor-photos/{membership_id}/{version}.png')
+async def public_doctor_photo(membership_id: UUID, version: UUID, db: AsyncSession = Depends(get_db)):
+    from asyncio import to_thread
+    from fastapi import Response
+    from ..models.clinic import Clinic
+    from ..services.doctor_photo import doctor_photo_url, read_doctor_photo
+    member = (await db.execute(select(ClinicMembership.id)
+        .join(Clinic, Clinic.id == ClinicMembership.clinic_id)
+        .join(ServiceUser, ServiceUser.id == ClinicMembership.user_id)
+        .where(ClinicMembership.id == membership_id,
+               ClinicMembership.photo_url == doctor_photo_url(membership_id, version),
+               ClinicMembership.is_doctor.is_(True), ClinicMembership.status == 'active',
+               ClinicMembership.deleted_at.is_(None), Clinic.deleted_at.is_(None),
+               ServiceUser.is_active.is_(True), ServiceUser.deleted_at.is_(None)))).scalar_one_or_none()
+    if member is None:
+        raise HTTPException(404, 'Фотография недоступна')
+    image = await to_thread(read_doctor_photo, membership_id, version)
+    return Response(image, media_type='image/png', headers={
+        'Cache-Control': 'public, max-age=86400', 'X-Content-Type-Options': 'nosniff',
+    })
+
+
 @router.get('/clinic-roles', summary='Роли сотрудников')
 async def staff_roles(_: ServiceUser = Depends(get_current_user)):
     from ..services.staff_roles import STAFF_ROLES

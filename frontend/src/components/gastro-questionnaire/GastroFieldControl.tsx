@@ -1,6 +1,7 @@
 'use client';
 
 import { useId } from 'react';
+import { PatientVoiceInput } from '@/components/questionnaire/PatientVoiceInput';
 import {
   toggleGastroChoice,
   type GastroField,
@@ -110,6 +111,25 @@ export function GastroFieldControl({
                   onChange(next);
                 }}
               />
+              <PatientVoiceInput
+                value={item}
+                disabled={disabled}
+                maxLength={Math.max(
+                  item.length,
+                  Math.min(
+                    field.item_max_length ?? 2000,
+                    (field.max_length ?? 20000) -
+                      selected.join('\n').length +
+                      item.length,
+                  ),
+                )}
+                scope={JSON.stringify([field.key, index, selected.length])}
+                onChange={(text) => {
+                  const next = selected.length ? [...selected] : [''];
+                  next[index] = text;
+                  onChange(next);
+                }}
+              />
               {selected.length > 1 ? (
                 <button
                   type="button"
@@ -146,7 +166,15 @@ export function GastroFieldControl({
           onChange={(event) => onChange(event.target.value)}
           placeholder={field.placeholder}
           rows={hideLabel ? 1 : (field.max_length ?? 1000) > 1000 ? 9 : 3}
-          onInput={hideLabel ? (event) => { const element = event.currentTarget; element.style.height = 'auto'; element.style.height = `${Math.min(element.scrollHeight, 144)}px`; } : undefined}
+          onInput={
+            hideLabel
+              ? (event) => {
+                  const element = event.currentTarget;
+                  element.style.height = 'auto';
+                  element.style.height = `${Math.min(element.scrollHeight, 144)}px`;
+                }
+              : undefined
+          }
           className={inputClass}
         />
       ) : (
@@ -169,6 +197,15 @@ export function GastroFieldControl({
           }
           placeholder={field.placeholder}
           className={inputClass}
+        />
+      )}
+      {(field.type === 'text' || field.type === 'multiline') && (
+        <PatientVoiceInput
+          value={textValue}
+          onChange={onChange}
+          disabled={disabled}
+          maxLength={field.max_length ?? 20000}
+          scope={field.key}
         />
       )}
       {(field.options ?? [])

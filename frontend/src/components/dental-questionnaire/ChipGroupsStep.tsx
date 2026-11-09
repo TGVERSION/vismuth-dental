@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import type { QuestionnaireStep, QuestionnaireStepAnswer } from '@/api';
+import { PatientVoiceInput } from '@/components/questionnaire/PatientVoiceInput';
 import { FIELD_CLASS } from '@/components/questionnaire/field-styles';
 import { ANSWER_MAX_LENGTH } from '@/lib/questionnaire';
 import {
@@ -199,6 +200,17 @@ const ChipGroup = ({
               ))}
             </div>
           ) : null}
+          {(!group.text.input_kind ||
+            group.text.input_kind === 'text' ||
+            useRawInput) && (
+            <PatientVoiceInput
+              value={text}
+              onChange={onText}
+              disabled={disabled}
+              maxLength={group.text.max_length ?? ANSWER_MAX_LENGTH}
+              scope={group.key}
+            />
+          )}
           {group.text.input_kind && group.text.input_kind !== 'text' ? (
             <>
               <input

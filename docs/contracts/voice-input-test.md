@@ -1,6 +1,6 @@
 # Проверка браузерной диктовки на телефонах
 
-Отдельная диагностическая страница: [открыть тест](https://anketa.vismuth.ru/api/main/public/voice-input-test). Backend-маршрут `GET /public/voice-input-test`, без JWT, отдаёт самостоятельный HTML через frontend rewrite. В рабочую анкету кнопка не добавлена.
+Отдельная диагностическая страница: [открыть тест](https://anketa.vismuth.ru/api/main/public/voice-input-test). Backend-маршрут `GET /public/voice-input-test`, без JWT, отдаёт самостоятельный HTML через frontend rewrite. Интеграция кнопки в пациентские анкеты описана в [questionnaire-public.md](questionnaire-public.md).
 
 Кнопка вызывает `SpeechRecognition` или `webkitSpeechRecognition` непосредственно внутри пользовательского нажатия. Язык `ru-RU`, одна фраза, промежуточные результаты отображаются; отдельного нажатия микрофона клавиатуры нет. Это проверка браузерного сервиса, своего распознавания/записи аудиофайла нет. Поддержка API сама по себе не доказывает работоспособность распознавания.
 

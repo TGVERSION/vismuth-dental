@@ -14,6 +14,7 @@ import {
   setGroupText,
 } from '@/lib/dental-questionnaire';
 import { useDentalDraft } from '@/hooks/useDentalDraft';
+import { PatientVoiceInput } from '@/components/questionnaire/PatientVoiceInput';
 import { SendIcon } from '@/components/questionnaire/icons';
 import {
   DentalAssistantMessage,
@@ -212,6 +213,13 @@ export const DentalConversationStep = ({
   ) : (
     <>
       <DentalError message={error} />
+      <PatientVoiceInput
+        value={value}
+        onChange={(text) => setValue(text)}
+        disabled={isSubmitting || !restored}
+        maxLength={maxLength}
+        scope={currentKey}
+      />
       <form
         className="q-composer flex items-end gap-2 bg-[var(--q-surface)] px-4 py-1"
         onSubmit={(e) => {

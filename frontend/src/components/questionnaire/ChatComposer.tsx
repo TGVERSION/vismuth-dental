@@ -12,6 +12,7 @@ import {
 } from '@/lib/questionnaire';
 import { useIsDesktop } from '@/hooks/useIsDesktop';
 import { SendIcon } from './icons';
+import { PatientVoiceInput } from './PatientVoiceInput';
 
 /** До скольких строк растёт поле ввода, прежде чем начать прокручиваться. */
 const MAX_INPUT_LINES = 6;
@@ -198,6 +199,15 @@ export const ChatComposer = ({
         </div>
       ) : null}
 
+      {!isLocked && (
+        <PatientVoiceInput
+          value={value}
+          onChange={handleChange}
+          disabled={isAwaiting}
+          maxLength={ANSWER_MAX_LENGTH}
+          scope={`${prompt.stepKey}:${prompt.text}`}
+        />
+      )}
       <form
         onSubmit={(event) => {
           event.preventDefault();
@@ -233,7 +243,7 @@ export const ChatComposer = ({
           // Шрифт не меньше 16px (`text-base`): мельче iOS при фокусе
           // масштабирует страницу, и подстройка экрана под клавиатуру
           // выключается (см. useVisualViewport).
-          className="q-chat-input custom-scrollbar flex-1 resize-none bg-transparent py-3 text-base outline-none disabled:opacity-60"
+          className="q-chat-input custom-scrollbar min-w-0 flex-1 resize-none bg-transparent py-3 text-base outline-none disabled:opacity-60"
         />
 
         <button

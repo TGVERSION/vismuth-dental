@@ -71,6 +71,7 @@ describe('browser dictation', () => {
     expect(rec.start).toHaveBeenCalledOnce();
     expect(rec.lang).toBe('ru-RU');
     expect(rec.continuous).toBe(true);
+    expect(rec.interimResults).toBe(false);
     rec.result('черновик', false);
     expect(text).not.toHaveBeenCalled();
     rec.result('Болит зуб');
@@ -92,7 +93,7 @@ describe('browser dictation', () => {
         { isFinal: true, 0: { transcript: 'Вторая' } },
       ],
     });
-    expect(text.mock.calls).toEqual([['Первая'], ['Вторая']]);
+    expect(text.mock.calls).toEqual([['Первая'], ['Первая Вторая']]);
   });
   it('stop waits for the final result', () => {
     const { rec, session, text } = setup();
@@ -100,6 +101,109 @@ describe('browser dictation', () => {
     expect(rec.stop).toHaveBeenCalledOnce();
     rec.result('Ответ');
     expect(text).toHaveBeenCalledWith('Ответ');
+  });
+
+  it('replaces corrected snapshots at the same index instead of retaining the first word', () => {
+    const { rec, text } = setup();
+    rec.result('верхние');
+    rec.result('верхние квадрат');
+    rec.result('верхние квадрат ничего не болит');
+    rec.result(
+      'верхние квадрат ничего не болит Нижний иногда побаливает где-то 3 месяца назад',
+    );
+    rec.onend?.();
+    expect(text).toHaveBeenLastCalledWith(
+      'верхние квадрат ничего не болит Нижний иногда побаливает где-то 3 месяца назад',
+    );
+  });
+
+  it('does not request Android cumulative partials from the reported example', () => {
+    class AndroidRecognition extends Recognition {
+      start = vi.fn(() => {
+        const prefixes = [
+          'верхние',
+          'верхние',
+          'верхние квадрат',
+          'верхние квадрат ничего',
+          'верхние квадрат ничего не болит',
+        ];
+        // Android maps requested partials to separate final entries in continuous mode.
+        if (this.interimResults)
+          this.onresult?.({
+            results: prefixes.map((transcript) => ({
+              isFinal: true,
+              0: { transcript },
+            })),
+          });
+        this.result(
+          'верхние квадрат ничего не болит Нижний иногда побаливает где-то 3 месяца назад',
+        );
+      });
+    }
+    const text = vi.fn();
+    startDictation(AndroidRecognition, text, vi.fn());
+    expect(text).toHaveBeenCalledOnce();
+    expect(text).toHaveBeenLastCalledWith(
+      'верхние квадрат ничего не болит Нижний иногда побаливает где-то 3 месяца назад',
+    );
+  });
+
+  it('keeps intentional repeated words and separate repeated phrases', () => {
+    const { rec, text } = setup();
+    rec.onresult?.({
+      results: [
+        { isFinal: true, 0: { transcript: 'да да' } },
+        { isFinal: true, 0: { transcript: 'да да' } },
+      ],
+    });
+    expect(text).toHaveBeenLastCalledWith('да да да да');
+  });
+
+  it('retains an unconfirmed tail with a warning if the provider never finalises it', () => {
+    const { rec, text, status, session } = setup();
+    rec.onresult?.({
+      results: [
+        { isFinal: true, 0: { transcript: 'Болит' } },
+        { isFinal: false, 0: { transcript: 'три месяца' } },
+      ],
+    });
+    session.stop();
+    rec.onend?.();
+    expect(text).toHaveBeenLastCalledWith('Болит три месяца');
+    expect(status).toHaveBeenLastCalledWith(
+      expect.stringContaining('не подтверждены'),
+      false,
+    );
+  });
+
+  it('uses the last final correction, including a shorter phrase', () => {
+    const { rec, text, session } = setup();
+    rec.result('Болит зуб и десна', false);
+    session.stop();
+    rec.result('Болит зуб');
+    rec.onend?.();
+    expect(text).toHaveBeenLastCalledWith('Болит зуб');
+  });
+
+  it('removes withdrawn interim words and replaces the previous snapshot', () => {
+    const { rec, text } = setup();
+    rec.result('Первый ответ');
+    rec.onresult?.({
+      results: [
+        { isFinal: true, 0: { transcript: 'Первый ответ' } },
+        { isFinal: false, 0: { transcript: 'лишний хвост' } },
+      ],
+    });
+    rec.result('Исправленный ответ');
+    rec.onend?.();
+    expect(text).toHaveBeenLastCalledWith('Исправленный ответ');
+  });
+
+  it('does not commit interim words when cancelled', () => {
+    const { rec, text, session } = setup();
+    rec.result('Не сохранять', false);
+    session.cancel();
+    expect(text).not.toHaveBeenCalled();
   });
 
   it('releases the microphone when the browser ignores stop', () => {

@@ -55,10 +55,26 @@ export function startDictation(
   cancelActive?.();
   let rec: BrowserRecognition | undefined;
   let closed = false;
-  let received = false;
-  const committed = new Set<number>();
+  let transcript = '';
+  let hasInterim = false;
+  let published = '';
+  let stopping = false;
+  const publish = () => {
+    if (transcript === published) return;
+    published = transcript;
+    onText(transcript);
+  };
+  const completedMessage = () =>
+    hasInterim && transcript
+      ? 'Последние слова не подтверждены сервисом. Проверьте расшифровку перед отправкой.'
+      : transcript
+        ? 'Текст добавлен. Проверьте ответ перед отправкой.'
+        : ERRORS['no-speech'];
   let timer: ReturnType<typeof setTimeout> | undefined;
   const finish = (message: string, abort = false) => {
+    if (closed) return;
+    // Cancel never publishes; other exits retain the latest draft for review.
+    if (message) publish();
     if (closed) return;
     closed = true;
     clearTimeout(timer);
@@ -83,7 +99,9 @@ export function startDictation(
     rec = new Recognition();
     rec.lang = 'ru-RU';
     rec.continuous = true;
-    rec.interimResults = true;
+    // Android continuous mode can label cumulative partials as final.
+    // The recording panel does not display partial words, so do not request them.
+    rec.interimResults = false;
     rec.onstart = () => {
       if (!closed) onStatus('Слушаю. Говорите.', true);
     };
@@ -99,21 +117,16 @@ export function startDictation(
         interim: string[] = [];
       for (let i = 0; i < results.length; i++) {
         const result = results[i];
-        if (result.isFinal && !committed.has(i)) {
-          committed.add(i);
-          final.push(result[0].transcript.trim());
-        } else if (!result.isFinal) interim.push(result[0].transcript);
+        const phrase = result[0]?.transcript?.trim() ?? '';
+        (result.isFinal ? final : interim).push(phrase);
       }
-      const text = final.filter(Boolean).join(' ');
-      if (text) {
-        received = true;
-        onText(text);
-      }
+      transcript = [...final, ...interim].filter(Boolean).join(' ');
+      hasInterim = interim.some(Boolean);
+      // The callback replaces the whole draft, never appends an event delta.
+      if (!hasInterim) publish();
       if (closed) return;
       onStatus(
-        interim.length
-          ? `Распознаю: ${interim.join(' ')}`
-          : 'Текст добавлен. Можно продолжать говорить или остановить.',
+        stopping ? 'Завершаю распознавание…' : 'Слушаю. Говорите.',
         true,
       );
     };
@@ -125,12 +138,7 @@ export function startDictation(
               'Не удалось распознать речь. Введите ответ текстом.'),
         true,
       );
-    rec.onend = () =>
-      finish(
-        received
-          ? 'Текст добавлен. Проверьте ответ перед отправкой.'
-          : ERRORS['no-speech'],
-      );
+    rec.onend = () => finish(completedMessage());
     onStatus('Ожидаю микрофон…', true);
     rec.start();
     if (!closed)
@@ -151,19 +159,11 @@ export function startDictation(
   return {
     cancel,
     stop: () => {
-      if (closed) return;
+      if (closed || stopping) return;
+      stopping = true;
       onStatus('Завершаю распознавание…', true);
       clearTimeout(timer);
-      timer = setTimeout(
-        () =>
-          finish(
-            received
-              ? 'Текст добавлен. Проверьте ответ перед отправкой.'
-              : ERRORS['no-speech'],
-            true,
-          ),
-        5000,
-      );
+      timer = setTimeout(() => finish(completedMessage(), true), 5000);
       try {
         rec?.stop();
       } catch {

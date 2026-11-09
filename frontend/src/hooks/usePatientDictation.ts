@@ -103,8 +103,7 @@ export function usePatientDictation(props: Props) {
     session.current = startDictation(
       Recognition,
       (text) => {
-        if (!recording.discarded)
-          recording.text += `${recording.text ? ' ' : ''}${text}`;
+        if (!recording.discarded) recording.text = text;
       },
       (status, active) => {
         if (attempt.current !== recording) return;

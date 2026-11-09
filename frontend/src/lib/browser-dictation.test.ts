@@ -57,7 +57,7 @@ describe('browser dictation', () => {
     const { text, status, rec } = setup();
     expect(rec.start).toHaveBeenCalledOnce();
     expect(rec.lang).toBe('ru-RU');
-    expect(rec.continuous).toBe(false);
+    expect(rec.continuous).toBe(true);
     rec.result('черновик', false);
     expect(text).not.toHaveBeenCalled();
     rec.result('Болит зуб');
@@ -87,6 +87,19 @@ describe('browser dictation', () => {
     expect(rec.stop).toHaveBeenCalledOnce();
     rec.result('Ответ');
     expect(text).toHaveBeenCalledWith('Ответ');
+  });
+
+  it('releases the microphone when the browser ignores stop', () => {
+    vi.useFakeTimers();
+    const { rec, session, status } = setup();
+    rec.result('Ответ');
+    session.stop();
+    vi.advanceTimersByTime(5000);
+    expect(rec.abort).toHaveBeenCalledOnce();
+    expect(status).toHaveBeenLastCalledWith(
+      expect.stringContaining('Проверьте'),
+      false,
+    );
   });
   it('cancels the preceding field and ignores already queued events', () => {
     const first = setup();

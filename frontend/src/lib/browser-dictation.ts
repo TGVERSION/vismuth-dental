@@ -43,7 +43,7 @@ const ERRORS: Record<string, string> = {
 let cancelActive: (() => void) | undefined;
 export const DICTATION_TIMEOUT_MS = 60_000;
 
-/** A single user gesture starts one phrase; interim words never enter the answer. */
+/** A user gesture starts dictation; the caller buffers final phrases until Stop. */
 export function startDictation(
   Recognition: RecognitionConstructor,
   onText: (text: string) => void,
@@ -77,7 +77,7 @@ export function startDictation(
   try {
     rec = new Recognition();
     rec.lang = 'ru-RU';
-    rec.continuous = false;
+    rec.continuous = true;
     rec.interimResults = true;
     rec.onstart = () => {
       if (!closed) onStatus('Слушаю. Говорите.', true);
@@ -142,6 +142,17 @@ export function startDictation(
     stop: () => {
       if (closed) return;
       onStatus('Завершаю распознавание…', true);
+      clearTimeout(timer);
+      timer = setTimeout(
+        () =>
+          finish(
+            received
+              ? 'Текст добавлен. Проверьте ответ перед отправкой.'
+              : ERRORS['no-speech'],
+            true,
+          ),
+        5000,
+      );
       try {
         rec?.stop();
       } catch {

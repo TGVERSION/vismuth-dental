@@ -1,6 +1,6 @@
 'use client';
 
-import { useId } from 'react';
+import { useId, useLayoutEffect, useRef } from 'react';
 import { PatientVoiceInput } from '@/components/questionnaire/PatientVoiceInput';
 import {
   toggleGastroChoice,
@@ -18,7 +18,7 @@ interface Props {
   hideLabel?: boolean;
 }
 
-const inputClass = 'q-field w-full outline-none';
+const inputClass = 'q-field min-w-0 w-full outline-none';
 
 export function GastroFieldControl({
   field,
@@ -31,6 +31,17 @@ export function GastroFieldControl({
   hideLabel = false,
 }: Props) {
   const id = useId();
+  const fieldset = useRef<HTMLFieldSetElement>(null);
+  useLayoutEffect(() => {
+    fieldset.current?.querySelectorAll('textarea').forEach((input) => {
+      if (input.offsetParent === null) return;
+      input.style.height = 'auto';
+      const style = getComputedStyle(input);
+      const border =
+        parseFloat(style.borderTopWidth) + parseFloat(style.borderBottomWidth);
+      input.style.height = `${Math.min(input.scrollHeight + border, 144)}px`;
+    });
+  }, [value]);
   const describedBy =
     [field.help && !hideLabel ? `${id}-help` : '', error ? `${id}-error` : '']
       .filter(Boolean)
@@ -50,6 +61,7 @@ export function GastroFieldControl({
 
   return (
     <fieldset
+      ref={fieldset}
       disabled={disabled}
       className="min-w-0 space-y-3"
       aria-describedby={describedBy}
@@ -69,145 +81,149 @@ export function GastroFieldControl({
           {field.help}
         </p>
       ) : null}
-      {field.type === 'single' || field.type === 'multi' ? (
-        <div className="flex flex-wrap gap-2">
-          {(field.options ?? []).map((option) => (
-            <label
-              key={option.value}
-              className={`flex min-h-12 cursor-pointer items-center gap-3 rounded-xl border px-4 py-3 text-base leading-snug has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-[var(--q-brand)] ${selected.includes(option.value) ? 'border-[var(--q-brand)] bg-[var(--q-surface)] font-medium' : 'border-[var(--q-border)] bg-[var(--q-bg)]'}`}
-            >
-              <input
-                type={field.type === 'single' ? 'radio' : 'checkbox'}
-                name={`${id}-${field.key}`}
-                value={option.value}
-                checked={selected.includes(option.value)}
-                onChange={() =>
-                  onChange(toggleGastroChoice(field, selected, option.value))
-                }
-                className="h-[var(--ui-size-checkbox-m)] w-[var(--ui-size-checkbox-m)] shrink-0 accent-[var(--q-brand)]"
-              />
-              <span>{option.label}</span>
-            </label>
-          ))}
-        </div>
-      ) : field.type === 'list' ? (
-        <div className="space-y-3">
-          {(selected.length ? selected : ['']).map((item, index) => (
-            <div key={index} className="space-y-1">
-              <label htmlFor={`${id}-${index}`} className="text-sm font-medium">
-                Вопрос {index + 1}
-              </label>
-              <textarea
-                id={`${id}-${index}`}
-                value={item}
-                rows={2}
-                placeholder="Напишите свой вопрос"
-                className={inputClass}
-                aria-invalid={Boolean(error)}
-                aria-describedby={describedBy}
-                onChange={(event) => {
-                  const next = selected.length ? [...selected] : [''];
-                  next[index] = event.target.value;
-                  onChange(next);
-                }}
-              />
-              <PatientVoiceInput
-                value={item}
-                disabled={disabled}
-                maxLength={Math.max(
-                  item.length,
-                  Math.min(
-                    field.item_max_length ?? 2000,
-                    (field.max_length ?? 20000) -
-                      selected.join('\n').length +
-                      item.length,
-                  ),
-                )}
-                scope={JSON.stringify([field.key, index, selected.length])}
-                onChange={(text) => {
-                  const next = selected.length ? [...selected] : [''];
-                  next[index] = text;
-                  onChange(next);
-                }}
-              />
-              {selected.length > 1 ? (
-                <button
-                  type="button"
-                  className="min-h-11 px-2 text-sm underline underline-offset-4"
-                  onClick={() =>
-                    onChange(selected.filter((_, i) => i !== index))
+      <div
+        className={
+          field.type === 'text' || field.type === 'multiline'
+            ? 'q-voice-field flex items-center gap-1 rounded-xl bg-[var(--q-surface)]'
+            : undefined
+        }
+      >
+        {field.type === 'single' || field.type === 'multi' ? (
+          <div className="flex flex-wrap gap-2">
+            {(field.options ?? []).map((option) => (
+              <label
+                key={option.value}
+                className={`flex min-h-12 cursor-pointer items-center gap-3 rounded-xl border px-4 py-3 text-base leading-snug has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-[var(--q-brand)] ${selected.includes(option.value) ? 'border-[var(--q-brand)] bg-[var(--q-surface)] font-medium' : 'border-[var(--q-border)] bg-[var(--q-bg)]'}`}
+              >
+                <input
+                  type={field.type === 'single' ? 'radio' : 'checkbox'}
+                  name={`${id}-${field.key}`}
+                  value={option.value}
+                  checked={selected.includes(option.value)}
+                  onChange={() =>
+                    onChange(toggleGastroChoice(field, selected, option.value))
                   }
-                  aria-label={`Удалить вопрос ${index + 1}`}
+                  className="h-[var(--ui-size-checkbox-m)] w-[var(--ui-size-checkbox-m)] shrink-0 accent-[var(--q-brand)]"
+                />
+                <span>{option.label}</span>
+              </label>
+            ))}
+          </div>
+        ) : field.type === 'list' ? (
+          <div className="space-y-3">
+            {(selected.length ? selected : ['']).map((item, index) => (
+              <div key={index} className="space-y-1">
+                <label
+                  htmlFor={`${id}-${index}`}
+                  className="text-sm font-medium"
                 >
-                  Удалить
-                </button>
-              ) : null}
-            </div>
-          ))}
-          <button
-            type="button"
-            disabled={selected.length >= (field.max_items ?? 30)}
-            data-variant="outline"
-            className="q-button"
-            onClick={() =>
-              onChange([...(selected.length ? selected : ['']), ''])
+                  Вопрос {index + 1}
+                </label>
+                <div className="q-voice-field flex items-center gap-1 rounded-xl bg-[var(--q-surface)]">
+                  <textarea
+                    id={`${id}-${index}`}
+                    value={item}
+                    rows={1}
+                    placeholder="Напишите свой вопрос"
+                    className={inputClass}
+                    aria-invalid={Boolean(error)}
+                    aria-describedby={describedBy}
+                    onChange={(event) => {
+                      const next = selected.length ? [...selected] : [''];
+                      next[index] = event.target.value;
+                      onChange(next);
+                    }}
+                  />
+                  <PatientVoiceInput
+                    value={item}
+                    disabled={disabled}
+                    maxLength={Math.max(
+                      item.length,
+                      Math.min(
+                        field.item_max_length ?? 2000,
+                        (field.max_length ?? 20000) -
+                          selected.join('\n').length +
+                          item.length,
+                      ),
+                    )}
+                    scope={JSON.stringify([field.key, index, selected.length])}
+                    onChange={(text) => {
+                      const next = selected.length ? [...selected] : [''];
+                      next[index] = text;
+                      onChange(next);
+                    }}
+                  />
+                </div>
+                {selected.length > 1 ? (
+                  <button
+                    type="button"
+                    className="min-h-11 px-2 text-sm underline underline-offset-4"
+                    onClick={() =>
+                      onChange(selected.filter((_, i) => i !== index))
+                    }
+                    aria-label={`Удалить вопрос ${index + 1}`}
+                  >
+                    Удалить
+                  </button>
+                ) : null}
+              </div>
+            ))}
+            <button
+              type="button"
+              disabled={selected.length >= (field.max_items ?? 30)}
+              data-variant="outline"
+              className="q-button"
+              onClick={() =>
+                onChange([...(selected.length ? selected : ['']), ''])
+              }
+            >
+              Добавить вопрос
+            </button>
+          </div>
+        ) : field.type === 'multiline' ? (
+          <textarea
+            id={id}
+            aria-label={field.label}
+            aria-invalid={Boolean(error)}
+            aria-describedby={describedBy}
+            value={textValue}
+            onChange={(event) => onChange(event.target.value)}
+            placeholder={field.placeholder}
+            rows={1}
+            className={inputClass}
+          />
+        ) : (
+          <input
+            id={id}
+            type={field.type === 'date' ? 'date' : 'text'}
+            aria-label={field.label}
+            aria-invalid={Boolean(error)}
+            aria-describedby={describedBy}
+            value={textValue}
+            onChange={(event) => onChange(event.target.value)}
+            min={field.type === 'date' ? (dateMin ?? undefined) : undefined}
+            max={field.type === 'date' ? (dateMax ?? undefined) : undefined}
+            autoComplete={
+              field.key === 'first_name'
+                ? 'given-name'
+                : field.key === 'middle_name'
+                  ? 'additional-name'
+                  : 'off'
             }
-          >
-            Добавить вопрос
-          </button>
-        </div>
-      ) : field.type === 'multiline' ? (
-        <textarea
-          id={id}
-          aria-label={field.label}
-          aria-invalid={Boolean(error)}
-          aria-describedby={describedBy}
-          value={textValue}
-          onChange={(event) => onChange(event.target.value)}
-          placeholder={field.placeholder}
-          rows={hideLabel ? 1 : (field.max_length ?? 1000) > 1000 ? 9 : 3}
-          onInput={
-            hideLabel
-              ? (event) => {
-                  const element = event.currentTarget;
-                  element.style.height = 'auto';
-                  element.style.height = `${Math.min(element.scrollHeight, 144)}px`;
-                }
-              : undefined
-          }
-          className={inputClass}
-        />
-      ) : (
-        <input
-          id={id}
-          type={field.type === 'date' ? 'date' : 'text'}
-          aria-label={field.label}
-          aria-invalid={Boolean(error)}
-          aria-describedby={describedBy}
-          value={textValue}
-          onChange={(event) => onChange(event.target.value)}
-          min={field.type === 'date' ? (dateMin ?? undefined) : undefined}
-          max={field.type === 'date' ? (dateMax ?? undefined) : undefined}
-          autoComplete={
-            field.key === 'first_name'
-              ? 'given-name'
-              : field.key === 'middle_name'
-                ? 'additional-name'
-                : 'off'
-          }
-          placeholder={field.placeholder}
-          className={inputClass}
-        />
-      )}
-      {(field.type === 'text' || field.type === 'multiline') && (
-        <PatientVoiceInput
-          value={textValue}
-          onChange={onChange}
-          disabled={disabled}
-          maxLength={field.max_length ?? 20000}
-          scope={field.key}
-        />
-      )}
+            placeholder={field.placeholder}
+            className={inputClass}
+          />
+        )}
+        {(field.type === 'text' || field.type === 'multiline') && (
+          <PatientVoiceInput
+            value={textValue}
+            onChange={onChange}
+            disabled={disabled}
+            maxLength={field.max_length ?? 20000}
+            scope={field.key}
+          />
+        )}
+      </div>
       {(field.options ?? [])
         .filter((option) => selected.includes(option.value) && option.warning)
         .map((option) => (

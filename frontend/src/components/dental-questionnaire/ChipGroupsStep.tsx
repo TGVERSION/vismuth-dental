@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useLayoutEffect, useRef, useState } from 'react';
 import type { QuestionnaireStep, QuestionnaireStepAnswer } from '@/api';
 import { PatientVoiceInput } from '@/components/questionnaire/PatientVoiceInput';
 import { FIELD_CLASS } from '@/components/questionnaire/field-styles';
@@ -85,6 +85,16 @@ const ChipGroup = ({
   onText,
   disabled,
 }: ChipGroupProps) => {
+  const textArea = useRef<HTMLTextAreaElement>(null);
+  useLayoutEffect(() => {
+    const input = textArea.current;
+    if (!input || input.offsetParent === null) return;
+    input.style.height = 'auto';
+    const style = getComputedStyle(input);
+    const border =
+      parseFloat(style.borderTopWidth) + parseFloat(style.borderBottomWidth);
+    input.style.height = `${Math.min(input.scrollHeight + border, 144)}px`;
+  }, [text, showText]);
   const [expanded, setExpanded] = useState(Boolean(text));
   const [rawInput, setRawInput] = useState(
     Boolean(
@@ -200,36 +210,36 @@ const ChipGroup = ({
               ))}
             </div>
           ) : null}
-          {(!group.text.input_kind ||
-            group.text.input_kind === 'text' ||
-            useRawInput) && (
-            <PatientVoiceInput
-              value={text}
-              onChange={onText}
-              disabled={disabled}
-              maxLength={group.text.max_length ?? ANSWER_MAX_LENGTH}
-              scope={group.key}
-            />
-          )}
           {group.text.input_kind && group.text.input_kind !== 'text' ? (
             <>
-              <input
-                disabled={disabled}
-                type={
-                  group.text.input_kind === 'date' && !useRawInput
-                    ? 'date'
-                    : 'text'
-                }
-                inputMode={useRawInput ? 'text' : group.text.input_mode}
-                aria-labelledby={questionId}
-                aria-invalid={problem === 'text'}
-                aria-describedby={problem ? problemId : undefined}
-                value={text}
-                maxLength={group.text.max_length ?? ANSWER_MAX_LENGTH}
-                placeholder={group.text.placeholder}
-                onChange={(event) => onText(event.target.value)}
-                className={`${FIELD_CLASS} w-full`}
-              />
+              <div className="q-voice-field flex items-center gap-1 rounded-xl bg-[var(--q-surface)]">
+                <input
+                  disabled={disabled}
+                  type={
+                    group.text.input_kind === 'date' && !useRawInput
+                      ? 'date'
+                      : 'text'
+                  }
+                  inputMode={useRawInput ? 'text' : group.text.input_mode}
+                  aria-labelledby={questionId}
+                  aria-invalid={problem === 'text'}
+                  aria-describedby={problem ? problemId : undefined}
+                  value={text}
+                  maxLength={group.text.max_length ?? ANSWER_MAX_LENGTH}
+                  placeholder={group.text.placeholder}
+                  onChange={(event) => onText(event.target.value)}
+                  className={`${FIELD_CLASS} min-w-0 w-full`}
+                />
+                {useRawInput && (
+                  <PatientVoiceInput
+                    value={text}
+                    onChange={onText}
+                    disabled={disabled}
+                    maxLength={group.text.max_length ?? ANSWER_MAX_LENGTH}
+                    scope={group.key}
+                  />
+                )}
+              </div>
               <button
                 type="button"
                 aria-label={
@@ -248,18 +258,32 @@ const ChipGroup = ({
               </button>
             </>
           ) : (
-            <textarea
-              disabled={disabled}
-              aria-labelledby={questionId}
-              aria-invalid={problem === 'text'}
-              aria-describedby={problem ? problemId : undefined}
-              value={text}
-              rows={2}
-              maxLength={group.text.max_length ?? ANSWER_MAX_LENGTH}
-              placeholder={group.text.placeholder}
-              onChange={(event) => onText(event.target.value)}
-              className={`${FIELD_CLASS} w-full resize-none py-3 focus:ring-2 focus:ring-[var(--q-brand)]`}
-            />
+            <div className="q-voice-field flex items-center gap-1 rounded-xl bg-[var(--q-surface)]">
+              <textarea
+                ref={textArea}
+                disabled={disabled}
+                aria-labelledby={questionId}
+                aria-invalid={problem === 'text'}
+                aria-describedby={problem ? problemId : undefined}
+                value={text}
+                rows={1}
+                maxLength={group.text.max_length ?? ANSWER_MAX_LENGTH}
+                placeholder={group.text.placeholder}
+                onChange={(event) => onText(event.target.value)}
+                className={`${FIELD_CLASS} min-w-0 w-full resize-none py-3 focus:ring-2 focus:ring-[var(--q-brand)]`}
+              />
+              {(!group.text.input_kind ||
+                group.text.input_kind === 'text' ||
+                useRawInput) && (
+                <PatientVoiceInput
+                  value={text}
+                  onChange={onText}
+                  disabled={disabled}
+                  maxLength={group.text.max_length ?? ANSWER_MAX_LENGTH}
+                  scope={group.key}
+                />
+              )}
+            </div>
           )}
         </>
       ) : null}

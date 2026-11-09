@@ -199,21 +199,12 @@ export const ChatComposer = ({
         </div>
       ) : null}
 
-      {!isLocked && (
-        <PatientVoiceInput
-          value={value}
-          onChange={handleChange}
-          disabled={isAwaiting}
-          maxLength={ANSWER_MAX_LENGTH}
-          scope={`${prompt.stepKey}:${prompt.text}`}
-        />
-      )}
       <form
         onSubmit={(event) => {
           event.preventDefault();
           submit();
         }}
-        className="flex items-end gap-2 rounded-2xl bg-[var(--q-surface)] px-4 py-1"
+        className="q-voice-field flex items-center gap-2 rounded-2xl bg-[var(--q-surface)] px-4 py-1"
       >
         <textarea
           ref={textareaRef}
@@ -246,15 +237,23 @@ export const ChatComposer = ({
           className="q-chat-input custom-scrollbar min-w-0 flex-1 resize-none bg-transparent py-3 text-base outline-none disabled:opacity-60"
         />
 
-        <button
-          type="submit"
-          onMouseDown={keepInputFocus}
-          disabled={!canSend}
-          aria-label="Отправить"
-          className="mb-1 flex h-11 w-11 shrink-0 items-center justify-center text-[var(--q-accent)] disabled:opacity-40"
+        <PatientVoiceInput
+          value={value}
+          onChange={handleChange}
+          disabled={isAwaiting || isLocked}
+          maxLength={ANSWER_MAX_LENGTH}
+          scope={JSON.stringify([prompt.stepKey, prompt.text])}
         >
-          <SendIcon className="h-6 w-6" />
-        </button>
+          <button
+            type="submit"
+            onMouseDown={keepInputFocus}
+            disabled={!canSend}
+            aria-label="Отправить"
+            className="flex h-11 w-11 shrink-0 items-center justify-center text-[var(--q-accent)] disabled:opacity-40"
+          >
+            <SendIcon className="h-6 w-6" />
+          </button>
+        </PatientVoiceInput>
       </form>
 
       {hint ? (

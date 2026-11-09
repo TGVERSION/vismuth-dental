@@ -125,6 +125,162 @@
     box-shadow: none;
   }
 
+  /* One line, microphone and Send share the same vertical centre. */
+  [data-questionnaire] .q-voice-field {
+    position: relative;
+    min-width: 0;
+    min-height: 56px;
+    align-items: center;
+  }
+
+  [data-questionnaire] .q-voice-field > textarea {
+    min-height: 48px;
+    margin: 0;
+    padding-block: 12px;
+    line-height: 24px;
+    box-sizing: border-box;
+  }
+
+  [data-questionnaire]
+    .q-voice-field:has([data-voice-recording='true'])
+    > textarea,
+  [data-questionnaire]
+    .q-voice-field:has([data-voice-recording='true'])
+    > input {
+    display: none;
+  }
+
+  [data-questionnaire] .q-voice-action {
+    position: relative;
+    display: inline-flex;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+  }
+
+  [data-questionnaire] .q-voice-control,
+  [data-questionnaire] .q-voice-action > button {
+    display: inline-flex;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    margin: 0;
+    border-radius: 50%;
+    color: var(--q-accent);
+    cursor: pointer;
+  }
+
+  [data-questionnaire] .q-voice-control:focus-visible {
+    outline: 2px solid var(--q-brand);
+    outline-offset: 2px;
+  }
+
+  [data-questionnaire] .q-voice-control:disabled {
+    opacity: 0.4;
+    cursor: default;
+  }
+
+  [data-questionnaire] .q-voice-mic {
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
+  }
+
+  [data-questionnaire] .q-voice-session {
+    position: relative;
+    display: flex;
+    flex: 1;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+    min-height: 48px;
+    padding-left: 8px;
+  }
+
+  [data-questionnaire] .q-voice-control.q-voice-mic-active {
+    color: var(--q-brand-contrast);
+    background: var(--q-brand);
+  }
+
+  [data-questionnaire] .q-voice-delete,
+  [data-questionnaire] .q-voice-indicator {
+    color: var(--ui-color-red-600);
+  }
+
+  [data-questionnaire] .q-voice-indicator {
+    flex-shrink: 0;
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: currentColor;
+    animation: q-voice-pulse 1.2s ease-in-out infinite;
+  }
+
+  [data-questionnaire] .q-voice-time {
+    font-size: 14px;
+    font-variant-numeric: tabular-nums;
+  }
+
+  [data-questionnaire] .q-voice-instruction {
+    flex: 1;
+    min-width: 0;
+    color: var(--q-muted);
+    font-size: 12px;
+    line-height: 16px;
+    text-align: center;
+  }
+
+  [data-questionnaire] .q-voice-lock {
+    position: absolute;
+    right: 0;
+    bottom: calc(100% + 8px);
+    display: flex;
+    align-items: center;
+    flex-direction: column;
+    gap: 12px;
+    width: 44px;
+    padding: 12px 0;
+    border: 1px solid var(--q-border);
+    border-radius: 24px;
+    color: var(--q-accent);
+    background: var(--q-bg);
+  }
+
+  [data-questionnaire] .q-voice-notice {
+    position: absolute;
+    right: 0;
+    bottom: calc(100% + 8px);
+    z-index: 20;
+    width: min(280px, calc(100vw - 48px));
+    padding: 12px;
+    border: 1px solid var(--q-border);
+    border-radius: 16px;
+    color: var(--q-text);
+    background: var(--q-bg);
+    font-size: 14px;
+    overflow-wrap: anywhere;
+  }
+
+  [data-questionnaire] .q-voice-dismiss {
+    display: block;
+    min-height: 44px;
+    color: var(--q-accent);
+  }
+
+  @keyframes q-voice-pulse {
+    50% {
+      opacity: 0.35;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    [data-questionnaire] .q-voice-indicator {
+      animation: none;
+    }
+  }
+
   [data-questionnaire] .q-choice {
     position: relative;
     min-height: var(--ui-size-btn-s);

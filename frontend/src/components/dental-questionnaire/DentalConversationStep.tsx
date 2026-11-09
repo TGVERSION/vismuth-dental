@@ -213,15 +213,8 @@ export const DentalConversationStep = ({
   ) : (
     <>
       <DentalError message={error} />
-      <PatientVoiceInput
-        value={value}
-        onChange={(text) => setValue(text)}
-        disabled={isSubmitting || !restored}
-        maxLength={maxLength}
-        scope={currentKey}
-      />
       <form
-        className="q-composer flex items-end gap-2 bg-[var(--q-surface)] px-4 py-1"
+        className="q-composer q-voice-field flex items-center gap-2 bg-[var(--q-surface)] px-4 py-1"
         onSubmit={(e) => {
           e.preventDefault();
           send();
@@ -248,21 +241,29 @@ export const DentalConversationStep = ({
           }}
           className="min-w-0 flex-1 resize-none bg-transparent py-3 text-base outline-none"
         />
-        <button
-          type="submit"
-          aria-label={
-            key === 'about.more' ? 'Отправить анкету' : 'Отправить ответ'
-          }
-          disabled={isSubmitting || !restored || !value.trim()}
-          onMouseDown={(e) => e.preventDefault()}
-          className="q-icon-button mb-1 flex shrink-0 items-center justify-center text-[var(--q-brand)] disabled:opacity-40"
+        <PatientVoiceInput
+          value={value}
+          onChange={(text) => setValue(text)}
+          disabled={isSubmitting || !restored}
+          maxLength={maxLength}
+          scope={currentKey}
         >
-          {isSubmitting ? (
-            <span className="h-5 w-5 animate-spin rounded-full border-2 border-current border-b-transparent" />
-          ) : (
-            <SendIcon className="h-6 w-6" />
-          )}
-        </button>
+          <button
+            type="submit"
+            aria-label={
+              key === 'about.more' ? 'Отправить анкету' : 'Отправить ответ'
+            }
+            disabled={isSubmitting || !restored || !value.trim()}
+            onMouseDown={(e) => e.preventDefault()}
+            className="q-icon-button flex shrink-0 items-center justify-center text-[var(--q-brand)] disabled:opacity-40"
+          >
+            {isSubmitting ? (
+              <span className="h-5 w-5 animate-spin rounded-full border-2 border-current border-b-transparent" />
+            ) : (
+              <SendIcon className="h-6 w-6" />
+            )}
+          </button>
+        </PatientVoiceInput>
       </form>
       {step.allow_skip || step.dental?.allow_empty ? (
         <button

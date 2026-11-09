@@ -8,6 +8,8 @@ export interface BrowserRecognition {
   continuous: boolean;
   interimResults: boolean;
   onstart: (() => void) | null;
+  onspeechstart?: (() => void) | null;
+  onspeechend?: (() => void) | null;
   onresult: ((event: { results: ArrayLike<RecognitionResult> }) => void) | null;
   onerror: ((event: { error: string }) => void) | null;
   onend: (() => void) | null;
@@ -48,6 +50,7 @@ export function startDictation(
   Recognition: RecognitionConstructor,
   onText: (text: string) => void,
   onStatus: (message: string, active: boolean) => void,
+  onSpeechActivity?: (speaking: boolean) => void,
 ) {
   cancelActive?.();
   let rec: BrowserRecognition | undefined;
@@ -62,6 +65,7 @@ export function startDictation(
     if (cancelActive === cancel) cancelActive = undefined;
     if (rec) {
       rec.onstart = rec.onresult = rec.onerror = rec.onend = null;
+      rec.onspeechstart = rec.onspeechend = null;
       if (abort) {
         try {
           rec.abort();
@@ -70,6 +74,7 @@ export function startDictation(
         }
       }
     }
+    onSpeechActivity?.(false);
     onStatus(message, false);
   };
   const cancel = () => finish('', true);
@@ -81,6 +86,12 @@ export function startDictation(
     rec.interimResults = true;
     rec.onstart = () => {
       if (!closed) onStatus('Слушаю. Говорите.', true);
+    };
+    rec.onspeechstart = () => {
+      if (!closed) onSpeechActivity?.(true);
+    };
+    rec.onspeechend = () => {
+      if (!closed) onSpeechActivity?.(false);
     };
     rec.onresult = ({ results }) => {
       if (closed) return;

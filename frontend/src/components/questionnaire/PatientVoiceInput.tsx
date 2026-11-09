@@ -70,12 +70,15 @@ function VoiceIcon({ kind }: { kind: 'mic' | 'stop' | 'trash' | 'lock' }) {
 
 export function PatientVoiceInput({ children, ...props }: Props) {
   const root = useRef<HTMLSpanElement>(null);
-  const setLevel = useCallback(
-    (level: number) =>
-      root.current?.style.setProperty('--voice-level', String(level)),
+  const setSpeechActivity = useCallback(
+    (speaking: boolean) =>
+      root.current?.style.setProperty('--voice-level', speaking ? '1' : '0'),
     [],
   );
-  const voice = usePatientDictation({ ...props, onLevel: setLevel });
+  const voice = usePatientDictation({
+    ...props,
+    onSpeechActivity: setSpeechActivity,
+  });
   const cancelDictation = voice.cancel;
   const id = useId();
   const pointer = useRef<{ id: number; x: number; y: number } | null>(null);

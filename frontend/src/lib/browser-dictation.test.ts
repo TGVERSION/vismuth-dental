@@ -38,6 +38,19 @@ const setup = () => {
 };
 
 describe('browser dictation', () => {
+  it('animates speech activity from the recognizer and clears it after cancel', () => {
+    const activity = vi.fn();
+    const session = startDictation(Recognition, vi.fn(), vi.fn(), activity);
+    const rec: BrowserRecognition = Recognition.latest;
+    rec.onspeechstart?.();
+    expect(activity).toHaveBeenLastCalledWith(true);
+    rec.onspeechend?.();
+    expect(activity).toHaveBeenLastCalledWith(false);
+    const late = rec.onspeechstart;
+    session.cancel();
+    late?.();
+    expect(activity).toHaveBeenLastCalledWith(false);
+  });
   it('selects prefixed API only in a secure context', () => {
     expect(
       recognitionConstructor({

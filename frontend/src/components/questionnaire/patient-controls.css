@@ -161,6 +161,7 @@
     --voice-drag-y: 0px;
     --voice-cancel: 0;
     --voice-lock: 0;
+    --voice-orb-shift: 0px;
     position: static;
     display: inline-flex;
     flex: 0 0 44px;
@@ -168,7 +169,14 @@
     justify-content: center;
     width: 44px;
     height: 44px;
-    margin-right: 10px;
+    /* A 24px glyph inside its 44px hit target has 10px of internal padding. */
+    margin-right: -10px;
+  }
+  [data-questionnaire] .q-voice-field:has(> .q-field) .q-voice-action {
+    margin-right: calc(var(--ui-space-14) + var(--ui-border-width-sm) - 10px);
+  }
+  [data-questionnaire] .q-voice-action[data-voice-recording='true'] {
+    --voice-orb-shift: -10px;
   }
   [data-questionnaire] .q-voice-control,
   [data-questionnaire] .q-voice-send > button {
@@ -216,7 +224,10 @@
     justify-content: center;
     color: var(--q-accent);
     opacity: 1;
-    transform: translate(var(--voice-drag-x), var(--voice-drag-y));
+    transform: translate(
+      calc(var(--voice-drag-x) + var(--voice-orb-shift)),
+      var(--voice-drag-y)
+    );
     transition:
       transform 240ms cubic-bezier(0.2, 0.9, 0.3, 1.2),
       opacity 180ms ease;
@@ -372,7 +383,7 @@
   }
   [data-questionnaire] .q-voice-lock {
     position: absolute;
-    right: var(--voice-control-right, 4px);
+    right: calc(var(--voice-control-right, 4px) + 10px);
     bottom: calc(100% + 16px);
     z-index: 3;
     display: flex;

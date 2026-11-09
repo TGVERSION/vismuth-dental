@@ -23,6 +23,13 @@ describe('getActiveNavItem', () => {
 });
 
 describe('раздел «Анкеты пациентов»', () => {
+  it('показывает протоколы врачу независимо от наличия анкет', () => {
+    expect(
+      getNavItems({ showRegistry: false, role: 'doctor', isDoctor: true }).map(
+        (i) => i.id,
+      ),
+    ).toEqual(['questionnaires', 'protocols']);
+  });
   it('открыт по своему пути и вложенным', () => {
     expect(getActiveNavItem('/registry')).toBe('registry');
     expect(getActiveNavItem('/registry/abc')).toBe('registry');

@@ -2,36 +2,17 @@
 
 import Image from 'next/image';
 import { useMemo } from 'react';
-import type { QuestionnaireVisitType } from '@/api';
-import {
-  CustomDropdown,
-  type DropdownOption,
-} from '@/components/CustomDropdown';
 import { DateField } from '@/components/DateField';
 import { formatDateLabel, formatDateNumeric } from '@/lib/calendar';
-import {
-  VISIT_TYPES,
-  doctorDateRange,
-  isVisitType,
-  visitTypeLabel,
-} from '@/lib/doctor-questionnaires';
+import { doctorDateRange } from '@/lib/doctor-questionnaires';
 import { fieldFillClass } from '@/lib/field-fill';
-
-const VISIT_TYPE_OPTIONS: DropdownOption<string>[] = [
-  { value: '', label: 'Все типы' },
-  ...VISIT_TYPES.map((type) => ({
-    value: type,
-    label: visitTypeLabel(type) ?? type,
-  })),
-];
 
 interface QuestionnaireFiltersProps {
   search: string;
   onSearchChange: (value: string) => void;
   date: string;
   onDateChange: (value: string) => void;
-  visitType: QuestionnaireVisitType | '';
-  onVisitTypeChange: (value: QuestionnaireVisitType | '') => void;
+  markedDates?: readonly string[];
 }
 
 /**
@@ -44,8 +25,7 @@ export const QuestionnaireFilters = ({
   onSearchChange,
   date,
   onDateChange,
-  visitType,
-  onVisitTypeChange,
+  markedDates,
 }: QuestionnaireFiltersProps) => {
   const range = useMemo(() => doctorDateRange(), []);
 
@@ -71,8 +51,9 @@ export const QuestionnaireFilters = ({
         />
       </label>
 
-      <div className="grid grid-cols-2 gap-3">
+      <div className="w-full">
         <DateField
+          markedDates={markedDates}
           value={date}
           onChange={onDateChange}
           min={range.min}
@@ -80,31 +61,6 @@ export const QuestionnaireFilters = ({
           formatValue={formatDateNumeric}
           popoverAlign="left"
           aria-label={`Дата приёма: ${formatDateLabel(date)}`}
-        />
-
-        <CustomDropdown<string>
-          options={VISIT_TYPE_OPTIONS}
-          value={visitType}
-          onChange={(value) =>
-            onVisitTypeChange(isVisitType(value) ? value : '')
-          }
-          placeholder="Тип приёма"
-          aria-label="Тип приёма"
-          triggerClassName={fieldFillClass(visitType)}
-          // Опция «Все типы» выбрана при пустом значении, и без своего
-          // триггера в поле стояло бы «Все типы», а не заглушка макета.
-          renderTrigger={(option) => {
-            const selected = Array.isArray(option) ? option[0] : option;
-            return selected?.value ? (
-              <span className="truncate text-sm text-[#202020]">
-                {selected.label}
-              </span>
-            ) : (
-              <span className="truncate text-sm text-[#A0A7B0]">
-                Тип приёма
-              </span>
-            );
-          }}
         />
       </div>
     </div>

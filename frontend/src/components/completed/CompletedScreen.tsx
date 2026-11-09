@@ -18,6 +18,7 @@ import { DateField } from '@/components/DateField';
 import { formatDateLabel, formatDateNumeric } from '@/lib/calendar';
 import { doctorDateRange } from '@/lib/doctor-questionnaires';
 import { toDateInputValue } from '@/lib/questionnaire';
+import { useQuestionnaireDates } from '@/hooks/useQuestionnaireDates';
 import { useCompletedQuestionnaireList } from '@/hooks/useCompletedQuestionnaireList';
 import { PatientLinkGenerator } from '@/components/doctor-questionnaires/PatientLinkGenerator';
 import { ModalShell } from '@/components/settings/clinics/ModalShell';
@@ -54,6 +55,16 @@ export function CompletedScreen() {
         .then(setClinics)
         .catch(() => setError('Не удалось загрузить клиники'));
   }, [superAdmin]);
+  const markedDates = useQuestionnaireDates(
+    scope,
+    Object.fromEntries(
+      Object.entries({
+        clinic_id: filters.clinic_id,
+        kind: filters.kind,
+        name: filters.name.trim(),
+      }).filter(([, value]) => value),
+    ),
+  );
   const list = useCompletedQuestionnaireList(scope, filters, refresh);
   const { items, loading, hasMore, error: listError, loadMore } = list;
   const sentinel = useRef<HTMLDivElement>(null);
@@ -211,6 +222,7 @@ export function CompletedScreen() {
             onChange={(e) => filter('name', e.target.value)}
           />
           <DateField
+            markedDates={markedDates}
             value={filters.date}
             onChange={(value) => filter('date', value)}
             min={dateRange.min}

@@ -90,7 +90,7 @@ def test_read_routers_are_scoped_to_platform_or_registry_dependency():
     from app.routers.super_admin.questionnaires import router as platform
     from app.routers.clinic_completed_questionnaires import router as registry
     from app.deps import require_clinic_registry
-    assert len(platform.routes) == 2 and len(registry.routes) == 2
+    assert len(platform.routes) == 3 and len(registry.routes) == 3
     for route in registry.routes:
         assert require_clinic_registry in [d.call for d in route.dependant.dependencies]
     for route in platform.routes:

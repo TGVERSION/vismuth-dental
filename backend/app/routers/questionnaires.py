@@ -3,7 +3,7 @@ from typing import Any, List, Optional
 from uuid import UUID
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, status
-from sqlalchemy import and_, func, or_, select
+from sqlalchemy import and_, case, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..db import get_db
@@ -256,6 +256,31 @@ async def list_questionnaires(
         )
         for q, spec_name in rows
     ]
+
+
+@router.get('/appointment-dates', response_model=list[date])
+async def appointment_dates(
+    date_from: date | None = None, date_to: date | None = None,
+    name: str | None = Query(default=None, max_length=255),
+    current_user: ServiceUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    membership = await get_active_doctor_membership(current_user, db)
+    if date_from and date_to and date_from > date_to:
+        raise HTTPException(422, 'date_from must not be after date_to')
+    day = case((Questionnaire.kind == 'dental', func.date(Questionnaire.completed_at)),
+               else_=Questionnaire.appointment_date)
+    stmt = select(day).where(_visible_to(membership), Questionnaire.status == 'completed', day.is_not(None))
+    if date_from:
+        stmt = stmt.where(day >= date_from)
+    if date_to:
+        stmt = stmt.where(day <= date_to)
+    if name and name.strip():
+        pattern = f'%{name.strip()}%'
+        stmt = stmt.where(or_(Questionnaire.patient_last_name.ilike(pattern),
+                              Questionnaire.patient_first_name.ilike(pattern),
+                              Questionnaire.patient_middle_name.ilike(pattern)))
+    return list((await db.execute(stmt.distinct().order_by(day))).scalars())
 
 
 @router.get(

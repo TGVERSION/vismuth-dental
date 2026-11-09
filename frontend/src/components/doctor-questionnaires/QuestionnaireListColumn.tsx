@@ -1,11 +1,9 @@
 'use client';
 
-import type {
-  DoctorQuestionnaireListItem,
-  QuestionnaireVisitType,
-} from '@/api';
+import type { DoctorQuestionnaireListItem } from '@/api';
 import type { QuestionnaireListError } from '@/hooks/useDoctorQuestionnaireList';
 import { formatDateLabel } from '@/lib/calendar';
+import { useMyClinic } from '@/hooks/useMyClinic';
 import { LinksQrButton } from './LinksQrButton';
 import { QuestionnaireFilters } from './QuestionnaireFilters';
 import { QuestionnaireListItem } from './QuestionnaireListItem';
@@ -15,8 +13,7 @@ interface QuestionnaireListColumnProps {
   onSearchChange: (value: string) => void;
   date: string;
   onDateChange: (value: string) => void;
-  visitType: QuestionnaireVisitType | '';
-  onVisitTypeChange: (value: QuestionnaireVisitType | '') => void;
+  markedDates: readonly string[];
   items: DoctorQuestionnaireListItem[];
   isInitialLoading: boolean;
   isLoading: boolean;
@@ -35,8 +32,7 @@ export const QuestionnaireListColumn = ({
   onSearchChange,
   date,
   onDateChange,
-  visitType,
-  onVisitTypeChange,
+  markedDates,
   items,
   isInitialLoading,
   isLoading,
@@ -45,7 +41,8 @@ export const QuestionnaireListColumn = ({
   selectedId,
   now,
 }: QuestionnaireListColumnProps) => {
-  const hasFilters = search.trim() !== '' || visitType !== '';
+  const { clinic } = useMyClinic();
+  const hasFilters = search.trim() !== '';
 
   const renderBody = () => {
     // На повторной загрузке прежние строки остаются на месте, но если их нет —
@@ -113,7 +110,7 @@ export const QuestionnaireListColumn = ({
       aria-label="Анкеты для врачей"
       className="custom-height fixed top-20 left-0 ml-3 mr-5 flex w-85.75 flex-col bg-[#F3F4F8]"
     >
-      <LinksQrButton />
+      {clinic?.is_clinic_admin && <LinksQrButton />}
 
       <div className="mt-6">
         <QuestionnaireFilters
@@ -121,8 +118,7 @@ export const QuestionnaireListColumn = ({
           onSearchChange={onSearchChange}
           date={date}
           onDateChange={onDateChange}
-          visitType={visitType}
-          onVisitTypeChange={onVisitTypeChange}
+          markedDates={markedDates}
         />
       </div>
 

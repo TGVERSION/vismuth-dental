@@ -8,7 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from ..db import get_db
 from ..deps import require_clinic_registry
 from ..schemas.completed_questionnaire import CompletedQuestionnaireDetail, CompletedQuestionnairePage
-from ..services.questionnaire_read import get_completed, list_completed
+from ..services.questionnaire_read import completed_dates, get_completed, list_completed
 
 router = APIRouter(prefix='/clinics/{clinic_id}/completed-questionnaires', tags=['clinic-questionnaires'],
                    dependencies=[Depends(require_clinic_registry)])
@@ -25,6 +25,18 @@ async def list_questionnaires(
 ):
     return await list_completed(db, clinic_id=clinic_id, kind=kind, name=name,
         date_from=date_from, date_to=date_to, page=page, page_size=page_size)
+
+
+@router.get('/appointment-dates', response_model=list[date])
+async def appointment_dates(
+    clinic_id: UUID,
+    kind: Literal['general', 'gastro', 'dental'] | None = None,
+    name: str | None = Query(default=None, max_length=255),
+    date_from: date | None = None, date_to: date | None = None,
+    db: AsyncSession = Depends(get_db),
+):
+    return await completed_dates(db, clinic_id=clinic_id, kind=kind, name=name,
+                                date_from=date_from, date_to=date_to)
 
 
 @router.get('/{questionnaire_id}', response_model=CompletedQuestionnaireDetail)

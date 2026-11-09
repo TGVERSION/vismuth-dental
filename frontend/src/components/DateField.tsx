@@ -24,6 +24,7 @@ export interface DateFieldProps {
   formatValue?: (value: string) => string;
   /** С какого края поля раскрывается календарь. */
   popoverAlign?: 'left' | 'right';
+  markedDates?: readonly string[];
   'aria-label'?: string;
 }
 
@@ -46,6 +47,7 @@ export const DateField = ({
   max,
   formatValue = formatDateLabel,
   popoverAlign = 'right',
+  markedDates = [],
   'aria-label': ariaLabel,
 }: DateFieldProps) => {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -175,13 +177,22 @@ export const DateField = ({
                     setIsOpen(false);
                   }}
                   aria-pressed={day.date === value}
-                  className={`h-8 cursor-pointer rounded-lg disabled:cursor-not-allowed disabled:text-[var(--ui-color-slate-300)] disabled:hover:bg-transparent ${
+                  title={
+                    markedDates.includes(day.date) ? 'Есть анкеты' : undefined
+                  }
+                  className={`relative h-8 cursor-pointer rounded-lg disabled:cursor-not-allowed disabled:text-[var(--ui-color-slate-300)] disabled:hover:bg-transparent ${
                     day.date === value
                       ? 'bg-[var(--ui-color-blue-600)] text-white'
                       : 'text-[var(--ui-color-alabaster-dark-800)] hover:bg-gray-100'
                   }`}
                 >
                   {day.day}
+                  {markedDates.includes(day.date) && (
+                    <span
+                      aria-label="Есть анкеты"
+                      className={`absolute right-0.5 top-0.5 h-1.5 w-1.5 rounded-full ring-1 ring-white ${day.date < todayIso ? 'bg-[var(--ui-color-slate-400)]' : 'bg-[var(--ui-color-blue-600)]'}`}
+                    />
+                  )}
                 </button>
               ) : (
                 <span key={`empty-${index}`} />

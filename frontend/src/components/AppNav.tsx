@@ -52,6 +52,7 @@ export const AppNav = () => {
   const base = getNavItems({
     showRegistry: role === 'super_admin' || canUseRegistry(clinic),
     role,
+    isDoctor: clinic?.is_doctor === true,
   });
   const items =
     role === 'super_admin'

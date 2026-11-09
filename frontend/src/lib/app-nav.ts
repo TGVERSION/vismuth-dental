@@ -42,13 +42,15 @@ export const canUseRegistry = (
   (clinic.questionnaire_kind === 'dental' ||
     clinic.questionnaire_kind === 'mixed');
 
-/** Стоматология — первой; протоколы временно показываем только супер-админу. */
+/** Стоматология — первой; врачебные инструменты зависят от членства. */
 export const getNavItems = ({
   showRegistry,
   role,
+  isDoctor = false,
 }: {
   showRegistry: boolean;
   role?: string | null;
+  isDoctor?: boolean;
 }): AppNavItem[] => {
   if (role === 'super_admin')
     return [
@@ -61,9 +63,7 @@ export const getNavItems = ({
       { id: 'protocols', label: 'Протоколы', href: '/' },
       { id: 'requests', label: 'Заявки', href: '/join-requests' },
     ];
-  const items = NAV_ITEMS.filter(
-    (item) => item.id !== 'protocols' || role === 'super_admin',
-  );
+  const items = NAV_ITEMS.filter((item) => item.id !== 'protocols' || isDoctor);
   return showRegistry ? [REGISTRY_ITEM, ...items] : items;
 };
 

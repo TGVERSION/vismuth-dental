@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useSearchParams } from 'next/navigation';
-import type { QuestionnaireVisitType } from '@/api';
+import { useQuestionnaireDates } from '@/hooks/useQuestionnaireDates';
 import { useDoctorQuestionnaire } from '@/hooks/useDoctorQuestionnaire';
 import { useDoctorQuestionnaireList } from '@/hooks/useDoctorQuestionnaireList';
 import { useNow } from '@/hooks/useNow';
@@ -22,10 +22,13 @@ export const QuestionnairesScreen = () => {
   const [search, setSearch] = useState('');
   // Дата выбрана всегда: её можно сменить, но не очистить.
   const [date, setDate] = useState(() => toDateInputValue(new Date()));
-  const [visitType, setVisitType] = useState<QuestionnaireVisitType | ''>('');
+  const markedDates = useQuestionnaireDates(
+    '/questionnaires',
+    search.trim() ? { name: search.trim() } : {},
+  );
 
   const now = useNow();
-  const list = useDoctorQuestionnaireList({ search, date, visitType });
+  const list = useDoctorQuestionnaireList({ search, date, visitType: '' });
   const questionnaire = useDoctorQuestionnaire(selectedId);
 
   const renderDetail = () => {
@@ -87,8 +90,7 @@ export const QuestionnairesScreen = () => {
         onSearchChange={setSearch}
         date={date}
         onDateChange={setDate}
-        visitType={visitType}
-        onVisitTypeChange={setVisitType}
+        markedDates={markedDates}
         items={list.items}
         isInitialLoading={list.isInitialLoading}
         isLoading={list.isLoading}

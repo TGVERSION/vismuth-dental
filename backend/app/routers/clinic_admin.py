@@ -8,7 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..config import settings
 from ..db import get_db
-from ..deps import get_current_user, require_clinic_admin, require_clinic_registry, require_patient_link_staff
+from ..deps import get_current_user, require_clinic_admin, require_clinic_registry
 from ..services.patient_link_context import PatientLinkSelection, encode_appointment, validate_appointment_date
 from ..models.clinic import Clinic
 from ..models.clinic_invitation import ClinicInvitation
@@ -620,7 +620,7 @@ async def deactivate_member(
 @router.get('/clinics/{clinic_id}/patient-links', response_model=ClinicPatientLinks)
 async def clinic_patient_links(
     clinic_id: UUID,
-    _: ServiceUser = Depends(require_patient_link_staff),
+    _: ServiceUser = Depends(require_clinic_registry),
     db: AsyncSession = Depends(get_db),
 ) -> ClinicPatientLinks:
     clinic = await get_clinic_or_404(db, clinic_id)
@@ -646,7 +646,7 @@ async def clinic_patient_links(
 
 @router.post('/clinics/{clinic_id}/patient-links')
 async def create_patient_link(clinic_id: UUID, payload: PatientLinkSelection,
-    _: ServiceUser = Depends(require_patient_link_staff), db: AsyncSession = Depends(get_db)):
+    _: ServiceUser = Depends(require_clinic_registry), db: AsyncSession = Depends(get_db)):
     clinic = await get_clinic_or_404(db, clinic_id)
     if clinic.questionnaire_kind not in {'general', 'mixed'}:
         raise HTTPException(400, 'Для этого направления нужны стоматологические приглашения')

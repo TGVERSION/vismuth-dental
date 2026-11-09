@@ -58,6 +58,13 @@ async def list_completed(db: AsyncSession, *, page=1, page_size=50, **filters):
     return CompletedQuestionnairePage(items=items, total=total, page=page, page_size=page_size)
 
 
+async def completed_dates(db: AsyncSession, **filters):
+    stmt = completed_query(**filters).with_only_columns(Questionnaire.appointment_date).where(
+        Questionnaire.appointment_date.is_not(None)
+    ).distinct().order_by(Questionnaire.appointment_date)
+    return list((await db.execute(stmt)).scalars())
+
+
 async def get_completed(db: AsyncSession, questionnaire_id: UUID, *, clinic_id=None):
     row = (await db.execute(completed_query(clinic_id=clinic_id).where(Questionnaire.id == questionnaire_id))).first()
     if row is None:

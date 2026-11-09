@@ -33,7 +33,11 @@ export const useAuth = () => {
 
       const userId = response.user.id;
       if (userId) fetchUserSettings(userId).catch(() => {});
-      router.push('/');
+      const clinic =
+        user.role === 'super_admin'
+          ? null
+          : await mainApi.myClinic.get().catch(() => null);
+      router.push(clinic?.is_doctor ? '/questionnaires' : '/');
 
       return { success: true };
     } catch (error) {

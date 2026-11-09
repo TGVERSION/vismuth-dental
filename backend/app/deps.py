@@ -92,23 +92,6 @@ async def require_clinic_registry(
     return current_user
 
 
-async def require_patient_link_staff(
-    clinic_id: UUID,
-    current_user: ServiceUser = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
-) -> ServiceUser:
-    if user_has_any_role(current_user, 'super_admin'):
-        return current_user
-    from .models.clinic import Clinic
-    membership = (await db.execute(select(ClinicMembership).join(Clinic, Clinic.id == ClinicMembership.clinic_id).where(
-        ClinicMembership.clinic_id == clinic_id, ClinicMembership.user_id == current_user.id,
-        ClinicMembership.status == 'active', ClinicMembership.deleted_at.is_(None), Clinic.deleted_at.is_(None),
-        (ClinicMembership.is_doctor.is_(True) | ClinicMembership.is_clinic_admin.is_(True) | ClinicMembership.is_operator.is_(True)),
-    ))).scalar_one_or_none()
-    if membership is None:
-        raise HTTPException(403, 'Clinic staff access required')
-    return current_user
-
 
 def require_roles(*role_names: str):
     async def _dependency(

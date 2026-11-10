@@ -23,11 +23,14 @@ export const dentalDraftBaseline = (step: QuestionnaireStep): string =>
   step.step_type === 'checklist'
     ? JSON.stringify([
         step.choices,
+        step.dental?.answers.health_comments?.[step.step_key] ?? '',
         scopedChecklistValues(step, draftForDentalStep(step)),
         step.dental?.answers.health_answered
           ? parseChecklist(step)
               .map((item) => item.value)
-              .filter((value) => step.dental?.answers.health_answered?.includes(value))
+              .filter((value) =>
+                step.dental?.answers.health_answered?.includes(value),
+              )
           : step.dental?.answers.health == null
             ? null
             : 'answered',

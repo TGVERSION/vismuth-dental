@@ -30,7 +30,7 @@ from .dental.flow import (
     apply_dental_answer,
     dental_step,
     STEP_REASON, STEP_PAIN, STEP_HEALTH, STEP_DETAILS, STEP_ABOUT, STEP_REVIEW,
-    DEFAULT_MAX_TEXT_LEN, has_pain,
+    DEFAULT_MAX_TEXT_LEN,
     _groups_for, _parse_group,
     dental_route, detail_pages, HEALTH_PAGE_KEYS, step_title,
 )
@@ -47,7 +47,13 @@ MAX_AI_CHOICES = 5
 
 
 def _dental_answers(questionnaire: Questionnaire) -> DentalAnswers:
-    return DentalAnswers.model_validate(questionnaire.dental_answers or {})
+    answers = DentalAnswers.model_validate(questionnaire.dental_answers or {})
+    if questionnaire.status != "completed" and questionnaire.current_step == STEP_PAIN:
+        # Одинаково восстанавливаем старый шаг при чтении и отправке ответа.
+        questionnaire.current_step = next(
+            (key for key in dental_route(answers)
+             if key != STEP_REASON and key not in answers.completed_steps), STEP_ABOUT)
+    return answers
 
 
 def _route(answers: DentalAnswers) -> list[str]:
@@ -259,6 +265,23 @@ async def apply_dental(
     if questionnaire.status != "in_progress":
         raise HTTPException(status_code=409, detail="Questionnaire already completed")
     updated_revision = previous.revision + 1
+    if choice == "form:back":
+        if selections or texts or none_answer or skip:
+            raise HTTPException(status_code=400, detail="Возврат не должен содержать ответ")
+        editable = _editable_steps(questionnaire, previous)
+        if not editable:
+            raise HTTPException(status_code=400, detail="Предыдущий раздел недоступен")
+        previous = previous.model_copy(update={"form_mode": True})
+        choice = "edit:" + editable[-1]
+    elif choice == "form":
+        previous = previous.model_copy(update={"form_mode": True})
+        choice = None
+        if step_key == STEP_HEALTH or step_key in HEALTH_PAGE_KEYS:
+            try:
+                previous, _, selections, texts, none_answer = prepare_question_answer(
+                    step_key, previous, 'health', selections, texts, none_answer)
+            except DentalAnswerError as exc:
+                raise HTTPException(status_code=400, detail=str(exc)) from exc
     if choice and choice.startswith('question:'):
         if skip and step_key != AI_STEP:
             raise HTTPException(status_code=400, detail='Пропуск недоступен на этом шаге')
@@ -339,7 +362,15 @@ async def apply_dental(
         if next_step == STEP_REVIEW and any(key not in completed_steps for key in _route(answers)):
             # Повреждённый/неполный JSON не должен завершиться через последний экран.
             raise HTTPException(status_code=400, detail="Заполните все обязательные страницы")
-        next_step = next((key for key in _route(answers) if key not in completed_steps), STEP_REVIEW)
+        route = _route(answers)
+        missing = next((key for key in route if key not in completed_steps), STEP_REVIEW)
+        if answers.form_mode and next_step != STEP_REVIEW:
+            # В форме «Далее» открывает соседний раздел, даже если он уже заполнен.
+            # При изменении условий нельзя перескочить через новое уточнение.
+            if missing != STEP_REVIEW and route.index(missing) < route.index(next_step):
+                next_step = missing
+        else:
+            next_step = missing
     else:
         completed_steps = [key for key in _route(answers) if key in {*answers.completed_steps, *_editable_steps(questionnaire, previous), step_key}]
     answers = answers.model_copy(update={"revision": updated_revision, "completed_steps": completed_steps})

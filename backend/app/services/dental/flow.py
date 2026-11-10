@@ -1,6 +1,6 @@
 """Сценарий стоматологической анкеты без базы данных.
 
-Шаги: повод → боль (только если «Болит зуб») → здоровье → уточнения по
+Шаги: повод → здоровье → уточнения по
 отмеченному (если им есть что уточнять) → о вас → готово. Модуль чистый:
 получает прежние ответы и ответ на шаг, возвращает новые ответы и следующий
 шаг. Сохранение — в `questionnaire_flow`.
@@ -21,6 +21,7 @@ from .questions import (
     PAIN_GROUPS,
     REASON,
     Group,
+    is_uncertain_choice,
 )
 
 STEP_REASON = "dental_reason"
@@ -92,6 +93,7 @@ class DentalAnswers(BaseModel):
 
     # JSON без версии относится к существующему одностраничному сценарию.
     flow_version: int = 1
+    form_mode: bool = False
     health: list[str] | None = None
     health_unknown: list[str] = Field(default_factory=list)
     health_answered: list[str] = Field(default_factory=list)
@@ -176,8 +178,6 @@ def detail_pages(answers: DentalAnswers) -> dict[str, tuple[Group, ...]]:
 
 def dental_route(answers: DentalAnswers) -> list[str]:
     route = [STEP_REASON]
-    if has_pain(answers):
-        route.append(STEP_PAIN)
     if answers.flow_version == 2:
         return [*route, *HEALTH_PAGE_KEYS, *detail_pages(answers), STEP_ABOUT]
     return [*route, STEP_HEALTH, *([STEP_DETAILS] if _detail_groups(answers) else []), STEP_ABOUT]
@@ -206,10 +206,11 @@ def _group_descriptor(group: Group) -> dict[str, Any]:
         "key": group.key,
         "title": group.title,
         "question": group.question,
-        # Старый код неизвестной дозы принимается и печатается, но новый
-        # экран использует текстовую подсказку вместо отдельного выбора.
+        # Старый код неизвестной дозы принимается и печатается,
+        # но не предлагается как быстрый ответ.
         "options": [] if group.key == "medications.dose" else [
-            {"value": o.value, "label": o.label} for o in group.options],
+            {"value": o.value, "label": o.label} for o in group.options
+            if o.value != "unknown" and not is_uncertain_choice(o.label)],
         "multiple": group.multiple,
         "required": group.selection_required,
         "text": text,
@@ -232,6 +233,7 @@ def input_metadata(key: str) -> dict[str, Any]:
         "pressure": ["Не знаю"], "smoking": ["Не помню точно"],
         "medications.dose": ["Дозу не помню"],
     }.get(key, [])
+    quick = [label for label in quick if not is_uncertain_choice(label)]
     return {"input_kind": kind, "input_mode": "numeric" if kind in {"date", "year", "pressure", "duration"} else "text",
             "quick_choices": quick, "optional_reveal": key == "about.more", "max_length": DEFAULT_MAX_TEXT_LEN}
 
@@ -327,7 +329,7 @@ def _apply_groups(
             group,
             selections.get(group.key, []),
             _clean_text(texts.get(group.key), max_len),
-            allow_free_text=group.key in answers.free_text_groups,
+            allow_free_text=answers.form_mode or group.key in answers.free_text_groups,
         )
         if answer.selected or answer.text:
             parsed[group.key] = answer
@@ -338,6 +340,7 @@ def _apply_groups(
         merged = {key: value for key, value in merged.items() if not key.startswith("pain.")}
     changed = merged != answers.groups
     return answers.model_copy(update={"groups": merged,
+        "free_text_groups": list(dict.fromkeys([*answers.free_text_groups, *(g.key for g in groups)])) if answers.form_mode else answers.free_text_groups,
         "ai": [] if changed else answers.ai,
         "clarification_checked": False if changed else answers.clarification_checked})
 
@@ -386,7 +389,7 @@ def _next_step(step: str, answers: DentalAnswers) -> str:
         route = dental_route(answers)
         return route[route.index(step) + 1] if route.index(step) + 1 < len(route) else STEP_REVIEW
     if step == STEP_REASON:
-        return STEP_PAIN if has_pain(answers) else STEP_HEALTH
+        return STEP_HEALTH
     if step == STEP_PAIN:
         return STEP_HEALTH
     if step == STEP_HEALTH:

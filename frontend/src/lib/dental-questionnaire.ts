@@ -62,8 +62,8 @@ export const dentalProgress = (
   step: QuestionnaireStep | string,
 ): DentalProgress | null =>
   typeof step === 'string'
-    ? PROGRESS[step] ?? null
-    : step.dental?.progress ?? PROGRESS[step.step_key] ?? null;
+    ? (PROGRESS[step] ?? null)
+    : (step.dental?.progress ?? PROGRESS[step.step_key] ?? null);
 
 const STEP_LABELS: Record<string, string> = {
   dental_reason: 'повод визита',
@@ -77,8 +77,11 @@ const STEP_LABELS: Record<string, string> = {
 export const dentalNavigation = (step: QuestionnaireStep) =>
   (step.dental?.editable_steps ?? []).map((step_key) => ({
     step_key,
-    label: step.dental?.navigation?.find((item) => item.step_key === step_key)
-      ?.label ?? STEP_LABELS[step_key] ?? 'ответы',
+    label:
+      step.dental?.navigation?.find((item) => item.step_key === step_key)
+        ?.label ??
+      STEP_LABELS[step_key] ??
+      'ответы',
   }));
 
 // ---------------------------------------------------------------------------
@@ -100,6 +103,7 @@ export interface DentalGroup {
   multiple: boolean;
   /** Нужно выбрать хотя бы один вариант. */
   required: boolean;
+  free_text?: boolean;
   text: {
     placeholder: string;
     required: boolean;
@@ -165,6 +169,7 @@ const parseGroup = (raw: unknown): DentalGroup | null => {
       .filter((option): option is DentalOption => option !== null),
     multiple: raw.multiple !== false,
     required: raw.required === true,
+    ...(raw.free_text === true ? { free_text: true } : {}),
     text: parseText(raw.text),
   };
 };
@@ -174,6 +179,48 @@ export const parseGroups = (step: QuestionnaireStep): DentalGroup[] =>
   (step.groups ?? [])
     .map(parseGroup)
     .filter((group): group is DentalGroup => group !== null);
+
+/** Форма использует все поля серверного раздела, включая старые текстовые ответы. */
+export const dentalFormStep = (step: QuestionnaireStep): QuestionnaireStep => ({
+  ...step,
+  groups: parseGroups(step).map((group) => ({
+    ...group,
+    free_text: true,
+    text: {
+      placeholder: 'Свой ответ или уточнение',
+      required: false,
+      max_length: 20000,
+      optional_reveal: !group.required && !group.text,
+      ...group.text,
+      show: 'always',
+    },
+  })),
+});
+
+export const dentalFormStage = (step: QuestionnaireStep) => {
+  const key = step.step_key;
+  if (key === 'dental_reason')
+    return { current: 1, title: 'Повод обращения', label: 'Этап 1 из 4' };
+  if (key.startsWith('dental_health'))
+    return {
+      current: 2,
+      title: 'Здоровье',
+      label:
+        step.dental?.page?.kind === 'health'
+          ? `Здоровье · раздел ${step.dental.page.current} из ${step.dental.page.total}`
+          : 'Этап 2 из 4',
+    };
+  if (key.startsWith('dental_details') || key === AI_STEP)
+    return {
+      current: 3,
+      title: 'Уточнения',
+      label:
+        step.dental?.page?.kind === 'details'
+          ? `Уточнения · раздел ${step.dental.page.current} из ${step.dental.page.total}`
+          : 'Этап 3 из 4',
+    };
+  return { current: 4, title: 'Дополнительно', label: 'Этап 4 из 4' };
+};
 
 // ---------------------------------------------------------------------------
 // Черновик ответа
@@ -198,6 +245,8 @@ export const draftForDentalStep = (step: QuestionnaireStep): DentalDraft => {
     selections[key] = [...value.selected];
     texts[key] = value.text;
   }
+  if (step.step_type === 'checklist')
+    texts.health = answers.health_comments?.[step.step_key] ?? '';
   selections.health = [...(answers.health ?? [])];
   selections.health_unknown = [...(answers.health_unknown ?? [])];
   return normalizeDentalDraft({ selections, texts });
@@ -210,9 +259,16 @@ export const normalizeDentalDraft = (draft: DentalDraft): DentalDraft => {
   if (!selected.includes('unknown')) return draft;
   const text = draft.texts[key] ?? '';
   return {
-    selections: { ...draft.selections, [key]: selected.filter((x) => x !== 'unknown') },
-    texts: { ...draft.texts, [key]: text.includes('Дозу не помню')
-      ? text : ['Дозу не помню', text].filter(Boolean).join('; ') },
+    selections: {
+      ...draft.selections,
+      [key]: selected.filter((x) => x !== 'unknown'),
+    },
+    texts: {
+      ...draft.texts,
+      [key]: text.includes('Дозу не помню')
+        ? text
+        : ['Дозу не помню', text].filter(Boolean).join('; '),
+    },
   };
 };
 
@@ -276,7 +332,12 @@ export const groupProblem = (
   draft: DentalDraft,
 ): GroupProblem | null => {
   const selected = selectedIn(draft, group.key);
-  if (group.required && selected.length === 0) return 'choose';
+  if (
+    group.required &&
+    selected.length === 0 &&
+    !(group.free_text && (draft.texts[group.key] ?? '').trim())
+  )
+    return 'choose';
   if (!group.text || !isTextVisible(group, draft)) return null;
   const needsText = group.text.required || selected.includes(OTHER);
   const hasText = (draft.texts[group.key] ?? '').trim().length > 0;
@@ -351,8 +412,12 @@ export const scopedChecklistValues = (
 ): { checked: string[]; uncertain: string[] } => {
   const visible = new Set(parseChecklist(step).map((item) => item.value));
   return {
-    checked: (draft.selections.health ?? []).filter((value) => visible.has(value)),
-    uncertain: (draft.selections.health_unknown ?? []).filter((value) => visible.has(value)),
+    checked: (draft.selections.health ?? []).filter((value) =>
+      visible.has(value),
+    ),
+    uncertain: (draft.selections.health_unknown ?? []).filter((value) =>
+      visible.has(value),
+    ),
   };
 };
 

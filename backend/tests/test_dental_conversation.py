@@ -23,30 +23,14 @@ def answer(q, key, selected=(), text='', none=False):
         none_answer=none, skip=False, revision=q.dental_answers.get('revision', 0), now=datetime.now(timezone.utc)))
 
 
-def test_pain_has_one_question_and_partial_answers_survive_reload():
+def test_pain_skips_extra_questions_and_old_open_step_resumes_health():
     q = questionnaire()
     answer(q, 'reason', ['pain'])
-    step = dq.build_dental_descriptor(q)
-    assert step.dental['question']['key'] == 'pain.where'
-    assert step.dental['question_key'] == 'pain.where'
-    answer(q, 'pain.where', text='Под старой коронкой слева')
-    assert q.current_step == 'dental_pain'
-    step = dq.build_dental_descriptor(q)
-    assert step.dental['question']['key'] == 'pain.when'
-    assert step.dental['history'][-1]['answer'] == 'Под старой коронкой слева'
-    before = q.dental_answers.copy()
-    with pytest.raises(HTTPException):
-        answer(q, 'pain.where', text='повтор')
-    assert q.dental_answers == before
-    answer(q, 'pain.when', text='Когда жую яблоки')
-    assert dq.build_dental_descriptor(q).dental['question']['key'] == 'pain.since'
-    answer(q, 'pain.since', text='Третий день')
     assert q.current_step == 'dental_health_1'
-    summary, _ = build_dental_summary(DentalAnswers.model_validate(q.dental_answers))
-    assert 'Под старой коронкой слева' in summary['complaints']
-    assert 'Когда жую яблоки' in summary['complaints']
-    paper = build_paper_form(DentalAnswers.model_validate(q.dental_answers))
-    assert 'Третий день' in paper['more']
+    q.current_step = 'dental_pain'
+    step = dq.build_dental_descriptor(q)
+    assert step.step_key == 'dental_health_1'
+    assert step.dental['question_key'] == 'health'
 
 
 def test_free_reason_can_replace_required_choice_and_is_preserved():
@@ -57,7 +41,7 @@ def test_free_reason_can_replace_required_choice_and_is_preserved():
     assert 'Сломалась временная коронка' in build_paper_form(DentalAnswers.model_validate(q.dental_answers))['more']
     typed = questionnaire()
     answer(typed, 'reason', text='Болит зуб')
-    assert typed.current_step == 'dental_pain'
+    assert typed.current_step == 'dental_health_1'
 
 
 def test_health_free_answer_is_not_silently_converted_to_no():

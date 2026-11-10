@@ -17,11 +17,8 @@ import {
   type GroupProblem,
 } from '@/lib/dental-questionnaire';
 import { useDentalDraft } from '@/hooks/useDentalDraft';
-import {
-  DentalAssistantMessage,
-  DentalButton,
-  DentalError,
-} from './DentalShell';
+import { DentalButton, DentalError } from './DentalShell';
+import { DentalFormHeading as DentalAssistantMessage } from './DentalFormShell';
 
 const PROBLEM_TEXT: Record<GroupProblem, string> = {
   choose: 'Выберите хотя бы один вариант',
@@ -333,11 +330,6 @@ export const ChipGroupsStep = ({
   const body = (
     <>
       {intro}
-      {step.dental?.page?.kind === 'details' && step.title ? (
-        <p className="text-center text-[length:var(--ui-font-size-13)] text-[var(--q-muted)]">
-          {step.title}
-        </p>
-      ) : null}
       {step.dental?.page?.kind === 'details' && step.text ? (
         <p className="text-sm text-[var(--q-muted)]">{step.text}</p>
       ) : null}
@@ -370,7 +362,7 @@ export const ChipGroupsStep = ({
   const footer = (
     <>
       <DentalError message={error} />
-      <DentalButton onClick={handleNext} isBusy={isSubmitting}>
+      <DentalButton onClick={handleNext} isBusy={isSubmitting || !restored}>
         {step.step_key === 'dental_about' ? 'Отправить анкету' : 'Далее'}
       </DentalButton>
       {onSkip && step.allow_skip && !isSubmitting ? (

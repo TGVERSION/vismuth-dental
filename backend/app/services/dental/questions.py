@@ -17,6 +17,12 @@ from typing import Literal
 OTHER = "other"
 
 
+def is_uncertain_choice(label: str) -> bool:
+    """Не предлагать незнание кнопкой; свободный ответ и старые данные допустимы."""
+    normalized = label.casefold().replace("ё", "е")
+    return any(phrase in normalized for phrase in ("не знаю", "не помню"))
+
+
 @dataclass(frozen=True)
 class Option:
     value: str

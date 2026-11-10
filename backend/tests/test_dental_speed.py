@@ -180,11 +180,11 @@ def test_administrator_birth_date_is_not_asked_and_survives_patient_submission()
         apply(before, 'dental_about', texts={'about.birth_date': '1990-01-01'})
 
 
-def test_unknown_dose_is_a_text_suggestion_and_legacy_answer_still_prints():
+def test_unknown_dose_has_no_button_and_legacy_answer_still_prints():
     step = dental_step('dental_details', DentalAnswers(health=['medications']))
     dose = next(g for g in step.groups if g['key'] == 'medications.dose')
     assert dose['options'] == []
-    assert dose['text']['quick_choices'] == ['Дозу не помню']
+    assert dose['text']['quick_choices'] == []
     for answer in [GroupAnswer(selected=['unknown']), GroupAnswer(text='Дозу не помню')]:
         paper = build_paper_form(DentalAnswers(health=['medications'], groups={
             'medications': GroupAnswer(selected=['eliquis']), 'medications.dose': answer}))

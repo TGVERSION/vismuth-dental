@@ -69,18 +69,13 @@ def test_last_answer_completes_without_review_or_model(ml):
     assert calls == []
 
 
-def test_model_question_opens_clarify_step(ml):
-    calls, replies = ml
-    replies.append({"status": "question", "question": "Давно шатается?", "choices": ["Неделю", "Месяц"]})
-    q = _questionnaire("dental_about", INCOMPLETE_PAIN)
-
-    _answer(q, "dental_about")
-
-    assert q.status == "in_progress"
-    assert q.current_step == "dental_ai"
-    assert calls[0][0] == "/dental_clarify"
-    assert "Болит зуб" in calls[0][1]["answers"]
-    assert dq.build_dental_descriptor(q).groups[0]["question"] == "Давно шатается?"
+def test_pain_completes_without_requesting_model_questions(ml):
+    calls, _ = ml
+    q = _questionnaire('dental_about', INCOMPLETE_PAIN)
+    _answer(q, 'dental_about')
+    assert q.status == 'completed'
+    assert calls == []
+    assert q.gaps == []
 
 
 def test_model_failure_completes_without_clarifications(ml):
@@ -92,7 +87,7 @@ def test_model_failure_completes_without_clarifications(ml):
 
     assert q.current_step == "done"
     assert q.status == "completed"
-    assert q.ai_unavailable is True
+    assert q.ai_unavailable is False
     assert q.structured["clarifications"] == []
 
 
@@ -104,7 +99,9 @@ def test_answer_then_model_done_completes_with_clarification(ml):
     ]
     q = _questionnaire("dental_about", INCOMPLETE_PAIN)
 
-    _answer(q, "dental_about")
+    q.current_step = 'dental_ai'
+    q.dental_answers = {**INCOMPLETE_PAIN, 'ai': [
+        {'question': replies[0]['question'], 'choices': replies[0]['choices']}]}
     _answer(q, "dental_ai", selections={"ai": ["1"]})
 
     assert q.current_step == "done"
@@ -118,9 +115,11 @@ def test_no_more_than_the_limit_of_questions(ml, monkeypatch):
     replies.append({"status": "question", "question": "Давно шатается?", "choices": []})
     q = _questionnaire("dental_about", INCOMPLETE_PAIN)
 
-    _answer(q, "dental_about")
+    q.current_step = 'dental_ai'
+    q.dental_answers = {**INCOMPLETE_PAIN, 'ai': [
+        {'question': replies[0]['question'], 'choices': []}]}
     _answer(q, "dental_ai", skip=True)
 
     assert q.current_step == "done"
     assert q.status == "completed"
-    assert len(calls) == 1
+    assert calls == []

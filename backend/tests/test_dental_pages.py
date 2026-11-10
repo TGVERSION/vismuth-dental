@@ -182,36 +182,28 @@ def test_details_reject_foreign_groups_and_required_allergy_cannot_be_empty():
     assert q.current_step == "dental_details_allergy"
 
 
-def test_reason_edit_adds_required_pain_before_previously_completed_pages(monkeypatch):
+def test_reason_edit_does_not_add_pain_questions(monkeypatch):
     q = questionnaire()
     start(q)
     health(q)
     answer(q, choice="edit:dental_reason")
     answer(q, selections={"reason": ["pain"]})
-    assert q.current_step == "dental_pain"
-    answer(q, selections={"pain.where": ["upper_left"], "pain.when": ["cold"], "pain.since": ["today"]})
     assert q.current_step == "dental_about"
     answer(q, texts={"about.more": "а" * 18000})
     assert q.status == "completed"
     assert q.structured["paper_form"]["more"] == "а" * 18000
 
 
-def test_version_two_ai_completes_directly_and_health_return_clears_ai(monkeypatch):
+def test_version_two_pain_completes_without_calling_ai(monkeypatch):
     async def ask(*args, **kwargs):
-        return {"status": "question", "question": "Где болит?", "choices": []}
+        pytest.fail('Removed pain questions must not call ML')
     monkeypatch.setattr(dq, "proxy_post_to_ml", ask)
     q = questionnaire()
     q.ai_unavailable = False
     answer(q, selections={"reason": ["pain"]})
-    answer(q)
+    assert q.current_step == 'dental_health_1'
     health(q)
     answer(q)
-    assert q.current_step == "dental_ai"
-    answer(q, choice="edit:dental_health_6")
-    assert q.dental_answers["ai"] == [] and q.ai_questions_count == 0
-    answer(q, none=True)
-    assert q.current_step == "dental_ai"
-    answer(q, texts={"ai": "Слева сверху"})
     assert q.current_step == "done" and q.status == "completed"
 
 

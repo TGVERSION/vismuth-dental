@@ -10,6 +10,7 @@ from __future__ import annotations
 from .flow import AiTurn, DentalAnswerError, DentalAnswers, DentalStep, has_pain
 from .flow import DEFAULT_MAX_TEXT_LEN, _clean_text
 from .summary import build_dental_summary
+from .questions import is_uncertain_choice
 
 AI_STEP = "dental_ai"
 AI_GROUP = "ai"
@@ -19,18 +20,10 @@ _FACT_KEYS = ("about.birth_date", "about.visit_year", "about.visit_clinic")
 
 
 def needs_clarification(answers: DentalAnswers) -> bool:
-    """Модель нужна только для конкретного пробела, а не любого своего текста.
+    """Дополнительные вопросы о боли удалены; новые AI-уточнения не нужны.
 
-    Один цикл уточнения на неизменённые ответы предотвращает повторный доспрос.
-    Явное «не знаю» остаётся ответом пациента, а не поводом переспрашивать.
+    Остальные функции оставлены для ответов и карточек прежних анкет.
     """
-    if answers.clarification_checked or answers.ai:
-        return False
-    if has_pain(answers):
-        return any(
-            not answers.groups.get(key) or not (answers.groups[key].selected or answers.groups[key].text)
-            for key in _PAIN_KEYS
-        )
     return False
 
 
@@ -63,6 +56,7 @@ def ai_step(answers: DentalAnswers) -> DentalStep:
                 "options": [
                     {"value": str(index), "label": label}
                     for index, label in enumerate(turn.choices)
+                    if not is_uncertain_choice(label)
                 ],
                 "multiple": True,
                 "required": False,

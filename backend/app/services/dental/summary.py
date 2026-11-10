@@ -274,14 +274,6 @@ def _gaps(answers: DentalAnswers, health: list[str]) -> list[dict[str, str]]:
     other_text = _answer(answers, REASON.key).text
     if other_text:
         gaps.append(_gap(COMPLAINTS, f"Уточнить повод визита: «{other_text}»"))
-    if has_pain(answers):
-        for key, question in (
-            ("pain.where", "Где именно болит"),
-            ("pain.when", "От чего возникает боль"),
-            ("pain.since", "Как давно болит"),
-        ):
-            if not _answer(answers, key).selected and not _answer(answers, key).text:
-                gaps.append(_gap(COMPLAINTS, question))
     thinners = _thinner_labels(answers, health)
     if thinners:
         gaps.append(_gap(MEDICATIONS, f"По какому поводу назначен {', '.join(thinners)}"))

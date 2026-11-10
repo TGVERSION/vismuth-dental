@@ -6,7 +6,7 @@ import { brandStyle } from '@/lib/branding';
 import {
   AI_STEP,
   buildSkipAnswer,
-  dentalProgress,
+  dentalFormStep,
   dentalScreenFor,
   inviteGreeting,
 } from '@/lib/dental-questionnaire';
@@ -14,13 +14,11 @@ import type { ClinicBranding, QuestionnaireBlock } from '@/lib/questionnaire';
 import { useDentalQuestionnaire } from '@/hooks/useDentalQuestionnaire';
 import { QuestionnaireStub } from '@/components/questionnaire/QuestionnaireStub';
 import { QuestionnaireThemeProvider } from '@/components/questionnaire/QuestionnaireTheme';
-import { ChatBubble } from '@/components/questionnaire/ChatBubble';
 import { ChecklistStep } from './ChecklistStep';
 import { ChipGroupsStep } from './ChipGroupsStep';
 import { DentalDoneScreen } from './DentalDoneScreen';
-import { DentalShell } from './DentalShell';
+import { DentalFormShell } from './DentalFormShell';
 import { DentalReviewStep } from './DentalReviewStep';
-import { DentalConversationStep } from './DentalConversationStep';
 
 const inviteBranding = (invite: PublicInvite): ClinicBranding => ({
   name: invite.clinic_name,
@@ -34,11 +32,6 @@ const inviteBranding = (invite: PublicInvite): ClinicBranding => ({
  * Приветствие над первым вопросом: имя уже в ссылке, спрашивать не нужно.
  * Врача и приёма нет — анкета, как бумажная, к ним не привязана.
  */
-const Intro = ({ invite }: { invite: PublicInvite }) => (
-  <ChatBubble author="assistant">
-    {`${inviteGreeting(invite.patient_first_name, invite.patient_middle_name)}\nЗадам несколько вопросов для безопасного лечения. Ответы конфиденциальны.`}
-  </ChatBubble>
-);
 
 /** Над вопросом нейросети: пациент должен понимать, откуда вопрос. */
 const AiBadge = () => (
@@ -65,7 +58,7 @@ const InviteFlow = ({
 }) => {
   const clinic = inviteBranding(invite);
   const flow = useDentalQuestionnaire(invite, token);
-  const { step } = flow;
+  const step = flow.step ? dentalFormStep(flow.step) : null;
 
   if (flow.block)
     return <QuestionnaireStub state={flow.block} clinic={clinic} />;
@@ -73,29 +66,25 @@ const InviteFlow = ({
     return <QuestionnaireStub state="subscription_expired" clinic={clinic} />;
 
   const renderShell = (body: React.ReactNode, footer: React.ReactNode) => (
-    <DentalShell
+    <DentalFormShell
       clinic={clinic}
-      progress={step.dental?.conversation_progress ?? dentalProgress(step)}
-      activeKey={`${step.step_key}:${step.dental?.question_key ?? ''}`}
-      history={step.dental?.history}
-      intro={<Intro invite={invite} />}
+      step={step}
+      greeting={inviteGreeting(
+        invite.patient_first_name,
+        invite.patient_middle_name,
+      )}
+      busy={flow.isSubmitting}
+      onBack={
+        step.dental?.editable_steps?.length
+          ? () =>
+              void flow.submit({ step_key: step.step_key, choice: 'form:back' })
+          : undefined
+      }
       footer={footer}
     >
       {body}
-    </DentalShell>
+    </DentalFormShell>
   );
-
-  if (step.dental?.question_key && dentalScreenFor(step) !== 'done')
-    return (
-      <DentalConversationStep
-        step={step}
-        questionnaireId={invite.questionnaire_id}
-        isSubmitting={flow.isSubmitting}
-        error={flow.error}
-        onSubmit={(answer) => void flow.submit(answer)}
-        renderShell={renderShell}
-      />
-    );
 
   switch (dentalScreenFor(step)) {
     case 'done':
@@ -109,7 +98,12 @@ const InviteFlow = ({
           questionnaireId={invite.questionnaire_id}
           isSubmitting={flow.isSubmitting}
           error={flow.error}
-          onSubmit={(answer) => void flow.submit(answer)}
+          onSubmit={(answer) =>
+            void flow.submit({
+              ...answer,
+              choice: step.step_key === AI_STEP ? answer.choice : 'form',
+            })
+          }
           intro={step.step_key === AI_STEP ? <AiBadge /> : undefined}
           onSkip={() => void flow.submit(buildSkipAnswer(step.step_key))}
           renderShell={renderShell}
@@ -123,7 +117,7 @@ const InviteFlow = ({
           questionnaireId={invite.questionnaire_id}
           isSubmitting={flow.isSubmitting}
           error={flow.error}
-          onSubmit={(answer) => void flow.submit(answer)}
+          onSubmit={(answer) => void flow.submit({ ...answer, choice: 'form' })}
           renderShell={renderShell}
         />
       );

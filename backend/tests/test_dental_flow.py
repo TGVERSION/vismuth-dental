@@ -53,10 +53,10 @@ def test_reason_step_offers_problems_from_the_paper_form():
     assert group["text"]["show"] == "on_other"
 
 
-def test_pain_reason_leads_to_pain_step():
+def test_pain_reason_leads_directly_to_health():
     answers, next_step = _answer(EMPTY, "dental_reason", selections={"reason": ["pain"]})
 
-    assert next_step == "dental_pain"
+    assert next_step == "dental_health"
     assert answers.groups["reason"].selected == ["pain"]
 
 

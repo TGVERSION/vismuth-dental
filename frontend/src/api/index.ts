@@ -732,6 +732,7 @@ export interface QuestionnaireStep {
       health_answered?: string[];
       health: string[] | null;
       health_unknown: string[];
+      health_comments?: Record<string, string>;
       groups: Record<string, { selected: string[]; text: string }>;
       ai?: {
         question: string;

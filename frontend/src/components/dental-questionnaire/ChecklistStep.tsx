@@ -6,11 +6,8 @@ import {
   scopedChecklistValues,
 } from '@/lib/dental-questionnaire';
 import { useDentalDraft } from '@/hooks/useDentalDraft';
-import {
-  DentalAssistantMessage,
-  DentalButton,
-  DentalError,
-} from './DentalShell';
+import { DentalButton, DentalError } from './DentalShell';
+import { DentalFormHeading as DentalAssistantMessage } from './DentalFormShell';
 interface ChecklistStepProps {
   step: QuestionnaireStep;
   questionnaireId: string;
@@ -34,6 +31,7 @@ export const ChecklistStep = ({
   const { draft, setDraft, restored } = useDentalDraft(questionnaireId, step);
   const { checked, uncertain } = scopedChecklistValues(step, draft);
   const healthPage = step.dental?.page?.kind === 'health';
+  const comment = draft.texts.health ?? '';
   const toggle = (value: string, unknown: boolean) => {
     setDraft((current) => {
       const key = unknown ? 'health_unknown' : 'health';
@@ -55,7 +53,7 @@ export const ChecklistStep = ({
     <>
       <DentalAssistantMessage>
         <h2 id="health-question" className="text-base leading-snug font-medium">
-          {step.title ?? 'Здоровье сейчас и раньше'}
+          Отметьте подходящие состояния · {items.length} пунктов
         </h2>
         <p className="mt-2 text-[length:var(--ui-font-size-14)] leading-snug text-[var(--q-muted)]">
           {step.text ??
@@ -90,8 +88,13 @@ export const ChecklistStep = ({
                   disabled={isSubmitting || !restored}
                   className="h-[var(--ui-size-checkbox-m)] w-[var(--ui-size-checkbox-m)] shrink-0 accent-[var(--q-brand)]"
                 />
-                <span className="text-[length:var(--ui-font-size-15)] leading-snug">
+                <span className="text-base leading-snug">
                   {item.label}
+                  {uncertain.includes(item.value) ? (
+                    <span className="block text-sm text-[var(--q-muted)]">
+                      Ранее указан неопределённый ответ
+                    </span>
+                  ) : null}
                   {item.hint ? (
                     <span className="block text-[length:var(--ui-font-size-13)] text-[var(--q-muted)]">
                       {item.hint}
@@ -103,6 +106,27 @@ export const ChecklistStep = ({
           </li>
         ))}
       </ul>
+      <details open={comment ? true : undefined}>
+        <summary className="min-h-[44px] cursor-pointer py-3 text-base text-[var(--q-brand)]">
+          Добавить уточнение к разделу
+        </summary>
+        <label className="flex flex-col gap-2 text-base">
+          Уточнение к разделу
+          <textarea
+            value={comment}
+            disabled={isSubmitting || !restored}
+            rows={3}
+            maxLength={20000}
+            onChange={(event) =>
+              setDraft((current) => ({
+                ...current,
+                texts: { ...current.texts, health: event.target.value },
+              }))
+            }
+            className="q-field w-full resize-y rounded-xl p-3"
+          />
+        </label>
+      </details>
     </>
   );
   return (
@@ -112,13 +136,18 @@ export const ChecklistStep = ({
         <>
           <DentalError message={error} />
           <DentalButton
-            isBusy={isSubmitting}
+            isBusy={isSubmitting || !restored}
             onClick={() => {
               if (!restored) return;
-              onSubmit(buildChecklistAnswer(step.step_key, checked, uncertain));
+              onSubmit({
+                ...buildChecklistAnswer(step.step_key, checked, uncertain),
+                ...(comment.trim()
+                  ? { none: false, texts: { health: comment.trim() } }
+                  : {}),
+              });
             }}
           >
-            {checked.length || uncertain.length
+            {checked.length || uncertain.length || comment.trim()
               ? 'Далее'
               : 'Ничего из этого нет'}
           </DentalButton>

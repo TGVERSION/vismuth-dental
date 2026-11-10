@@ -208,7 +208,7 @@ def test_unknown_stored_value_does_not_break_the_card():
     assert summary["complaints"].startswith("Болит зуб")
 
 
-def test_incomplete_pain_and_other_reason_go_to_gaps():
+def test_old_pain_is_preserved_but_missing_pain_details_are_not_gaps():
     answers = _answers([], reason={"selected": ["pain", "other"], "text": "Шатается зуб"},
                        pain__where={"selected": ["upper_left"]})
 
@@ -217,8 +217,6 @@ def test_incomplete_pain_and_other_reason_go_to_gaps():
     assert summary["complaints"] == "Болит зуб сверху слева. Другое: Шатается зуб."
     assert {(gap["section"], gap["question"]) for gap in gaps} == {
         ("complaints", "Уточнить повод визита: «Шатается зуб»"),
-        ("complaints", "От чего возникает боль"),
-        ("complaints", "Как давно болит"),
     }
 
 

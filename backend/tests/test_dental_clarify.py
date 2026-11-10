@@ -30,7 +30,7 @@ CHECKUP = _answers(reason={"selected": ["checkup"]})
     [
         (CHECKUP, False),
         (_answers(reason={"selected": ["other"], "text": "Шатается зуб"}), False),
-        (_answers(reason={"selected": ["pain"]}, pain__where={"selected": ["upper_left"]}), True),
+        (_answers(reason={"selected": ["pain"]}, pain__where={"selected": ["upper_left"]}), False),
         (
             _answers(
                 reason={"selected": ["pain"]},

@@ -63,7 +63,7 @@ def test_resuming_a_legacy_session_skips_an_already_answered_medication_question
 
 
 @pytest.mark.parametrize('specialty,expected',[
-    ('Гастроэнтеролог','stool_changes'),
+    ('Гастроэнтеролог','stool_frequency'),
     ('Детский гастроэнтеролог','patient_info'),
     ('Терапевт','patient_info'),
 ])

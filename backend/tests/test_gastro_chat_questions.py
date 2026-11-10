@@ -12,7 +12,7 @@ from app.services import questionnaire_process as process
 from app.services.gastro_chat_questions import GASTRO_CHAT_QUESTIONS, append_gastro_chat_answers
 
 
-@pytest.mark.parametrize('specialty,visit,expected', [('Гастроэнтеролог','primary','stool_changes'),('Терапевт','primary','patient_info'),('Детский гастроэнтеролог','primary','patient_info'),('Гастроэнтеролог','repeat','patient_info')])
+@pytest.mark.parametrize('specialty,visit,expected', [('Гастроэнтеролог','primary','stool_frequency'),('Терапевт','primary','patient_info'),('Детский гастроэнтеролог','primary','patient_info'),('Гастроэнтеролог','repeat','patient_info')])
 def test_only_adult_primary_gastro_gets_extra_questions(monkeypatch,specialty,visit,expected):
     monkeypatch.setattr(flow,'specialization_name',AsyncMock(return_value=specialty))
     monkeypatch.setattr(flow,'add_answer',AsyncMock())

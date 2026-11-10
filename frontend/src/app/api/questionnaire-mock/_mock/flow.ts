@@ -21,6 +21,10 @@ import {
   toDateInputValue,
 } from '@/lib/questionnaire';
 import { MOCK_AI_QUESTIONS } from './script';
+import {
+  GASTRO_CHAT_FOLLOWUPS,
+  gastroFollowupChoices,
+} from '@/lib/gastro-chat-questions';
 
 export type MockStepKey =
   | 'choose_doctor'
@@ -32,6 +36,10 @@ export type MockStepKey =
   | 'chronic'
   | 'allergy'
   | 'stool_changes'
+  | 'stool_frequency'
+  | 'stool_form'
+  | 'stool_recent_changes'
+  | 'stool_change_onset'
   | 'weight_changes'
   | 'family_history'
   | 'repeat_change'
@@ -87,23 +95,22 @@ const FIXED_TEXTS: Partial<Record<MockStepKey, string>> = {
   repeat_side_effects: 'Были ли побочные эффекты или новые жалобы?',
 };
 
-const GASTRO_FOLLOWUPS = {
-  stool_changes: {
-    text: 'Изменился ли стул: как часто вы ходите в туалет и каким он стал? Если да — как давно?',
-    negative: 'Без изменений',
-    next: 'weight_changes',
-  },
-  weight_changes: {
-    text: 'Менялся ли вес за последние 6 месяцев без намерения его менять? Если да — на сколько килограммов и за какой срок?',
-    negative: 'Без изменений',
-    next: 'family_history',
-  },
-  family_history: {
-    text: 'Известны ли у кровных родственников рак желудка или кишечника, болезнь Крона, язвенный колит или целиакия? Если да — у кого и что именно?',
-    negative: 'Нет',
-    next: 'patient_info',
-  },
-} as const;
+const GASTRO_FOLLOWUPS = GASTRO_CHAT_FOLLOWUPS;
+
+const isAdultPrimaryGastro = (q: MockQuestionnaire, env: MockFlowEnv) => {
+  const name =
+    doctorById(env, q.doctorMembershipId)?.specializations.find(
+      (spec) => spec.id === q.specializationId,
+    )?.name ?? '';
+  return (
+    q.visitType === 'primary' && /гастро/i.test(name) && !/детск/i.test(name)
+  );
+};
+
+const gastroFixedText = (step: string) =>
+  step === 'medications'
+    ? 'Какие лекарства вы принимаете сейчас?\n\nУкажите названия и дозировку в мг, мкг или г. Если её не помните — хотя бы сколько таблеток или капсул принимаете за один раз. Если знаете, добавьте, сколько раз в день. Можно написать, что дозировку не помните.'
+    : 'Есть ли аллергия на лекарства?\n\nЕсли да, напишите название препарата и как проявилась реакция: например, сыпь, зуд, отёк или другое. Если подробности не помните, так и напишите.';
 
 /** QUESTIONNAIRE_ANSWER_MAX_LEN backend по умолчанию. */
 const ANSWER_MAX_LEN = 1000;
@@ -248,27 +255,32 @@ export const describeStep = (
       };
 
     case 'stool_changes':
+    case 'stool_frequency':
+    case 'stool_form':
+    case 'stool_recent_changes':
+    case 'stool_change_onset':
     case 'weight_changes':
     case 'family_history': {
       const question = GASTRO_FOLLOWUPS[step];
       return {
         ...emptyStep(step, 'text'),
         text: question.text,
-        choices: [
-          { value: 'none', label: question.negative },
-          { value: 'unknown', label: 'Не знаю' },
-        ],
+        choices: gastroFollowupChoices(question),
       };
     }
 
     case 'complaint': {
-      const specialty = doctorById(env, questionnaire.doctorMembershipId)
-        ?.specializations.find((item) => item.id === questionnaire.specializationId);
+      const specialty = doctorById(
+        env,
+        questionnaire.doctorMembershipId,
+      )?.specializations.find(
+        (item) => item.id === questionnaire.specializationId,
+      );
       return {
         ...emptyStep(step, 'text'),
         text: /гастро/i.test(specialty?.name ?? '')
           ? 'С чем вы обращаетесь к гастроэнтерологу?\n\nНапример, с болью в животе, вздутием, изжогой, тошнотой или другими жалобами на пищеварение.'
-          : FIXED_TEXTS[step] ?? null,
+          : (FIXED_TEXTS[step] ?? null),
       };
     }
 
@@ -278,7 +290,11 @@ export const describeStep = (
     case 'repeat_side_effects':
       return {
         ...emptyStep(step, 'text_or_none'),
-        text: FIXED_TEXTS[step] ?? null,
+        text:
+          (step === 'medications' || step === 'allergy') &&
+          isAdultPrimaryGastro(questionnaire, env)
+            ? gastroFixedText(step)
+            : (FIXED_TEXTS[step] ?? null),
         allow_none: true,
       };
 
@@ -436,23 +452,34 @@ export const applyAnswer = (
     }
 
     case 'stool_changes':
+    case 'stool_frequency':
+    case 'stool_form':
+    case 'stool_recent_changes':
+    case 'stool_change_onset':
     case 'weight_changes':
     case 'family_history': {
+      const question = GASTRO_FOLLOWUPS[questionnaire.currentStep];
+      const choices = gastroFollowupChoices(question).map(
+        (option) => option.value,
+      );
       if (
         answer.skip ||
-        (answer.choice != null && !['none', 'unknown'].includes(answer.choice))
+        (answer.choice != null && !choices.includes(answer.choice)) ||
+        (answer.none && !choices.includes('none'))
       )
         return fail(400, 'Invalid answer');
       if (
         ((answer.choice != null || answer.none) && text) ||
-        (answer.none && answer.choice === 'unknown')
+        (answer.none && answer.choice != null && answer.choice !== 'none')
       )
         return fail(400, 'Choose a quick reply or send text');
       if (!text && !answer.none && !answer.choice)
         return fail(400, 'Answer required');
       next = {
         ...questionnaire,
-        currentStep: GASTRO_FOLLOWUPS[questionnaire.currentStep].next,
+        currentStep: (question.next_by_choice?.[
+          answer.choice ?? (answer.none ? 'none' : '')
+        ] ?? question.next) as MockStepKey,
       };
       break;
     }
@@ -483,7 +510,7 @@ export const applyAnswer = (
                         )?.name ?? '';
                       return /гастро/i.test(name) && !/детск/i.test(name);
                     })()
-                      ? 'stool_changes'
+                      ? 'stool_frequency'
                       : 'patient_info',
                 }
               : enterAiOrNext(questionnaire, env, 'patient_info');

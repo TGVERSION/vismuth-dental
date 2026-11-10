@@ -104,9 +104,11 @@ def test_selected_doctor_or_specialization_goes_directly_to_primary_complaint(mo
     result.scalar_one_or_none.return_value = object()
     db.execute.return_value = result
     monkeypatch.setattr(flow, "doctor_specializations", AsyncMock(return_value=[{"id": 7}]))
+    monkeypatch.setattr(flow, "specialization_name", AsyncMock(return_value="Гастроэнтеролог"))
     kwargs = {"doctor_membership_id": mid} if step_key == "choose_doctor" else {"specialization_id": 7}
     descriptor, _, _ = asyncio.run(flow.apply_answer(db, q, step_key=step_key, **kwargs))
     assert descriptor.step_key == "complaint" and q.visit_type == "primary"
+    assert "гастроэнтерологу" in descriptor.text
 
 
 def test_legacy_resume_does_not_reset_concurrently_advanced_session(monkeypatch):

@@ -460,7 +460,7 @@ it('stale visit-type choice is treated as primary', () => {
   }
 });
 
-it('adds only three small chat questions for an adult primary gastro visit', () => {
+it('collects stool frequency, form and changes as separate chat questions', () => {
   const doctor = {
     ...oneSpec,
     specializations: [{ id: 8, code: 'gastro', name: 'Гастроэнтеролог' }],
@@ -475,13 +475,16 @@ it('adds only three small chat questions for an adult primary gastro visit', () 
     [{ step_key: 'allergy', none: true }],
     env,
   );
-  expect(step.step_key).toBe('stool_changes');
+  expect(step.step_key).toBe('stool_frequency');
   expect(step.step_type).toBe('text');
-  expect(step.choices).toHaveLength(2);
+  expect(step.choices?.some((choice) => choice.value === 'daily')).toBe(true);
   const completed = run(
     questionnaire,
     [
-      { step_key: 'stool_changes', value: 'Жидкий стул неделю' },
+      { step_key: 'stool_frequency', choice: 'two_three' },
+      { step_key: 'stool_form', choice: 'watery' },
+      { step_key: 'stool_recent_changes', choice: 'yes' },
+      { step_key: 'stool_change_onset', value: 'Неделю назад' },
       { step_key: 'weight_changes', choice: 'unknown' },
       { step_key: 'family_history', value: 'У сестры целиакия' },
     ],

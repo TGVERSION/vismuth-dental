@@ -10,6 +10,7 @@ from .questionnaire_step import StepDescriptor
 GUARDED_STEPS = frozenset({
     'complaint', 'ai_clarify', 'medications', 'chronic', 'allergy',
     'stool_changes', 'weight_changes', 'family_history', 'repeat_change', 'repeat_side_effects',
+    'stool_frequency', 'stool_form', 'stool_recent_changes', 'stool_change_onset',
 })
 MAX_CONSECUTIVE = 3
 MAX_TOTAL = 6

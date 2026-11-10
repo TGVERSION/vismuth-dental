@@ -27,7 +27,7 @@ from .questionnaire_answer_guard import (
     GUARDED_STEPS, MAX_CONSECUTIVE, MAX_TOTAL, classify_answer, guard_notice,
     rejected_before, rejection_counts, stopped_descriptor,
 )
-from .gastro_chat_questions import GASTRO_CHAT_QUESTIONS
+from .gastro_chat_questions import GASTRO_CHAT_QUESTIONS, gastro_choices
 from .gastro_questionnaire import apply_gastro, build_gastro_descriptor, submission_fingerprint
 
 _APPOINTMENT_TIME_RE = re.compile(r"^([01]\d|2[0-3]):([0-5]\d)$")
@@ -42,6 +42,10 @@ StepKey = Literal[
     "chronic",
     "allergy",
     "stool_changes",
+    "stool_frequency",
+    "stool_form",
+    "stool_recent_changes",
+    "stool_change_onset",
     "weight_changes",
     "family_history",
     "repeat_change",
@@ -50,6 +54,11 @@ StepKey = Literal[
     "patient_info",
     "code",
 ]
+
+GASTRO_FIXED_TEXTS: dict[str, str] = {
+    "medications": "Какие лекарства вы принимаете сейчас?\n\nУкажите названия и дозировку в мг, мкг или г. Если её не помните — хотя бы сколько таблеток или капсул принимаете за один раз. Если знаете, добавьте, сколько раз в день. Можно написать, что дозировку не помните.",
+    "allergy": "Есть ли аллергия на лекарства?\n\nЕсли да, напишите название препарата и как проявилась реакция: например, сыпь, зуд, отёк или другое. Если подробности не помните, так и напишите.",
+}
 
 FIXED_TEXTS: dict[str, str] = {
     "complaint": "Что вас беспокоит?",
@@ -71,6 +80,16 @@ async def complaint_question(db: AsyncSession, questionnaire: Questionnaire) -> 
             "или другими жалобами на пищеварение."
         )
     return FIXED_TEXTS["complaint"]
+
+
+async def fixed_question(db: AsyncSession, questionnaire: Questionnaire, step: str) -> str:
+    if step == "complaint":
+        return await complaint_question(db, questionnaire)
+    if step in GASTRO_FIXED_TEXTS and questionnaire.visit_type == "primary":
+        specialty = (await specialization_name(db, questionnaire.specialization_id) or "").casefold()
+        if "гастро" in specialty and "детск" not in specialty:
+            return GASTRO_FIXED_TEXTS[step]
+    return FIXED_TEXTS[step]
 
 
 def truncate_answer(value: str) -> tuple[str, bool]:
@@ -247,10 +266,7 @@ async def _build_step_descriptor(
             step_key=step,
             step_type="text",
             text=question['text'],
-            choices=[
-                {"value": "none", "label": question['negative_label']},
-                {"value": "unknown", "label": "Не знаю"},
-            ],
+            choices=gastro_choices(question),
         )
 
     if step in FIXED_TEXTS:
@@ -281,7 +297,7 @@ async def _build_step_descriptor(
         return StepDescriptor(
             step_key=step,
             step_type=step_type,
-            text=await complaint_question(db, questionnaire) if step == "complaint" else FIXED_TEXTS[step],
+            text=await fixed_question(db, questionnaire, step),
             allow_none=allow_none,
             choices=choices,
         )
@@ -431,7 +447,7 @@ async def step_after_allergy(db: AsyncSession, questionnaire: Questionnaire) -> 
     if questionnaire.visit_type != "primary":
         return "patient_info"
     specialty = (await specialization_name(db, questionnaire.specialization_id) or "").casefold()
-    return "stool_changes" if "гастро" in specialty and "детск" not in specialty else "patient_info"
+    return "stool_frequency" if "гастро" in specialty and "детск" not in specialty else "patient_info"
 
 
 async def next_unanswered_general_step(
@@ -779,14 +795,17 @@ async def apply_answer(
 
     elif step_key in GASTRO_CHAT_QUESTIONS:
         question = GASTRO_CHAT_QUESTIONS[step_key]
-        if skip or (choice is not None and choice not in {"none", "unknown"}):
+        choice_labels = {option['value']: option['label'] for option in gastro_choices(question)}
+        if skip or (choice is not None and choice not in choice_labels) or (none_answer and 'none' not in choice_labels):
             raise HTTPException(status_code=400, detail="Invalid answer")
-        if ((choice is not None or none_answer) and text_value) or (none_answer and choice == "unknown"):
+        if ((choice is not None or none_answer) and text_value) or (none_answer and choice not in {None, "none"}):
             raise HTTPException(status_code=400, detail="Choose a quick reply or send text")
         if choice == "unknown":
-            answer_text = "Не знаю"
+            answer_text = choice_labels[choice]
         elif choice == "none" or none_answer:
             answer_text = question['negative_text']
+        elif choice is not None:
+            answer_text = choice_labels[choice]
         elif text_value:
             answer_text = text_value
         else:
@@ -794,7 +813,7 @@ async def apply_answer(
         await add_answer(db, questionnaire, step_key=step_key, kind="answer",
                          question_text=question['text'], answer_text=answer_text,
                          choice=choice or ("none" if none_answer else None))
-        questionnaire.current_step = question['next']
+        questionnaire.current_step = question.get('next_by_choice', {}).get(choice or ('none' if none_answer else None), question['next'])
 
     elif step_key in {"medications", "chronic", "allergy", "repeat_side_effects"}:
         answer_text = "нет" if none_answer else text_value
@@ -808,7 +827,7 @@ async def apply_answer(
             questionnaire,
             step_key=step_key,
             kind="answer",
-            question_text=FIXED_TEXTS[step_key],
+            question_text=await fixed_question(db, questionnaire, step_key),
             answer_text=answer_text,
             choice="none" if none_answer else None,
         )

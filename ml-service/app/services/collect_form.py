@@ -33,8 +33,7 @@ _HISTORY_LIMIT = 40
 # Первый вопрос по полю: формулировка фиксирована, LLM не зовём.
 _FIRST_QUESTIONS: dict[CollectionTarget, str] = {
     CollectionTarget.COMPLAINTS: (
-        "Что вас беспокоит? Опишите, пожалуйста, подробнее: где именно, "
-        "какого характера и как давно."
+        "Что вас беспокоит? Опишите, пожалуйста, симптомы и как давно они появились."
     ),
     CollectionTarget.MEDICATIONS: (
         "Какие лекарства принимаете сейчас? Если да — назовите, пожалуйста, "
@@ -49,8 +48,7 @@ _FIRST_QUESTIONS: dict[CollectionTarget, str] = {
 # Переформулировка, если первый вопрос уже звучал, а поле так и не закрыто.
 _REPEAT_QUESTIONS: dict[CollectionTarget, str] = {
     CollectionTarget.COMPLAINTS: (
-        "Давайте вернёмся к жалобам. Что именно вас беспокоит — где, "
-        "какого характера и как давно?"
+        "Давайте вернёмся к жалобам. Какие симптомы вы замечаете и как давно?"
     ),
     CollectionTarget.MEDICATIONS: (
         "Уточните, пожалуйста: какие лекарства вы принимаете сейчас "
@@ -65,11 +63,11 @@ _REPEAT_QUESTIONS: dict[CollectionTarget, str] = {
 # Цель уточняющего вопроса и поле, из которого берётся уже известное.
 _FOLLOWUPS: dict[CollectionTarget, tuple[str, FormField]] = {
     CollectionTarget.COMPLAINTS_DETAIL: (
-        "детали жалоб: где именно болит, какого характера боль, как давно началось",
+        "уточнить недостающие сведения об основной жалобе пациента",
         FormField.COMPLAINTS,
     ),
     CollectionTarget.MEDICATIONS_DOSE: (
-        "доза принимаемых препаратов",
+        "дозировка принимаемых препаратов в мг/мкг/г либо хотя бы количество таблеток или капсул за один приём; не вычислять мг из количества таблеток",
         FormField.MEDICATIONS,
     ),
 }
@@ -175,6 +173,18 @@ class CollectFormService:
             return self._template(target, request)
 
         goal, source = followup
+        if target == CollectionTarget.COMPLAINTS_DETAIL:
+            complaint = progress.complaints
+            relevant = {
+                "pain": [("has_localization", "где именно болит"), ("has_character", "характер боли"), ("has_onset", "когда началась боль")],
+                "heartburn": [("has_onset", "когда началась изжога"), ("has_frequency", "как часто бывает изжога"), ("has_triggers", "связь изжоги с едой или положением тела")],
+                "stool": [("has_onset", "когда начались нарушения стула"), ("has_frequency", "как часто бывает стул"), ("has_stool_description", "вид и консистенция стула")],
+                "other": [("has_onset", "когда появился симптом"), ("has_character", "как проявляется симптом")],
+            }[complaint.symptom_type]
+            missing = [label for flag, label in relevant if not getattr(complaint, flag)]
+            goal = "детали жалоб; уточни один недостающий факт: " + "; ".join(missing)
+            if complaint.symptom_type != "pain":
+                goal += ". Не спрашивай локализацию или характер боли, если пациент не сообщает о боли"
         known = getattr(progress, source.value).value
         system = QUESTION_PROMPT.format(goal=goal)
         history = self._build_messages(request)

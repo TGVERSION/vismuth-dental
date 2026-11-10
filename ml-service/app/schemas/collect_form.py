@@ -6,6 +6,7 @@
 """
 
 from enum import StrEnum
+from typing import Literal
 
 from pydantic import BaseModel, Field
 
@@ -56,6 +57,13 @@ class Complaints(BaseModel):
         default="",
         description="Краткий текст жалоб из истории чата; пусто, если данных нет",
     )
+    symptom_type: Literal["pain", "heartburn", "stool", "other"] = Field(
+        default="pain",
+        description="Основная уточняемая жалоба: pain — боль; heartburn — изжога; stool — диарея/запор/изменения стула; other — прочее. Не считать изжогу или диарею болью без сообщения пациента о боли",
+    )
+    has_frequency: bool = Field(default=False, description="Известна частота основной жалобы; для стула — частота дефекации")
+    has_triggers: bool = Field(default=False, description="Известна связь изжоги с едой или положением тела, либо пациент не замечает связи/не знает")
+    has_stool_description: bool = Field(default=False, description="Известен вид стула: например, жидкий, водянистый, твёрдый или оформленный")
     has_localization: bool = Field(
         default=False,
         description="Из истории известно, где именно болит",
@@ -72,6 +80,12 @@ class Complaints(BaseModel):
     @property
     def detailed(self) -> bool:
         """Жалобы описаны достаточно подробно для формы."""
+        if self.symptom_type == "heartburn":
+            return self.has_onset and self.has_frequency and self.has_triggers
+        if self.symptom_type == "stool":
+            return self.has_onset and self.has_frequency and self.has_stool_description
+        if self.symptom_type == "other":
+            return self.has_onset and self.has_character
         return self.has_localization and self.has_character and self.has_onset
 
 
@@ -87,7 +101,7 @@ class Medications(BaseModel):
     )
     has_dose: bool = Field(
         default=False,
-        description="Названа доза хотя бы у одного препарата",
+        description="Названа дозировка в мг/мкг/г или количество таблеток/капсул хотя бы у одного препарата. Количество таблеток не пересчитывать в мг без указанной пациентом дозировки",
     )
 
 

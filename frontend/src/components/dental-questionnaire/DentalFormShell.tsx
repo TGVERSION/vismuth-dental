@@ -2,31 +2,25 @@
 
 import { useEffect, useRef, useState } from 'react';
 import type { QuestionnaireStep } from '@/api';
-import type { ClinicBranding } from '@/lib/questionnaire';
 import { dentalFormStage } from '@/lib/dental-questionnaire';
-import { ClinicLogo } from '@/components/questionnaire/ClinicLogo';
 import { useVisualViewport } from '@/hooks/useVisualViewport';
 import { useIsDesktop } from '@/hooks/useIsDesktop';
 
 interface Props {
-  clinic: ClinicBranding;
   step: QuestionnaireStep;
   children: React.ReactNode;
   footer: React.ReactNode;
   onBack?: () => void;
   busy: boolean;
-  greeting?: string;
 }
 
 /** Одна область прокрутки; действия идут после всех полей раздела. */
 export const DentalFormShell = ({
-  clinic,
   step,
   children,
   footer,
   onBack,
   busy,
-  greeting,
 }: Props) => {
   const mainRef = useRef<HTMLElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
@@ -109,19 +103,6 @@ export const DentalFormShell = ({
       <header className="shrink-0 border-b border-[var(--q-surface)] px-4 pt-[calc(env(safe-area-inset-top)+12px)] pb-4">
         <div className="mb-4 flex items-center justify-between gap-3">
           <span className="text-sm font-medium">Анкета о здоровье</span>
-          <div
-            className="max-w-[45%] rounded-lg px-2 py-1 text-sm"
-            style={{
-              backgroundColor: 'var(--q-logo-bg)',
-              color: 'var(--q-logo-contrast)',
-            }}
-          >
-            {clinic.logo_url ? (
-              <ClinicLogo url={clinic.logo_url} clinicName={clinic.name} />
-            ) : (
-              clinic.name
-            )}
-          </div>
         </div>
         <ol aria-label="Этапы анкеты" className="grid grid-cols-4 gap-2">
           {['Обращение', 'Здоровье', 'Уточнения', 'О вас'].map(
@@ -157,14 +138,10 @@ export const DentalFormShell = ({
               tabIndex={-1}
               className="text-2xl leading-tight font-semibold outline-none"
             >
-              {step.title ?? stage.title}
+              {step.step_key === 'dental_details_allergy'
+                ? 'Уточнения об аллергии'
+                : (step.title ?? stage.title)}
             </h1>
-            {greeting && step.step_key === 'dental_reason' ? (
-              <p className="mt-3 text-base text-[var(--q-muted)]">
-                {greeting} Заполните анкету перед лечением. Ответы
-                конфиденциальны.
-              </p>
-            ) : null}
           </div>
           {children}
           <div ref={endRef} data-dental-fields-end aria-hidden="true" />

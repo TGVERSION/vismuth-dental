@@ -7,7 +7,6 @@ import {
 } from '@/lib/dental-questionnaire';
 import { useDentalDraft } from '@/hooks/useDentalDraft';
 import { DentalButton, DentalError } from './DentalShell';
-import { DentalFormHeading as DentalAssistantMessage } from './DentalFormShell';
 interface ChecklistStepProps {
   step: QuestionnaireStep;
   questionnaireId: string;
@@ -51,17 +50,9 @@ export const ChecklistStep = ({
   };
   const body = (
     <>
-      <DentalAssistantMessage>
-        <h2 id="health-question" className="text-base leading-snug font-medium">
-          Отметьте подходящие состояния · {items.length} пунктов
-        </h2>
-        <p className="mt-2 text-[length:var(--ui-font-size-14)] leading-snug text-[var(--q-muted)]">
-          {step.text ??
-            (healthPage && step.dental?.page?.current !== 1
-              ? 'Отметьте подходящее. Без отметки — «Нет».'
-              : 'Отметьте, что есть сейчас или было раньше. Учитывайте сроки. Без отметки — «Нет».')}
-        </p>
-      </DentalAssistantMessage>
+      <h2 id="health-question" className="sr-only">
+        Состояния здоровья
+      </h2>
       <ul
         role="group"
         aria-labelledby="health-question"

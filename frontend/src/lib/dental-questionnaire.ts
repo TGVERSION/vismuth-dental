@@ -185,6 +185,12 @@ export const dentalFormStep = (step: QuestionnaireStep): QuestionnaireStep => ({
   ...step,
   groups: parseGroups(step).map((group) => ({
     ...group,
+    question:
+      group.key === 'allergy.substance'
+        ? 'На что была аллергическая реакция?'
+        : group.key === 'allergy.reaction'
+          ? 'Как проявлялась аллергия?'
+          : group.question,
     free_text: true,
     text: {
       placeholder: 'Свой ответ или уточнение',

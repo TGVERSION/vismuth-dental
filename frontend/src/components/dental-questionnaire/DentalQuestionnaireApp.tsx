@@ -8,7 +8,6 @@ import {
   buildSkipAnswer,
   dentalFormStep,
   dentalScreenFor,
-  inviteGreeting,
 } from '@/lib/dental-questionnaire';
 import type { ClinicBranding, QuestionnaireBlock } from '@/lib/questionnaire';
 import { useDentalQuestionnaire } from '@/hooks/useDentalQuestionnaire';
@@ -67,12 +66,7 @@ const InviteFlow = ({
 
   const renderShell = (body: React.ReactNode, footer: React.ReactNode) => (
     <DentalFormShell
-      clinic={clinic}
       step={step}
-      greeting={inviteGreeting(
-        invite.patient_first_name,
-        invite.patient_middle_name,
-      )}
       busy={flow.isSubmitting}
       onBack={
         step.dental?.editable_steps?.length

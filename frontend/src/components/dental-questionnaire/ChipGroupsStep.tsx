@@ -19,6 +19,7 @@ import {
 import { useDentalDraft } from '@/hooks/useDentalDraft';
 import { DentalButton, DentalError } from './DentalShell';
 import { DentalFormHeading as DentalAssistantMessage } from './DentalFormShell';
+import { DentalVisitYearField } from './DentalVisitYearField';
 
 const PROBLEM_TEXT: Record<GroupProblem, string> = {
   choose: 'Выберите хотя бы один вариант',
@@ -47,7 +48,6 @@ interface ChipGroupProps {
   text: string;
   showText: boolean;
   problem: GroupProblem | null;
-  showMultipleHint: boolean;
   onToggle: (value: string) => void;
   onText: (text: string) => void;
   disabled: boolean;
@@ -77,7 +77,6 @@ const ChipGroup = ({
   text,
   showText,
   problem,
-  showMultipleHint,
   onToggle,
   onText,
   disabled,
@@ -112,6 +111,16 @@ const ChipGroup = ({
   const collapsed = Boolean(
     showText && group.text?.optional_reveal && !expanded && !text,
   );
+  if (group.key === 'about.visit_year')
+    return (
+      <DentalVisitYearField
+        group={group}
+        value={text}
+        onChange={onText}
+        disabled={disabled}
+        problem={problem ? PROBLEM_TEXT[problem] : null}
+      />
+    );
   return (
     <fieldset
       disabled={disabled}
@@ -123,14 +132,11 @@ const ChipGroup = ({
       {!collapsed ? (
         <DentalAssistantMessage>
           <h2 id={questionId} className="text-base leading-snug font-medium">
-            {group.title ? `${group.title}: ` : ''}
+            {group.title && !group.key.startsWith('allergy.')
+              ? `${group.title}: `
+              : ''}
             {group.question}
           </h2>
-          {showMultipleHint ? (
-            <p className="mt-1 text-[length:var(--ui-font-size-13)] text-[var(--q-muted)]">
-              Можно несколько
-            </p>
-          ) : null}
         </DentalAssistantMessage>
       ) : null}
 
@@ -330,10 +336,7 @@ export const ChipGroupsStep = ({
   const body = (
     <>
       {intro}
-      {step.dental?.page?.kind === 'details' && step.text ? (
-        <p className="text-sm text-[var(--q-muted)]">{step.text}</p>
-      ) : null}
-      {groups.map((group, index) => (
+      {groups.map((group) => (
         <ChipGroup
           key={group.key}
           group={group}
@@ -341,10 +344,6 @@ export const ChipGroupsStep = ({
           text={draft.texts[group.key] ?? ''}
           showText={isTextVisible(group, draft)}
           problem={showProblems ? groupProblem(group, draft) : null}
-          showMultipleHint={
-            index ===
-            groups.findIndex((item) => item.multiple && item.options.length > 1)
-          }
           disabled={isSubmitting || !restored}
           onToggle={(value) =>
             setDraft((current) => toggleOption(current, group, value))

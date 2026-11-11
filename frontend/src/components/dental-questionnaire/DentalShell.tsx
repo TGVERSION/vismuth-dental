@@ -192,6 +192,7 @@ interface DentalButtonProps {
   onClick: () => void;
   /** Ответ отправляется: кнопка заблокирована, вместо текста — крутилка. */
   isBusy?: boolean;
+  disabled?: boolean;
   /** Мягкая кнопка: «Ничего из этого нет». */
   variant?: 'primary' | 'soft';
 }
@@ -200,12 +201,13 @@ export const DentalButton = ({
   children,
   onClick,
   isBusy = false,
+  disabled = false,
   variant = 'primary',
 }: DentalButtonProps) => (
   <button
     type="button"
     onClick={onClick}
-    disabled={isBusy}
+    disabled={isBusy || disabled}
     aria-busy={isBusy}
     data-variant={variant === 'soft' ? 'secondary' : 'primary'}
     className="q-button w-full"

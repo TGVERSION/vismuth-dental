@@ -70,11 +70,7 @@ export const DentalGroupField = ({
         {group.question}
       </h2>
       {problem === 'choose' ? (
-        <p
-          id={errorId}
-          role="alert"
-          className="text-sm text-[var(--ui-color-red-700)]"
-        >
+        <p id={errorId} className="text-sm text-[var(--q-muted)]">
           {PROBLEMS.choose}
         </p>
       ) : null}

@@ -45,9 +45,13 @@ export const ChipGroupsStep = ({
   const groups = parseGroups(step);
   const { draft, setDraft, restored } = useDentalDraft(questionnaireId, step);
   const [showProblems, setShowProblems] = useState(false);
+  const needsChoice = groups.some(
+    (group) =>
+      group.options.length > 0 && groupProblem(group, draft) === 'choose',
+  );
 
   const handleNext = () => {
-    if (!restored) return;
+    if (!restored || needsChoice) return;
     if (!canSubmitGroups(groups, draft)) {
       setShowProblems(true);
       const first = groups.find((group) => groupProblem(group, draft) !== null);
@@ -65,7 +69,7 @@ export const ChipGroupsStep = ({
                 )
               : null;
           const target =
-            input ?? field.querySelector('[role="alert"]') ?? field;
+            input ?? document.getElementById(`problem-${first.key}`) ?? field;
           const viewport = main.getBoundingClientRect();
           const bounds = target.getBoundingClientRect();
           // Прокручиваем только форму внутри закреплённого экрана.
@@ -84,25 +88,30 @@ export const ChipGroupsStep = ({
   const body = (
     <>
       {intro}
-      {groups.map((group) => (
-        <DentalGroupField
-          key={group.key}
-          group={group}
-          selected={draft.selections[group.key] ?? []}
-          text={draft.texts[group.key] ?? ''}
-          showText={isTextVisible(group, draft)}
-          problem={showProblems ? groupProblem(group, draft) : null}
-          disabled={isSubmitting || !restored}
-          onToggle={(value) =>
-            setDraft((current) => toggleOption(current, group, value))
-          }
-          onText={(text) =>
-            setDraft((current) =>
-              setGroupText(current, group.key, text, group.text?.max_length),
-            )
-          }
-        />
-      ))}
+      {groups.map((group) => {
+        const problem = groupProblem(group, draft);
+        const showChoiceHint =
+          restored && group.options.length > 0 && problem === 'choose';
+        return (
+          <DentalGroupField
+            key={group.key}
+            group={group}
+            selected={draft.selections[group.key] ?? []}
+            text={draft.texts[group.key] ?? ''}
+            showText={isTextVisible(group, draft)}
+            problem={showProblems || showChoiceHint ? problem : null}
+            disabled={isSubmitting || !restored}
+            onToggle={(value) =>
+              setDraft((current) => toggleOption(current, group, value))
+            }
+            onText={(text) =>
+              setDraft((current) =>
+                setGroupText(current, group.key, text, group.text?.max_length),
+              )
+            }
+          />
+        );
+      })}
     </>
   );
 
@@ -114,7 +123,11 @@ export const ChipGroupsStep = ({
           Пропустить
         </DentalButton>
       ) : null}
-      <DentalButton onClick={handleNext} isBusy={isSubmitting || !restored}>
+      <DentalButton
+        onClick={handleNext}
+        isBusy={isSubmitting || !restored}
+        disabled={needsChoice}
+      >
         {step.step_key === 'dental_about' ? 'Отправить анкету' : 'Далее'}
       </DentalButton>
     </>

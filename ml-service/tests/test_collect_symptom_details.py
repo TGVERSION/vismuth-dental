@@ -45,7 +45,10 @@ def test_acute_pain_then_short_location_only_asks_for_missing_details(location_q
 
         def with_structured_output(self, _):
             return AsyncMock(ainvoke=AsyncMock(
-                side_effect=[progress(symptom_type='pain'), progress(symptom_type='pain')],
+                side_effect=[
+                    progress(symptom_type='pain', has_onset=True),
+                    progress(symptom_type='pain', has_onset=True),
+                ],
             ))
 
     service = CollectFormService(Client(), 6)
@@ -62,6 +65,7 @@ def test_acute_pain_then_short_location_only_asks_for_missing_details(location_q
     assert second.messages.text == 'Когда началась боль?'
     assert second.state.complaints.has_localization
     assert second.state.complaints.has_character
+    assert not second.state.complaints.has_onset
 
 
 @pytest.mark.parametrize('kind, missing', [('heartburn', 'как часто бывает изжога'), ('stool', 'как часто бывает стул')])

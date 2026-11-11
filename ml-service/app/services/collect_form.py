@@ -40,6 +40,10 @@ _PAIN_CHARACTER = re.compile(
     r"\b(?:остр|режущ|ноющ|колющ|тянущ|жгуч|туп|схваткообразн)\w*\s+бол[ьиью]\b",
     re.IGNORECASE,
 )
+_PAIN_DESCRIPTION_WITHOUT_ONSET = re.compile(
+    rf"(?:у меня )?{_PAIN_CHARACTER.pattern}(?: в животе)?[.!]?",
+    re.IGNORECASE,
+)
 _SHORT_PAIN_LOCATION = re.compile(
     r"(?:в\s?низу|в\s?верху|справа|слева|по центру)(?: живота)?[.!]?",
     re.IGNORECASE,
@@ -53,19 +57,31 @@ def _recognize_explicit_pain_details(progress: FormProgress, request: CollectFor
         return
 
     previous_question = ""
-    for message in request.messages[-_HISTORY_LIMIT:]:
+    description_only = True
+    has_description = False
+    for index, message in enumerate(request.messages[-_HISTORY_LIMIT:]):
         if message.role == ChatRole.ASSISTANT:
             previous_question = message.text.casefold()
             continue
-        if _PAIN_CHARACTER.search(message.text):
+        text = message.text.strip()
+        if index == 0 and text.startswith("Контекст: специализация — "):
+            continue
+        if _PAIN_CHARACTER.search(text):
             complaint.has_character = True
-        if (
+        location_reply = (
             "бол" in previous_question
             and ("где именно" in previous_question or "локализуется боль" in previous_question)
-            and _SHORT_PAIN_LOCATION.fullmatch(message.text.strip())
-        ):
+            and _SHORT_PAIN_LOCATION.fullmatch(text)
+        )
+        if location_reply:
             complaint.has_localization = True
+        else:
+            is_description = bool(_PAIN_DESCRIPTION_WITHOUT_ONSET.fullmatch(text))
+            has_description |= is_description
+            description_only &= is_description
         previous_question = ""
+    if has_description and description_only:
+        complaint.has_onset = False
 
 
 # Первый вопрос по полю: формулировка фиксирована, LLM не зовём.

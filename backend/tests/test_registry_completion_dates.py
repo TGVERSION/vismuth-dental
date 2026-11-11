@@ -31,6 +31,30 @@ def test_all_dates_does_not_exclude_unfinished_links():
     assert 'completed_at' not in str(compiled).split('WHERE', 1)[1]
 
 
+@pytest.mark.parametrize('day', [None, date(2026, 11, 11)])
+def test_completed_only_list_filters_and_sorts_before_limit(monkeypatch, day):
+    async def clinic(*args):
+        return object()
+
+    monkeypatch.setattr(registry, 'get_clinic_or_404', clinic)
+
+    class DB:
+        async def execute(self, query):
+            compiled = query.compile(dialect=postgresql.dialect())
+            sql = str(compiled)
+            assert 'questionnaire.completed_at IS NOT NULL' in sql
+            assert 'ORDER BY questionnaire.completed_at DESC, questionnaire.id DESC' in sql
+            assert 'concat_ws(' in sql
+            assert '%Иванов Иван%' in compiled.params.values()
+            assert 'LIMIT' in sql
+            return SimpleNamespace(scalars=lambda: SimpleNamespace(all=lambda: []))
+
+    assert asyncio.run(registry.list_registry_questionnaires(
+        uuid4(), registry_status_filter=None, name='Иванов Иван', completed_on=day,
+        utc_offset_minutes=300, completed_only=True, _=None, db=DB(),
+    )) == []
+
+
 def test_calendar_is_distinct_completion_days_with_the_same_access_filters(monkeypatch):
     clinic_id = uuid4()
     async def clinic(*args): return object()

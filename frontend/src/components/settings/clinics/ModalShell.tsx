@@ -11,6 +11,7 @@ interface ModalShellProps {
   closeDisabled?: boolean;
   /** Не закрывать случайно по фону или Escape; крестик остаётся доступным. */
   dismissDisabled?: boolean;
+  layout?: 'centered' | 'wide-top';
   children: ReactNode;
 }
 
@@ -33,6 +34,7 @@ export const ModalShell = ({
   onClose,
   closeDisabled = false,
   dismissDisabled = false,
+  layout = 'centered',
   children,
 }: ModalShellProps) => {
   useEffect(() => {
@@ -67,14 +69,20 @@ export const ModalShell = ({
 
   return createPortal(
     <div
-      className="modal-overlay fixed inset-0 z-[var(--ui-z-modal)] flex items-center justify-center overscroll-contain bg-[color:var(--ui-color-alabaster-dark-800)]/20"
+      className={`fixed inset-0 z-[var(--ui-z-modal)] flex justify-center overscroll-contain bg-[color:var(--ui-color-alabaster-dark-800)]/20 ${
+        layout === 'wide-top' ? 'items-start pt-4 sm:pt-10' : 'modal-overlay items-center'
+      }`}
       onClick={() => !closeDisabled && !dismissDisabled && onClose()}
     >
       <div
         role="dialog"
         aria-modal="true"
         aria-label={title}
-        className="animate-fade-in relative flex max-h-[calc(100dvh-32px)] w-141.25 max-w-[calc(100vw-32px)] flex-col overflow-y-auto rounded-2xl bg-white px-6 py-8 shadow-[var(--ui-shadow)] sm:px-10 sm:py-10"
+        className={`animate-fade-in relative flex max-w-[calc(100vw-32px)] flex-col overflow-y-auto rounded-2xl bg-white px-6 py-8 shadow-[var(--ui-shadow)] sm:px-10 ${
+          layout === 'wide-top'
+            ? 'max-h-[calc(100dvh-64px)] w-[min(56rem,calc(100vw-32px))]'
+            : 'max-h-[calc(100dvh-32px)] w-141.25 sm:py-10'
+        }`}
         onClick={(event) => event.stopPropagation()}
       >
         <button

@@ -1,41 +1,27 @@
 'use client';
 
 import { useRef, useState } from 'react';
-import type { RegistryQuestionnaireCreated } from '@/api';
 import { mainApi } from '@/api';
 import { ApiError } from '@/api/base-client';
-import {
-  ModalShell,
-  PRIMARY_BUTTON_CLASS,
-  SECONDARY_BUTTON_CLASS,
-} from '@/components/settings/clinics/ModalShell';
-import { FieldRow, INPUT_CLASS } from '@/components/settings/clinics/fields';
-import { LinkQrCard } from '@/components/doctor-questionnaires/LinkQrCard';
+import { ModalShell } from '@/components/settings/clinics/ModalShell';
+import { INPUT_CLASS } from '@/components/settings/clinics/fields';
+import { copyText } from '@/lib/clipboard';
 import { fieldFillClass } from '@/lib/field-fill';
-import { logWarn } from '@/lib/logger';
-import {
-  EMPTY_NEW_LINK,
-  buildNewLinkPayload,
-  inviteLinkItem,
-  validateNewLink,
-  type NewLinkErrors,
-  type NewLinkForm,
-} from '@/lib/registry';
+import { toDateInputValue } from '@/lib/questionnaire';
+import { buildNewLinkPayload } from '@/lib/registry';
 
 const HAS_CYRILLIC = /[а-яё]/i;
 
-/** Текст ошибки для регистратуры — только по-русски. */
 const createErrorText = (error: unknown): string => {
-  if (!(error instanceof ApiError))
-    return 'Не удалось создать ссылку. Проверьте интернет и попробуйте ещё раз.';
-  if (error.status === 503)
-    return 'Доступ клиники к сервису закончился — новые ссылки создать нельзя';
-  if (error.status === 409)
-    return 'Клиника работает с общей анкетой — персональные ссылки недоступны';
-  if (error.status === 400 || error.status === 422) {
-    // Тексты проверок backend уже по-русски; прочие — общим текстом.
-    if (HAS_CYRILLIC.test(error.message)) return error.message;
-    return 'Проверьте поля формы';
+  if (error instanceof ApiError) {
+    if (error.status === 503)
+      return 'Доступ клиники к сервису закончился — новые ссылки создать нельзя';
+    if (error.status === 409)
+      return 'Клиника работает с общей анкетой — персональные ссылки недоступны';
+    if (error.status === 400 || error.status === 422)
+      return HAS_CYRILLIC.test(error.message)
+        ? error.message
+        : 'Проверьте поля формы';
   }
   return 'Не удалось создать ссылку. Попробуйте ещё раз.';
 };
@@ -43,54 +29,40 @@ const createErrorText = (error: unknown): string => {
 interface NewLinkModalProps {
   clinicId: string;
   onClose: () => void;
-  /** Ссылка создана: обновить список и открыть анкету. */
-  onCreated: (created: RegistryQuestionnaireCreated) => void;
 }
 
-/**
- * «Новая ссылка»: ФИО пациента → персональная ссылка и QR. Врач и время
- * приёма не нужны: анкета, как бумажная, к ним не привязана.
- * Ссылка показывается один раз — потом её можно только перевыпустить.
- * Поля и кнопки — как в окне приглашения сотрудника (`InviteMemberModal`).
- */
-export const NewLinkModal = ({
-  clinicId,
-  onClose,
-  onCreated,
-}: NewLinkModalProps) => {
-  const [form, setForm] = useState<NewLinkForm>(EMPTY_NEW_LINK);
-  const [errors, setErrors] = useState<NewLinkErrors>({});
+export const NewLinkModal = ({ clinicId, onClose }: NewLinkModalProps) => {
+  const [fullName, setFullName] = useState('');
+  const [birthDate, setBirthDate] = useState('');
+  const [nameError, setNameError] = useState('');
+  const [serverError, setServerError] = useState('');
+  const [url, setUrl] = useState('');
+  const [copyStatus, setCopyStatus] = useState('');
   const [isSaving, setIsSaving] = useState(false);
-  const [serverError, setServerError] = useState<string | null>(null);
-  const [created, setCreated] = useState<RegistryQuestionnaireCreated | null>(
-    null,
-  );
-  // Состояние обновится только после рендера: без ссылки два клика подряд
-  // создали бы две анкеты.
   const savingRef = useRef(false);
+  const urlRef = useRef<HTMLInputElement>(null);
 
-  const set =
-    (field: keyof NewLinkForm) => (event: { target: { value: string } }) =>
-      setForm((current) => ({ ...current, [field]: event.target.value }));
-
-  const handleSubmit = async (event: React.FormEvent) => {
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    const found = validateNewLink(form);
-    setErrors(found);
-    if (Object.keys(found).length > 0 || savingRef.current) return;
+    if (savingRef.current) return;
+
+    const payload = buildNewLinkPayload(fullName, birthDate);
+    setNameError(payload ? '' : 'Укажите фамилию и имя');
+    setServerError('');
+    if (!payload) return;
 
     savingRef.current = true;
     setIsSaving(true);
-    setServerError(null);
     try {
       const result = await mainApi.clinicQuestionnaires.create(
         clinicId,
-        buildNewLinkPayload(form),
+        payload,
       );
-      setCreated(result);
-      onCreated(result);
+      setUrl(result.url);
+      setFullName('');
+      setBirthDate('');
+      setCopyStatus('');
     } catch (error) {
-      logWarn('Регистратура: ссылка не создана', error);
       setServerError(createErrorText(error));
     } finally {
       savingRef.current = false;
@@ -98,110 +70,119 @@ export const NewLinkModal = ({
     }
   };
 
-  if (created) {
-    return (
-      // Ссылка показывается один раз: случайный клик мимо окна или Esc не
-      // должны её терять — закрыть можно крестиком или кнопкой «Готово».
-      <ModalShell title="Ссылка готова" onClose={onClose} dismissDisabled>
-        <LinkQrCard item={inviteLinkItem(created)} />
-        <div className="mt-[var(--ui-space-32)] flex flex-col gap-3">
-          <button
-            type="button"
-            className={PRIMARY_BUTTON_CLASS}
-            onClick={onClose}
-          >
-            Готово
-          </button>
-          <button
-            type="button"
-            className={SECONDARY_BUTTON_CLASS}
-            onClick={() => {
-              setCreated(null);
-              setForm(EMPTY_NEW_LINK);
-            }}
-          >
-            Ещё одна ссылка
-          </button>
-        </div>
-      </ModalShell>
-    );
-  }
-
-  const field = (value: string) => `${INPUT_CLASS} ${fieldFillClass(value)}`;
+  const copyLink = async () => {
+    try {
+      await copyText(url);
+      setCopyStatus('Ссылка скопирована');
+    } catch {
+      urlRef.current?.focus();
+      urlRef.current?.select();
+      setCopyStatus('Скопируйте выделенную ссылку вручную');
+    }
+  };
 
   return (
     <ModalShell
-      title="Новая ссылка на анкету"
+      title="Создание ссылки пациенту"
+      layout="wide-top"
       onClose={onClose}
       closeDisabled={isSaving}
+      dismissDisabled={Boolean(url)}
     >
-      <form onSubmit={handleSubmit} noValidate className="flex flex-col">
-        <FieldRow label="Фамилия" htmlFor="nl-last" error={errors.lastName}>
+      <form
+        onSubmit={handleSubmit}
+        className="mt-3 grid grid-cols-1 items-start gap-3 sm:grid-cols-[minmax(0,1fr)_minmax(11rem,auto)_auto]"
+      >
+        <div className="min-w-0">
           <input
-            id="nl-last"
-            className={field(form.lastName)}
-            value={form.lastName}
-            onChange={set('lastName')}
-            maxLength={255}
+            className={`${INPUT_CLASS} ${fieldFillClass(fullName)}`}
+            aria-label="ФИО пациента"
+            aria-invalid={Boolean(nameError)}
+            aria-describedby={nameError ? 'new-link-name-error' : undefined}
+            placeholder="ФИО пациента"
+            autoComplete="off"
+            value={fullName}
+            onChange={(event) => {
+              setFullName(event.target.value);
+              setNameError('');
+            }}
+            maxLength={767}
+            disabled={isSaving}
             autoFocus
           />
-        </FieldRow>
-        <FieldRow label="Имя" htmlFor="nl-first" error={errors.firstName}>
+          {nameError && (
+            <p
+              id="new-link-name-error"
+              role="alert"
+              className="mt-1 text-xs text-[var(--ui-color-red-600)]"
+            >
+              {nameError}
+            </p>
+          )}
+        </div>
+        <div className="group relative">
           <input
-            id="nl-first"
-            className={field(form.firstName)}
-            value={form.firstName}
-            onChange={set('firstName')}
-            maxLength={255}
-          />
-        </FieldRow>
-        <FieldRow label="Отчество" hint="Если есть" htmlFor="nl-middle">
-          <input
-            id="nl-middle"
-            className={field(form.middleName)}
-            value={form.middleName}
-            onChange={set('middleName')}
-            maxLength={255}
-          />
-        </FieldRow>
-
-        <FieldRow label="Дата рождения" htmlFor="nl-birth">
-          <input
-            id="nl-birth"
             type="date"
-            className={field(form.birthDate ?? '')}
-            value={form.birthDate ?? ''}
-            onChange={set('birthDate')}
-            max={new Date().toISOString().slice(0, 10)}
+            className={`${INPUT_CLASS} ${fieldFillClass(birthDate)} ${birthDate ? '' : 'text-transparent! focus:text-[var(--ui-color-alabaster-dark-800)]!'}`}
+            aria-label="Дата рождения"
+            value={birthDate}
+            onChange={(event) => setBirthDate(event.target.value)}
+            max={toDateInputValue(new Date())}
+            disabled={isSaving}
           />
-        </FieldRow>
-
-        {serverError ? (
+          {!birthDate && (
+            <span
+              aria-hidden="true"
+              className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-[var(--ui-color-alabaster-800)] group-focus-within:hidden"
+            >
+              Дата рождения
+            </span>
+          )}
+        </div>
+        <button
+          type="submit"
+          className="vismuth-button whitespace-nowrap"
+          data-size="s"
+          disabled={isSaving}
+        >
+          {isSaving ? 'Создаём…' : 'Создать ссылку'}
+        </button>
+        {serverError && (
           <p
             role="alert"
-            className="mt-3 text-sm text-[var(--ui-color-red-600)]"
+            className="text-sm text-[var(--ui-color-red-600)] sm:col-span-3"
           >
             {serverError}
           </p>
-        ) : null}
-
-        <div className="mt-[var(--ui-space-32)] flex flex-col gap-3">
-          <button
-            type="submit"
-            disabled={isSaving}
-            className={PRIMARY_BUTTON_CLASS}
-          >
-            {isSaving ? 'Создаём…' : 'Создать ссылку'}
-          </button>
-          <button
-            type="button"
-            onClick={onClose}
-            disabled={isSaving}
-            className={SECONDARY_BUTTON_CLASS}
-          >
-            Отмена
-          </button>
-        </div>
+        )}
+        {url && (
+          <>
+            <input
+              ref={urlRef}
+              value={url}
+              readOnly
+              aria-label="Ссылка для пациента"
+              onFocus={(event) => event.target.select()}
+              className="vismuth-input min-w-0 bg-white! sm:col-span-2"
+            />
+            <button
+              type="button"
+              className="vismuth-button vismuth-button--secondary"
+              data-size="s"
+              onClick={() => void copyLink()}
+            >
+              {copyStatus === 'Ссылка скопирована'
+                ? 'Скопировано'
+                : 'Копировать'}
+            </button>
+            <p
+              role="status"
+              className={copyStatus ? 'text-sm sm:col-span-3' : 'sr-only'}
+            >
+              {copyStatus}
+            </p>
+          </>
+        )}
       </form>
     </ModalShell>
   );

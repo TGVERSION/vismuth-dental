@@ -59,6 +59,19 @@
 .vismuth-button[data-variant='ghost']:hover:not(:disabled) {
   background: var(--ui-color-blue-100);
 }
+.vismuth-button[data-variant='ghost'][data-color='neutral'] {
+  color: var(--ui-color-alabaster-950);
+  font-weight: var(--ui-font-weight-medium);
+}
+.vismuth-button[data-variant='ghost'][data-color='neutral']:is(a:hover, a:active) {
+  background: var(--ui-color-alabaster-500);
+  color: var(--ui-color-alabaster-dark-800);
+}
+.vismuth-button[data-variant='ghost'][data-color='neutral'][aria-current='page'] {
+  background: transparent;
+  color: var(--ui-color-alabaster-dark-800);
+  cursor: default;
+}
 .vismuth-button[data-variant='danger'],
 .vismuth-button--danger {
   background: var(--ui-color-red-100);

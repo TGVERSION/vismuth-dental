@@ -1,15 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import type { RegistryQuestionnaireItem } from '@/api';
 import {
-  EMPTY_NEW_LINK,
   buildNewLinkPayload,
   formatDateTime,
+  groupRegistryByCompletionDay,
   inviteLinkItem,
   patientFullName,
   registryActions,
   registryStatusView,
   registryWhenLine,
-  validateNewLink,
 } from './registry';
 
 const TZ = 'Asia/Yekaterinburg';
@@ -29,12 +28,6 @@ const item = (
   invite_expires_at: '2026-11-03T10:00:00Z',
   ...patch,
 });
-
-const FORM = {
-  lastName: ' Белова ',
-  firstName: 'Ольга',
-  middleName: '  ',
-};
 
 describe('registryStatusView', () => {
   it('names every status for the front desk', () => {
@@ -81,33 +74,56 @@ describe('registryWhenLine', () => {
   });
 });
 
-describe('validateNewLink', () => {
-  it('accepts surname and name', () => {
-    expect(validateNewLink(FORM)).toEqual({});
-  });
-
-  it('requires surname and name only', () => {
-    expect(Object.keys(validateNewLink(EMPTY_NEW_LINK)).sort()).toEqual([
-      'firstName',
-      'lastName',
+describe('groupRegistryByCompletionDay', () => {
+  it('groups completed items in API order using the same offset as the date filter', () => {
+    const newest = item({
+      id: 'new',
+      status: 'signed',
+      completed_at: '2026-11-11T08:00:00Z',
+    });
+    const sameDay = item({
+      id: 'same',
+      status: 'printed',
+      completed_at: '2026-11-10T20:00:00Z',
+    });
+    const previousDay = item({
+      id: 'older',
+      status: 'completed',
+      completed_at: '2026-11-10T18:59:59Z',
+    });
+    expect(
+      groupRegistryByCompletionDay(
+        [newest, item({}), sameDay, previousDay],
+        300,
+      ),
+    ).toEqual([
+      ['2026-11-11', [newest, sameDay]],
+      ['2026-11-10', [previousDay]],
     ]);
   });
 });
 
 describe('buildNewLinkPayload', () => {
   it('passes the date entered by the administrator without asking the patient', () => {
-    expect(
-      buildNewLinkPayload({ ...FORM, birthDate: '1985-03-14' }),
-    ).toMatchObject({
-      birth_date: '1985-03-14',
-    });
+    expect(buildNewLinkPayload('Белова Ольга Сергеевна', '1985-03-14')).toEqual(
+      {
+        last_name: 'Белова',
+        first_name: 'Ольга',
+        middle_name: 'Сергеевна',
+        birth_date: '1985-03-14',
+      },
+    );
   });
   it('trims names and drops an empty patronymic', () => {
-    expect(buildNewLinkPayload(FORM)).toEqual({
+    expect(buildNewLinkPayload(' Белова   Ольга ', '')).toEqual({
       last_name: 'Белова',
       first_name: 'Ольга',
       middle_name: null,
     });
+  });
+  it('requires at least a surname and a given name', () => {
+    expect(buildNewLinkPayload('Белова', '')).toBeNull();
+    expect(buildNewLinkPayload(' ', '')).toBeNull();
   });
 });
 

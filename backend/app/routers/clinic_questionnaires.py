@@ -93,6 +93,10 @@ def _registry_query(clinic_id, registry_status_filter=None, name=None, completed
             Questionnaire.patient_last_name.ilike(pattern, escape='\\'),
             Questionnaire.patient_first_name.ilike(pattern, escape='\\'),
             Questionnaire.patient_middle_name.ilike(pattern, escape='\\'),
+            func.concat_ws(
+                ' ', Questionnaire.patient_last_name, Questionnaire.patient_first_name,
+                Questionnaire.patient_middle_name,
+            ).ilike(pattern, escape='\\'),
         ))
     if completed_on is not None:
         zone = timezone(timedelta(minutes=utc_offset_minutes))
@@ -190,12 +194,18 @@ async def list_registry_questionnaires(
     name: Optional[str] = Query(default=None, max_length=255),
     completed_on: Optional[date] = None,
     utc_offset_minutes: int = Query(default=0, ge=-840, le=840),
+    completed_only: bool = False,
     _: ServiceUser = Depends(require_clinic_registry),
     db: AsyncSession = Depends(get_db),
 ) -> list[RegistryQuestionnaireItem]:
     await get_clinic_or_404(db, clinic_id)
     query = _registry_query(clinic_id, registry_status_filter, name, completed_on, utc_offset_minutes)
-    query = query.order_by(Questionnaire.created_at.desc()).limit(LIST_LIMIT)
+    if completed_only:
+        query = query.where(Questionnaire.completed_at.is_not(None))
+        query = query.order_by(Questionnaire.completed_at.desc(), Questionnaire.id.desc())
+    else:
+        query = query.order_by(Questionnaire.created_at.desc())
+    query = query.limit(LIST_LIMIT)
     result = await db.execute(query)
     return [RegistryQuestionnaireItem(**_item_fields(q)) for q in result.scalars().all()]
 

@@ -11,8 +11,6 @@ import { useRegistryDetail, useRegistryList } from '@/hooks/useRegistry';
 import { canUseRegistry } from '@/lib/app-nav';
 import { QuestionnaireFilters } from '@/components/doctor-questionnaires/QuestionnaireFilters';
 import { useQuestionnaireDates } from '@/hooks/useQuestionnaireDates';
-import { toDateInputValue } from '@/lib/questionnaire';
-import { formatDateLabel } from '@/lib/calendar';
 import { NewLinkModal } from './NewLinkModal';
 import { RegistryDetail } from './RegistryDetail';
 import { RegistryList } from './RegistryList';
@@ -88,7 +86,7 @@ export const RegistryScreen = () => {
       : null;
 
   const [name, setName] = useState('');
-  const [date, setDate] = useState(() => toDateInputValue(new Date()));
+  const [date, setDate] = useState('');
   const [utcOffset] = useState(() => -new Date().getTimezoneOffset());
   const [calendarVersion, setCalendarVersion] = useState(0);
   const [isCreating, setIsCreating] = useState(false);
@@ -96,6 +94,7 @@ export const RegistryScreen = () => {
   const searchName = useDebounced(name.trim(), SEARCH_DEBOUNCE_MS);
   const query = useMemo(
     () => ({
+      completed_only: true,
       ...(searchName ? { name: searchName } : {}),
       ...(date ? { completed_on: date, utc_offset_minutes: utcOffset } : {}),
     }),
@@ -159,7 +158,7 @@ export const RegistryScreen = () => {
         <p className="px-4 py-8 text-center text-sm text-gray-500">
           {isFiltered
             ? 'Ничего не найдено'
-            : 'Анкет пока нет — создайте ссылку для пациента'}
+            : 'Заполненных анкет пока нет'}
         </p>
       );
     }
@@ -168,6 +167,7 @@ export const RegistryScreen = () => {
         items={list.items}
         selectedId={selectedId}
         clinicId={superAdmin ? clinicId : undefined}
+        utcOffsetMinutes={utcOffset}
       />
     );
   };
@@ -247,9 +247,11 @@ export const RegistryScreen = () => {
           type="button"
           aria-haspopup="dialog"
           onClick={() => setIsCreating(true)}
-          className="vismuth-button vismuth-button--secondary w-full shrink-0"
+          className="vismuth-button w-full shrink-0 bg-white! hover:bg-[var(--ui-color-blue-50)]!"
+          data-variant="ghost"
+          data-size="l"
         >
-          Новая ссылка
+          Новая ссылка для пациента
         </button>
 
         <div className="mt-6 shrink-0">
@@ -259,15 +261,13 @@ export const RegistryScreen = () => {
             date={date}
             onDateChange={setDate}
             dateLabel="Дата заполнения"
+            searchLabel="ФИО пациента"
             onClearDate={() => setDate('')}
             markedDates={markedDates}
           />
         </div>
 
         <div className="custom-scrollbar mt-6 min-h-0 flex-1 overflow-x-hidden overflow-y-auto">
-          <h2 className="px-0 py-[var(--ui-space-8)] text-[length:var(--ui-font-size-14)] font-medium">
-            {date ? formatDateLabel(date) : 'Все даты'}
-          </h2>
           {renderList()}
         </div>
       </aside>
@@ -280,12 +280,6 @@ export const RegistryScreen = () => {
         <NewLinkModal
           clinicId={clinicId}
           onClose={() => setIsCreating(false)}
-          onCreated={(created) => {
-            setDate('');
-            setCalendarVersion((version) => version + 1);
-            list.reload();
-            select(created.id);
-          }}
         />
       ) : null}
     </>

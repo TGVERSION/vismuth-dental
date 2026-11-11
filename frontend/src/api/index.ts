@@ -1103,6 +1103,7 @@ export interface RegistryQuestionnaireQuery {
   status?: RegistryStatus;
   name?: string;
   completed_on?: string;
+  completed_only?: boolean;
   utc_offset_minutes?: number;
 }
 

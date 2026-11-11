@@ -50,6 +50,26 @@ export const registryWhenLine = (
   }).format(new Date(item.completed_at));
 };
 
+/** Группы в порядке выдачи сервера, по тем же местным суткам, что и фильтр. */
+export const groupRegistryByCompletionDay = (
+  items: RegistryQuestionnaireItem[],
+  utcOffsetMinutes: number,
+) => {
+  const groups = new Map<string, RegistryQuestionnaireItem[]>();
+  for (const item of items) {
+    if (!item.completed_at) continue;
+    const timestamp = Date.parse(item.completed_at);
+    if (!Number.isFinite(timestamp)) continue;
+    const day = new Date(timestamp + utcOffsetMinutes * 60_000)
+      .toISOString()
+      .slice(0, 10);
+    const group = groups.get(day);
+    if (group) group.push(item);
+    else groups.set(day, [item]);
+  }
+  return [...groups];
+};
+
 // ---------------------------------------------------------------------------
 // Статус
 
@@ -120,37 +140,19 @@ export const patientFullName = (item: RegistryQuestionnaireItem): string =>
 // Форма новой ссылки: ФИО и дата рождения — ссылка не привязана
 // ни к врачу, ни к дате приёма.
 
-export interface NewLinkForm {
-  lastName: string;
-  firstName: string;
-  middleName: string;
-  birthDate?: string;
-}
-
-export const EMPTY_NEW_LINK: NewLinkForm = Object.freeze({
-  lastName: '',
-  firstName: '',
-  middleName: '',
-  birthDate: '',
-});
-
-export type NewLinkErrors = Partial<Record<keyof NewLinkForm, string>>;
-
-export const validateNewLink = (form: NewLinkForm): NewLinkErrors => {
-  const errors: NewLinkErrors = {};
-  if (!form.lastName.trim()) errors.lastName = 'Укажите фамилию';
-  if (!form.firstName.trim()) errors.firstName = 'Укажите имя';
-  return errors;
-};
-
 export const buildNewLinkPayload = (
-  form: NewLinkForm,
-): RegistryQuestionnaireCreate => ({
-  last_name: form.lastName.trim(),
-  first_name: form.firstName.trim(),
-  middle_name: form.middleName.trim() || null,
-  ...(form.birthDate ? { birth_date: form.birthDate } : {}),
-});
+  fullName: string,
+  birthDate: string,
+): RegistryQuestionnaireCreate | null => {
+  const [lastName, firstName, ...middleNameParts] = fullName.trim().split(/\s+/);
+  if (!lastName || !firstName) return null;
+  return {
+    last_name: lastName,
+    first_name: firstName,
+    middle_name: middleNameParts.join(' ') || null,
+    ...(birthDate ? { birth_date: birthDate } : {}),
+  };
+};
 
 /**
  * Карточка новой ссылки для `LinkQrCard`: адрес, QR и имя файла. В имени

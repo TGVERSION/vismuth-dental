@@ -11,7 +11,7 @@ import { useAuthStore } from '@/store/authStore';
 /**
  * Разделы в шапке защищённой зоны.
  *
- * Активный раздел — серым, остальные — тёмным, как на макете.
+ * Пункты оформлены как нейтральные ghost-кнопки VISMUTH.
  *
  * Активный пункт намеренно не ссылка. Экран протокола живёт на
  * `/?id=…&structure_id=…`, и переход по `href="/"` стёр бы параметры: протокол
@@ -83,13 +83,16 @@ export const AppNav = () => {
         ];
 
   return (
-    <nav aria-label="Разделы" className="flex w-max items-center gap-5 px-3">
+    <nav aria-label="Разделы" className="flex w-max items-center gap-2 px-3">
       {items.map((item) =>
         item.id === active ? (
           <span
             key={item.id}
             aria-current="page"
-            className="text-[var(--ui-color-alabaster-950)]"
+            className="vismuth-button whitespace-nowrap"
+            data-variant="ghost"
+            data-color="neutral"
+            data-size="l"
           >
             {item.label}
           </span>
@@ -97,7 +100,10 @@ export const AppNav = () => {
           <Link
             key={item.id}
             href={item.href}
-            className="text-[var(--ui-color-alabaster-dark-800)] transition-colors hover:text-[var(--ui-color-blue-600)]"
+            className="vismuth-button whitespace-nowrap"
+            data-variant="ghost"
+            data-color="neutral"
+            data-size="l"
           >
             {item.label}
           </Link>

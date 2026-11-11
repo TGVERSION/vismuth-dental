@@ -14,6 +14,7 @@ interface QuestionnaireFiltersProps {
   onDateChange: (value: string) => void;
   markedDates?: readonly string[];
   dateLabel?: string;
+  searchLabel?: string;
   onClearDate?: () => void;
   children?: React.ReactNode;
 }
@@ -30,6 +31,7 @@ export const QuestionnaireFilters = ({
   onDateChange,
   markedDates,
   dateLabel = 'Дата приёма',
+  searchLabel = 'Имя пациента',
   onClearDate,
   children,
 }: QuestionnaireFiltersProps) => {
@@ -38,7 +40,7 @@ export const QuestionnaireFilters = ({
   return (
     <div className="flex shrink-0 flex-col gap-3 rounded-[15px] bg-white p-3">
       <label className="relative block">
-        <span className="sr-only">Имя пациента</span>
+        <span className="sr-only">{searchLabel}</span>
         <Image
           src="/search.svg"
           alt=""
@@ -50,7 +52,7 @@ export const QuestionnaireFilters = ({
           type="search"
           value={search}
           onChange={(event) => onSearchChange(event.target.value)}
-          placeholder="Имя пациента"
+          placeholder={searchLabel}
           autoComplete="off"
           maxLength={100}
           className={`h-10 w-full rounded-xl ${fieldFillClass(search)} pr-3 pl-10 text-sm text-[#202020] placeholder:text-[#A0A7B0] focus:ring-2 focus:ring-[#5D8CF1] focus:outline-none`}

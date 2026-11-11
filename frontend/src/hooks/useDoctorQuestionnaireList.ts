@@ -52,6 +52,7 @@ export const useDoctorQuestionnaireList = ({
     () => ({
       ...buildListQuery({ search: debouncedSearch, date, visitType }),
       by_completion: true,
+      exclude_dental: true,
       utc_offset_minutes: utcOffsetMinutes,
     }),
     [debouncedSearch, date, visitType, utcOffsetMinutes],

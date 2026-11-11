@@ -182,7 +182,7 @@ function ClinicPatientLinkGenerator({ clinicId, onPrint, compact }: Props) {
       }}
       min={today}
       max={toDateInputValue(horizon)}
-      placeholder={compact ? 'Дата приёма' : 'Не указана'}
+      placeholder="Не указана"
       popoverAlign="left"
       aria-label="Дата приёма для ссылки"
     />
@@ -195,7 +195,7 @@ function ClinicPatientLinkGenerator({ clinicId, onPrint, compact }: Props) {
       value={time}
       onChange={(event) => update(setTime, event.target.value)}
       disabled={busy}
-      className={`vismuth-input w-full ${fieldFillClass(time)} ${compact && !time ? 'text-transparent! focus:text-[var(--ui-color-alabaster-dark-800)]!' : ''}`}
+      className={`vismuth-input w-full ${fieldFillClass(time)}`}
     />
   );
   const qrCard = url ? (
@@ -226,45 +226,28 @@ function ClinicPatientLinkGenerator({ clinicId, onPrint, compact }: Props) {
             event.preventDefault();
             void create();
           }}
-          className="grid grid-cols-1 items-start gap-3 md:grid-cols-[minmax(0,1fr)_minmax(9rem,auto)_minmax(9rem,auto)_8rem]"
+          className="grid grid-cols-1 items-start gap-3 sm:grid-cols-[minmax(0,1fr)_minmax(13rem,auto)_8rem]"
         >
           {doctorControl}
-          <div className="min-w-0">
-            {dateControl}
-            {date && (
-              <button
-                type="button"
-                disabled={busy}
-                onClick={() => update(setDate, '')}
-                className="vismuth-function-button text-sm"
-              >
-                Убрать дату
-              </button>
-            )}
-          </div>
-          <div className="min-w-0">
-            <div className="group relative">
-              {timeControl}
-              {!time && (
-                <span
-                  aria-hidden="true"
-                  className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-[var(--ui-color-alabaster-800)] group-focus-within:hidden"
-                >
-                  Время приёма
-                </span>
-              )}
-            </div>
-            {time && (
-              <button
-                type="button"
-                disabled={busy}
-                onClick={() => update(setTime, '')}
-                className="vismuth-function-button text-sm"
-              >
-                Убрать время
-              </button>
-            )}
-          </div>
+          <DateField
+            value={date}
+            onChange={(value) => update(setDate, value)}
+            timePicker={{
+              value: time,
+              onChange: (nextDate, nextTime) => {
+                setDate(nextDate);
+                setTime(nextTime);
+                setUrl('');
+                setError('');
+              },
+            }}
+            disabled={busy}
+            min={today}
+            max={toDateInputValue(horizon)}
+            placeholder="Дата и время приёма"
+            popoverAlign="left"
+            aria-label="Дата и время приёма для ссылки"
+          />
           <button
             type="submit"
             className="vismuth-button whitespace-nowrap"

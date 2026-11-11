@@ -10,11 +10,13 @@ import {
   buildSections,
   formatAppointmentTime,
   gapQuestions,
+  isQuestionnaireReady,
   patientName,
   visitTypeLabel,
 } from '@/lib/doctor-questionnaires';
 import { QuestionnaireSection } from '@/components/doctor-questionnaires/QuestionnaireSection';
 import { QuestionnaireQuestions } from '@/components/dental-card/DentalCardParts';
+import { FloatingQuestionnaire } from '@/components/doctor-questionnaires/FloatingQuestionnaire';
 import {
   GastroDoctorHighlights,
   GastroDoctorHistory,
@@ -23,9 +25,11 @@ import {
 export function CompletedDetail({
   data,
   onChanged,
+  doctorView = false,
 }: {
   data: Detail;
   onChanged: () => void;
+  doctorView?: boolean;
 }) {
   const [printing, setPrinting] = useState(false),
     [error, setError] = useState('');
@@ -61,7 +65,10 @@ export function CompletedDetail({
   return (
     <article className="space-y-9">
       <header className="space-y-3">
-        <div className="flex flex-wrap items-baseline gap-3 text-[#6C757D] lg:gap-9">
+        <div className="flex flex-wrap items-center gap-3 text-[#6C757D]">
+          {doctorView && isQuestionnaireReady(data) && (
+            <FloatingQuestionnaire questionnaire={data} />
+          )}
           {sheet && (
             <button
               type="button"
@@ -98,12 +105,14 @@ export function CompletedDetail({
             {visitTypeLabel(data.visit_type)}
           </span>
         </div>
-        <p className="text-sm text-[#8B8B8B]">
-          {data.clinic_name} ·{' '}
-          {data.completed_at
-            ? new Date(data.completed_at).toLocaleString('ru-RU')
-            : ''}
-        </p>
+        {!doctorView && (
+          <p className="text-sm text-[#8B8B8B]">
+            {data.clinic_name} ·{' '}
+            {data.completed_at
+              ? new Date(data.completed_at).toLocaleString('ru-RU')
+              : ''}
+          </p>
+        )}
       </header>
       {sheet?.continuation.length ? (
         <p className="rounded-xl bg-amber-50 p-3 text-sm">

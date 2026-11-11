@@ -30,6 +30,7 @@ export function useCompletedQuestionnaireList(
         ? {}
         : {
             by_completion: 'true',
+            exclude_dental: 'true',
             utc_offset_minutes: completionOffset,
           }),
     }),

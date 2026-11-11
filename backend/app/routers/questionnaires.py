@@ -209,6 +209,7 @@ async def list_questionnaires(
     db: AsyncSession = Depends(get_db),
     by_completion: bool = False,
     utc_offset_minutes: int = Query(default=0, ge=-840, le=840),
+    exclude_dental: bool = False,
 ) -> List[DoctorQuestionnaireListItem]:
     membership = await get_active_doctor_membership(current_user, db)
 
@@ -226,6 +227,8 @@ async def list_questionnaires(
 
     if code:
         stmt = stmt.where(Questionnaire.code == code)
+    if exclude_dental:
+        stmt = stmt.where(Questionnaire.kind != 'dental')
     if by_completion:
         stmt = stmt.where(Questionnaire.completed_at.is_not(None))
         if date_filter is not None:
@@ -274,6 +277,7 @@ async def appointment_dates(
     db: AsyncSession = Depends(get_db),
     by_completion: bool = False,
     utc_offset_minutes: int = Query(default=0, ge=-840, le=840),
+    exclude_dental: bool = False,
 ):
     membership = await get_active_doctor_membership(current_user, db)
     if date_from and date_to and date_from > date_to:
@@ -285,6 +289,8 @@ async def appointment_dates(
                   else_=Questionnaire.appointment_date)
     )
     stmt = select(day).where(_visible_to(membership), Questionnaire.status == 'completed', day.is_not(None))
+    if exclude_dental:
+        stmt = stmt.where(Questionnaire.kind != 'dental')
     if date_from:
         stmt = stmt.where(day >= date_from)
     if date_to:

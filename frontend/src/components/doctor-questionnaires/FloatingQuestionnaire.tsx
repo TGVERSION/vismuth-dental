@@ -136,7 +136,7 @@ export function FloatingQuestionnaire({
   if (!fields.length) return null;
 
   return (
-    <div className="mb-5">
+    <div className="shrink-0">
       <button
         type="button"
         className="vismuth-button vismuth-button--secondary"

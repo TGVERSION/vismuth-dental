@@ -86,6 +86,8 @@ def test_doctor_completion_mode_keeps_scope_and_orders_by_completion(monkeypatch
             assert 'completed' in compiled.params.values()
             assert 'ORDER BY questionnaire.completed_at DESC' in sql
             assert 'questionnaire.completed_at IS NOT NULL' in sql
+            assert 'questionnaire.kind !=' in sql
+            assert 'dental' in compiled.params.values()
             assert '%Иванов Иван%' in compiled.params.values()
             assert ('questionnaire.completed_at >=' in sql) == (day is not None)
             if day is not None:
@@ -96,6 +98,7 @@ def test_doctor_completion_mode_keeps_scope_and_orders_by_completion(monkeypatch
     assert asyncio.run(questionnaires.list_questionnaires(
         name='Иванов Иван', date_filter=day, visit_type=None, code=None,
         current_user=None, db=DB(), by_completion=True, utc_offset_minutes=300,
+        exclude_dental=True,
     )) == []
 
 
@@ -103,8 +106,10 @@ def test_admin_completion_range_uses_local_days():
     day = date(2026, 11, 11)
     query = completed_query(
         date_from=day, date_to=day, by_completion=True, utc_offset_minutes=300,
+        exclude_dental=True,
     ).compile(dialect=postgresql.dialect())
     assert 'questionnaire.completed_at >=' in str(query)
     assert 'questionnaire.completed_at <' in str(query)
+    assert 'questionnaire.kind !=' in str(query)
     assert datetime(2026, 11, 10, 19, tzinfo=timezone.utc) in query.params.values()
     assert datetime(2026, 11, 11, 19, tzinfo=timezone.utc) in query.params.values()

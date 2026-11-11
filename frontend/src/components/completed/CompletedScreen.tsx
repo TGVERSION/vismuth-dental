@@ -11,7 +11,6 @@ import { useMyClinic } from '@/hooks/useMyClinic';
 import { CompletedDetail } from './CompletedDetail';
 import {
   formatAppointmentTime,
-  isQuestionnaireReady,
   patientName,
   visitTypeLabel,
 } from '@/lib/doctor-questionnaires';
@@ -23,7 +22,6 @@ import { useQuestionnaireDates } from '@/hooks/useQuestionnaireDates';
 import { useCompletedQuestionnaireList } from '@/hooks/useCompletedQuestionnaireList';
 import { PatientLinkGenerator } from '@/components/doctor-questionnaires/PatientLinkGenerator';
 import { CompletedQuestionnaireList } from '@/components/doctor-questionnaires/CompletedQuestionnaireList';
-import { FloatingQuestionnaire } from '@/components/doctor-questionnaires/FloatingQuestionnaire';
 import { QuestionnaireFilters } from '@/components/doctor-questionnaires/QuestionnaireFilters';
 import { ModalShell } from '@/components/settings/clinics/ModalShell';
 import { CustomDropdown } from '@/components/CustomDropdown';
@@ -75,6 +73,7 @@ export function CompletedScreen() {
         ...(superAdmin
           ? {
               by_completion: 'true',
+              exclude_dental: 'true',
               utc_offset_minutes: String(utcOffsetMinutes),
             }
           : {}),
@@ -362,10 +361,11 @@ export function CompletedScreen() {
             key={detail.id}
             className="custom-scrollbar w-full max-w-246 self-start rounded-2xl bg-white px-4 py-6 lg:max-h-[calc(100dvh-140px)] lg:overflow-y-auto min-[1200px]:max-h-[calc(100dvh-100px)] 2xl:px-8"
           >
-            {superAdmin && isQuestionnaireReady(detail) && (
-              <FloatingQuestionnaire questionnaire={detail} />
-            )}
-            <CompletedDetail data={detail} onChanged={changed} />
+            <CompletedDetail
+              data={detail}
+              onChanged={changed}
+              doctorView={superAdmin}
+            />
           </div>
         ) : (
           <p className="mt-40 text-center text-[var(--ui-color-alabaster-950)]">

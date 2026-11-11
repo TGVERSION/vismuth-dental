@@ -15,7 +15,7 @@ from ..schemas.completed_questionnaire import (
 
 
 def completed_query(*, clinic_id=None, kind=None, name=None, date_from=None, date_to=None,
-                    by_completion=False, utc_offset_minutes=0):
+                    by_completion=False, utc_offset_minutes=0, exclude_dental=False):
     if date_from and date_to and date_from > date_to:
         raise HTTPException(status_code=422, detail='date_from must not be after date_to')
     stmt = (select(Questionnaire, Clinic.name, RefSpecialization.name)
@@ -26,6 +26,8 @@ def completed_query(*, clinic_id=None, kind=None, name=None, date_from=None, dat
         stmt = stmt.where(Questionnaire.clinic_id == clinic_id)
     if kind is not None:
         stmt = stmt.where(Questionnaire.kind == kind)
+    if exclude_dental:
+        stmt = stmt.where(Questionnaire.kind != 'dental')
     if name and name.strip():
         pattern = '%' + name.strip().replace('\\', '\\\\').replace('%', '\\%').replace('_', '\\_') + '%'
         stmt = stmt.where(or_(

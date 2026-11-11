@@ -24,10 +24,12 @@ async def list_questionnaires(
     db: AsyncSession = Depends(get_db),
     by_completion: bool = False,
     utc_offset_minutes: int = Query(default=0, ge=-840, le=840),
+    exclude_dental: bool = False,
 ):
     return await list_completed(db, clinic_id=clinic_id, kind=kind, name=name,
         date_from=date_from, date_to=date_to, page=page, page_size=page_size,
-        by_completion=by_completion, utc_offset_minutes=utc_offset_minutes)
+        by_completion=by_completion, utc_offset_minutes=utc_offset_minutes,
+        exclude_dental=exclude_dental)
 
 
 @router.get('/appointment-dates', response_model=list[date])
@@ -39,10 +41,11 @@ async def appointment_dates(
     db: AsyncSession = Depends(get_db),
     by_completion: bool = False,
     utc_offset_minutes: int = Query(default=0, ge=-840, le=840),
+    exclude_dental: bool = False,
 ):
     return await completed_dates(db, clinic_id=clinic_id, kind=kind, name=name,
                                 date_from=date_from, date_to=date_to, by_completion=by_completion,
-                                utc_offset_minutes=utc_offset_minutes)
+                                utc_offset_minutes=utc_offset_minutes, exclude_dental=exclude_dental)
 
 
 @router.get('/{questionnaire_id}', response_model=CompletedQuestionnaireDetail)

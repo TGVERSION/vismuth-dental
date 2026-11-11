@@ -871,6 +871,7 @@ export interface DoctorQuestionnaireQuery {
   /** YYYY-MM-DD. Без даты backend берёт «сегодня» в поясе сервера. */
   date?: string;
   by_completion?: boolean;
+  exclude_dental?: boolean;
   utc_offset_minutes?: number;
   visit_type?: QuestionnaireVisitType;
   /** Ровно четыре символа, иначе 422. */

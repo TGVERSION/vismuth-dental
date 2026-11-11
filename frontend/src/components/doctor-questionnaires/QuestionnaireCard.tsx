@@ -12,6 +12,7 @@ import { DentalDoctorSummary } from './DentalDoctorSummary';
 import { QuestionnaireQuestions } from '@/components/dental-card/DentalCardParts';
 import { dentalSummaryText } from '@/lib/dental-health';
 import { ProtocolActionButton } from './ProtocolActionButton';
+import { FloatingQuestionnaire } from './FloatingQuestionnaire';
 import { QuestionnaireSection } from './QuestionnaireSection';
 import {
   GastroDoctorHighlights,
@@ -39,7 +40,8 @@ export const QuestionnaireCard = ({
 
   return (
     <article className="flex flex-col gap-9">
-      <header className="flex items-baseline gap-9 text-[#6C757D]">
+      <header className="flex flex-wrap items-center gap-3 text-[#6C757D]">
+        {isReady && <FloatingQuestionnaire questionnaire={questionnaire} />}
         <span className="shrink-0 text-[20px]">
           {formatAppointmentTime(questionnaire.appointment_time)}
         </span>

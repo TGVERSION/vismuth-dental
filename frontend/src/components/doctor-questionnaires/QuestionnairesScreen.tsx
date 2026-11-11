@@ -5,13 +5,9 @@ import { useSearchParams } from 'next/navigation';
 import { useQuestionnaireDates } from '@/hooks/useQuestionnaireDates';
 import { useDoctorQuestionnaire } from '@/hooks/useDoctorQuestionnaire';
 import { useDoctorQuestionnaireList } from '@/hooks/useDoctorQuestionnaireList';
-import {
-  parseSearchQuery,
-  isQuestionnaireReady,
-} from '@/lib/doctor-questionnaires';
+import { parseSearchQuery } from '@/lib/doctor-questionnaires';
 import { QuestionnaireCard } from './QuestionnaireCard';
 import { QuestionnaireListColumn } from './QuestionnaireListColumn';
-import { FloatingQuestionnaire } from './FloatingQuestionnaire';
 
 /**
  * Раздел «Анкеты»: список слева, открытая анкета справа.
@@ -28,6 +24,7 @@ export const QuestionnairesScreen = () => {
   const markedDates = useQuestionnaireDates('/questionnaires', {
     ...parseSearchQuery(search),
     by_completion: 'true',
+    exclude_dental: 'true',
     utc_offset_minutes: String(utcOffsetMinutes),
   });
 
@@ -59,7 +56,10 @@ export const QuestionnairesScreen = () => {
           Раздел доступен врачам клиники
         </p>
       );
-    } else if (questionnaire.error === 'not_found') {
+    } else if (
+      questionnaire.error === 'not_found' ||
+      questionnaire.data?.kind === 'dental'
+    ) {
       content = (
         <p className="my-40 text-center text-[#8B8B8B]">Анкета не найдена</p>
       );
@@ -78,15 +78,10 @@ export const QuestionnairesScreen = () => {
       );
     } else {
       content = (
-        <>
-          {isQuestionnaireReady(questionnaire.data) && (
-            <FloatingQuestionnaire
-              key={questionnaire.data.id}
-              questionnaire={questionnaire.data}
-            />
-          )}
-          <QuestionnaireCard questionnaire={questionnaire.data} />
-        </>
+        <QuestionnaireCard
+          key={questionnaire.data.id}
+          questionnaire={questionnaire.data}
+        />
       );
     }
 

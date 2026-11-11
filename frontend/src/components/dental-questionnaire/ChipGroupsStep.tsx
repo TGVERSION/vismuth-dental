@@ -56,12 +56,25 @@ export const ChipGroupsStep = ({
       if (first && problem)
         requestAnimationFrame(() => {
           const field = document.getElementById(`group-${first.key}`);
-          field?.scrollIntoView({ block: 'center' });
-          field
-            ?.querySelector<HTMLElement>(
-              problem === 'text' ? 'textarea, input' : 'button, input',
-            )
-            ?.focus({ preventScroll: true });
+          const main = field?.closest('main');
+          if (!field || !main) return;
+          const input =
+            problem === 'text'
+              ? field.querySelector<HTMLElement>(
+                  'textarea, input:not([type="checkbox"])',
+                )
+              : null;
+          const target =
+            input ?? field.querySelector('[role="alert"]') ?? field;
+          const viewport = main.getBoundingClientRect();
+          const bounds = target.getBoundingClientRect();
+          // Прокручиваем только форму внутри закреплённого экрана.
+          if (bounds.top < viewport.top + 12) {
+            main.scrollTop += bounds.top - viewport.top - 12;
+          } else if (bounds.bottom > viewport.bottom - 12) {
+            main.scrollTop += bounds.bottom - viewport.bottom + 12;
+          }
+          input?.focus({ preventScroll: true });
         });
       return;
     }

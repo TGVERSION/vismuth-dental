@@ -59,6 +59,7 @@ export const DentalGroupField = ({
       id={`group-${group.key}`}
       disabled={disabled}
       aria-labelledby={titleId}
+      aria-describedby={problem === 'choose' ? errorId : undefined}
       className="flex min-w-0 flex-col gap-3"
     >
       <h2
@@ -68,6 +69,15 @@ export const DentalGroupField = ({
         {group.title && !allergy ? `${group.title}: ` : ''}
         {group.question}
       </h2>
+      {problem === 'choose' ? (
+        <p
+          id={errorId}
+          role="alert"
+          className="text-sm text-[var(--ui-color-red-700)]"
+        >
+          {PROBLEMS.choose}
+        </p>
+      ) : null}
       {group.options.length ? (
         allergy || reason ? (
           <div className="overflow-hidden rounded-2xl bg-white">
@@ -156,7 +166,7 @@ export const DentalGroupField = ({
           {text}
         </p>
       ) : null}
-      {problem ? (
+      {problem === 'text' ? (
         <p
           id={errorId}
           role="alert"

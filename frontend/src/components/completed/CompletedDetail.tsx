@@ -26,8 +26,7 @@ export function CompletedDetail({
   onChanged: () => void;
 }) {
   const [printing, setPrinting] = useState(false),
-    [error, setError] = useState(''),
-    [busy, setBusy] = useState(false);
+    [error, setError] = useState('');
   const dental: RegistryQuestionnaireDetail = {
     ...data,
     status: data.signed_at
@@ -57,29 +56,42 @@ export function CompletedDetail({
       document.documentElement.removeAttribute('data-print-mode');
     };
   }, [data.clinic_id, data.id, onChanged]);
-  const signed = async () => {
-    setBusy(true);
-    try {
-      await mainApi.clinicQuestionnaires.markSigned(data.clinic_id, data.id);
-      onChanged();
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Не удалось отметить подпись');
-    } finally {
-      setBusy(false);
-    }
-  };
   return (
     <article className="space-y-9">
       <header className="space-y-3">
         <div className="flex flex-wrap items-baseline gap-3 text-[#6C757D] lg:gap-9">
-          <span className="shrink-0 text-[20px]">
-            {formatAppointmentTime(data.appointment_time)}
-          </span>
+          {sheet && (
+            <button
+              type="button"
+              className="vismuth-button vismuth-button--secondary"
+              data-size="s"
+              onClick={() => {
+                flushSync(() => setPrinting(true));
+                document.documentElement.setAttribute(
+                  'data-print-mode',
+                  'anketa',
+                );
+                window.print();
+              }}
+            >
+              Распечатать
+            </button>
+          )}
+          {data.kind !== 'dental' && (
+            <span className="shrink-0 text-[20px]">
+              {formatAppointmentTime(data.appointment_time)}
+            </span>
+          )}
           <h2 className="min-w-0 flex-1 truncate text-[20px]">
             {data.code}
             {data.code && ' · '}
             {patientName(data) || 'Пациент'}
           </h2>
+          {data.kind === 'dental' && data.appointment_time && (
+            <span className="shrink-0 text-[20px]">
+              {formatAppointmentTime(data.appointment_time)}
+            </span>
+          )}
           <span className="shrink-0 text-[14px]">
             {visitTypeLabel(data.visit_type)}
           </span>
@@ -91,30 +103,6 @@ export function CompletedDetail({
             : ''}
         </p>
       </header>
-      {sheet && (
-        <div className="flex flex-wrap gap-4">
-          <button
-            className="vismuth-button vismuth-button--secondary"
-            onClick={() => {
-              flushSync(() => setPrinting(true));
-              document.documentElement.setAttribute(
-                'data-print-mode',
-                'anketa',
-              );
-              window.print();
-            }}
-          >
-            Печать
-          </button>
-          <button
-            disabled={busy || !!data.signed_at}
-            className="vismuth-button vismuth-button--secondary"
-            onClick={() => void signed()}
-          >
-            {data.signed_at ? 'Подписана' : 'Отметить подписанной'}
-          </button>
-        </div>
-      )}
       {sheet?.continuation.length ? (
         <p className="rounded-xl bg-amber-50 p-3 text-sm">
           Длинные ответы будут полностью напечатаны на листах продолжения.

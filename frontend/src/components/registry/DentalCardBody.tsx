@@ -6,8 +6,10 @@ import {
   DentalClarifications,
   DentalHealth,
   DentalImportant,
+  DentalQuestions,
 } from '@/components/dental-card/DentalCardParts';
 import { gapQuestions } from '@/lib/doctor-questionnaires';
+import { dentalSummaryText } from '@/lib/dental-health';
 
 interface DentalCardBodyProps {
   structured: DoctorQuestionnaireStructured;
@@ -20,46 +22,39 @@ interface DentalCardBodyProps {
  */
 export const DentalCardBody = ({ structured, gaps }: DentalCardBodyProps) => {
   const questions = gapQuestions(gaps);
+  const complaints = dentalSummaryText(structured.complaints);
+  const medications = dentalSummaryText(structured.medications);
+  const allergy = dentalSummaryText(structured.allergy_anamnesis);
   return (
     <div className="flex flex-col gap-9">
-      <Block title="Самое важное">
-        <DentalImportant important={structured.important ?? []} />
-      </Block>
-      <Block title="С чем пришёл">
-        <p>{structured.complaints || '—'}</p>
-      </Block>
+      <DentalImportant important={structured.important ?? []} />
+      {complaints && (
+        <Block title="С чем пришёл">
+          <p>{complaints}</p>
+        </Block>
+      )}
       {structured.clarifications && structured.clarifications.length > 0 ? (
         <Block title="Уточнения">
           <DentalClarifications items={structured.clarifications} />
         </Block>
       ) : null}
-      <Block title="Здоровье">
-        <DentalHealth health={structured.health ?? []} />
-      </Block>
+      <DentalHealth health={structured.health ?? []} />
       {structured.about ? (
         <Block title="О пациенте">
           <p>{structured.about}</p>
         </Block>
       ) : null}
-      <Block title="Препараты">
-        <p>{structured.medications || '—'}</p>
-      </Block>
-      <Block title="Аллергия">
-        <p>{structured.allergy_anamnesis || '—'}</p>
-      </Block>
-      {/* «Что доспросить» — как подсказка под разделом анкеты у врача. */}
-      {questions.length > 0 ? (
-        <div className="ml-8 w-fit max-w-full rounded-2xl bg-[var(--ui-color-slate-100)] px-3 py-[var(--ui-space-10)]">
-          <p className="text-[length:var(--ui-font-size-14)] font-medium text-[var(--ui-color-blue-600)]">
-            Что доспросить
-          </p>
-          <ul className="mt-1 list-disc pl-5 text-[length:var(--ui-font-size-13)] text-[var(--ui-color-alabaster-950)] marker:text-[var(--ui-color-alabaster-950)]">
-            {questions.map((question) => (
-              <li key={question}>{question}</li>
-            ))}
-          </ul>
-        </div>
-      ) : null}
+      {medications && (
+        <Block title="Препараты">
+          <p>{medications}</p>
+        </Block>
+      )}
+      {allergy && (
+        <Block title="Аллергия">
+          <p>{allergy}</p>
+        </Block>
+      )}
+      <DentalQuestions questions={questions} />
     </div>
   );
 };

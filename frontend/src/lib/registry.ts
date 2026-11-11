@@ -107,7 +107,6 @@ export interface RegistryActions {
   canResendLink: boolean;
   canDelete: boolean;
   canPrint: boolean;
-  canMarkSigned: boolean;
 }
 
 export const registryActions = (status: RegistryStatus): RegistryActions => {
@@ -116,7 +115,6 @@ export const registryActions = (status: RegistryStatus): RegistryActions => {
     canResendLink: isOpen,
     canDelete: isOpen,
     canPrint: !isOpen,
-    canMarkSigned: status === 'completed' || status === 'printed',
   };
 };
 
@@ -144,7 +142,9 @@ export const buildNewLinkPayload = (
   fullName: string,
   birthDate: string,
 ): RegistryQuestionnaireCreate | null => {
-  const [lastName, firstName, ...middleNameParts] = fullName.trim().split(/\s+/);
+  const [lastName, firstName, ...middleNameParts] = fullName
+    .trim()
+    .split(/\s+/);
   if (!lastName || !firstName) return null;
   return {
     last_name: lastName,

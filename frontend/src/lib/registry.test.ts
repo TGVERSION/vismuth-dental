@@ -147,36 +147,31 @@ describe('inviteLinkItem', () => {
 });
 
 describe('registryActions', () => {
-  it('allows link actions before completion and print/sign after', () => {
+  it('allows link actions before completion and print after', () => {
     expect(registryActions('invited')).toEqual({
       canResendLink: true,
       canDelete: true,
       canPrint: false,
-      canMarkSigned: false,
     });
     expect(registryActions('in_progress')).toEqual({
       canResendLink: true,
       canDelete: true,
       canPrint: false,
-      canMarkSigned: false,
     });
     expect(registryActions('completed')).toEqual({
       canResendLink: false,
       canDelete: false,
       canPrint: true,
-      canMarkSigned: true,
     });
     expect(registryActions('printed')).toEqual({
       canResendLink: false,
       canDelete: false,
       canPrint: true,
-      canMarkSigned: true,
     });
     expect(registryActions('signed')).toEqual({
       canResendLink: false,
       canDelete: false,
       canPrint: true,
-      canMarkSigned: false,
     });
   });
 });

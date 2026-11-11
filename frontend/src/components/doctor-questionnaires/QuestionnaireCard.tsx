@@ -2,12 +2,15 @@ import type { DoctorQuestionnaireDetail } from '@/api';
 import {
   buildSections,
   formatAppointmentTime,
+  gapQuestions,
   isQuestionnaireReady,
   notReadyMessage,
   patientName,
   visitTypeLabel,
 } from '@/lib/doctor-questionnaires';
 import { DentalDoctorSummary } from './DentalDoctorSummary';
+import { DentalQuestions } from '@/components/dental-card/DentalCardParts';
+import { dentalSummaryText } from '@/lib/dental-health';
 import { ProtocolActionButton } from './ProtocolActionButton';
 import { QuestionnaireSection } from './QuestionnaireSection';
 import {
@@ -32,6 +35,7 @@ export const QuestionnaireCard = ({
   const name = patientName(questionnaire);
   const typeLabel = visitTypeLabel(questionnaire.visit_type);
   const isReady = isQuestionnaireReady(questionnaire);
+  const isDental = questionnaire.kind === 'dental';
 
   return (
     <article className="flex flex-col gap-9">
@@ -55,22 +59,30 @@ export const QuestionnaireCard = ({
           {questionnaire.kind === 'gastro' && questionnaire.structured ? (
             <GastroDoctorHighlights structured={questionnaire.structured} />
           ) : null}
-          {buildSections(questionnaire).map((section) =>
-            questionnaire.kind === 'gastro' && section.text.length > 3000 ? (
-              <details
-                key={section.key}
-                className="rounded-xl border border-[#D7DCE3] p-4"
-              >
-                <summary className="cursor-pointer py-2 font-medium">
-                  {section.title} — полный текст
-                </summary>
-                <div className="mt-4">
-                  <QuestionnaireSection section={section} />
-                </div>
-              </details>
-            ) : (
-              <QuestionnaireSection key={section.key} section={section} />
-            ),
+          {buildSections(questionnaire)
+            .filter((section) => !isDental || dentalSummaryText(section.text))
+            .map((section) =>
+              questionnaire.kind === 'gastro' && section.text.length > 3000 ? (
+                <details
+                  key={section.key}
+                  className="rounded-xl border border-[#D7DCE3] p-4"
+                >
+                  <summary className="cursor-pointer py-2 font-medium">
+                    {section.title} — полный текст
+                  </summary>
+                  <div className="mt-4">
+                    <QuestionnaireSection section={section} />
+                  </div>
+                </details>
+              ) : (
+                <QuestionnaireSection
+                  key={section.key}
+                  section={isDental ? { ...section, gaps: [] } : section}
+                />
+              ),
+            )}
+          {isDental && (
+            <DentalQuestions questions={gapQuestions(questionnaire.gaps)} />
           )}
           {questionnaire.kind === 'gastro' && questionnaire.structured ? (
             <>

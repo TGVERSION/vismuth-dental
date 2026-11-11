@@ -19,12 +19,8 @@ export const DentalDoctorSummary = ({
   structured: DoctorQuestionnaireStructured;
 }) => (
   <>
-    <Block title="Самое важное">
-      <DentalImportant important={structured.important ?? []} />
-    </Block>
-    <Block title="Здоровье">
-      <DentalHealth health={structured.health ?? []} />
-    </Block>
+    <DentalImportant important={structured.important ?? []} />
+    <DentalHealth health={structured.health ?? []} />
     {structured.about ? (
       <Block title="О пациенте">
         <p>{structured.about}</p>

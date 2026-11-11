@@ -143,12 +143,6 @@ export const RegistryDetail = ({
     window.print();
   };
 
-  const markSigned = () =>
-    run(
-      () => mainApi.clinicQuestionnaires.markSigned(clinicId, questionnaire.id),
-      onChanged,
-    );
-
   const remove = () =>
     run(
       () => mainApi.clinicQuestionnaires.remove(clinicId, questionnaire.id),
@@ -161,59 +155,52 @@ export const RegistryDetail = ({
   return (
     <article className="flex min-w-0 flex-col gap-9 break-words">
       {/* Шапка — как у карточки анкеты врача. */}
-      <header className="flex flex-wrap items-baseline gap-x-9 gap-y-2 text-[var(--ui-color-alabaster-950)]">
-        <h2 className="min-w-0 flex-1 truncate text-[length:var(--ui-font-size-20)] font-normal">
-          {patientFullName(questionnaire)}
-        </h2>
-        {questionnaire.completed_at ? (
-          <span className="shrink-0 text-[length:var(--ui-font-size-14)]">
-            {registryWhenLine(questionnaire)}
-          </span>
-        ) : null}
-      </header>
-
-      <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
+      <header className="flex flex-wrap items-center gap-x-4 gap-y-2 text-[var(--ui-color-alabaster-950)]">
         {actions.canPrint && sheet ? (
           <button
             type="button"
             onClick={print}
             disabled={isBusy}
             className="vismuth-button vismuth-button--secondary"
+            data-size="s"
           >
             Распечатать
           </button>
         ) : null}
-        {actions.canMarkSigned ? (
-          <button
-            type="button"
-            className={LINK_BUTTON_CLASS}
-            disabled={isBusy}
-            onClick={markSigned}
-          >
-            Отметить подписанной
-          </button>
+        <h2 className="min-w-0 break-words text-[length:var(--ui-font-size-20)] font-normal">
+          {patientFullName(questionnaire)}
+        </h2>
+        {questionnaire.completed_at ? (
+          <span className="ml-auto shrink-0 text-[length:var(--ui-font-size-14)]">
+            {registryWhenLine(questionnaire)}
+          </span>
         ) : null}
-        {actions.canResendLink ? (
-          <button
-            type="button"
-            className={LINK_BUTTON_CLASS}
-            disabled={isBusy}
-            onClick={resendLink}
-          >
-            Новая ссылка
-          </button>
-        ) : null}
-        {actions.canDelete ? (
-          <button
-            type="button"
-            className="cursor-pointer text-sm text-[var(--ui-color-red-600)] hover:underline disabled:opacity-50"
-            disabled={isBusy}
-            onClick={() => setConfirmDelete(true)}
-          >
-            Удалить
-          </button>
-        ) : null}
-      </div>
+      </header>
+
+      {(actions.canResendLink || actions.canDelete) && (
+        <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
+          {actions.canResendLink ? (
+            <button
+              type="button"
+              className={LINK_BUTTON_CLASS}
+              disabled={isBusy}
+              onClick={resendLink}
+            >
+              Новая ссылка
+            </button>
+          ) : null}
+          {actions.canDelete ? (
+            <button
+              type="button"
+              className="cursor-pointer text-sm text-[var(--ui-color-red-600)] hover:underline disabled:opacity-50"
+              disabled={isBusy}
+              onClick={() => setConfirmDelete(true)}
+            >
+              Удалить
+            </button>
+          ) : null}
+        </div>
+      )}
       {sheet && sheet.continuation.length > 0 ? (
         <p
           role="status"

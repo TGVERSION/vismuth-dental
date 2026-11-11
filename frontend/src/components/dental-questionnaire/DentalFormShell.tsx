@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import type { QuestionnaireStep } from '@/api';
-import { dentalFormStage } from '@/lib/dental-questionnaire';
+import { dentalFormStage, dentalProgress } from '@/lib/dental-questionnaire';
 import { useVisualViewport } from '@/hooks/useVisualViewport';
 import { useIsDesktop } from '@/hooks/useIsDesktop';
 
@@ -28,6 +28,11 @@ export const DentalFormShell = ({
   const headingRef = useRef<HTMLHeadingElement>(null);
   const [moreBelow, setMoreBelow] = useState(false);
   const stage = dentalFormStage(step);
+  const progress = dentalProgress(step) ?? { current: stage.current, total: 4 };
+  const percent =
+    step.step_type === 'dental_review'
+      ? 100
+      : Math.round(((progress.current - 1) / progress.total) * 100);
   const viewport = useVisualViewport();
   const isDesktop = useIsDesktop();
   const fit = isDesktop ? null : viewport;
@@ -100,8 +105,8 @@ export const DentalFormShell = ({
           : undefined
       }
     >
-      <header className="shrink-0 border-b border-[var(--q-surface)] px-4 pt-[calc(env(safe-area-inset-top)+12px)] pb-4">
-        <div className="flex items-center gap-2">
+      <header className="grid h-auto shrink-0 grid-cols-[48px_minmax(0,1fr)_4ch] items-center gap-2 border-b border-[var(--q-surface)] px-4 pt-[calc(env(safe-area-inset-top)+4px)] pb-1 text-sm tabular-nums">
+        <div className="h-12">
           {onBack ? (
             <button
               type="button"
@@ -128,40 +133,33 @@ export const DentalFormShell = ({
               </svg>
             </button>
           ) : null}
-          <ol
-            aria-label="Этапы анкеты"
-            className="grid min-w-0 flex-1 grid-cols-4 gap-2"
-          >
-            {['Обращение', 'Здоровье', 'Уточнения', 'О вас'].map(
-              (label, index) => (
-                <li
-                  key={label}
-                  className="min-w-0 break-words"
-                  aria-current={
-                    stage.current === index + 1 ? 'step' : undefined
-                  }
-                >
-                  <div
-                    aria-hidden="true"
-                    className={`mb-2 h-1 rounded-full ${index + 1 <= stage.current ? 'bg-[var(--q-brand)]' : 'bg-[var(--q-surface)]'}`}
-                  />
-                  <span
-                    className={`block text-xs ${stage.current === index + 1 ? 'font-semibold text-[var(--q-text)]' : 'text-[var(--q-muted)]'}`}
-                  >
-                    {label}
-                  </span>
-                </li>
-              ),
-            )}
-          </ol>
         </div>
+        <div
+          role="progressbar"
+          aria-label="Заполнение анкеты"
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-valuenow={percent}
+          className="h-1.5 overflow-hidden rounded-full bg-[var(--q-surface)]"
+        >
+          <div
+            className="h-full rounded-full bg-[var(--q-brand)]"
+            style={{ width: `${percent}%` }}
+          />
+        </div>
+        <span
+          aria-hidden="true"
+          className="text-right font-semibold text-[var(--q-text)]"
+        >
+          {percent}%
+        </span>
       </header>
       <main
         ref={mainRef}
         aria-label="Раздел анкеты"
         className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 pb-[calc(env(safe-area-inset-bottom)+24px)]"
       >
-        <div ref={contentRef} className="flex min-w-0 flex-col gap-6 pt-6">
+        <div ref={contentRef} className="flex min-w-0 flex-col gap-5 pt-3">
           <div>
             <h1
               ref={headingRef}

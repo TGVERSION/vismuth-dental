@@ -5,7 +5,7 @@ import { mainApi } from '@/api';
 import { ApiError } from '@/api/base-client';
 import { ModalShell } from '@/components/settings/clinics/ModalShell';
 import { INPUT_CLASS } from '@/components/settings/clinics/fields';
-import { copyText } from '@/lib/clipboard';
+import { PatientLinkResult } from '@/components/doctor-questionnaires/PatientLinkResult';
 import { fieldFillClass } from '@/lib/field-fill';
 import { toDateInputValue } from '@/lib/questionnaire';
 import { buildNewLinkPayload } from '@/lib/registry';
@@ -37,10 +37,8 @@ export const NewLinkModal = ({ clinicId, onClose }: NewLinkModalProps) => {
   const [nameError, setNameError] = useState('');
   const [serverError, setServerError] = useState('');
   const [url, setUrl] = useState('');
-  const [copyStatus, setCopyStatus] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const savingRef = useRef(false);
-  const urlRef = useRef<HTMLInputElement>(null);
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -61,23 +59,11 @@ export const NewLinkModal = ({ clinicId, onClose }: NewLinkModalProps) => {
       setUrl(result.url);
       setFullName('');
       setBirthDate('');
-      setCopyStatus('');
     } catch (error) {
       setServerError(createErrorText(error));
     } finally {
       savingRef.current = false;
       setIsSaving(false);
-    }
-  };
-
-  const copyLink = async () => {
-    try {
-      await copyText(url);
-      setCopyStatus('Ссылка скопирована');
-    } catch {
-      urlRef.current?.focus();
-      urlRef.current?.select();
-      setCopyStatus('Скопируйте выделенную ссылку вручную');
     }
   };
 
@@ -91,7 +77,7 @@ export const NewLinkModal = ({ clinicId, onClose }: NewLinkModalProps) => {
     >
       <form
         onSubmit={handleSubmit}
-        className="mt-3 grid grid-cols-1 items-start gap-3 sm:grid-cols-[minmax(0,1fr)_minmax(11rem,auto)_auto]"
+        className="mt-3 grid grid-cols-1 items-start gap-3 sm:grid-cols-[minmax(0,1fr)_minmax(11rem,auto)_8rem]"
       >
         <div className="min-w-0">
           <input
@@ -156,32 +142,9 @@ export const NewLinkModal = ({ clinicId, onClose }: NewLinkModalProps) => {
           </p>
         )}
         {url && (
-          <>
-            <input
-              ref={urlRef}
-              value={url}
-              readOnly
-              aria-label="Ссылка для пациента"
-              onFocus={(event) => event.target.select()}
-              className="vismuth-input min-w-0 bg-white! sm:col-span-2"
-            />
-            <button
-              type="button"
-              className="vismuth-button vismuth-button--secondary"
-              data-size="s"
-              onClick={() => void copyLink()}
-            >
-              {copyStatus === 'Ссылка скопирована'
-                ? 'Скопировано'
-                : 'Копировать'}
-            </button>
-            <p
-              role="status"
-              className={copyStatus ? 'text-sm sm:col-span-3' : 'sr-only'}
-            >
-              {copyStatus}
-            </p>
-          </>
+          <div className="min-w-0 sm:col-span-3">
+            <PatientLinkResult key={url} url={url} />
+          </div>
         )}
       </form>
     </ModalShell>

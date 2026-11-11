@@ -96,12 +96,20 @@ export const LinksQrModal = ({ onClose }: LinksQrModalProps) => {
     }
 
     return (
-      <PatientLinkGenerator clinicId={clinic.clinic_id} onPrint={handlePrint} />
+      <PatientLinkGenerator
+        clinicId={clinic.clinic_id}
+        onPrint={handlePrint}
+        compact
+      />
     );
   };
 
   return (
-    <ModalShell title="Ссылки и QR-код" onClose={onClose}>
+    <ModalShell
+      title="Создание ссылки пациенту"
+      layout="wide-top"
+      onClose={onClose}
+    >
       {/* Своя прокрутка: ModalShell высоту не ограничивает, а две карточки
           на ноутбуке могут не поместиться. */}
       <div

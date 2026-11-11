@@ -90,6 +90,7 @@ export function CompletedScreen() {
   const { items, loading, hasMore, error: listError, loadMore } = list;
   const sentinel = useRef<HTMLDivElement>(null);
   const [showLink, setShowLink] = useState(false);
+  const [modalClinicId, setModalClinicId] = useState('');
   const linkClinicId = superAdmin ? filters.clinic_id : clinic?.clinic_id;
   const [clinicLink, setClinicLink] = useState<{
     clinicId: string;
@@ -97,7 +98,7 @@ export function CompletedScreen() {
   } | null>(null);
   const [linkCopied, setLinkCopied] = useState('');
   useEffect(() => {
-    if (!linkClinicId) return;
+    if (superAdmin || !linkClinicId) return;
     let live = true;
     completedApi
       .links(linkClinicId)
@@ -114,9 +115,11 @@ export function CompletedScreen() {
     return () => {
       live = false;
     };
-  }, [linkClinicId]);
+  }, [linkClinicId, superAdmin]);
   const clinicUrl =
-    clinicLink && clinicLink.clinicId === linkClinicId ? clinicLink.url : '';
+    !superAdmin && clinicLink?.clinicId === linkClinicId
+      ? (clinicLink?.url ?? '')
+      : '';
   const copyClinicLink = async () => {
     try {
       await copyText(clinicUrl);
@@ -181,15 +184,34 @@ export function CompletedScreen() {
         <h1 className="sr-only">
           {superAdmin ? 'Анкеты для врачей' : 'Заполненные анкеты'}
         </h1>
+        {superAdmin && (
+          <label className="mb-3 block text-sm">
+            Клиника
+            <CustomDropdown
+              aria-label="Клиника"
+              className="mt-2 w-full"
+              options={[
+                { value: '', label: 'Все клиники' },
+                ...clinics.map((c) => ({ value: c.id, label: c.name })),
+              ]}
+              value={filters.clinic_id}
+              onChange={(value) => filter('clinic_id', value)}
+            />
+          </label>
+        )}
         <button
           type="button"
-          disabled={!linkClinicId}
-          onClick={() => setShowLink(true)}
-          className={`vismuth-button w-full shrink-0 ${superAdmin ? 'bg-white!' : 'vismuth-button--secondary'}`}
+          aria-haspopup="dialog"
+          disabled={!superAdmin && !linkClinicId}
+          onClick={() => {
+            setModalClinicId(linkClinicId ?? '');
+            setShowLink(true);
+          }}
+          className={`vismuth-button w-full shrink-0 ${superAdmin ? 'bg-white! hover:bg-[var(--ui-color-blue-50)]!' : 'vismuth-button--secondary'}`}
           data-variant={superAdmin ? 'ghost' : undefined}
           data-size={superAdmin ? 'l' : undefined}
         >
-          Создать ссылку для пациента
+          Новая ссылка для пациента
         </button>
         {clinicUrl && (
           <div className="mt-2 flex items-center gap-2">
@@ -209,23 +231,8 @@ export function CompletedScreen() {
             </button>
           </div>
         )}
-        {superAdmin && !linkClinicId && (
-          <p className="mt-2 text-sm text-[#8B8B8B]">
-            Выберите клинику для создания ссылки
-          </p>
-        )}
         {superAdmin ? (
-          <div className="mt-6 flex shrink-0 flex-col gap-3">
-            <CustomDropdown
-              aria-label="Клиника"
-              className="w-full"
-              options={[
-                { value: '', label: 'Все клиники' },
-                ...clinics.map((c) => ({ value: c.id, label: c.name })),
-              ]}
-              value={filters.clinic_id}
-              onChange={(value) => filter('clinic_id', value)}
-            />
+          <div className="mt-6 shrink-0">
             <QuestionnaireFilters
               search={filters.name}
               onSearchChange={(value) => filter('name', value)}
@@ -286,7 +293,6 @@ export function CompletedScreen() {
               selectedId={selected}
               onSelect={select}
               utcOffsetMinutes={utcOffsetMinutes}
-              subtitleFor={(item) => item.clinic_name}
             />
           ) : (
             <>
@@ -314,7 +320,6 @@ export function CompletedScreen() {
                         {patientName(i) || 'Пациент'}
                       </span>
                       <span className="block truncate text-[#8B8B8B]">
-                        {i.clinic_name} ·{' '}
                         {visitTypeLabel(i.visit_type) || kinds[i.kind]}
                       </span>
                     </span>
@@ -352,31 +357,40 @@ export function CompletedScreen() {
         </div>
       </aside>
       <div className="mx-3 flex min-w-0 flex-1 justify-center lg:mx-0 lg:ml-93.5 lg:pr-5">
-        <div className="custom-scrollbar w-full max-w-246 self-start rounded-[15px] bg-white px-4 py-6 lg:max-h-[calc(100vh-100px)] lg:overflow-y-auto lg:px-8">
-          {detail ? (
-            <>
-              {superAdmin && isQuestionnaireReady(detail) && (
-                <FloatingQuestionnaire key={detail.id} questionnaire={detail} />
-              )}
-              <CompletedDetail
-                key={detail.id}
-                data={detail}
-                onChanged={changed}
-              />
-            </>
-          ) : (
-            <p className="p-12 text-center text-gray-500">
-              {selected ? 'Загрузка анкеты…' : 'Выберите анкету'}
-            </p>
-          )}
-        </div>
+        {detail ? (
+          <div
+            key={detail.id}
+            className="custom-scrollbar w-full max-w-246 self-start rounded-2xl bg-white px-4 py-6 lg:max-h-[calc(100dvh-140px)] lg:overflow-y-auto min-[1200px]:max-h-[calc(100dvh-100px)] 2xl:px-8"
+          >
+            {superAdmin && isQuestionnaireReady(detail) && (
+              <FloatingQuestionnaire questionnaire={detail} />
+            )}
+            <CompletedDetail data={detail} onChanged={changed} />
+          </div>
+        ) : (
+          <p className="mt-40 text-center text-[var(--ui-color-alabaster-950)]">
+            {selected ? 'Загрузка анкеты…' : 'Выберите анкету в списке'}
+          </p>
+        )}
       </div>
-      {showLink && linkClinicId && (
+      {showLink && (
         <ModalShell
-          title="Ссылка для пациента"
+          title="Создание ссылки пациенту"
+          layout="wide-top"
           onClose={() => setShowLink(false)}
         >
-          <PatientLinkGenerator clinicId={linkClinicId} />
+          {superAdmin && !linkClinicId && (
+            <CustomDropdown
+              aria-label="Клиника для ссылки"
+              placeholder="Выберите клинику"
+              options={clinics.map((c) => ({ value: c.id, label: c.name }))}
+              value={modalClinicId}
+              onChange={setModalClinicId}
+            />
+          )}
+          {modalClinicId && (
+            <PatientLinkGenerator clinicId={modalClinicId} compact />
+          )}
         </ModalShell>
       )}
     </section>

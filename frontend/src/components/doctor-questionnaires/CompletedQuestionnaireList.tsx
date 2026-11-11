@@ -16,7 +16,6 @@ type CompletedQuestionnaireListProps<T extends ListItem> = {
   items: T[];
   selectedId: string | null;
   utcOffsetMinutes: number;
-  subtitleFor?: (item: T) => string;
 } & (
   | { hrefFor: (id: string) => string; onSelect?: never }
   | { hrefFor?: never; onSelect: (id: string) => void }
@@ -30,7 +29,6 @@ export const CompletedQuestionnaireList = <T extends ListItem>({
   selectedId,
   hrefFor,
   onSelect,
-  subtitleFor,
   utcOffsetMinutes,
 }: CompletedQuestionnaireListProps<T>) => {
   const headingPrefix = useId();
@@ -49,7 +47,6 @@ export const CompletedQuestionnaireList = <T extends ListItem>({
               {entries.map((item) => {
                 const isSelected = item.id === selectedId;
                 const name = patientName(item);
-                const subtitle = subtitleFor?.(item);
                 const rowClass = `flex w-full items-center gap-3 rounded-2xl px-3 py-[var(--ui-space-10)] text-left text-sm text-[var(--ui-color-alabaster-dark-800)] transition-colors ${isSelected ? 'bg-white' : 'hover:bg-white'}`;
                 const content = (
                   <span className="min-w-0 flex-1">
@@ -62,11 +59,6 @@ export const CompletedQuestionnaireList = <T extends ListItem>({
                       )}
                       {name || (!item.code && 'Пациент')}
                     </span>
-                    {subtitle && (
-                      <span className="block truncate text-xs text-[var(--ui-color-alabaster-950)]">
-                        {subtitle}
-                      </span>
-                    )}
                   </span>
                 );
                 return (

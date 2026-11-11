@@ -10,28 +10,32 @@ import { isAbortError } from '@/api/base-client';
 import { CustomDropdown } from '@/components/CustomDropdown';
 import { DateField } from '@/components/DateField';
 import { copyText } from '@/lib/clipboard';
+import { fieldFillClass } from '@/lib/field-fill';
 import { APPOINTMENT_DAYS_AHEAD, toDateInputValue } from '@/lib/questionnaire';
 import { normalizeQrUrl } from '@/lib/qr';
 import type { QuestionnaireLinkItem } from '@/lib/questionnaire-links';
 import { LinkQrCard } from './LinkQrCard';
+import { PatientLinkResult } from './PatientLinkResult';
 
 interface Props {
   clinicId: string;
   onPrint?: (item: QuestionnaireLinkItem) => void;
+  compact?: boolean;
 }
 
 /** Все параметры необязательны; адрес и его уникальность определяет сервер. */
-export function PatientLinkGenerator({ clinicId, onPrint }: Props) {
+export function PatientLinkGenerator({ clinicId, onPrint, compact }: Props) {
   return (
     <ClinicPatientLinkGenerator
       key={clinicId}
       clinicId={clinicId}
       onPrint={onPrint}
+      compact={compact}
     />
   );
 }
 
-function ClinicPatientLinkGenerator({ clinicId, onPrint }: Props) {
+function ClinicPatientLinkGenerator({ clinicId, onPrint, compact }: Props) {
   const [links, setLinks] = useState<PatientLinks | null>(null);
   const [doctorId, setDoctorId] = useState('');
   const [date, setDate] = useState('');
@@ -149,6 +153,154 @@ function ClinicPatientLinkGenerator({ clinicId, onPrint }: Props) {
       </p>
     );
 
+  const doctorOptions = [
+    { value: '', label: 'Пациент выберет врача' },
+    ...links.doctors.map((doctor) => ({
+      value: doctor.membership_id,
+      label:
+        [doctor.last_name, doctor.first_name, doctor.middle_name]
+          .filter(Boolean)
+          .join(' ') || 'Врач',
+    })),
+  ];
+  const doctorControl = (
+    <CustomDropdown
+      options={doctorOptions}
+      value={doctorId}
+      onChange={(value) => update(setDoctorId, value)}
+      disabled={busy}
+      aria-label="Врач для ссылки"
+      triggerClassName={compact ? fieldFillClass(doctorId) : undefined}
+    />
+  );
+  const dateControl = (
+    <DateField
+      id={dateId}
+      value={date}
+      onChange={(value) => {
+        if (!busy) update(setDate, value);
+      }}
+      min={today}
+      max={toDateInputValue(horizon)}
+      placeholder={compact ? 'Дата приёма' : 'Не указана'}
+      popoverAlign="left"
+      aria-label="Дата приёма для ссылки"
+    />
+  );
+  const timeControl = (
+    <input
+      id={timeId}
+      type="time"
+      aria-label="Время приёма для ссылки"
+      value={time}
+      onChange={(event) => update(setTime, event.target.value)}
+      disabled={busy}
+      className={`vismuth-input w-full ${fieldFillClass(time)} ${compact && !time ? 'text-transparent! focus:text-[var(--ui-color-alabaster-dark-800)]!' : ''}`}
+    />
+  );
+  const qrCard = url ? (
+    <LinkQrCard
+      key={url}
+      item={{
+        kind: 'invite',
+        title: 'Ссылка для пациента',
+        description: 'Отправьте пациенту ссылку или QR-код',
+        url,
+        qrText: normalizeQrUrl(url),
+        fileName: 'vismuth-qr-patient.png',
+      }}
+      onPrint={onPrint}
+    />
+  ) : null;
+  const errorMessage = error && (
+    <p role="alert" className="text-sm text-red-600">
+      {error}
+    </p>
+  );
+
+  if (compact) {
+    return (
+      <div className="mt-3 space-y-3">
+        <form
+          onSubmit={(event) => {
+            event.preventDefault();
+            void create();
+          }}
+          className="grid grid-cols-1 items-start gap-3 md:grid-cols-[minmax(0,1fr)_minmax(9rem,auto)_minmax(9rem,auto)_8rem]"
+        >
+          {doctorControl}
+          <div className="min-w-0">
+            {dateControl}
+            {date && (
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => update(setDate, '')}
+                className="vismuth-function-button text-sm"
+              >
+                Убрать дату
+              </button>
+            )}
+          </div>
+          <div className="min-w-0">
+            <div className="group relative">
+              {timeControl}
+              {!time && (
+                <span
+                  aria-hidden="true"
+                  className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-[var(--ui-color-alabaster-800)] group-focus-within:hidden"
+                >
+                  Время приёма
+                </span>
+              )}
+            </div>
+            {time && (
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => update(setTime, '')}
+                className="vismuth-function-button text-sm"
+              >
+                Убрать время
+              </button>
+            )}
+          </div>
+          <button
+            type="submit"
+            className="vismuth-button whitespace-nowrap"
+            data-size="s"
+            disabled={busy}
+          >
+            {busy ? 'Создаём…' : 'Создать ссылку'}
+          </button>
+        </form>
+        {errorMessage}
+        {url && (
+          <>
+            <PatientLinkResult key={url} url={url} />
+            <details>
+              <summary className="vismuth-function-button cursor-pointer text-sm">
+                QR-код
+              </summary>
+              <div className="mt-3">{qrCard}</div>
+            </details>
+          </>
+        )}
+        <details>
+          <summary className="vismuth-function-button cursor-pointer text-sm">
+            Общая ссылка клиники
+          </summary>
+          <div className="mt-3">
+            <PatientLinkResult
+              url={links.clinic_public_url}
+              label="Общая ссылка клиники"
+            />
+          </div>
+        </details>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-5">
       <p className="text-sm text-gray-500">
@@ -157,40 +309,14 @@ function ClinicPatientLinkGenerator({ clinicId, onPrint }: Props) {
       </p>
       <label className="block space-y-2">
         <span className="text-sm">Врач</span>
-        <CustomDropdown
-          options={[
-            { value: '', label: 'Пациент выберет врача' },
-            ...links.doctors.map((doctor) => ({
-              value: doctor.membership_id,
-              label:
-                [doctor.last_name, doctor.first_name, doctor.middle_name]
-                  .filter(Boolean)
-                  .join(' ') || 'Врач',
-            })),
-          ]}
-          value={doctorId}
-          onChange={(value) => update(setDoctorId, value)}
-          disabled={busy}
-          aria-label="Врач для ссылки"
-        />
+        {doctorControl}
       </label>
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="space-y-2">
           <label htmlFor={dateId} className="text-sm">
             Дата приёма
           </label>
-          <DateField
-            id={dateId}
-            value={date}
-            onChange={(value) => {
-              if (!busy) update(setDate, value);
-            }}
-            min={today}
-            max={toDateInputValue(horizon)}
-            placeholder="Не указана"
-            popoverAlign="left"
-            aria-label="Дата приёма для ссылки"
-          />
+          {dateControl}
           {date && (
             <button
               type="button"
@@ -206,15 +332,7 @@ function ClinicPatientLinkGenerator({ clinicId, onPrint }: Props) {
           <label htmlFor={timeId} className="text-sm">
             Время приёма
           </label>
-          <input
-            id={timeId}
-            type="time"
-            aria-label="Время приёма для ссылки"
-            value={time}
-            onChange={(event) => update(setTime, event.target.value)}
-            disabled={busy}
-            className="vismuth-input w-full"
-          />
+          {timeControl}
           {time && (
             <button
               type="button"
@@ -254,25 +372,8 @@ function ClinicPatientLinkGenerator({ clinicId, onPrint }: Props) {
           </button>
         </div>
       </div>
-      {error && (
-        <p role="alert" className="text-sm text-red-600">
-          {error}
-        </p>
-      )}
-      {url && (
-        <LinkQrCard
-          key={url}
-          item={{
-            kind: 'invite',
-            title: 'Ссылка для пациента',
-            description: 'Отправьте пациенту ссылку или QR-код',
-            url,
-            qrText: normalizeQrUrl(url),
-            fileName: 'vismuth-qr-patient.png',
-          }}
-          onPrint={onPrint}
-        />
-      )}
+      {errorMessage}
+      {qrCard}
     </div>
   );
 }

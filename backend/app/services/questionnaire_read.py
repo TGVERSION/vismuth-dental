@@ -1,9 +1,9 @@
 """Read-only completed questionnaires, shared by platform and clinic registry."""
-from datetime import date
+from datetime import datetime, time, timedelta, timezone
 from uuid import UUID
 
 from fastapi import HTTPException
-from sqlalchemy import func, or_, select
+from sqlalchemy import Date, cast, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..models.clinic import Clinic
@@ -14,7 +14,8 @@ from ..schemas.completed_questionnaire import (
 )
 
 
-def completed_query(*, clinic_id=None, kind=None, name=None, date_from=None, date_to=None):
+def completed_query(*, clinic_id=None, kind=None, name=None, date_from=None, date_to=None,
+                    by_completion=False, utc_offset_minutes=0):
     if date_from and date_to and date_from > date_to:
         raise HTTPException(status_code=422, detail='date_from must not be after date_to')
     stmt = (select(Questionnaire, Clinic.name, RefSpecialization.name)
@@ -33,10 +34,20 @@ def completed_query(*, clinic_id=None, kind=None, name=None, date_from=None, dat
             func.concat_ws(' ', Questionnaire.patient_first_name,
                            Questionnaire.patient_middle_name, Questionnaire.patient_last_name).ilike(pattern, escape='\\'),
         ))
-    if date_from:
-        stmt = stmt.where(Questionnaire.appointment_date >= date_from)
-    if date_to:
-        stmt = stmt.where(Questionnaire.appointment_date <= date_to)
+    if by_completion:
+        zone = timezone(timedelta(minutes=utc_offset_minutes))
+        stmt = stmt.where(Questionnaire.completed_at.is_not(None))
+        if date_from:
+            start = datetime.combine(date_from, time.min, tzinfo=zone).astimezone(timezone.utc)
+            stmt = stmt.where(Questionnaire.completed_at >= start)
+        if date_to:
+            end = datetime.combine(date_to, time.min, tzinfo=zone).astimezone(timezone.utc)
+            stmt = stmt.where(Questionnaire.completed_at < end + timedelta(days=1))
+    else:
+        if date_from:
+            stmt = stmt.where(Questionnaire.appointment_date >= date_from)
+        if date_to:
+            stmt = stmt.where(Questionnaire.appointment_date <= date_to)
     return stmt
 
 
@@ -45,7 +56,11 @@ async def list_completed(db: AsyncSession, *, page=1, page_size=50, **filters):
         raise HTTPException(status_code=422, detail='Invalid pagination')
     stmt = completed_query(**filters)
     total = (await db.execute(select(func.count()).select_from(stmt.subquery()))).scalar_one()
-    rows = (await db.execute(stmt.order_by(Questionnaire.appointment_date.desc().nulls_last(), Questionnaire.appointment_time.asc().nulls_last(), Questionnaire.id.desc())
+    if filters.get('by_completion'):
+        stmt = stmt.order_by(Questionnaire.completed_at.desc(), Questionnaire.id.desc())
+    else:
+        stmt = stmt.order_by(Questionnaire.appointment_date.desc().nulls_last(), Questionnaire.appointment_time.asc().nulls_last(), Questionnaire.id.desc())
+    rows = (await db.execute(stmt
                              .offset((page - 1) * page_size).limit(page_size))).all()
     items = [CompletedQuestionnaireItem(
         id=q.id, clinic_id=q.clinic_id, clinic_name=clinic_name, kind=q.kind,
@@ -59,9 +74,11 @@ async def list_completed(db: AsyncSession, *, page=1, page_size=50, **filters):
 
 
 async def completed_dates(db: AsyncSession, **filters):
-    stmt = completed_query(**filters).with_only_columns(Questionnaire.appointment_date).where(
-        Questionnaire.appointment_date.is_not(None)
-    ).distinct().order_by(Questionnaire.appointment_date)
+    day = Questionnaire.appointment_date
+    if filters.get('by_completion'):
+        offset = timedelta(minutes=filters.get('utc_offset_minutes', 0))
+        day = cast(func.timezone('UTC', Questionnaire.completed_at) + offset, Date)
+    stmt = completed_query(**filters).with_only_columns(day).where(day.is_not(None)).distinct().order_by(day)
     return list((await db.execute(stmt)).scalars())
 
 

@@ -56,11 +56,7 @@ export const AppNav = () => {
   });
   const items =
     role === 'super_admin'
-      ? base.map((item) =>
-          item.id === 'requests' && pending
-            ? { ...item, label: 'Заявки (' + pending + ')' }
-            : item,
-        )
+      ? base
       : [
           ...base.filter(
             (i) =>
@@ -84,31 +80,49 @@ export const AppNav = () => {
 
   return (
     <nav aria-label="Разделы" className="flex w-max items-center gap-2 px-3">
-      {items.map((item) =>
-        item.id === active ? (
+      {items.map((item) => {
+        const label = (
+          <>
+            {item.label}
+            {item.id === 'requests' &&
+              role === 'super_admin' &&
+              pending > 0 && (
+                <>
+                  <span
+                    aria-hidden="true"
+                    className="absolute top-2 right-2 size-2 rounded-full bg-[var(--ui-color-blue-600)]"
+                  />
+                  <span className="sr-only">
+                    , ожидают рассмотрения: {pending}
+                  </span>
+                </>
+              )}
+          </>
+        );
+        return item.id === active ? (
           <span
             key={item.id}
             aria-current="page"
-            className="vismuth-button whitespace-nowrap"
+            className="vismuth-button relative whitespace-nowrap"
             data-variant="ghost"
             data-color="neutral"
             data-size="l"
           >
-            {item.label}
+            {label}
           </span>
         ) : (
           <Link
             key={item.id}
             href={item.href}
-            className="vismuth-button whitespace-nowrap"
+            className="vismuth-button relative whitespace-nowrap"
             data-variant="ghost"
             data-color="neutral"
             data-size="l"
           >
-            {item.label}
+            {label}
           </Link>
-        ),
-      )}
+        );
+      })}
     </nav>
   );
 };

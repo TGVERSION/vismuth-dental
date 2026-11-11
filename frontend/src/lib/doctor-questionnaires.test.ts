@@ -28,9 +28,13 @@ describe('parseSearchQuery', () => {
     expect(parseSearchQuery('12a4')).toEqual({ name: '12a4' });
   });
 
-  it('из имени берётся первое слово', () => {
-    expect(parseSearchQuery('Анна Петровна')).toEqual({ name: 'Анна' });
-    expect(parseSearchQuery('  Пётр   Иванович ')).toEqual({ name: 'Пётр' });
+  it('ищет по полному вводу, нормализуя пробелы', () => {
+    expect(parseSearchQuery('Анна Петровна')).toEqual({
+      name: 'Анна Петровна',
+    });
+    expect(parseSearchQuery('  Пётр   Иванович ')).toEqual({
+      name: 'Пётр Иванович',
+    });
   });
 
   it('пустой ввод — без фильтра', () => {
@@ -64,6 +68,12 @@ describe('buildListQuery', () => {
       date,
       visit_type: 'repeat',
     });
+  });
+
+  it('пустая дата не передаётся в запросе', () => {
+    expect(buildListQuery({ search: '5860', date: '', visitType: '' })).toEqual(
+      { code: '5860' },
+    );
   });
 });
 
@@ -315,7 +325,10 @@ describe('стоматологическая анкета у врача', () => 
     expect(
       gapQuestions([
         { section: 'complaints', question: 'Как давно болит' },
-        { section: 'medications', question: 'По какому поводу назначен Эликвис' },
+        {
+          section: 'medications',
+          question: 'По какому поводу назначен Эликвис',
+        },
         { section: 'unknown', question: 'Чужой раздел' },
         'строка без раздела',
       ]),

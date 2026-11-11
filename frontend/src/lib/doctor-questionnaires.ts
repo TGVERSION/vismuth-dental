@@ -28,22 +28,19 @@ export interface SearchQuery {
 /**
  * Что ввёл врач: код пациента или имя.
  *
- * Ровно четыре цифры — код: другой длины backend отклоняет с 422. Всё прочее —
- * имя, причём только первое слово: сервер ищет подстроку в имени и в отчестве
- * по отдельности, и «Анна Петровна» целиком не нашлась бы ни там, ни там.
+ * Ровно четыре цифры — код. Остальной текст — поиск по ФИО.
  */
 export const parseSearchQuery = (raw: string): SearchQuery => {
   const value = raw.trim();
   if (!value) return {};
   if (CODE_PATTERN.test(value)) return { code: value };
 
-  const [firstWord] = value.split(/\s+/);
-  return { name: firstWord };
+  return { name: value.replace(/\s+/g, ' ') };
 };
 
 export interface QuestionnaireListFilters {
   search: string;
-  /** YYYY-MM-DD, пустой не бывает. */
+  /** YYYY-MM-DD или пусто для всех дней. */
   date: string;
   /** Пустая строка — без фильтра по типу. */
   visitType: QuestionnaireVisitType | '';
@@ -52,15 +49,14 @@ export interface QuestionnaireListFilters {
 /**
  * Параметры запроса списка.
  *
- * Дата уходит всегда: без неё сервер подставит «сегодня» в своём часовом
- * поясе, а не в поясе врача. Поэтому и код ищется в пределах выбранного дня.
+ * Дата ограничивает поиск по ФИО и коду, когда врач её выбрал.
  */
 export const buildListQuery = ({
   search,
   date,
   visitType,
 }: QuestionnaireListFilters): DoctorQuestionnaireQuery => ({
-  date,
+  ...(date ? { date } : {}),
   ...parseSearchQuery(search),
   ...(visitType ? { visit_type: visitType } : {}),
 });

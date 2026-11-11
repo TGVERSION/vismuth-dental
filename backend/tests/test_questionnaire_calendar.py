@@ -1,7 +1,8 @@
 import asyncio
-from datetime import date
+from datetime import date, datetime, timezone
 from types import SimpleNamespace
 from uuid import uuid4
+import pytest
 
 from fastapi.testclient import TestClient
 from sqlalchemy.dialects import postgresql
@@ -9,7 +10,7 @@ from sqlalchemy.dialects import postgresql
 from app import deps
 from app.db import get_db
 from app.main import app
-from app.services.questionnaire_read import completed_dates
+from app.services.questionnaire_read import completed_dates, completed_query
 
 
 def test_completed_dates_are_distinct_and_scoped_without_patient_data():
@@ -63,3 +64,47 @@ def test_doctor_calendar_uses_own_visibility_and_appointment_day(monkeypatch):
             return SimpleNamespace(scalars=lambda: [])
     assert asyncio.run(questionnaires.appointment_dates(date_from=date(2026, 11, 1), name=None,
                                                        current_user=None, db=DB())) == []
+
+
+@pytest.mark.parametrize('day', [None, date(2026, 11, 11)])
+def test_doctor_completion_mode_keeps_scope_and_orders_by_completion(monkeypatch, day):
+    from app.routers import questionnaires
+
+    member = SimpleNamespace(id=uuid4(), clinic_id=uuid4())
+
+    async def membership(*args):
+        return member
+
+    monkeypatch.setattr(questionnaires, 'get_active_doctor_membership', membership)
+
+    class DB:
+        async def execute(self, stmt):
+            compiled = stmt.compile(dialect=postgresql.dialect())
+            sql = str(compiled)
+            assert member.id in compiled.params.values()
+            assert member.clinic_id in compiled.params.values()
+            assert 'completed' in compiled.params.values()
+            assert 'ORDER BY questionnaire.completed_at DESC' in sql
+            assert 'questionnaire.completed_at IS NOT NULL' in sql
+            assert '%Иванов Иван%' in compiled.params.values()
+            assert ('questionnaire.completed_at >=' in sql) == (day is not None)
+            if day is not None:
+                assert datetime(2026, 11, 10, 19, tzinfo=timezone.utc) in compiled.params.values()
+                assert datetime(2026, 11, 11, 19, tzinfo=timezone.utc) in compiled.params.values()
+            return SimpleNamespace(all=lambda: [])
+
+    assert asyncio.run(questionnaires.list_questionnaires(
+        name='Иванов Иван', date_filter=day, visit_type=None, code=None,
+        current_user=None, db=DB(), by_completion=True, utc_offset_minutes=300,
+    )) == []
+
+
+def test_admin_completion_range_uses_local_days():
+    day = date(2026, 11, 11)
+    query = completed_query(
+        date_from=day, date_to=day, by_completion=True, utc_offset_minutes=300,
+    ).compile(dialect=postgresql.dialect())
+    assert 'questionnaire.completed_at >=' in str(query)
+    assert 'questionnaire.completed_at <' in str(query)
+    assert datetime(2026, 11, 10, 19, tzinfo=timezone.utc) in query.params.values()
+    assert datetime(2026, 11, 11, 19, tzinfo=timezone.utc) in query.params.values()

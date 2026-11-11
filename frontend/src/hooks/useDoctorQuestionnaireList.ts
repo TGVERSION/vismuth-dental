@@ -6,7 +6,6 @@ import { ApiError, isAbortError } from '@/api/base-client';
 import {
   buildListQuery,
   isVisibleInList,
-  sortByTime,
   type QuestionnaireListFilters,
 } from '@/lib/doctor-questionnaires';
 import { logWarn } from '@/lib/logger';
@@ -19,6 +18,7 @@ export type QuestionnaireListError = 'forbidden' | 'failed';
 interface ListResult {
   /** Какому запросу принадлежит результат. */
   key: string;
+  filterKey: string;
   items: DoctorQuestionnaireListItem[];
   error: QuestionnaireListError | null;
 }
@@ -28,14 +28,14 @@ interface ListResult {
  *
  * Поиск уходит с задержкой, дата и тип — сразу. Каждый новый запрос отменяет
  * предыдущий: ответ устаревшего запроса не перезапишет результат нового.
- * Пока идёт запрос, прежний список остаётся на месте — колонка не мигает
- * спиннером на каждую букву.
+ * При повторной загрузке того же фильтра список остаётся на месте.
  */
 export const useDoctorQuestionnaireList = ({
   search,
   date,
   visitType,
-}: QuestionnaireListFilters) => {
+  utcOffsetMinutes,
+}: QuestionnaireListFilters & { utcOffsetMinutes: number }) => {
   const [debouncedSearch, setDebouncedSearch] = useState(search);
   const [reloadKey, setReloadKey] = useState(0);
   const [result, setResult] = useState<ListResult | null>(null);
@@ -49,10 +49,15 @@ export const useDoctorQuestionnaireList = ({
   }, [search]);
 
   const query = useMemo(
-    () => buildListQuery({ search: debouncedSearch, date, visitType }),
-    [debouncedSearch, date, visitType],
+    () => ({
+      ...buildListQuery({ search: debouncedSearch, date, visitType }),
+      by_completion: true,
+      utc_offset_minutes: utcOffsetMinutes,
+    }),
+    [debouncedSearch, date, visitType, utcOffsetMinutes],
   );
-  const requestKey = `${JSON.stringify(query)}#${reloadKey}`;
+  const filterKey = JSON.stringify(query);
+  const requestKey = `${filterKey}#${reloadKey}`;
 
   useEffect(() => {
     const controller = new AbortController();
@@ -62,7 +67,8 @@ export const useDoctorQuestionnaireList = ({
       .then((data) => {
         setResult({
           key: requestKey,
-          items: sortByTime(data.filter(isVisibleInList)),
+          filterKey,
+          items: data.filter(isVisibleInList),
           error: null,
         });
       })
@@ -72,7 +78,8 @@ export const useDoctorQuestionnaireList = ({
         logWarn('Анкеты: не удалось загрузить список', error);
         setResult((previous) => ({
           key: requestKey,
-          items: previous?.items ?? [],
+          filterKey,
+          items: previous?.filterKey === filterKey ? previous.items : [],
           error:
             error instanceof ApiError && error.status === 403
               ? 'forbidden'
@@ -81,14 +88,14 @@ export const useDoctorQuestionnaireList = ({
       });
 
     return () => controller.abort();
-  }, [query, requestKey]);
+  }, [filterKey, query, requestKey]);
 
   const retry = useCallback(() => setReloadKey((key) => key + 1), []);
 
   const isLoading = result?.key !== requestKey;
 
   return {
-    items: result?.items ?? [],
+    items: result?.filterKey === filterKey ? result.items : [],
     /** Ответа ещё не было ни разу — показывать спиннер вместо списка. */
     isInitialLoading: result === null,
     isLoading,

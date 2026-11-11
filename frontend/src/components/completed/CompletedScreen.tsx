@@ -1,5 +1,5 @@
 'use client';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { mainApi, type ClinicRead } from '@/api';
 import {
   completedApi,
@@ -11,6 +11,7 @@ import { useMyClinic } from '@/hooks/useMyClinic';
 import { CompletedDetail } from './CompletedDetail';
 import {
   formatAppointmentTime,
+  isQuestionnaireReady,
   patientName,
   visitTypeLabel,
 } from '@/lib/doctor-questionnaires';
@@ -21,6 +22,9 @@ import { toDateInputValue } from '@/lib/questionnaire';
 import { useQuestionnaireDates } from '@/hooks/useQuestionnaireDates';
 import { useCompletedQuestionnaireList } from '@/hooks/useCompletedQuestionnaireList';
 import { PatientLinkGenerator } from '@/components/doctor-questionnaires/PatientLinkGenerator';
+import { CompletedQuestionnaireList } from '@/components/doctor-questionnaires/CompletedQuestionnaireList';
+import { FloatingQuestionnaire } from '@/components/doctor-questionnaires/FloatingQuestionnaire';
+import { QuestionnaireFilters } from '@/components/doctor-questionnaires/QuestionnaireFilters';
 import { ModalShell } from '@/components/settings/clinics/ModalShell';
 import { CustomDropdown } from '@/components/CustomDropdown';
 import { copyText } from '@/lib/clipboard';
@@ -42,12 +46,18 @@ export function CompletedScreen() {
       clinic_id: '',
       kind: '',
       name: '',
-      date: toDateInputValue(new Date()),
+      date: '',
     }),
     [selected, setSelected] = useState(''),
     [detail, setDetail] = useState<Detail | null>(null),
     [error, setError] = useState(''),
     [refresh, setRefresh] = useState(0);
+  const [utcOffsetMinutes] = useState(() => -new Date().getTimezoneOffset());
+  const [today] = useState(() => toDateInputValue(new Date()));
+  const effectiveFilters = useMemo(
+    () => (superAdmin ? filters : { ...filters, date: filters.date || today }),
+    [superAdmin, filters, today],
+  );
   useEffect(() => {
     if (superAdmin)
       mainApi.clinics
@@ -62,10 +72,21 @@ export function CompletedScreen() {
         clinic_id: filters.clinic_id,
         kind: filters.kind,
         name: filters.name.trim(),
+        ...(superAdmin
+          ? {
+              by_completion: 'true',
+              utc_offset_minutes: String(utcOffsetMinutes),
+            }
+          : {}),
       }).filter(([, value]) => value),
     ),
   );
-  const list = useCompletedQuestionnaireList(scope, filters, refresh);
+  const list = useCompletedQuestionnaireList(
+    scope,
+    effectiveFilters,
+    refresh,
+    superAdmin ? utcOffsetMinutes : undefined,
+  );
   const { items, loading, hasMore, error: listError, loadMore } = list;
   const sentinel = useRef<HTMLDivElement>(null);
   const [showLink, setShowLink] = useState(false);
@@ -140,6 +161,11 @@ export function CompletedScreen() {
     setSelected('');
     setDetail(null);
   };
+  const select = (id: string) => {
+    if (id === selected) return;
+    setSelected(id);
+    setDetail(null);
+  };
   if (!superAdmin && !clinic?.is_operator && !clinic?.is_clinic_admin)
     return (
       <p className="p-8">
@@ -150,7 +176,7 @@ export function CompletedScreen() {
     <section className="custom-scrollbar flex max-h-[calc(100vh-80px)] w-full flex-col gap-5 overflow-y-auto lg:max-h-none lg:flex-row lg:gap-0 lg:overflow-visible">
       <aside
         aria-label={superAdmin ? 'Анкеты для врачей' : 'Заполненные анкеты'}
-        className="mx-3 flex shrink-0 flex-col bg-[#F3F4F8] lg:fixed lg:top-20 lg:left-0 lg:mx-0 lg:ml-3 lg:h-[calc(100vh-100px)] lg:w-85.75"
+        className="mx-3 flex shrink-0 flex-col bg-[var(--ui-color-slate-100)] lg:fixed lg:top-[120px] lg:bottom-5 lg:left-0 lg:mx-0 lg:ml-3 lg:w-85.75 min-[1200px]:top-20"
       >
         <h1 className="sr-only">
           {superAdmin ? 'Анкеты для врачей' : 'Заполненные анкеты'}
@@ -159,7 +185,9 @@ export function CompletedScreen() {
           type="button"
           disabled={!linkClinicId}
           onClick={() => setShowLink(true)}
-          className="vismuth-button vismuth-button--secondary w-full shrink-0"
+          className={`vismuth-button w-full shrink-0 ${superAdmin ? 'bg-white!' : 'vismuth-button--secondary'}`}
+          data-variant={superAdmin ? 'ghost' : undefined}
+          data-size={superAdmin ? 'l' : undefined}
         >
           Создать ссылку для пациента
         </button>
@@ -186,8 +214,8 @@ export function CompletedScreen() {
             Выберите клинику для создания ссылки
           </p>
         )}
-        <div className="mt-6 flex shrink-0 flex-col gap-3 rounded-[15px] bg-white p-3">
-          {superAdmin && (
+        {superAdmin ? (
+          <div className="mt-6 flex shrink-0 flex-col gap-3">
             <CustomDropdown
               aria-label="Клиника"
               className="w-full"
@@ -198,8 +226,19 @@ export function CompletedScreen() {
               value={filters.clinic_id}
               onChange={(value) => filter('clinic_id', value)}
             />
-          )}
-          {!superAdmin && (
+            <QuestionnaireFilters
+              search={filters.name}
+              onSearchChange={(value) => filter('name', value)}
+              date={filters.date}
+              onDateChange={(value) => filter('date', value)}
+              onClearDate={() => filter('date', '')}
+              markedDates={markedDates}
+              dateLabel="Дата заполнения"
+              searchLabel="ФИО пациента"
+            />
+          </div>
+        ) : (
+          <div className="mt-6 flex shrink-0 flex-col gap-3 rounded-[15px] bg-white p-3">
             <CustomDropdown
               aria-label="Вид анкеты"
               className="w-full"
@@ -213,25 +252,25 @@ export function CompletedScreen() {
               value={filters.kind}
               onChange={(value) => filter('kind', value)}
             />
-          )}
-          <input
-            aria-label="Имя пациента"
-            placeholder="Имя пациента"
-            className="vismuth-input"
-            value={filters.name}
-            onChange={(e) => filter('name', e.target.value)}
-          />
-          <DateField
-            markedDates={markedDates}
-            value={filters.date}
-            onChange={(value) => filter('date', value)}
-            min={dateRange.min}
-            max={dateRange.max}
-            formatValue={formatDateNumeric}
-            popoverAlign="left"
-            aria-label="Дата приёма"
-          />
-        </div>
+            <input
+              aria-label="Имя пациента"
+              placeholder="Имя пациента"
+              className="vismuth-input"
+              value={filters.name}
+              onChange={(e) => filter('name', e.target.value)}
+            />
+            <DateField
+              markedDates={markedDates}
+              value={effectiveFilters.date}
+              onChange={(value) => filter('date', value)}
+              min={dateRange.min}
+              max={dateRange.max}
+              formatValue={formatDateNumeric}
+              popoverAlign="left"
+              aria-label="Дата приёма"
+            />
+          </div>
+        )}
         {error && (
           <p role="alert" className="mb-4 text-red-700">
             {error}
@@ -241,40 +280,49 @@ export function CompletedScreen() {
           data-questionnaire-list-scroll
           className="custom-scrollbar mt-6 flex min-h-0 flex-1 flex-col lg:overflow-x-hidden lg:overflow-y-auto"
         >
-          <h2 className="py-2.25 text-[14px] font-medium">
-            {formatDateLabel(filters.date)}
-          </h2>
-          <div className="space-y-2">
-            {items.map((i) => (
-              <button
-                key={i.id}
-                onClick={() => {
-                  setSelected(i.id);
-                  setDetail(null);
-                }}
-                aria-pressed={selected === i.id}
-                className={
-                  'flex w-full items-center gap-3 rounded-[15px] px-3 py-2.5 text-left text-[#202020] transition-colors ' +
-                  (selected === i.id ? 'bg-white' : 'hover:bg-white')
-                }
-              >
-                <span className="w-15 shrink-0 text-[22px]">
-                  {formatAppointmentTime(i.appointment_time)}
-                </span>
-                <span className="min-w-0 text-[14px]">
-                  <span className="block truncate">
-                    <strong>{i.code}</strong>
-                    {i.code && ' · '}
-                    {patientName(i) || 'Пациент'}
-                  </span>
-                  <span className="block truncate text-[#8B8B8B]">
-                    {i.clinic_name} ·{' '}
-                    {visitTypeLabel(i.visit_type) || kinds[i.kind]}
-                  </span>
-                </span>
-              </button>
-            ))}
-          </div>
+          {superAdmin ? (
+            <CompletedQuestionnaireList
+              items={items}
+              selectedId={selected}
+              onSelect={select}
+              utcOffsetMinutes={utcOffsetMinutes}
+              subtitleFor={(item) => item.clinic_name}
+            />
+          ) : (
+            <>
+              <h2 className="py-2.25 text-[14px] font-medium">
+                {formatDateLabel(effectiveFilters.date)}
+              </h2>
+              <div className="space-y-2">
+                {items.map((i) => (
+                  <button
+                    key={i.id}
+                    onClick={() => select(i.id)}
+                    aria-pressed={selected === i.id}
+                    className={
+                      'flex w-full items-center gap-3 rounded-[15px] px-3 py-2.5 text-left text-[#202020] transition-colors ' +
+                      (selected === i.id ? 'bg-white' : 'hover:bg-white')
+                    }
+                  >
+                    <span className="w-15 shrink-0 text-[22px]">
+                      {formatAppointmentTime(i.appointment_time)}
+                    </span>
+                    <span className="min-w-0 text-[14px]">
+                      <span className="block truncate">
+                        <strong>{i.code}</strong>
+                        {i.code && ' · '}
+                        {patientName(i) || 'Пациент'}
+                      </span>
+                      <span className="block truncate text-[#8B8B8B]">
+                        {i.clinic_name} ·{' '}
+                        {visitTypeLabel(i.visit_type) || kinds[i.kind]}
+                      </span>
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
           {!items.length && !loading && (
             <p className="py-10 text-gray-500">
               По выбранным фильтрам анкет нет
@@ -306,11 +354,16 @@ export function CompletedScreen() {
       <div className="mx-3 flex min-w-0 flex-1 justify-center lg:mx-0 lg:ml-93.5 lg:pr-5">
         <div className="custom-scrollbar w-full max-w-246 self-start rounded-[15px] bg-white px-4 py-6 lg:max-h-[calc(100vh-100px)] lg:overflow-y-auto lg:px-8">
           {detail ? (
-            <CompletedDetail
-              key={detail.id}
-              data={detail}
-              onChanged={changed}
-            />
+            <>
+              {superAdmin && isQuestionnaireReady(detail) && (
+                <FloatingQuestionnaire key={detail.id} questionnaire={detail} />
+              )}
+              <CompletedDetail
+                key={detail.id}
+                data={detail}
+                onChanged={changed}
+              />
+            </>
           ) : (
             <p className="p-12 text-center text-gray-500">
               {selected ? 'Загрузка анкеты…' : 'Выберите анкету'}

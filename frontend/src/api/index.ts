@@ -846,6 +846,7 @@ export type QuestionnaireProcessingStatus = 'pending' | 'done' | 'failed';
 
 export interface DoctorQuestionnaireListItem {
   id: string;
+  completed_at?: string | null;
   /** YYYY-MM-DD. */
   appointment_date: string | null;
   /** HH:MM — слот из настроек backend. */
@@ -869,6 +870,8 @@ export interface DoctorQuestionnaireListItem {
 export interface DoctorQuestionnaireQuery {
   /** YYYY-MM-DD. Без даты backend берёт «сегодня» в поясе сервера. */
   date?: string;
+  by_completion?: boolean;
+  utc_offset_minutes?: number;
   visit_type?: QuestionnaireVisitType;
   /** Ровно четыре символа, иначе 422. */
   code?: string;

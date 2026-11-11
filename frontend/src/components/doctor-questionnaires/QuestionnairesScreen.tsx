@@ -5,10 +5,13 @@ import { useSearchParams } from 'next/navigation';
 import { useQuestionnaireDates } from '@/hooks/useQuestionnaireDates';
 import { useDoctorQuestionnaire } from '@/hooks/useDoctorQuestionnaire';
 import { useDoctorQuestionnaireList } from '@/hooks/useDoctorQuestionnaireList';
-import { useNow } from '@/hooks/useNow';
-import { toDateInputValue } from '@/lib/questionnaire';
+import {
+  parseSearchQuery,
+  isQuestionnaireReady,
+} from '@/lib/doctor-questionnaires';
 import { QuestionnaireCard } from './QuestionnaireCard';
 import { QuestionnaireListColumn } from './QuestionnaireListColumn';
+import { FloatingQuestionnaire } from './FloatingQuestionnaire';
 
 /**
  * Раздел «Анкеты»: список слева, открытая анкета справа.
@@ -20,15 +23,20 @@ export const QuestionnairesScreen = () => {
   const selectedId = useSearchParams().get('id');
 
   const [search, setSearch] = useState('');
-  // Дата выбрана всегда: её можно сменить, но не очистить.
-  const [date, setDate] = useState(() => toDateInputValue(new Date()));
-  const markedDates = useQuestionnaireDates(
-    '/questionnaires',
-    search.trim() ? { name: search.trim() } : {},
-  );
+  const [date, setDate] = useState('');
+  const [utcOffsetMinutes] = useState(() => -new Date().getTimezoneOffset());
+  const markedDates = useQuestionnaireDates('/questionnaires', {
+    ...parseSearchQuery(search),
+    by_completion: 'true',
+    utc_offset_minutes: String(utcOffsetMinutes),
+  });
 
-  const now = useNow();
-  const list = useDoctorQuestionnaireList({ search, date, visitType: '' });
+  const list = useDoctorQuestionnaireList({
+    search,
+    date,
+    visitType: '',
+    utcOffsetMinutes,
+  });
   const questionnaire = useDoctorQuestionnaire(selectedId);
 
   const renderDetail = () => {
@@ -69,13 +77,23 @@ export const QuestionnairesScreen = () => {
         </div>
       );
     } else {
-      content = <QuestionnaireCard questionnaire={questionnaire.data} />;
+      content = (
+        <>
+          {isQuestionnaireReady(questionnaire.data) && (
+            <FloatingQuestionnaire
+              key={questionnaire.data.id}
+              questionnaire={questionnaire.data}
+            />
+          )}
+          <QuestionnaireCard questionnaire={questionnaire.data} />
+        </>
+      );
     }
 
     // Своя прокрутка карточки: в защищённой зоне прокрутка `body`
     // заблокирована, и без неё кнопка протокола на длинной анкете недостижима.
     return (
-      <div className="custom-scrollbar max-h-[calc(100vh-100px)] w-full max-w-246 self-start overflow-y-auto rounded-[15px] bg-white px-8 py-6">
+      <div className="custom-scrollbar max-h-[calc(100dvh-140px)] min-w-0 w-full max-w-246 self-start overflow-x-hidden overflow-y-auto rounded-2xl bg-white px-4 py-6 min-[1200px]:max-h-[calc(100dvh-100px)] 2xl:px-8">
         {content}
       </div>
     );
@@ -97,7 +115,7 @@ export const QuestionnairesScreen = () => {
         error={list.error}
         onRetry={list.retry}
         selectedId={selectedId}
-        now={now}
+        utcOffsetMinutes={utcOffsetMinutes}
       />
 
       <div className="ml-93.5 flex min-w-0 flex-1 justify-center pr-5">

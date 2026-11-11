@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date, datetime
 from typing import Annotated, Any, Literal, Optional
 from uuid import UUID
 
@@ -205,6 +205,7 @@ class DoctorQuestionnaireListItem(BaseModel):
     code: Optional[str] = None
     protocol_id: Optional[UUID] = None
     appointment_date: Optional[date] = None
+    completed_at: Optional[datetime] = None
 
 
 class QuestionnaireAnswerItem(BaseModel):

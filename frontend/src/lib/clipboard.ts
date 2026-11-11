@@ -8,11 +8,8 @@
  * `execCommand` устарел, но работает и вне HTTPS, где Clipboard API нет.
  * Срабатывает только синхронно в обработчике действия пользователя.
  */
-const copyViaSelection = (text: string): void => {
-  const previousFocus =
-    document.activeElement instanceof HTMLElement
-      ? document.activeElement
-      : null;
+const copyViaSelection = (text: string, document: Document): void => {
+  const previousFocus = document.activeElement as HTMLElement | null;
   const selection = document.getSelection();
   const previousRange =
     selection && selection.rangeCount > 0 ? selection.getRangeAt(0) : null;
@@ -39,7 +36,7 @@ const copyViaSelection = (text: string): void => {
     copied = document.execCommand('copy');
   } finally {
     field.remove();
-    previousFocus?.focus({ preventScroll: true });
+    previousFocus?.focus?.({ preventScroll: true });
     if (previousRange && selection) {
       selection.removeAllRanges();
       selection.addRange(previousRange);
@@ -54,8 +51,12 @@ const copyViaSelection = (text: string): void => {
  * без него и при отказе в доступе — копирование через выделение. Не вышло
  * ни так, ни так — отклонённый промис.
  */
-export const copyText = async (text: string): Promise<void> => {
-  if (window.isSecureContext && navigator.clipboard?.writeText) {
+export const copyText = async (
+  text: string,
+  sourceWindow: Window = window,
+): Promise<void> => {
+  const { navigator, document } = sourceWindow;
+  if (sourceWindow.isSecureContext && navigator.clipboard?.writeText) {
     try {
       await navigator.clipboard.writeText(text);
       return;
@@ -64,5 +65,5 @@ export const copyText = async (text: string): Promise<void> => {
     }
   }
 
-  copyViaSelection(text);
+  copyViaSelection(text, document);
 };

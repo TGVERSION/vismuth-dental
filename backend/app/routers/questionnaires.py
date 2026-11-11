@@ -1,9 +1,9 @@
-from datetime import date, datetime, timezone
+from datetime import date, datetime, time, timedelta, timezone
 from typing import Any, List, Optional
 from uuid import UUID
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, status
-from sqlalchemy import and_, case, func, or_, select
+from sqlalchemy import Date, and_, case, cast, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..db import get_db
@@ -187,6 +187,14 @@ def _on_day(day: date):
     )
 
 
+def _name_matches(name: str):
+    pattern = '%' + name.strip().replace('\\', '\\\\').replace('%', '\\%').replace('_', '\\_') + '%'
+    return func.concat_ws(
+        ' ', Questionnaire.patient_last_name, Questionnaire.patient_first_name,
+        Questionnaire.patient_middle_name,
+    ).ilike(pattern, escape='\\')
+
+
 @router.get(
     "",
     response_model=List[DoctorQuestionnaireListItem],
@@ -199,6 +207,8 @@ async def list_questionnaires(
     code: Optional[str] = Query(default=None, min_length=4, max_length=4),
     current_user: ServiceUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
+    by_completion: bool = False,
+    utc_offset_minutes: int = Query(default=0, ge=-840, le=840),
 ) -> List[DoctorQuestionnaireListItem]:
     membership = await get_active_doctor_membership(current_user, db)
 
@@ -214,30 +224,26 @@ async def list_questionnaires(
         )
     )
 
-    # date defaults to today; if code is set and date omitted — search all days
     if code:
         stmt = stmt.where(Questionnaire.code == code)
+    if by_completion:
+        stmt = stmt.where(Questionnaire.completed_at.is_not(None))
         if date_filter is not None:
-            stmt = stmt.where(_on_day(date_filter))
-    else:
-        appt_date = date_filter if date_filter is not None else date.today()
-        stmt = stmt.where(_on_day(appt_date))
+            local_zone = timezone(timedelta(minutes=utc_offset_minutes))
+            start = datetime.combine(date_filter, time.min, tzinfo=local_zone).astimezone(timezone.utc)
+            stmt = stmt.where(Questionnaire.completed_at >= start, Questionnaire.completed_at < start + timedelta(days=1))
+    elif date_filter is not None or not code:
+        stmt = stmt.where(_on_day(date_filter or date.today()))
 
     if visit_type:
         stmt = stmt.where(Questionnaire.visit_type == visit_type)
-    if name:
-        pattern = f"%{name.strip()}%"
-        stmt = stmt.where(
-            or_(
-                Questionnaire.patient_last_name.ilike(pattern),
-                Questionnaire.patient_first_name.ilike(pattern),
-                Questionnaire.patient_middle_name.ilike(pattern),
-            ),
-        )
+    if name and name.strip():
+        stmt = stmt.where(_name_matches(name))
 
-    stmt = stmt.order_by(
-        Questionnaire.appointment_time.asc().nulls_last(),
-        Questionnaire.completed_at.desc(),
+    stmt = (
+        stmt.order_by(Questionnaire.completed_at.desc(), Questionnaire.id.desc()).limit(300)
+        if by_completion
+        else stmt.order_by(Questionnaire.appointment_time.asc().nulls_last(), Questionnaire.completed_at.desc())
     )
     result = await db.execute(stmt)
     rows = result.all()
@@ -253,6 +259,7 @@ async def list_questionnaires(
             code=q.code,
             protocol_id=q.protocol_id,
             appointment_date=q.appointment_date,
+            completed_at=q.completed_at,
         )
         for q, spec_name in rows
     ]
@@ -262,24 +269,30 @@ async def list_questionnaires(
 async def appointment_dates(
     date_from: date | None = None, date_to: date | None = None,
     name: str | None = Query(default=None, max_length=255),
+    code: str | None = Query(default=None, min_length=4, max_length=4),
     current_user: ServiceUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
+    by_completion: bool = False,
+    utc_offset_minutes: int = Query(default=0, ge=-840, le=840),
 ):
     membership = await get_active_doctor_membership(current_user, db)
     if date_from and date_to and date_from > date_to:
         raise HTTPException(422, 'date_from must not be after date_to')
-    day = case((Questionnaire.kind == 'dental', func.date(Questionnaire.completed_at)),
-               else_=Questionnaire.appointment_date)
+    day = (
+        cast(func.timezone('UTC', Questionnaire.completed_at) + timedelta(minutes=utc_offset_minutes), Date)
+        if by_completion
+        else case((Questionnaire.kind == 'dental', func.date(Questionnaire.completed_at)),
+                  else_=Questionnaire.appointment_date)
+    )
     stmt = select(day).where(_visible_to(membership), Questionnaire.status == 'completed', day.is_not(None))
     if date_from:
         stmt = stmt.where(day >= date_from)
     if date_to:
         stmt = stmt.where(day <= date_to)
     if name and name.strip():
-        pattern = f'%{name.strip()}%'
-        stmt = stmt.where(or_(Questionnaire.patient_last_name.ilike(pattern),
-                              Questionnaire.patient_first_name.ilike(pattern),
-                              Questionnaire.patient_middle_name.ilike(pattern)))
+        stmt = stmt.where(_name_matches(name))
+    if isinstance(code, str):
+        stmt = stmt.where(Questionnaire.code == code)
     return list((await db.execute(stmt.distinct().order_by(day))).scalars())
 
 

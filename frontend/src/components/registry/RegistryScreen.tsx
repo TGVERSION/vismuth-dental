@@ -13,7 +13,7 @@ import { QuestionnaireFilters } from '@/components/doctor-questionnaires/Questio
 import { useQuestionnaireDates } from '@/hooks/useQuestionnaireDates';
 import { NewLinkModal } from './NewLinkModal';
 import { RegistryDetail } from './RegistryDetail';
-import { RegistryList } from './RegistryList';
+import { CompletedQuestionnaireList } from '@/components/doctor-questionnaires/CompletedQuestionnaireList';
 
 /** Поиск по ФИО уходит на сервер после паузы в наборе, а не на каждую букву. */
 const SEARCH_DEBOUNCE_MS = 300;
@@ -156,17 +156,17 @@ export const RegistryScreen = () => {
       const isFiltered = Boolean(searchName || date);
       return (
         <p className="px-4 py-8 text-center text-sm text-gray-500">
-          {isFiltered
-            ? 'Ничего не найдено'
-            : 'Заполненных анкет пока нет'}
+          {isFiltered ? 'Ничего не найдено' : 'Заполненных анкет пока нет'}
         </p>
       );
     }
     return (
-      <RegistryList
+      <CompletedQuestionnaireList
         items={list.items}
         selectedId={selectedId}
-        clinicId={superAdmin ? clinicId : undefined}
+        hrefFor={(id) =>
+          `/registry?${new URLSearchParams({ id, ...(superAdmin ? { clinic_id: clinicId } : {}) })}`
+        }
         utcOffsetMinutes={utcOffset}
       />
     );

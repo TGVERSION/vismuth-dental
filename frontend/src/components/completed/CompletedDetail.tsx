@@ -9,10 +9,12 @@ import { printSheet } from '@/lib/registry-print';
 import {
   buildSections,
   formatAppointmentTime,
+  gapQuestions,
   patientName,
   visitTypeLabel,
 } from '@/lib/doctor-questionnaires';
 import { QuestionnaireSection } from '@/components/doctor-questionnaires/QuestionnaireSection';
+import { QuestionnaireQuestions } from '@/components/dental-card/DentalCardParts';
 import {
   GastroDoctorHighlights,
   GastroDoctorHistory,
@@ -124,6 +126,7 @@ export function CompletedDetail({
           {buildSections(data).map((s) => (
             <QuestionnaireSection key={s.key} section={s} />
           ))}
+          <QuestionnaireQuestions questions={gapQuestions(data.gaps)} />
           {data.kind === 'gastro' && data.structured && (
             <>
               <GastroDoctorHistory structured={data.structured} />
@@ -132,21 +135,6 @@ export function CompletedDetail({
           )}
         </>
       )}
-      <details>
-        <summary className="cursor-pointer text-[var(--ui-color-blue-600)]">
-          Сохранённые ответы
-        </summary>
-        <dl className="mt-4 space-y-4">
-          {data.answers.map((a, i) => (
-            <div key={i}>
-              <dt className="font-medium">{a.question_text || a.step_key}</dt>
-              <dd className="whitespace-pre-wrap break-words">
-                {a.answer_text || a.choice || 'Ответ не сообщён'}
-              </dd>
-            </div>
-          ))}
-        </dl>
-      </details>
       {printing && sheet && <AnketaPrintSheet sheet={sheet} />}
     </article>
   );

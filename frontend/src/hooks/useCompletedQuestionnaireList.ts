@@ -19,10 +19,22 @@ export function useCompletedQuestionnaireList(
   scope: string | null,
   filters: CompletedFilters,
   refresh: number,
+  completionOffset?: number,
 ) {
   const [result, setResult] = useState<Result | null>(null);
   const [retryKey, setRetryKey] = useState(0);
-  const query = useMemo(() => completedQuery(filters, 1), [filters]);
+  const query = useMemo(
+    () => ({
+      ...completedQuery(filters, 1),
+      ...(completionOffset === undefined
+        ? {}
+        : {
+            by_completion: 'true',
+            utc_offset_minutes: completionOffset,
+          }),
+    }),
+    [filters, completionOffset],
+  );
   const key = JSON.stringify([scope, query, refresh, retryKey]);
   const active = useRef<{
     key: string;

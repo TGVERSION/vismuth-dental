@@ -31,6 +31,7 @@ export async function GET(request: Request) {
   const date = params.get('date');
   const name = params.get('name')?.trim().toLowerCase();
   const visitType = params.get('visit_type');
+  const byCompletion = params.get('by_completion') === 'true';
 
   if (code !== null && code.length !== 4) {
     return unprocessable('code must be exactly 4 characters');
@@ -38,25 +39,30 @@ export async function GET(request: Request) {
 
   let items = seedQuestionnaires();
 
-  if (code) {
-    items = items.filter((item) => item.code === code);
-    if (date) items = items.filter((item) => item.appointment_date === date);
-  } else {
-    const day = date || toDateInputValue(new Date());
-    items = items.filter((item) => item.appointment_date === day);
-  }
+  if (code) items = items.filter((item) => item.code === code);
+  const day =
+    date || (!byCompletion && !code ? toDateInputValue(new Date()) : null);
+  if (day) items = items.filter((item) => item.appointment_date === day);
 
   if (visitType) items = items.filter((item) => item.visit_type === visitType);
 
   if (name) {
     items = items.filter((item) =>
-      [item.patient_first_name, item.patient_middle_name].some((part) =>
-        part?.toLowerCase().includes(name),
-      ),
+      [
+        item.patient_last_name,
+        item.patient_first_name,
+        item.patient_middle_name,
+      ]
+        .filter(Boolean)
+        .join(' ')
+        .toLowerCase()
+        .includes(name),
     );
   }
 
   items.sort((a, b) => {
+    if (byCompletion)
+      return (b.appointment_date ?? '').localeCompare(a.appointment_date ?? '');
     if (!a.appointment_time) return 1;
     if (!b.appointment_time) return -1;
     return a.appointment_time.localeCompare(b.appointment_time);

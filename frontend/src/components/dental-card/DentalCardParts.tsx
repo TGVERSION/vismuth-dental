@@ -19,7 +19,7 @@ export const DentalBlock = ({
     <section aria-labelledby={headingId} className="flex flex-col gap-4">
       <h2
         id={headingId}
-        className="pl-6 text-[length:var(--ui-font-size-31)] font-medium text-[var(--ui-color-alabaster-dark-800)]"
+        className="pl-6 text-2xl font-medium text-[var(--ui-color-alabaster-dark-800)]"
       >
         {title}
       </h2>
@@ -35,36 +35,34 @@ const lowerFirst = (text: string): string =>
   text.charAt(0).toLowerCase() + text.slice(1);
 
 const noteClass =
-  'rounded-2xl px-3 py-[var(--ui-space-10)] text-[length:var(--ui-font-size-14)]';
+  'list-disc space-y-1 rounded-2xl py-[var(--ui-space-10)] pr-3 pl-8 text-sm';
 
 /** «Самое важное»: отмеченные риски. */
 export const DentalImportant = ({ important }: { important: string[] }) =>
   important.length > 0 ? (
     <DentalBlock title="Самое важное">
-      <ul className="flex flex-col gap-[var(--ui-space-6)]">
+      <ul
+        className={`${noteClass} bg-[var(--ui-color-red-50)] text-[var(--ui-color-red-600)]`}
+      >
         {important.map((line) => (
-          <li
-            key={line}
-            className={`${noteClass} bg-[var(--ui-color-red-50)] text-[var(--ui-color-red-600)]`}
-          >
-            {line}
-          </li>
+          <li key={line}>{line}</li>
         ))}
       </ul>
     </DentalBlock>
   ) : null;
 
-export const DentalQuestions = ({ questions }: { questions: string[] }) =>
+export const QuestionnaireQuestions = ({
+  questions,
+}: {
+  questions: string[];
+}) =>
   questions.length ? (
     <DentalBlock title="Что доспросить">
-      <ul className="flex flex-col gap-[var(--ui-space-6)]">
+      <ul
+        className={`${noteClass} bg-[var(--ui-color-alabaster-500)] text-[var(--ui-color-slate-600)]`}
+      >
         {questions.map((question) => (
-          <li
-            key={question}
-            className={`${noteClass} bg-[var(--ui-color-alabaster-500)] text-[var(--ui-color-slate-600)]`}
-          >
-            {question}
-          </li>
+          <li key={question}>{question}</li>
         ))}
       </ul>
     </DentalBlock>

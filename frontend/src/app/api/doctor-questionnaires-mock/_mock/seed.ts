@@ -256,6 +256,9 @@ export const toListItem = (
 ): DoctorQuestionnaireListItem => ({
   id: detail.id,
   appointment_date: detail.appointment_date,
+  completed_at: detail.appointment_date
+    ? `${detail.appointment_date}T12:00:00Z`
+    : null,
   appointment_time: detail.appointment_time,
   patient_first_name: detail.patient_first_name,
   patient_middle_name: detail.patient_middle_name,

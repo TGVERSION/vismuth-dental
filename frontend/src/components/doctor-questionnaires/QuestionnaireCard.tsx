@@ -9,7 +9,7 @@ import {
   visitTypeLabel,
 } from '@/lib/doctor-questionnaires';
 import { DentalDoctorSummary } from './DentalDoctorSummary';
-import { DentalQuestions } from '@/components/dental-card/DentalCardParts';
+import { QuestionnaireQuestions } from '@/components/dental-card/DentalCardParts';
 import { dentalSummaryText } from '@/lib/dental-health';
 import { ProtocolActionButton } from './ProtocolActionButton';
 import { QuestionnaireSection } from './QuestionnaireSection';
@@ -75,15 +75,12 @@ export const QuestionnaireCard = ({
                   </div>
                 </details>
               ) : (
-                <QuestionnaireSection
-                  key={section.key}
-                  section={isDental ? { ...section, gaps: [] } : section}
-                />
+                <QuestionnaireSection key={section.key} section={section} />
               ),
             )}
-          {isDental && (
-            <DentalQuestions questions={gapQuestions(questionnaire.gaps)} />
-          )}
+          <QuestionnaireQuestions
+            questions={gapQuestions(questionnaire.gaps)}
+          />
           {questionnaire.kind === 'gastro' && questionnaire.structured ? (
             <>
               <GastroDoctorHistory structured={questionnaire.structured} />

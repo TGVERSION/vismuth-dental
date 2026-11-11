@@ -6,7 +6,7 @@ import {
   DentalClarifications,
   DentalHealth,
   DentalImportant,
-  DentalQuestions,
+  QuestionnaireQuestions,
 } from '@/components/dental-card/DentalCardParts';
 import { gapQuestions } from '@/lib/doctor-questionnaires';
 import { dentalSummaryText } from '@/lib/dental-health';
@@ -54,7 +54,7 @@ export const DentalCardBody = ({ structured, gaps }: DentalCardBodyProps) => {
           <p>{allergy}</p>
         </Block>
       )}
-      <DentalQuestions questions={questions} />
+      <QuestionnaireQuestions questions={questions} />
     </div>
   );
 };

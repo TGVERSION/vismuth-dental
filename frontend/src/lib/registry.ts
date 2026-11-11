@@ -51,11 +51,13 @@ export const registryWhenLine = (
 };
 
 /** Группы в порядке выдачи сервера, по тем же местным суткам, что и фильтр. */
-export const groupRegistryByCompletionDay = (
-  items: RegistryQuestionnaireItem[],
+export const groupRegistryByCompletionDay = <
+  T extends { completed_at?: string | null },
+>(
+  items: readonly T[],
   utcOffsetMinutes: number,
 ) => {
-  const groups = new Map<string, RegistryQuestionnaireItem[]>();
+  const groups = new Map<string, T[]>();
   for (const item of items) {
     if (!item.completed_at) continue;
     const timestamp = Date.parse(item.completed_at);

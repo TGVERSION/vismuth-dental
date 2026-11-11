@@ -2,11 +2,10 @@
 
 import type { DoctorQuestionnaireListItem } from '@/api';
 import type { QuestionnaireListError } from '@/hooks/useDoctorQuestionnaireList';
-import { formatDateLabel } from '@/lib/calendar';
 import { useMyClinic } from '@/hooks/useMyClinic';
+import { CompletedQuestionnaireList } from './CompletedQuestionnaireList';
 import { LinksQrButton } from './LinksQrButton';
 import { QuestionnaireFilters } from './QuestionnaireFilters';
-import { QuestionnaireListItem } from './QuestionnaireListItem';
 
 interface QuestionnaireListColumnProps {
   search: string;
@@ -20,7 +19,7 @@ interface QuestionnaireListColumnProps {
   error: QuestionnaireListError | null;
   onRetry: () => void;
   selectedId: string | null;
-  now: Date;
+  utcOffsetMinutes: number;
 }
 
 /**
@@ -39,10 +38,10 @@ export const QuestionnaireListColumn = ({
   error,
   onRetry,
   selectedId,
-  now,
+  utcOffsetMinutes,
 }: QuestionnaireListColumnProps) => {
   const { clinic } = useMyClinic();
-  const hasFilters = search.trim() !== '';
+  const hasFilters = Boolean(search.trim() || date);
 
   const renderBody = () => {
     // На повторной загрузке прежние строки остаются на месте, но если их нет —
@@ -79,28 +78,25 @@ export const QuestionnaireListColumn = ({
     if (items.length === 0 && !isLoading) {
       return (
         <p className="px-4 py-8 text-center text-sm text-gray-500">
-          {hasFilters ? 'Ничего не найдено' : 'Анкет на эту дату нет'}
+          {hasFilters ? 'Ничего не найдено' : 'Заполненных анкет пока нет'}
         </p>
       );
     }
 
     return (
-      <ul
+      <div
         aria-busy={isLoading}
         className={`flex flex-col gap-1.25 transition-opacity ${
           isLoading ? 'opacity-60' : ''
         }`}
       >
-        {items.map((item) => (
-          <li key={item.id}>
-            <QuestionnaireListItem
-              item={item}
-              selected={item.id === selectedId}
-              now={now}
-            />
-          </li>
-        ))}
-      </ul>
+        <CompletedQuestionnaireList
+          items={items}
+          selectedId={selectedId}
+          utcOffsetMinutes={utcOffsetMinutes}
+          hrefFor={(id) => `/questionnaires?id=${encodeURIComponent(id)}`}
+        />
+      </div>
     );
   };
 
@@ -108,24 +104,24 @@ export const QuestionnaireListColumn = ({
     <aside
       data-print-hide
       aria-label="Анкеты для врачей"
-      className="custom-height fixed top-20 left-0 ml-3 mr-5 flex w-85.75 flex-col bg-[#F3F4F8]"
+      className="fixed top-[120px] bottom-5 left-0 ml-3 mr-5 flex min-h-0 w-85.75 flex-col bg-[var(--ui-color-slate-100)] min-[1200px]:top-20"
     >
       {clinic?.is_clinic_admin && <LinksQrButton />}
 
-      <div className="mt-6">
+      <div className={clinic?.is_clinic_admin ? 'mt-6 shrink-0' : 'shrink-0'}>
         <QuestionnaireFilters
           search={search}
           onSearchChange={onSearchChange}
           date={date}
           onDateChange={onDateChange}
           markedDates={markedDates}
+          dateLabel="Дата заполнения"
+          searchLabel="ФИО пациента или код"
+          onClearDate={() => onDateChange('')}
         />
       </div>
 
-      <div className="custom-scrollbar mt-6 flex-1 overflow-x-hidden overflow-y-auto">
-        <h2 className="px-0 py-2.25 text-[14px] font-medium">
-          {formatDateLabel(date)}
-        </h2>
+      <div className="custom-scrollbar mt-6 min-h-0 flex-1 overflow-x-hidden overflow-y-auto">
         {renderBody()}
       </div>
     </aside>

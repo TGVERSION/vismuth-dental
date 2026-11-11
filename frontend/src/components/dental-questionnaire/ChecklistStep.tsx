@@ -6,6 +6,7 @@ import {
   scopedChecklistValues,
 } from '@/lib/dental-questionnaire';
 import { useDentalDraft } from '@/hooks/useDentalDraft';
+import { DentalCheckbox } from './DentalCheckbox';
 import { DentalButton, DentalError } from './DentalShell';
 interface ChecklistStepProps {
   step: QuestionnaireStep;
@@ -56,12 +57,12 @@ export const ChecklistStep = ({
       <ul
         role="group"
         aria-labelledby="health-question"
-        className="flex flex-col overflow-hidden rounded-2xl bg-[var(--q-surface)]"
+        className="flex flex-col overflow-hidden rounded-2xl bg-white"
       >
         {items.map((item, index) => (
           <li
             key={item.value}
-            className="border-t border-[var(--q-bg)] first:border-t-0"
+            className="border-t border-[var(--ui-color-alabaster-500)] first:border-t-0"
           >
             {!healthPage &&
             item.section &&
@@ -70,30 +71,25 @@ export const ChecklistStep = ({
                 {item.section}
               </h3>
             ) : null}
-            <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-2 px-3 py-1">
-              <label className="flex min-h-[var(--ui-size-btn-m)] min-w-0 cursor-pointer items-center gap-3 py-[var(--ui-space-10)]">
-                <input
-                  type="checkbox"
-                  checked={checked.includes(item.value)}
-                  onChange={() => toggle(item.value, false)}
-                  disabled={isSubmitting || !restored}
-                  className="h-[var(--ui-size-checkbox-m)] w-[var(--ui-size-checkbox-m)] shrink-0 accent-[var(--q-brand)]"
-                />
-                <span className="text-base leading-snug">
-                  {item.label}
-                  {uncertain.includes(item.value) ? (
-                    <span className="block text-sm text-[var(--q-muted)]">
-                      Ранее указан неопределённый ответ
-                    </span>
-                  ) : null}
-                  {item.hint ? (
-                    <span className="block text-[length:var(--ui-font-size-13)] text-[var(--q-muted)]">
-                      {item.hint}
-                    </span>
-                  ) : null}
-                </span>
-              </label>
-            </div>
+            <DentalCheckbox
+              checked={checked.includes(item.value)}
+              onChange={() => toggle(item.value, false)}
+              disabled={isSubmitting || !restored}
+            >
+              <span className="text-base leading-snug">
+                {item.label}
+                {uncertain.includes(item.value) ? (
+                  <span className="block text-sm text-[var(--q-muted)]">
+                    Ранее указан неопределённый ответ
+                  </span>
+                ) : null}
+                {item.hint ? (
+                  <span className="block text-[length:var(--ui-font-size-13)] text-[var(--q-muted)]">
+                    {item.hint}
+                  </span>
+                ) : null}
+              </span>
+            </DentalCheckbox>
           </li>
         ))}
       </ul>

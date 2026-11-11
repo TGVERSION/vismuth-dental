@@ -101,29 +101,60 @@ export const DentalFormShell = ({
       }
     >
       <header className="shrink-0 border-b border-[var(--q-surface)] px-4 pt-[calc(env(safe-area-inset-top)+12px)] pb-4">
-        <div className="mb-4 flex items-center justify-between gap-3">
-          <span className="text-sm font-medium">Анкета о здоровье</span>
-        </div>
-        <ol aria-label="Этапы анкеты" className="grid grid-cols-4 gap-2">
-          {['Обращение', 'Здоровье', 'Уточнения', 'О вас'].map(
-            (label, index) => (
-              <li
-                key={label}
-                aria-current={stage.current === index + 1 ? 'step' : undefined}
+        <div className="flex items-center gap-2">
+          {onBack ? (
+            <button
+              type="button"
+              aria-label="Назад"
+              title="Назад"
+              disabled={busy}
+              onClick={onBack}
+              className="q-icon-button flex shrink-0 items-center justify-center text-[var(--q-text)]"
+            >
+              <svg
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                aria-hidden="true"
               >
-                <div
-                  aria-hidden="true"
-                  className={`mb-2 h-1 rounded-full ${index + 1 <= stage.current ? 'bg-[var(--q-brand)]' : 'bg-[var(--q-surface)]'}`}
+                <path
+                  d="M19 12H5m7-7-7 7 7 7"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
                 />
-                <span
-                  className={`block text-xs ${stage.current === index + 1 ? 'font-semibold text-[var(--q-text)]' : 'text-[var(--q-muted)]'}`}
+              </svg>
+            </button>
+          ) : null}
+          <ol
+            aria-label="Этапы анкеты"
+            className="grid min-w-0 flex-1 grid-cols-4 gap-2"
+          >
+            {['Обращение', 'Здоровье', 'Уточнения', 'О вас'].map(
+              (label, index) => (
+                <li
+                  key={label}
+                  className="min-w-0 break-words"
+                  aria-current={
+                    stage.current === index + 1 ? 'step' : undefined
+                  }
                 >
-                  {label}
-                </span>
-              </li>
-            ),
-          )}
-        </ol>
+                  <div
+                    aria-hidden="true"
+                    className={`mb-2 h-1 rounded-full ${index + 1 <= stage.current ? 'bg-[var(--q-brand)]' : 'bg-[var(--q-surface)]'}`}
+                  />
+                  <span
+                    className={`block text-xs ${stage.current === index + 1 ? 'font-semibold text-[var(--q-text)]' : 'text-[var(--q-muted)]'}`}
+                  >
+                    {label}
+                  </span>
+                </li>
+              ),
+            )}
+          </ol>
+        </div>
       </header>
       <main
         ref={mainRef}
@@ -137,11 +168,13 @@ export const DentalFormShell = ({
               tabIndex={-1}
               className="text-2xl leading-tight font-semibold outline-none"
             >
-              {step.step_key.startsWith('dental_details_allergy')
-                ? step.step_key.endsWith('_reaction')
-                  ? 'Проявления аллергии'
-                  : 'На что была аллергия'
-                : (step.title ?? stage.title)}
+              {step.step_key === 'dental_reason'
+                ? 'Повод визита'
+                : step.step_key.startsWith('dental_details_allergy')
+                  ? step.step_key.endsWith('_reaction')
+                    ? 'Проявления аллергии'
+                    : 'На что была аллергия'
+                  : (step.title ?? stage.title)}
             </h1>
           </div>
           {children}
@@ -155,17 +188,6 @@ export const DentalFormShell = ({
         <span aria-hidden="true">↓ </span>Ниже ещё есть пункты
       </div>
       <div className="flex shrink-0 flex-col gap-2 border-t border-[var(--q-surface)] bg-[var(--q-bg)] px-4 pt-3 pb-[calc(env(safe-area-inset-bottom)+12px)]">
-        {onBack ? (
-          <button
-            type="button"
-            disabled={busy}
-            onClick={onBack}
-            className="q-button w-full"
-            data-variant="outline"
-          >
-            Назад
-          </button>
-        ) : null}
         {footer}
       </div>
     </div>

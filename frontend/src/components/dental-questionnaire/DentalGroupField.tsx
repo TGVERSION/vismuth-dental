@@ -3,6 +3,7 @@
 import { useLayoutEffect, useRef } from 'react';
 import type { DentalGroup, GroupProblem } from '@/lib/dental-questionnaire';
 import { PatientVoiceInput } from '@/components/questionnaire/PatientVoiceInput';
+import { DentalCheckbox } from './DentalCheckbox';
 import { DentalVisitYearField } from './DentalVisitYearField';
 
 const PROBLEMS: Record<GroupProblem, string> = {
@@ -51,6 +52,7 @@ export const DentalGroupField = ({
   const titleId = `q-${group.key}`,
     errorId = `problem-${group.key}`;
   const allergy = group.key.startsWith('allergy.');
+  const reason = group.key === 'reason';
   const numeric = group.text?.input_kind && group.text.input_kind !== 'text';
   return (
     <fieldset
@@ -59,27 +61,29 @@ export const DentalGroupField = ({
       aria-labelledby={titleId}
       className="flex min-w-0 flex-col gap-3"
     >
-      <h2 id={titleId} className="text-base leading-snug font-medium">
+      <h2
+        id={titleId}
+        className={reason ? 'sr-only' : 'text-base leading-snug font-medium'}
+      >
         {group.title && !allergy ? `${group.title}: ` : ''}
         {group.question}
       </h2>
       {group.options.length ? (
-        allergy ? (
-          <div className="overflow-hidden rounded-2xl bg-[var(--q-surface)]">
+        allergy || reason ? (
+          <div className="overflow-hidden rounded-2xl bg-white">
             {group.options.map((option) => (
-              <label
+              <div
                 key={option.value}
-                className="flex min-h-[48px] cursor-pointer items-center gap-3 border-t border-[var(--q-bg)] px-4 py-3 first:border-t-0"
+                className="border-t border-[var(--ui-color-alabaster-500)] first:border-t-0"
               >
-                <input
-                  type="checkbox"
+                <DentalCheckbox
                   checked={selected.includes(option.value)}
                   disabled={disabled}
                   onChange={() => onToggle(option.value)}
-                  className="h-5 w-5 shrink-0 accent-[var(--q-brand)]"
-                />
-                <span className="text-base">{option.label}</span>
-              </label>
+                >
+                  {option.label}
+                </DentalCheckbox>
+              </div>
             ))}
           </div>
         ) : (

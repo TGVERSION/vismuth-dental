@@ -74,11 +74,7 @@ FIXED_TEXTS: dict[str, str] = {
 async def complaint_question(db: AsyncSession, questionnaire: Questionnaire) -> str:
     specialty = (await specialization_name(db, questionnaire.specialization_id) or "").casefold()
     if "гастро" in specialty:
-        return (
-            "С чем вы обращаетесь к гастроэнтерологу?\n\n"
-            "Например, с болью в животе, вздутием, изжогой, тошнотой "
-            "или другими жалобами на пищеварение."
-        )
+        return "С какой проблемой вы обращаетесь к гастроэнтерологу?"
     return FIXED_TEXTS["complaint"]
 
 

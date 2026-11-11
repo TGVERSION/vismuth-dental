@@ -101,8 +101,8 @@ export const NewLinkModal = ({
   if (created) {
     return (
       // Ссылка показывается один раз: случайный клик мимо окна или Esc не
-      // должны её терять — закрыть можно только кнопкой «Готово».
-      <ModalShell title="Ссылка готова" onClose={onClose} closeDisabled>
+      // должны её терять — закрыть можно крестиком или кнопкой «Готово».
+      <ModalShell title="Ссылка готова" onClose={onClose} dismissDisabled>
         <LinkQrCard item={inviteLinkItem(created)} />
         <div className="mt-[var(--ui-space-32)] flex flex-col gap-3">
           <button

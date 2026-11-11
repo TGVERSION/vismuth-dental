@@ -249,7 +249,7 @@ export const RegistryDetail = ({
         <ModalShell
           title="Новая ссылка"
           onClose={() => setNewUrl(null)}
-          closeDisabled
+          dismissDisabled
         >
           <p className="mb-4 text-sm text-[var(--ui-color-alabaster-950)]">
             Прежняя ссылка больше не работает.

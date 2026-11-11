@@ -9,6 +9,8 @@ interface ModalShellProps {
   onClose: () => void;
   /** Пока идёт запрос, закрыть окно нельзя. */
   closeDisabled?: boolean;
+  /** Не закрывать случайно по фону или Escape; крестик остаётся доступным. */
+  dismissDisabled?: boolean;
   children: ReactNode;
 }
 
@@ -30,6 +32,7 @@ export const ModalShell = ({
   title,
   onClose,
   closeDisabled = false,
+  dismissDisabled = false,
   children,
 }: ModalShellProps) => {
   useEffect(() => {
@@ -49,7 +52,7 @@ export const ModalShell = ({
   }, []);
 
   useEffect(() => {
-    if (closeDisabled) return;
+    if (closeDisabled || dismissDisabled) return;
 
     const handleKey = (event: KeyboardEvent) => {
       if (event.key !== 'Escape' || event.defaultPrevented) return;
@@ -60,12 +63,12 @@ export const ModalShell = ({
     };
     document.addEventListener('keydown', handleKey);
     return () => document.removeEventListener('keydown', handleKey);
-  }, [closeDisabled, onClose]);
+  }, [closeDisabled, dismissDisabled, onClose]);
 
   return createPortal(
     <div
       className="modal-overlay fixed inset-0 z-[var(--ui-z-modal)] flex items-center justify-center overscroll-contain bg-[color:var(--ui-color-alabaster-dark-800)]/20"
-      onClick={() => !closeDisabled && onClose()}
+      onClick={() => !closeDisabled && !dismissDisabled && onClose()}
     >
       <div
         role="dialog"

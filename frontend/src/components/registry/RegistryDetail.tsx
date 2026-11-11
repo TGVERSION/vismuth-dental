@@ -18,7 +18,6 @@ import {
 import { printSheet } from '@/lib/registry-print';
 import { AnketaPrintSheet } from './AnketaPrintSheet';
 import { DentalCardBody } from './DentalCardBody';
-import { RegistryStatusBadge } from './RegistryStatusBadge';
 
 /** Режим печати анкеты: правила в globals.css действуют только под ним. */
 const PRINT_MODE_ATTR = 'data-print-mode';
@@ -166,10 +165,11 @@ export const RegistryDetail = ({
         <h2 className="min-w-0 flex-1 truncate text-[length:var(--ui-font-size-20)] font-normal">
           {patientFullName(questionnaire)}
         </h2>
-        <span className="shrink-0 text-[length:var(--ui-font-size-14)]">
-          {registryWhenLine(questionnaire)}
-        </span>
-        <RegistryStatusBadge status={questionnaire.status} />
+        {questionnaire.completed_at ? (
+          <span className="shrink-0 text-[length:var(--ui-font-size-14)]">
+            {registryWhenLine(questionnaire)}
+          </span>
+        ) : null}
       </header>
 
       <div className="flex flex-wrap items-center gap-x-5 gap-y-2">

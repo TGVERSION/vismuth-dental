@@ -64,32 +64,20 @@ describe('formatDateTime', () => {
 });
 
 describe('registryWhenLine', () => {
-  const now = new Date('2026-10-28T12:00:00Z');
-
-  it('shows when the questionnaire was filled', () => {
+  it('shows only the completion date in the display time zone', () => {
     expect(
       registryWhenLine(
-        item({ status: 'completed', completed_at: '2026-10-28T05:10:00Z' }),
-        now,
+        item({ status: 'completed', completed_at: '2026-10-28T21:10:00Z' }),
         TZ,
       ),
-    ).toBe('Заполнена 28.10.2026 в 10:10');
+    ).toBe('29.10.2026');
   });
-
-  it('shows until when the link works', () => {
-    expect(registryWhenLine(item({}), now, TZ)).toBe(
-      'Ссылка действует до 03.11.2026 в 15:00',
-    );
-  });
-
-  it('says the link is outdated after the deadline', () => {
+  it('has no date line for either active or expired unfinished links', () => {
+    expect(registryWhenLine(item({}), TZ)).toBe('');
     expect(
-      registryWhenLine(
-        item({ invite_expires_at: '2026-10-28T11:59:00Z' }),
-        now,
-        TZ,
-      ),
-    ).toBe('Ссылка устарела');
+      registryWhenLine(item({ invite_expires_at: '2026-10-01T11:59:00Z' }), TZ),
+    ).toBe('');
+    expect(registryWhenLine(item({ status: 'in_progress' }), TZ)).toBe('');
   });
 });
 
@@ -108,7 +96,9 @@ describe('validateNewLink', () => {
 
 describe('buildNewLinkPayload', () => {
   it('passes the date entered by the administrator without asking the patient', () => {
-    expect(buildNewLinkPayload({ ...FORM, birthDate: '1985-03-14' })).toMatchObject({
+    expect(
+      buildNewLinkPayload({ ...FORM, birthDate: '1985-03-14' }),
+    ).toMatchObject({
       birth_date: '1985-03-14',
     });
   });

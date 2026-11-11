@@ -4,14 +4,11 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { mainApi, type ClinicRead } from '@/api';
 import { useAuthStore } from '@/store/authStore';
-import type { RegistryStatus } from '@/api';
 import { CustomDropdown } from '@/components/CustomDropdown';
 import { ErrorState, Spinner } from '@/components/settings/clinics/fields';
 import { useMyClinic } from '@/hooks/useMyClinic';
 import { useRegistryDetail, useRegistryList } from '@/hooks/useRegistry';
 import { canUseRegistry } from '@/lib/app-nav';
-import { fieldFillClass } from '@/lib/field-fill';
-import { REGISTRY_STATUS_OPTIONS } from '@/lib/registry';
 import { QuestionnaireFilters } from '@/components/doctor-questionnaires/QuestionnaireFilters';
 import { useQuestionnaireDates } from '@/hooks/useQuestionnaireDates';
 import { toDateInputValue } from '@/lib/questionnaire';
@@ -90,7 +87,6 @@ export const RegistryScreen = () => {
       ? clinic.clinic_id
       : null;
 
-  const [status, setStatus] = useState<RegistryStatus | ''>('');
   const [name, setName] = useState('');
   const [date, setDate] = useState(() => toDateInputValue(new Date()));
   const [utcOffset] = useState(() => -new Date().getTimezoneOffset());
@@ -100,16 +96,14 @@ export const RegistryScreen = () => {
   const searchName = useDebounced(name.trim(), SEARCH_DEBOUNCE_MS);
   const query = useMemo(
     () => ({
-      ...(status ? { status } : {}),
       ...(searchName ? { name: searchName } : {}),
       ...(date ? { completed_on: date, utc_offset_minutes: utcOffset } : {}),
     }),
-    [status, searchName, date, utcOffset],
+    [searchName, date, utcOffset],
   );
   const markedDates = useQuestionnaireDates(
     clinicId ? `/clinics/${clinicId}/questionnaires` : null,
     {
-      ...(status ? { status } : {}),
       ...(searchName ? { name: searchName } : {}),
       utc_offset_minutes: String(utcOffset),
     },
@@ -160,7 +154,7 @@ export const RegistryScreen = () => {
       );
     }
     if (list.items.length === 0) {
-      const isFiltered = Boolean(status || searchName || date);
+      const isFiltered = Boolean(searchName || date);
       return (
         <p className="px-4 py-8 text-center text-sm text-gray-500">
           {isFiltered
@@ -267,29 +261,7 @@ export const RegistryScreen = () => {
             dateLabel="Дата заполнения"
             onClearDate={() => setDate('')}
             markedDates={markedDates}
-          >
-            <CustomDropdown<RegistryStatus | ''>
-              options={REGISTRY_STATUS_OPTIONS}
-              value={status}
-              onChange={setStatus}
-              placeholder="Статус"
-              aria-label="Статус"
-              triggerClassName={fieldFillClass(status)}
-              // «Все статусы» выбраны при пустом значении — в поле заглушка.
-              renderTrigger={(option) => {
-                const selected = Array.isArray(option) ? option[0] : option;
-                return selected?.value ? (
-                  <span className="truncate text-sm text-[var(--ui-color-alabaster-dark-800)]">
-                    {selected.label}
-                  </span>
-                ) : (
-                  <span className="truncate text-sm text-[var(--ui-color-alabaster-800)]">
-                    Статус
-                  </span>
-                );
-              }}
-            />
-          </QuestionnaireFilters>
+          />
         </div>
 
         <div className="custom-scrollbar mt-6 min-h-0 flex-1 overflow-x-hidden overflow-y-auto">

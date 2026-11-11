@@ -3,7 +3,6 @@
 import Link from 'next/link';
 import type { RegistryQuestionnaireItem } from '@/api';
 import { patientFullName, registryWhenLine } from '@/lib/registry';
-import { RegistryStatusBadge } from './RegistryStatusBadge';
 
 interface RegistryListProps {
   items: RegistryQuestionnaireItem[];
@@ -12,7 +11,7 @@ interface RegistryListProps {
 }
 
 /**
- * Анкеты: пациент, когда заполнена (или до какого срока ссылка) и статус.
+ * Анкеты: пациент и дата заполнения, если она есть.
  * Строки — как в списке анкет у врача. Выбор — в адресе `?id=`.
  */
 export const RegistryList = ({
@@ -35,11 +34,12 @@ export const RegistryList = ({
           >
             <span className="min-w-0 flex-1">
               <span className="block truncate">{patientFullName(item)}</span>
-              <span className="block truncate text-[var(--ui-color-alabaster-950)]">
-                {registryWhenLine(item)}
-              </span>
+              {item.completed_at ? (
+                <span className="block truncate text-[var(--ui-color-alabaster-950)]">
+                  {registryWhenLine(item)}
+                </span>
+              ) : null}
             </span>
-            <RegistryStatusBadge status={item.status} />
           </Link>
         </li>
       );

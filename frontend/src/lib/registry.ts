@@ -35,20 +35,19 @@ export const formatDateTime = (iso: string, timeZone?: string): string => {
 };
 
 /**
- * Строка под ФИО: когда пациент заполнил анкету или до какого времени
- * работает ссылка. Анкета не привязана к дате приёма — регистратура ищет
- * её по ФИО.
+ * Строка под ФИО: только дата заполнения; до завершения строки нет.
  */
 export const registryWhenLine = (
   item: RegistryQuestionnaireItem,
-  now: Date = new Date(),
   timeZone?: string,
 ): string => {
-  if (item.completed_at)
-    return `Заполнена ${formatDateTime(item.completed_at, timeZone)}`;
-  if (!item.invite_expires_at) return '';
-  if (new Date(item.invite_expires_at) <= now) return 'Ссылка устарела';
-  return `Ссылка действует до ${formatDateTime(item.invite_expires_at, timeZone)}`;
+  if (!item.completed_at) return '';
+  return new Intl.DateTimeFormat('ru-RU', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    timeZone,
+  }).format(new Date(item.completed_at));
 };
 
 // ---------------------------------------------------------------------------

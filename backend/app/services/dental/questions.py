@@ -342,7 +342,8 @@ HEALTH_ITEMS = (
               ("urticaria", "Крапивница"),
               ("quincke", "Отёк Квинке"),
               ("itch", "Зуд и покраснение кожи"),
-          )),
+              (OTHER, "Другое"),
+          ), text_placeholder="Опишите реакцию", text_show="on_other"),
           hint="лекарства, обезболивание, еда, пыльца, металлы"),
     _item("pregnancy", "Беременность, кормление грудью",
           FormRow(42, "Для женщин:", has_answer=False, sub_group="pregnancy", subs=(

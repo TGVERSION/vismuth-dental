@@ -1,10 +1,7 @@
 'use client';
 
-import { useLayoutEffect, useRef, useState } from 'react';
+import { useState } from 'react';
 import type { QuestionnaireStep, QuestionnaireStepAnswer } from '@/api';
-import { PatientVoiceInput } from '@/components/questionnaire/PatientVoiceInput';
-import { FIELD_CLASS } from '@/components/questionnaire/field-styles';
-import { ANSWER_MAX_LENGTH } from '@/lib/questionnaire';
 import {
   buildGroupsAnswer,
   canSubmitGroups,
@@ -13,18 +10,10 @@ import {
   parseGroups,
   setGroupText,
   toggleOption,
-  type DentalGroup,
-  type GroupProblem,
 } from '@/lib/dental-questionnaire';
 import { useDentalDraft } from '@/hooks/useDentalDraft';
 import { DentalButton, DentalError } from './DentalShell';
-import { DentalFormHeading as DentalAssistantMessage } from './DentalFormShell';
-import { DentalVisitYearField } from './DentalVisitYearField';
-
-const PROBLEM_TEXT: Record<GroupProblem, string> = {
-  choose: 'Выберите хотя бы один вариант',
-  text: 'Напишите, пожалуйста, пару слов',
-};
+import { DentalGroupField } from './DentalGroupField';
 
 interface ChipGroupsStepProps {
   step: QuestionnaireStep;
@@ -41,268 +30,6 @@ interface ChipGroupsStepProps {
     footer: React.ReactNode,
   ) => React.ReactNode;
 }
-
-interface ChipGroupProps {
-  group: DentalGroup;
-  selected: readonly string[];
-  text: string;
-  showText: boolean;
-  problem: GroupProblem | null;
-  onToggle: (value: string) => void;
-  onText: (text: string) => void;
-  disabled: boolean;
-}
-
-const groupElementId = (key: string) => `group-${key}`;
-
-/**
- * Первая группа с проблемой: прокрутить к ней и поставить фокус. Кнопка
- * «Далее» прижата к низу, и без этого подсказка у группы ниже экрана
- * осталась бы невидимой — нажатие выглядело бы так, будто ничего не
- * произошло.
- */
-const revealProblem = (key: string, problem: GroupProblem) => {
-  const element = document.getElementById(groupElementId(key));
-  if (!element) return;
-  element.scrollIntoView({ block: 'center', behavior: 'smooth' });
-  const target = element.querySelector<HTMLElement>(
-    problem === 'text' ? 'textarea, input' : 'button',
-  );
-  target?.focus({ preventScroll: true });
-};
-
-const ChipGroup = ({
-  group,
-  selected,
-  text,
-  showText,
-  problem,
-  onToggle,
-  onText,
-  disabled,
-}: ChipGroupProps) => {
-  const textArea = useRef<HTMLTextAreaElement>(null);
-  useLayoutEffect(() => {
-    const input = textArea.current;
-    if (!input || input.offsetParent === null) return;
-    input.style.height = 'auto';
-    const style = getComputedStyle(input);
-    const border =
-      parseFloat(style.borderTopWidth) + parseFloat(style.borderBottomWidth);
-    input.style.height = `${Math.min(input.scrollHeight + border, 144)}px`;
-  }, [text, showText]);
-  const [expanded, setExpanded] = useState(Boolean(text));
-  const [rawInput, setRawInput] = useState(
-    Boolean(
-      text &&
-      group.text?.input_kind === 'date' &&
-      !/^\d{4}-\d{2}-\d{2}$/.test(text),
-    ),
-  );
-  const useRawInput =
-    rawInput ||
-    Boolean(
-      text &&
-      group.text?.input_kind === 'date' &&
-      !/^\d{4}-\d{2}-\d{2}$/.test(text),
-    );
-  const questionId = `q-${group.key}`;
-  const problemId = `problem-${group.key}`;
-  const collapsed = Boolean(
-    showText && group.text?.optional_reveal && !expanded && !text,
-  );
-  if (group.key === 'about.visit_year')
-    return (
-      <DentalVisitYearField
-        group={group}
-        value={text}
-        onChange={onText}
-        disabled={disabled}
-        problem={problem ? PROBLEM_TEXT[problem] : null}
-      />
-    );
-  return (
-    <fieldset
-      disabled={disabled}
-      id={groupElementId(group.key)}
-      role="group"
-      aria-labelledby={questionId}
-      className="flex min-w-0 flex-col gap-3"
-    >
-      {!collapsed ? (
-        <DentalAssistantMessage>
-          <h2 id={questionId} className="text-base leading-snug font-medium">
-            {group.title && !group.key.startsWith('allergy.')
-              ? `${group.title}: `
-              : ''}
-            {group.question}
-          </h2>
-        </DentalAssistantMessage>
-      ) : null}
-
-      {group.options.length > 0 ? (
-        <div className="flex flex-wrap gap-2">
-          {group.options.map((option) => {
-            const isOn = selected.includes(option.value);
-            return (
-              <button
-                key={option.value}
-                type="button"
-                disabled={disabled}
-                aria-pressed={isOn}
-                onClick={() => onToggle(option.value)}
-                // Кнопка-вариант — как быстрые ответы в чате общей анкеты.
-                className={`q-choice inline-flex items-center gap-[var(--ui-space-6)] rounded-full border border-[var(--q-brand)] px-4 py-2 text-base leading-tight transition-colors ${
-                  isOn
-                    ? 'bg-[var(--q-brand)] text-[var(--q-brand-contrast)]'
-                    : 'bg-[var(--q-bg)] text-[var(--q-brand)]'
-                }`}
-              >
-                {/* Галочка: выбор виден не только по цвету. */}
-                {isOn ? (
-                  <svg
-                    width="14"
-                    height="14"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="3"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    aria-hidden="true"
-                  >
-                    <path d="M20 6 9 17l-5-5" />
-                  </svg>
-                ) : null}
-                {option.label}
-              </button>
-            );
-          })}
-        </div>
-      ) : null}
-
-      {collapsed ? (
-        <button
-          id={questionId}
-          type="button"
-          className="min-h-[44px] self-start text-[var(--q-brand)] underline"
-          onClick={() => setExpanded(true)}
-        >
-          {group.question}
-        </button>
-      ) : null}
-      {showText &&
-      group.text &&
-      (!group.text.optional_reveal || expanded || Boolean(text)) ? (
-        <>
-          {!text.trim() && (group.text.quick_choices?.length ?? 0) > 0 ? (
-            <div className="flex flex-wrap gap-2">
-              {group.text.quick_choices?.map((choice) => (
-                <button
-                  key={choice}
-                  type="button"
-                  aria-pressed={text === choice}
-                  onClick={() => {
-                    setRawInput(true);
-                    onText(choice);
-                  }}
-                  className={`q-choice rounded-full border border-[var(--q-brand)] px-4 text-[length:var(--ui-font-size-15)] ${text === choice ? 'bg-[var(--q-brand)] text-[var(--q-brand-contrast)]' : 'text-[var(--q-brand)]'}`}
-                >
-                  {choice}
-                </button>
-              ))}
-            </div>
-          ) : null}
-          {group.text.input_kind && group.text.input_kind !== 'text' ? (
-            <>
-              <div className="q-voice-field flex items-center gap-1 rounded-xl bg-[var(--q-surface)]">
-                <input
-                  disabled={disabled}
-                  type={
-                    group.text.input_kind === 'date' && !useRawInput
-                      ? 'date'
-                      : 'text'
-                  }
-                  inputMode={useRawInput ? 'text' : group.text.input_mode}
-                  aria-labelledby={questionId}
-                  aria-invalid={problem === 'text'}
-                  aria-describedby={problem ? problemId : undefined}
-                  value={text}
-                  maxLength={group.text.max_length ?? ANSWER_MAX_LENGTH}
-                  placeholder={group.text.placeholder}
-                  onChange={(event) => onText(event.target.value)}
-                  className={`${FIELD_CLASS} min-w-0 w-full`}
-                />
-                {useRawInput && (
-                  <PatientVoiceInput
-                    value={text}
-                    onChange={onText}
-                    disabled={disabled}
-                    maxLength={group.text.max_length ?? ANSWER_MAX_LENGTH}
-                    scope={group.key}
-                  />
-                )}
-              </div>
-              <button
-                type="button"
-                aria-label={
-                  rawInput
-                    ? 'Переключить на цифровой ввод'
-                    : 'Написать в свободной форме'
-                }
-                onClick={() => setRawInput((current) => !current)}
-                className="min-h-[44px] self-start text-sm text-[var(--q-brand)] underline"
-              >
-                {rawInput
-                  ? group.text.input_kind === 'date'
-                    ? 'Календарь'
-                    : 'Цифрами'
-                  : 'Текстом'}
-              </button>
-            </>
-          ) : (
-            <div className="q-voice-field flex items-center gap-1 rounded-xl bg-[var(--q-surface)]">
-              <textarea
-                ref={textArea}
-                disabled={disabled}
-                aria-labelledby={questionId}
-                aria-invalid={problem === 'text'}
-                aria-describedby={problem ? problemId : undefined}
-                value={text}
-                rows={1}
-                maxLength={group.text.max_length ?? ANSWER_MAX_LENGTH}
-                placeholder={group.text.placeholder}
-                onChange={(event) => onText(event.target.value)}
-                className={`${FIELD_CLASS} min-w-0 w-full resize-none py-3 focus:ring-2 focus:ring-[var(--q-brand)]`}
-              />
-              {(!group.text.input_kind ||
-                group.text.input_kind === 'text' ||
-                useRawInput) && (
-                <PatientVoiceInput
-                  value={text}
-                  onChange={onText}
-                  disabled={disabled}
-                  maxLength={group.text.max_length ?? ANSWER_MAX_LENGTH}
-                  scope={group.key}
-                />
-              )}
-            </div>
-          )}
-        </>
-      ) : null}
-
-      {problem ? (
-        <p
-          id={problemId}
-          role="alert"
-          className="text-sm text-[var(--ui-color-red-700)]"
-        >
-          {PROBLEM_TEXT[problem]}
-        </p>
-      ) : null}
-    </fieldset>
-  );
-};
 
 /** Шаг из групп кнопок: повод визита, боль, уточнения по отмеченному. */
 export const ChipGroupsStep = ({
@@ -327,7 +54,15 @@ export const ChipGroupsStep = ({
       const problem = first ? groupProblem(first, draft) : null;
       // После отрисовки: поле текста могло ещё не появиться.
       if (first && problem)
-        requestAnimationFrame(() => revealProblem(first.key, problem));
+        requestAnimationFrame(() => {
+          const field = document.getElementById(`group-${first.key}`);
+          field?.scrollIntoView({ block: 'center' });
+          field
+            ?.querySelector<HTMLElement>(
+              problem === 'text' ? 'textarea, input' : 'button, input',
+            )
+            ?.focus({ preventScroll: true });
+        });
       return;
     }
     onSubmit(buildGroupsAnswer(step.step_key, groups, draft));
@@ -337,7 +72,7 @@ export const ChipGroupsStep = ({
     <>
       {intro}
       {groups.map((group) => (
-        <ChipGroup
+        <DentalGroupField
           key={group.key}
           group={group}
           selected={draft.selections[group.key] ?? []}
@@ -361,14 +96,14 @@ export const ChipGroupsStep = ({
   const footer = (
     <>
       <DentalError message={error} />
-      <DentalButton onClick={handleNext} isBusy={isSubmitting || !restored}>
-        {step.step_key === 'dental_about' ? 'Отправить анкету' : 'Далее'}
-      </DentalButton>
       {onSkip && step.allow_skip && !isSubmitting ? (
         <DentalButton variant="soft" onClick={onSkip}>
           Пропустить
         </DentalButton>
       ) : null}
+      <DentalButton onClick={handleNext} isBusy={isSubmitting || !restored}>
+        {step.step_key === 'dental_about' ? 'Отправить анкету' : 'Далее'}
+      </DentalButton>
     </>
   );
 

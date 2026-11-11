@@ -14,7 +14,7 @@ interface Props {
   busy: boolean;
 }
 
-/** Одна область прокрутки; действия идут после всех полей раздела. */
+/** Одна область прокрутки; основной переход закреплён внизу экрана. */
 export const DentalFormShell = ({
   step,
   children,
@@ -132,40 +132,41 @@ export const DentalFormShell = ({
       >
         <div ref={contentRef} className="flex min-w-0 flex-col gap-6 pt-6">
           <div>
-            <p className="mb-2 text-sm text-[var(--q-muted)]">{stage.label}</p>
             <h1
               ref={headingRef}
               tabIndex={-1}
               className="text-2xl leading-tight font-semibold outline-none"
             >
-              {step.step_key === 'dental_details_allergy'
-                ? 'Уточнения об аллергии'
+              {step.step_key.startsWith('dental_details_allergy')
+                ? step.step_key.endsWith('_reaction')
+                  ? 'Проявления аллергии'
+                  : 'На что была аллергия'
                 : (step.title ?? stage.title)}
             </h1>
           </div>
           {children}
           <div ref={endRef} data-dental-fields-end aria-hidden="true" />
-          <div className="flex flex-col gap-3 border-t border-[var(--q-surface)] pt-5">
-            {footer}
-            {onBack ? (
-              <button
-                type="button"
-                disabled={busy}
-                onClick={onBack}
-                className="q-button w-full"
-                data-variant="outline"
-              >
-                Назад
-              </button>
-            ) : null}
-          </div>
         </div>
       </main>
       <div
-        className={`pointer-events-none shrink-0 border-t border-[var(--q-surface)] bg-[var(--q-bg)] px-4 py-2 text-center text-sm text-[var(--q-muted)] ${moreBelow ? '' : 'hidden'}`}
+        className={`pointer-events-none shrink-0 bg-[var(--q-bg)] px-4 py-2 text-center text-sm text-[var(--q-muted)] ${moreBelow ? '' : 'hidden'}`}
         role="status"
       >
         <span aria-hidden="true">↓ </span>Ниже ещё есть пункты
+      </div>
+      <div className="flex shrink-0 flex-col gap-2 border-t border-[var(--q-surface)] bg-[var(--q-bg)] px-4 pt-3 pb-[calc(env(safe-area-inset-bottom)+12px)]">
+        {onBack ? (
+          <button
+            type="button"
+            disabled={busy}
+            onClick={onBack}
+            className="q-button w-full"
+            data-variant="outline"
+          >
+            Назад
+          </button>
+        ) : null}
+        {footer}
       </div>
     </div>
   );

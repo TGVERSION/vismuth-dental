@@ -56,8 +56,13 @@ def test_changed_health_adds_and_removes_required_details_and_form_finishes():
     assert q.current_step == 'dental_health_6'
     submit(q, {'health': ['allergy']})
     assert q.current_step == 'dental_details_allergy'
-    submit(q, texts={'allergy.substance': 'Не помню название', 'allergy.reaction': 'Сыпь'})
+    submit(q, selections={'allergy.substance': ['antibiotics']})
+    assert q.current_step == 'dental_details_allergy_reaction'
+    submit(q, selections={'allergy.reaction': ['urticaria']})
     assert q.current_step == 'dental_about'
+    submit(q, choice='form:back')
+    assert q.current_step == 'dental_details_allergy_reaction'
+    assert q.dental_answers['groups']['allergy.reaction']['selected'] == ['urticaria']
     submit(q, choice='form:back')
     assert q.current_step == 'dental_details_allergy'
     submit(q, choice='form:back')
@@ -68,6 +73,38 @@ def test_changed_health_adds_and_removes_required_details_and_form_finishes():
     submit(q, texts={'about.visit_year': 'Не помню', 'about.more': 'Дополнение'})
     assert q.status == 'completed'
     assert len(q.structured['paper_form']['rows']) == 43
+
+
+def test_previous_combined_allergy_answer_resumes_without_losing_either_group():
+    q = questionnaire()
+    submit(q, {'reason': ['checkup']})
+    health(q, allergy=True)
+    q.current_step = 'dental_about'
+    q.dental_answers = {**q.dental_answers,
+        'completed_steps': [*q.dental_answers['completed_steps'], 'dental_details_allergy'],
+        'groups': {**q.dental_answers['groups'],
+            'allergy.substance': {'selected': ['antibiotics'], 'text': 'Амоксициллин'},
+            'allergy.reaction': {'selected': ['urticaria'], 'text': ''},
+            'about.more': {'selected': [], 'text': 'Ранее сохранённое дополнение'}}}
+    assert dq.build_dental_descriptor(q).step_key == 'dental_about'
+    submit(q, texts={'about.visit_year': '2025'})
+    assert q.status == 'completed'
+    assert 'Ранее сохранённое дополнение' in q.structured['paper_form']['more']
+
+
+def test_other_reaction_needs_its_text_and_stays_on_its_own_page():
+    q = questionnaire()
+    submit(q, {'reason': ['checkup']})
+    health(q, allergy=True)
+    assert [g['key'] for g in dq.build_dental_descriptor(q).groups] == ['allergy.substance']
+    submit(q, {'allergy.substance': ['antibiotics']})
+    assert [g['key'] for g in dq.build_dental_descriptor(q).groups] == ['allergy.reaction']
+    with pytest.raises(HTTPException):
+        submit(q, {'allergy.reaction': ['other']})
+    submit(q, {'allergy.reaction': ['other']}, {'allergy.reaction': 'Необычная реакция'})
+    assert q.current_step == 'dental_about'
+    submit(q)
+    assert 'Необычная реакция' in q.structured['paper_form']['more']
 
 
 def test_form_comment_does_not_turn_unspecified_conditions_into_negative_answers():

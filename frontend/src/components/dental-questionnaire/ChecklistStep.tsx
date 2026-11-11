@@ -97,27 +97,14 @@ export const ChecklistStep = ({
           </li>
         ))}
       </ul>
-      <details open={comment ? true : undefined}>
-        <summary className="min-h-[44px] cursor-pointer py-3 text-base text-[var(--q-brand)]">
-          Добавить уточнение к разделу
-        </summary>
-        <label className="flex flex-col gap-2 text-base">
-          Уточнение к разделу
-          <textarea
-            value={comment}
-            disabled={isSubmitting || !restored}
-            rows={3}
-            maxLength={20000}
-            onChange={(event) =>
-              setDraft((current) => ({
-                ...current,
-                texts: { ...current.texts, health: event.target.value },
-              }))
-            }
-            className="q-field w-full resize-y rounded-xl p-3"
-          />
-        </label>
-      </details>
+      {comment ? (
+        <p
+          className="whitespace-pre-wrap text-base text-[var(--q-muted)]"
+          aria-label="Ранее сохранённое уточнение"
+        >
+          {comment}
+        </p>
+      ) : null}
     </>
   );
   return (

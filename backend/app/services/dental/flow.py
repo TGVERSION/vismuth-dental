@@ -165,6 +165,10 @@ def detail_pages(answers: DentalAnswers) -> dict[str, tuple[Group, ...]]:
             continue
         if item.value in {"medications", "allergy"}:
             flush()
+            if item.value == "allergy" and answers.form_mode:
+                pages["dental_details_allergy"] = (item.detail_groups[0],)
+                pages["dental_details_allergy_reaction"] = (item.detail_groups[1],)
+                continue
             pages[f"dental_details_{item.value}"] = item.detail_groups
             continue
         if len(pending) + len(item.detail_groups) > 3:
@@ -318,6 +322,8 @@ def _apply_groups(
     max_len: int,
 ) -> DentalAnswers:
     groups = _groups_for(step, answers)
+    if answers.form_mode and step == STEP_ABOUT and "about.more" not in texts and "about.more" not in selections:
+        groups = tuple(group for group in groups if group.key != "about.more")
     allowed_keys = {g.key for g in groups}
     foreign = (set(selections) | set(texts)) - allowed_keys
     if foreign:
@@ -325,10 +331,16 @@ def _apply_groups(
 
     parsed: dict[str, GroupAnswer] = {}
     for group in groups:
+        text = _clean_text(texts.get(group.key), max_len)
+        before = answers.groups.get(group.key)
+        if answers.form_mode and group.options and group.key not in texts and before and before.text and OTHER not in before.selected and selections.get(group.key, []) == before.selected:
+            # Скрытое старое пояснение не стирается при возврате и отправке
+            # того же выбора новой формой без поля для свободного уточнения.
+            text = before.text
         answer = _parse_group(
             group,
             selections.get(group.key, []),
-            _clean_text(texts.get(group.key), max_len),
+            text,
             allow_free_text=answers.form_mode or group.key in answers.free_text_groups,
         )
         if answer.selected or answer.text:

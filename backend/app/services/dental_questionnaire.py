@@ -48,6 +48,15 @@ MAX_AI_CHOICES = 5
 
 def _dental_answers(questionnaire: Questionnaire) -> DentalAnswers:
     answers = DentalAnswers.model_validate(questionnaire.dental_answers or {})
+    if answers.form_mode and answers.flow_version == 2 and "dental_details_allergy" in answers.completed_steps:
+        # Старый общий экран аллергии уже сохранял обе группы ответов.
+        completed = list(answers.completed_steps)
+        if "allergy.reaction" in answers.groups and "dental_details_allergy_reaction" not in completed:
+            completed.append("dental_details_allergy_reaction")
+            answers = answers.model_copy(update={"completed_steps": completed})
+        if questionnaire.status != "completed" and questionnaire.current_step == STEP_ABOUT:
+            missing = next((key for key in dental_route(answers) if key not in completed), STEP_ABOUT)
+            questionnaire.current_step = missing
     if questionnaire.status != "completed" and questionnaire.current_step == STEP_PAIN:
         # Одинаково восстанавливаем старый шаг при чтении и отправке ответа.
         questionnaire.current_step = next(

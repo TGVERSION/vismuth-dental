@@ -7,9 +7,10 @@ import {
   dentalFormStep,
   parseGroups,
   draftForDentalStep,
+  isTextVisible,
 } from './dental-questionnaire';
 
-it('shows all section fields and permits a typed answer instead of an unknown button', () => {
+it('opens free text for choices only after Other and omits hidden text from the payload', () => {
   const step = dentalFormStep({
     step_key: 'dental_details_allergy',
     groups: [
@@ -17,31 +18,66 @@ it('shows all section fields and permits a typed answer instead of an unknown bu
         key: 'allergy.substance',
         question: 'На что?',
         required: true,
-        options: [{ value: 'antibiotics', label: 'Антибиотики' }],
-        text: null,
+        options: [
+          { value: 'antibiotics', label: 'Антибиотики' },
+          { value: 'other', label: 'Другое' },
+        ],
+        text: { placeholder: 'На что?', show: 'on_other' },
       },
       {
         key: 'allergy.reaction',
         question: 'Как проявлялась?',
         options: [],
-        text: null,
+        text: { placeholder: 'Проявления', show: 'always' },
       },
     ],
   } as unknown as QuestionnaireStep);
   const groups = parseGroups(step);
   expect(groups).toHaveLength(2);
   const draft = {
-    selections: {},
+    selections: { 'allergy.substance': ['other'] },
     texts: {
       'allergy.substance': 'Не помню название',
       'allergy.reaction': 'Сыпь',
     },
   };
   expect(canSubmitGroups(groups, draft)).toBe(true);
+  expect(isTextVisible(groups[0], draft)).toBe(true);
+  const standard = {
+    ...draft,
+    selections: { 'allergy.substance': ['antibiotics'] },
+  };
+  expect(isTextVisible(groups[0], standard)).toBe(false);
+  expect(
+    buildGroupsAnswer(step.step_key, groups, standard).texts,
+  ).not.toHaveProperty('allergy.substance');
   expect(canSubmitGroups(groups, { selections: {}, texts: {} })).toBe(false);
   expect(buildGroupsAnswer(step.step_key, groups, draft).texts).toEqual(
     draft.texts,
   );
+});
+
+it('does not render the removed extra-health field', () => {
+  const step = dentalFormStep({
+    step_key: 'dental_about',
+    groups: [
+      {
+        key: 'about.more',
+        question: 'Дополнительно о здоровье',
+        options: [],
+        text: { show: 'always' },
+      },
+      {
+        key: 'about.visit_clinic',
+        question: 'Клиника',
+        options: [],
+        text: { show: 'always' },
+      },
+    ],
+  } as unknown as QuestionnaireStep);
+  expect(parseGroups(step).map((group) => group.key)).toEqual([
+    'about.visit_clinic',
+  ]);
 });
 
 it('keeps four stages stable and health subprogress independent of conditional details', () => {

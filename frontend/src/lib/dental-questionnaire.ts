@@ -183,24 +183,30 @@ export const parseGroups = (step: QuestionnaireStep): DentalGroup[] =>
 /** Форма использует все поля серверного раздела, включая старые текстовые ответы. */
 export const dentalFormStep = (step: QuestionnaireStep): QuestionnaireStep => ({
   ...step,
-  groups: parseGroups(step).map((group) => ({
-    ...group,
-    question:
-      group.key === 'allergy.substance'
-        ? 'На что была аллергическая реакция?'
-        : group.key === 'allergy.reaction'
-          ? 'Как проявлялась аллергия?'
-          : group.question,
-    free_text: true,
-    text: {
-      placeholder: 'Свой ответ или уточнение',
-      required: false,
-      max_length: 20000,
-      optional_reveal: !group.required && !group.text,
-      ...group.text,
-      show: 'always',
-    },
-  })),
+  groups: parseGroups(step)
+    .filter((group) => group.key !== 'about.more')
+    .map((group) => ({
+      ...group,
+      question:
+        group.key === 'allergy.substance'
+          ? 'На что была аллергическая реакция?'
+          : group.key === 'allergy.reaction'
+            ? 'Как проявлялась аллергия?'
+            : group.question,
+      required: group.required || group.key === 'medications',
+      free_text: group.options.length === 0,
+      text: group.text
+        ? {
+            ...group.text,
+            optional_reveal: false,
+            show:
+              group.options.length &&
+              (!group.text.input_kind || group.text.input_kind === 'text')
+                ? 'on_other'
+                : 'always',
+          }
+        : null,
+    })),
 });
 
 export const dentalFormStage = (step: QuestionnaireStep) => {

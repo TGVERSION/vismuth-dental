@@ -8,12 +8,14 @@ import { doctorDateRange } from '@/lib/doctor-questionnaires';
 export function useQuestionnaireDates(
   scope: string | null,
   query: Record<string, string> = {},
+  dateEndpoint: 'appointment-dates' | 'completion-dates' = 'appointment-dates',
+  refreshVersion = 0,
 ) {
   const key = JSON.stringify(query);
   const [result, setResult] = useState<{ key: string; dates: string[] } | null>(
     null,
   );
-  const requestKey = `${scope}:${key}`;
+  const requestKey = `${scope}:${dateEndpoint}:${key}`;
   useEffect(() => {
     if (!scope) return;
     const controller = new AbortController();
@@ -21,7 +23,7 @@ export function useQuestionnaireDates(
     const range = doctorDateRange();
     apiClient
       .get<string[]>(
-        `${scope}/appointment-dates`,
+        `${scope}/${dateEndpoint}`,
         {
           ...JSON.parse(key),
           date_from: range.min,
@@ -39,6 +41,6 @@ export function useQuestionnaireDates(
       live = false;
       controller.abort();
     };
-  }, [scope, key, requestKey]);
+  }, [scope, key, requestKey, dateEndpoint, refreshVersion]);
   return result?.key === requestKey ? result.dates : [];
 }

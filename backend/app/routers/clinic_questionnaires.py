@@ -1,12 +1,12 @@
 """Анкеты пациентов у админа клиники: регистратура создаёт персональные
 ссылки, видит статусы, печатает и отмечает подписанные."""
 
-from datetime import datetime, timezone
+from datetime import date, datetime, time, timedelta, timezone
 from typing import Optional
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
-from sqlalchemy import and_, delete, or_, select
+from sqlalchemy import Date, and_, cast, delete, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..db import get_db
@@ -81,6 +81,24 @@ def _base_query(clinic_id: UUID):
         Questionnaire.invite_expires_at.is_not(None),
         Questionnaire.status.in_(_VISIBLE_STATUSES),
     )
+
+
+def _registry_query(clinic_id, registry_status_filter=None, name=None, completed_on=None, utc_offset_minutes=0):
+    query = _base_query(clinic_id)
+    if registry_status_filter is not None:
+        query = query.where(_STATUS_FILTERS[registry_status_filter])
+    if name and name.strip():
+        pattern = '%' + name.strip().replace('\\', '\\\\').replace('%', '\\%').replace('_', '\\_') + '%'
+        query = query.where(or_(
+            Questionnaire.patient_last_name.ilike(pattern, escape='\\'),
+            Questionnaire.patient_first_name.ilike(pattern, escape='\\'),
+            Questionnaire.patient_middle_name.ilike(pattern, escape='\\'),
+        ))
+    if completed_on is not None:
+        zone = timezone(timedelta(minutes=utc_offset_minutes))
+        start = datetime.combine(completed_on, time.min, tzinfo=zone).astimezone(timezone.utc)
+        query = query.where(Questionnaire.completed_at >= start, Questionnaire.completed_at < start + timedelta(days=1))
+    return query
 
 
 async def _load(
@@ -161,7 +179,7 @@ async def create_registry_questionnaire(
     "/clinics/{clinic_id}/questionnaires",
     response_model=list[RegistryQuestionnaireItem],
     summary="Анкеты пациентов",
-    description="Новые сверху. Фильтры: статус, ФИО.",
+    description="Новые сверху. Фильтры: статус, ФИО, дата заполнения.",
 )
 async def list_registry_questionnaires(
     clinic_id: UUID,
@@ -170,25 +188,40 @@ async def list_registry_questionnaires(
         alias="status",
     ),
     name: Optional[str] = Query(default=None, max_length=255),
+    completed_on: Optional[date] = None,
+    utc_offset_minutes: int = Query(default=0, ge=-840, le=840),
     _: ServiceUser = Depends(require_clinic_registry),
     db: AsyncSession = Depends(get_db),
 ) -> list[RegistryQuestionnaireItem]:
     await get_clinic_or_404(db, clinic_id)
-    query = _base_query(clinic_id)
-    if registry_status_filter is not None:
-        query = query.where(_STATUS_FILTERS[registry_status_filter])
-    if name and name.strip():
-        pattern = f"%{name.strip()}%"
-        query = query.where(
-            or_(
-                Questionnaire.patient_last_name.ilike(pattern),
-                Questionnaire.patient_first_name.ilike(pattern),
-                Questionnaire.patient_middle_name.ilike(pattern),
-            ),
-        )
+    query = _registry_query(clinic_id, registry_status_filter, name, completed_on, utc_offset_minutes)
     query = query.order_by(Questionnaire.created_at.desc()).limit(LIST_LIMIT)
     result = await db.execute(query)
     return [RegistryQuestionnaireItem(**_item_fields(q)) for q in result.scalars().all()]
+
+
+@router.get('/clinics/{clinic_id}/questionnaires/completion-dates', response_model=list[date])
+async def registry_completion_dates(
+    clinic_id: UUID,
+    registry_status_filter: Optional[RegistryStatusLiteral] = Query(default=None, alias='status'),
+    name: Optional[str] = Query(default=None, max_length=255),
+    date_from: Optional[date] = None,
+    date_to: Optional[date] = None,
+    utc_offset_minutes: int = Query(default=0, ge=-840, le=840),
+    _: ServiceUser = Depends(require_clinic_registry),
+    db: AsyncSession = Depends(get_db),
+) -> list[date]:
+    await get_clinic_or_404(db, clinic_id)
+    if date_from and date_to and date_from > date_to:
+        raise HTTPException(status_code=422, detail='date_from must not be after date_to')
+    day = cast(func.timezone('UTC', Questionnaire.completed_at) + timedelta(minutes=utc_offset_minutes), Date)
+    query = _registry_query(clinic_id, registry_status_filter, name).with_only_columns(day).where(Questionnaire.completed_at.is_not(None))
+    if date_from:
+        query = query.where(day >= date_from)
+    if date_to:
+        query = query.where(day <= date_to)
+    result = await db.execute(query.distinct().order_by(day))
+    return list(result.scalars().all())
 
 
 @router.get(

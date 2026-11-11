@@ -1,6 +1,5 @@
 'use client';
 
-import Image from 'next/image';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { mainApi, type ClinicRead } from '@/api';
@@ -13,6 +12,10 @@ import { useRegistryDetail, useRegistryList } from '@/hooks/useRegistry';
 import { canUseRegistry } from '@/lib/app-nav';
 import { fieldFillClass } from '@/lib/field-fill';
 import { REGISTRY_STATUS_OPTIONS } from '@/lib/registry';
+import { QuestionnaireFilters } from '@/components/doctor-questionnaires/QuestionnaireFilters';
+import { useQuestionnaireDates } from '@/hooks/useQuestionnaireDates';
+import { toDateInputValue } from '@/lib/questionnaire';
+import { formatDateLabel } from '@/lib/calendar';
 import { NewLinkModal } from './NewLinkModal';
 import { RegistryDetail } from './RegistryDetail';
 import { RegistryList } from './RegistryList';
@@ -89,6 +92,9 @@ export const RegistryScreen = () => {
 
   const [status, setStatus] = useState<RegistryStatus | ''>('');
   const [name, setName] = useState('');
+  const [date, setDate] = useState(() => toDateInputValue(new Date()));
+  const [utcOffset] = useState(() => -new Date().getTimezoneOffset());
+  const [calendarVersion, setCalendarVersion] = useState(0);
   const [isCreating, setIsCreating] = useState(false);
 
   const searchName = useDebounced(name.trim(), SEARCH_DEBOUNCE_MS);
@@ -96,8 +102,19 @@ export const RegistryScreen = () => {
     () => ({
       ...(status ? { status } : {}),
       ...(searchName ? { name: searchName } : {}),
+      ...(date ? { completed_on: date, utc_offset_minutes: utcOffset } : {}),
     }),
-    [status, searchName],
+    [status, searchName, date, utcOffset],
+  );
+  const markedDates = useQuestionnaireDates(
+    clinicId ? `/clinics/${clinicId}/questionnaires` : null,
+    {
+      ...(status ? { status } : {}),
+      ...(searchName ? { name: searchName } : {}),
+      utc_offset_minutes: String(utcOffset),
+    },
+    'completion-dates',
+    calendarVersion,
   );
   const list = useRegistryList(clinicId, query);
   const detail = useRegistryDetail(clinicId, selectedId);
@@ -106,6 +123,7 @@ export const RegistryScreen = () => {
   const refreshAll = useCallback(() => {
     reloadList();
     reloadDetail();
+    setCalendarVersion((version) => version + 1);
   }, [reloadList, reloadDetail]);
   useAutoRefresh(refreshAll);
 
@@ -142,7 +160,7 @@ export const RegistryScreen = () => {
       );
     }
     if (list.items.length === 0) {
-      const isFiltered = Boolean(status || searchName);
+      const isFiltered = Boolean(status || searchName || date);
       return (
         <p className="px-4 py-8 text-center text-sm text-gray-500">
           {isFiltered
@@ -198,7 +216,7 @@ export const RegistryScreen = () => {
       );
     }
     return (
-      <div className="custom-scrollbar max-h-[calc(100vh-100px)] w-full max-w-246 self-start overflow-y-auto rounded-2xl bg-white px-8 py-6">
+      <div className="custom-scrollbar max-h-[calc(100dvh-140px)] min-[1200px]:max-h-[calc(100dvh-100px)] min-w-0 w-full max-w-246 self-start overflow-x-hidden overflow-y-auto rounded-2xl bg-white px-4 py-6 2xl:px-8">
         {content}
       </div>
     );
@@ -212,7 +230,7 @@ export const RegistryScreen = () => {
           фильтров, заголовок списка. */}
       <aside
         aria-label="Анкеты для стоматологии"
-        className="custom-height fixed top-20 left-0 ml-3 mr-5 flex w-85.75 flex-col bg-[var(--ui-color-slate-100)]"
+        className="fixed top-[120px] min-[1200px]:top-20 bottom-5 left-0 ml-3 mr-5 flex min-h-0 w-85.75 flex-col bg-[var(--ui-color-slate-100)]"
       >
         {superAdmin && (
           <label className="mb-3 block text-sm">
@@ -240,58 +258,49 @@ export const RegistryScreen = () => {
           Новая ссылка
         </button>
 
-        <div className="mt-6 flex shrink-0 flex-col gap-3 rounded-2xl bg-white p-3">
-          <label className="relative block">
-            <span className="sr-only">Фамилия или имя пациента</span>
-            <Image
-              src="/search.svg"
-              alt=""
-              width={18}
-              height={18}
-              className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2"
+        <div className="mt-6 shrink-0">
+          <QuestionnaireFilters
+            search={name}
+            onSearchChange={setName}
+            date={date}
+            onDateChange={setDate}
+            dateLabel="Дата заполнения"
+            onClearDate={() => setDate('')}
+            markedDates={markedDates}
+          >
+            <CustomDropdown<RegistryStatus | ''>
+              options={REGISTRY_STATUS_OPTIONS}
+              value={status}
+              onChange={setStatus}
+              placeholder="Статус"
+              aria-label="Статус"
+              triggerClassName={fieldFillClass(status)}
+              // «Все статусы» выбраны при пустом значении — в поле заглушка.
+              renderTrigger={(option) => {
+                const selected = Array.isArray(option) ? option[0] : option;
+                return selected?.value ? (
+                  <span className="truncate text-sm text-[var(--ui-color-alabaster-dark-800)]">
+                    {selected.label}
+                  </span>
+                ) : (
+                  <span className="truncate text-sm text-[var(--ui-color-alabaster-800)]">
+                    Статус
+                  </span>
+                );
+              }}
             />
-            <input
-              type="search"
-              value={name}
-              onChange={(event) => setName(event.target.value)}
-              placeholder="Фамилия или имя пациента"
-              autoComplete="off"
-              maxLength={100}
-              className={`h-10 w-full rounded-xl ${fieldFillClass(name)} pr-3 pl-10 text-sm text-[var(--ui-color-alabaster-dark-800)] placeholder:text-[var(--ui-color-alabaster-800)] focus:ring-2 focus:ring-[var(--ui-color-blue-600)] focus:outline-none`}
-            />
-          </label>
-          <CustomDropdown<RegistryStatus | ''>
-            options={REGISTRY_STATUS_OPTIONS}
-            value={status}
-            onChange={setStatus}
-            placeholder="Статус"
-            aria-label="Статус"
-            triggerClassName={fieldFillClass(status)}
-            // «Все статусы» выбраны при пустом значении — в поле заглушка.
-            renderTrigger={(option) => {
-              const selected = Array.isArray(option) ? option[0] : option;
-              return selected?.value ? (
-                <span className="truncate text-sm text-[var(--ui-color-alabaster-dark-800)]">
-                  {selected.label}
-                </span>
-              ) : (
-                <span className="truncate text-sm text-[var(--ui-color-alabaster-800)]">
-                  Статус
-                </span>
-              );
-            }}
-          />
+          </QuestionnaireFilters>
         </div>
 
-        <div className="custom-scrollbar mt-6 flex-1 overflow-x-hidden overflow-y-auto">
+        <div className="custom-scrollbar mt-6 min-h-0 flex-1 overflow-x-hidden overflow-y-auto">
           <h2 className="px-0 py-[var(--ui-space-8)] text-[length:var(--ui-font-size-14)] font-medium">
-            Анкеты для стоматологии
+            {date ? formatDateLabel(date) : 'Все даты'}
           </h2>
           {renderList()}
         </div>
       </aside>
 
-      <div className="ml-[var(--ui-space-64)] flex min-w-0 flex-1 justify-center pr-5">
+      <div className="ml-93.5 flex min-w-0 flex-1 justify-center pr-5">
         {renderDetail()}
       </div>
 
@@ -300,6 +309,8 @@ export const RegistryScreen = () => {
           clinicId={clinicId}
           onClose={() => setIsCreating(false)}
           onCreated={(created) => {
+            setDate('');
+            setCalendarVersion((version) => version + 1);
             list.reload();
             select(created.id);
           }}

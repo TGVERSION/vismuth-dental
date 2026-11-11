@@ -1102,6 +1102,8 @@ export interface RegistryQuestionnaireCreate {
 export interface RegistryQuestionnaireQuery {
   status?: RegistryStatus;
   name?: string;
+  completed_on?: string;
+  utc_offset_minutes?: number;
 }
 
 export type ClinicMemberStatus = 'invited' | 'active' | 'deactivated';

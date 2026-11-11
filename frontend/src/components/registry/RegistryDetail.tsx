@@ -160,7 +160,7 @@ export const RegistryDetail = ({
     );
 
   return (
-    <article className="flex flex-col gap-9">
+    <article className="flex min-w-0 flex-col gap-9 break-words">
       {/* Шапка — как у карточки анкеты врача. */}
       <header className="flex flex-wrap items-baseline gap-x-9 gap-y-2 text-[var(--ui-color-alabaster-950)]">
         <h2 className="min-w-0 flex-1 truncate text-[length:var(--ui-font-size-20)] font-normal">

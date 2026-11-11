@@ -13,11 +13,14 @@ interface QuestionnaireFiltersProps {
   date: string;
   onDateChange: (value: string) => void;
   markedDates?: readonly string[];
+  dateLabel?: string;
+  onClearDate?: () => void;
+  children?: React.ReactNode;
 }
 
 /**
- * Фильтры списка анкет. Дата выбрана всегда — её можно сменить, но не
- * очистить. Фон полей — по правилу `field-fill`: пустое светлее, заполненное
+ * Общие фильтры списка анкет. У врача дата выбрана всегда; регистратура
+ * может снять её через onClearDate. Фон полей — по правилу `field-fill`: пустое светлее, заполненное
  * темнее.
  */
 export const QuestionnaireFilters = ({
@@ -26,6 +29,9 @@ export const QuestionnaireFilters = ({
   date,
   onDateChange,
   markedDates,
+  dateLabel = 'Дата приёма',
+  onClearDate,
+  children,
 }: QuestionnaireFiltersProps) => {
   const range = useMemo(() => doctorDateRange(), []);
 
@@ -51,18 +57,31 @@ export const QuestionnaireFilters = ({
         />
       </label>
 
-      <div className="w-full">
-        <DateField
-          markedDates={markedDates}
-          value={date}
-          onChange={onDateChange}
-          min={range.min}
-          max={range.max}
-          formatValue={formatDateNumeric}
-          popoverAlign="left"
-          aria-label={`Дата приёма: ${formatDateLabel(date)}`}
-        />
+      <div className="flex w-full items-center gap-2">
+        <div className="min-w-0 flex-1">
+          <DateField
+            markedDates={markedDates}
+            value={date}
+            onChange={onDateChange}
+            min={range.min}
+            max={range.max}
+            formatValue={formatDateNumeric}
+            popoverAlign="left"
+            placeholder="Все даты"
+            aria-label={`${dateLabel}: ${date ? formatDateLabel(date) : 'Все даты'}`}
+          />
+        </div>
+        {onClearDate && date ? (
+          <button
+            type="button"
+            onClick={onClearDate}
+            className="min-h-10 shrink-0 cursor-pointer px-1 text-sm text-[var(--ui-color-blue-600)]"
+          >
+            Все даты
+          </button>
+        ) : null}
       </div>
+      {children}
     </div>
   );
 };

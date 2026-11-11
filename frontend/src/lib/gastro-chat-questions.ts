@@ -10,15 +10,24 @@ export interface GastroChatFollowup {
   next_by_choice?: Record<string, string>;
 }
 export const GASTRO_CHAT_FOLLOWUPS: Record<
+  | 'allergy_reaction'
   | 'stool_frequency'
   | 'stool_form'
   | 'stool_recent_changes'
   | 'stool_change_onset'
+  | 'stool_impurities'
   | 'stool_changes'
   | 'weight_changes'
   | 'family_history',
   GastroChatFollowup
 > = {
+  allergy_reaction: {
+    text: 'Как проявилась аллергия? Если не помните, так и напишите.',
+    choices: [],
+    heading: 'Проявление аллергии',
+    section: 'allergy_anamnesis',
+    next: 'stool_frequency',
+  },
   stool_frequency: {
     text: 'Как часто у вас обычно бывает стул?\n\nВыберите подходящий вариант или напишите своими словами, например: раз в три дня или несколько раз в день.',
     choices: [
@@ -100,8 +109,8 @@ export const GASTRO_CHAT_FOLLOWUPS: Record<
     section: 'complaints',
     next: 'stool_change_onset',
     next_by_choice: {
-      none: 'weight_changes',
-      unknown: 'weight_changes',
+      none: 'stool_impurities',
+      unknown: 'stool_impurities',
     },
   },
   stool_change_onset: {
@@ -130,13 +139,21 @@ export const GASTRO_CHAT_FOLLOWUPS: Record<
     ],
     heading: 'Начало изменений стула',
     section: 'complaints',
-    next: 'weight_changes',
+    next: 'stool_impurities',
   },
   stool_changes: {
     text: 'Изменился ли стул: как часто вы ходите в туалет и каким он стал? Если да — как давно?',
     negative_label: 'Без изменений',
     negative_text: 'Изменений стула не отмечает',
     heading: 'Изменения стула',
+    section: 'complaints',
+    next: 'stool_impurities',
+  },
+  stool_impurities: {
+    text: 'Замечали ли вы примеси в кале? Например, кровь, слизь или непереваренные кусочки пищи. Если да, напишите, что именно заметили.',
+    choices: [{ value: 'none', label: 'Не замечал(а)' }],
+    negative_text: 'Примесей в кале не замечал(а)',
+    heading: 'Примеси в кале',
     section: 'complaints',
     next: 'weight_changes',
   },
@@ -162,3 +179,13 @@ export const gastroFollowupChoices = (question: GastroChatFollowup) =>
     { value: 'none', label: question.negative_label ?? 'Нет' },
     { value: 'unknown', label: 'Не знаю' },
   ];
+
+export const normalizeGastroReply = (answer: string) =>
+  (answer.toLowerCase().replaceAll('ё', 'е').match(/[\p{L}\p{N}_]+/gu) ?? []).join(' ');
+
+export const needsAllergyReaction = (answer: string) => {
+  const text = normalizeGastroReply(answer);
+  return Boolean(text) &&
+    !/^(?:нет|не было|нет аллергии(?: на лекарства)?|аллергии(?: на лекарства)? (?:нет|не было)|не знаю|не помню|не уверен[а]?|не известно|неизвестно|без аллергии)$/.test(text) &&
+    !/(?:^| )(?:сып\p{L}*|высып\p{L}*|зуд\p{L}*|чесал\p{L}*|отек\p{L}*|опух\p{L}*|крапивниц\p{L}*|покрасн\p{L}*|задых\p{L}*|удуш\p{L}*|анафила\p{L}*|тошн\p{L}*|рвот\p{L}*|волдыр\p{L}*|не помню|не знаю|не уверен[а]?)(?: |$)/u.test(text);
+};

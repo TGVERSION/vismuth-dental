@@ -24,6 +24,8 @@ import { MOCK_AI_QUESTIONS } from './script';
 import {
   GASTRO_CHAT_FOLLOWUPS,
   gastroFollowupChoices,
+  needsAllergyReaction,
+  normalizeGastroReply,
 } from '@/lib/gastro-chat-questions';
 
 export type MockStepKey =
@@ -35,11 +37,13 @@ export type MockStepKey =
   | 'medications'
   | 'chronic'
   | 'allergy'
+  | 'allergy_reaction'
   | 'stool_changes'
   | 'stool_frequency'
   | 'stool_form'
   | 'stool_recent_changes'
   | 'stool_change_onset'
+  | 'stool_impurities'
   | 'weight_changes'
   | 'family_history'
   | 'repeat_change'
@@ -254,18 +258,22 @@ export const describeStep = (
         ],
       };
 
+    case 'allergy_reaction':
     case 'stool_changes':
     case 'stool_frequency':
     case 'stool_form':
     case 'stool_recent_changes':
     case 'stool_change_onset':
+    case 'stool_impurities':
     case 'weight_changes':
     case 'family_history': {
       const question = GASTRO_FOLLOWUPS[step];
       return {
         ...emptyStep(step, 'text'),
         text: question.text,
-        choices: gastroFollowupChoices(question),
+        choices: gastroFollowupChoices(question).filter(
+          (option) => !step.startsWith('stool_') || option.label !== 'Не знаю',
+        ),
       };
     }
 
@@ -451,11 +459,13 @@ export const applyAnswer = (
       break;
     }
 
+    case 'allergy_reaction':
     case 'stool_changes':
     case 'stool_frequency':
     case 'stool_form':
     case 'stool_recent_changes':
     case 'stool_change_onset':
+    case 'stool_impurities':
     case 'weight_changes':
     case 'family_history': {
       const question = GASTRO_FOLLOWUPS[questionnaire.currentStep];
@@ -475,11 +485,14 @@ export const applyAnswer = (
         return fail(400, 'Choose a quick reply or send text');
       if (!text && !answer.none && !answer.choice)
         return fail(400, 'Answer required');
+      const nextChoice =
+        questionnaire.currentStep === 'stool_recent_changes' &&
+        normalizeGastroReply(text ?? '') === 'не знаю'
+          ? 'unknown'
+          : answer.choice ?? (answer.none ? 'none' : '');
       next = {
         ...questionnaire,
-        currentStep: (question.next_by_choice?.[
-          answer.choice ?? (answer.none ? 'none' : '')
-        ] ?? question.next) as MockStepKey,
+        currentStep: (question.next_by_choice?.[nextChoice] ?? question.next) as MockStepKey,
       };
       break;
     }
@@ -499,18 +512,10 @@ export const applyAnswer = (
               ? {
                   ...questionnaire,
                   currentStep:
-                    questionnaire.visitType === 'primary' &&
-                    (() => {
-                      const name =
-                        doctorById(
-                          env,
-                          questionnaire.doctorMembershipId,
-                        )?.specializations.find(
-                          (spec) => spec.id === questionnaire.specializationId,
-                        )?.name ?? '';
-                      return /гастро/i.test(name) && !/детск/i.test(name);
-                    })()
-                      ? 'stool_frequency'
+                    isAdultPrimaryGastro(questionnaire, env)
+                      ? (!answer.none && text && needsAllergyReaction(text)
+                          ? 'allergy_reaction'
+                          : 'stool_frequency')
                       : 'patient_info',
                 }
               : enterAiOrNext(questionnaire, env, 'patient_info');

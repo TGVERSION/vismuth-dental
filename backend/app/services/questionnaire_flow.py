@@ -21,13 +21,13 @@ from ..services.questionnaire_code import allocate_code
 from ..services.questionnaire_limits import ensure_clinic_subscription_active
 from .dental_questionnaire import apply_dental, build_dental_descriptor, open_invite
 from .questionnaire_step import StepDescriptor
-from .questionnaire_dedup import answered_fixed_topics, question_was_asked
+from .questionnaire_dedup import answered_fixed_topics, normalized_question, question_was_asked
 from .patient_link_context import merge_appointment
 from .questionnaire_answer_guard import (
     GUARDED_STEPS, MAX_CONSECUTIVE, MAX_TOTAL, classify_answer, guard_notice,
     rejected_before, rejection_counts, stopped_descriptor,
 )
-from .gastro_chat_questions import GASTRO_CHAT_QUESTIONS, gastro_choices
+from .gastro_chat_questions import GASTRO_CHAT_QUESTIONS, gastro_choices, needs_allergy_reaction
 from .gastro_questionnaire import apply_gastro, build_gastro_descriptor, submission_fingerprint
 
 _APPOINTMENT_TIME_RE = re.compile(r"^([01]\d|2[0-3]):([0-5]\d)$")
@@ -41,11 +41,13 @@ StepKey = Literal[
     "medications",
     "chronic",
     "allergy",
+    "allergy_reaction",
     "stool_changes",
     "stool_frequency",
     "stool_form",
     "stool_recent_changes",
     "stool_change_onset",
+    "stool_impurities",
     "weight_changes",
     "family_history",
     "repeat_change",
@@ -262,7 +264,10 @@ async def _build_step_descriptor(
             step_key=step,
             step_type="text",
             text=question['text'],
-            choices=gastro_choices(question),
+            choices=[
+                option for option in gastro_choices(question)
+                if not (step.startswith('stool_') and option['label'] == 'Не знаю')
+            ],
         )
 
     if step in FIXED_TEXTS:
@@ -439,11 +444,13 @@ def build_collect_messages(
     return messages
 
 
-async def step_after_allergy(db: AsyncSession, questionnaire: Questionnaire) -> str:
+async def step_after_allergy(db: AsyncSession, questionnaire: Questionnaire, answer: str) -> str:
     if questionnaire.visit_type != "primary":
         return "patient_info"
     specialty = (await specialization_name(db, questionnaire.specialization_id) or "").casefold()
-    return "stool_frequency" if "гастро" in specialty and "детск" not in specialty else "patient_info"
+    if "гастро" not in specialty or "детск" in specialty:
+        return "patient_info"
+    return "allergy_reaction" if needs_allergy_reaction(answer) else "stool_frequency"
 
 
 async def next_unanswered_general_step(
@@ -455,7 +462,7 @@ async def next_unanswered_general_step(
     if step == "medications" and "medications" in answered:
         return "chronic"
     if step == "allergy" and "allergy" in answered:
-        return await step_after_allergy(db, questionnaire)
+        return await step_after_allergy(db, questionnaire, answered["allergy"])
     return step
 
 
@@ -809,7 +816,10 @@ async def apply_answer(
         await add_answer(db, questionnaire, step_key=step_key, kind="answer",
                          question_text=question['text'], answer_text=answer_text,
                          choice=choice or ("none" if none_answer else None))
-        questionnaire.current_step = question.get('next_by_choice', {}).get(choice or ('none' if none_answer else None), question['next'])
+        next_choice = choice or ("none" if none_answer else None)
+        if step_key == "stool_recent_changes" and text_value and normalized_question(text_value) == "не знаю":
+            next_choice = "unknown"
+        questionnaire.current_step = question.get('next_by_choice', {}).get(next_choice, question['next'])
 
     elif step_key in {"medications", "chronic", "allergy", "repeat_side_effects"}:
         answer_text = "нет" if none_answer else text_value
@@ -832,7 +842,7 @@ async def apply_answer(
         elif step_key == "chronic":
             questionnaire.current_step = await next_unanswered_general_step(db, questionnaire, "allergy")
         elif step_key == "allergy":
-            questionnaire.current_step = await step_after_allergy(db, questionnaire)
+            questionnaire.current_step = await step_after_allergy(db, questionnaire, answer_text)
         else:
             questionnaire.current_step = await enter_ai_or_next(
                 db,

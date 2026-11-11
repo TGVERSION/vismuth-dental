@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useId, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import {
   ANSWER_MAX_LENGTH,
   CHOOSE_OPTION_HINT,
@@ -18,6 +19,7 @@ import { PatientVoiceInput } from './PatientVoiceInput';
 const MAX_INPUT_LINES = 6;
 
 interface ChatComposerProps {
+  quickReplySlot: HTMLDivElement | null;
   prompt: ChatPrompt;
   isAwaiting: boolean;
   onAction: (action: ChatAction) => void;
@@ -31,7 +33,7 @@ const chipKey = (chip: ChatChip): string =>
       : `${chip.kind}-${chip.value}`;
 
 /**
- * Нижняя панель чата: быстрые ответы и поле ввода.
+ * Поле ввода и быстрые ответы в ленте чата.
  *
  * Быстрый ответ отправляется сразу по нажатию. Поле ввода видно всегда
  * (решение 3). Где backend текст не принимает (шаги `choice`, ВЗ-6), оно
@@ -42,6 +44,7 @@ const chipKey = (chip: ChatChip): string =>
  * касания поля, и на телефоне после каждого ответа пропадала бы клавиатура.
  */
 export const ChatComposer = ({
+  quickReplySlot,
   prompt,
   isAwaiting,
   onAction,
@@ -182,8 +185,8 @@ export const ChatComposer = ({
           Чип контурный и полностью скруглён: с серой заливкой и скруглением
           пузыря он выглядел как уже отправленное сообщение. При нажатии
           заливается цветом бренда — как ответ, который появится в ленте. */}
-      {!isAwaiting && prompt.chips.length ? (
-        <div className="mb-3 flex flex-wrap justify-end gap-2">
+      {!isAwaiting && quickReplySlot ? createPortal(
+        <div className="flex flex-wrap justify-end gap-2">
           {prompt.chips.map((chip) => (
             <button
               key={chipKey(chip)}
@@ -196,7 +199,8 @@ export const ChatComposer = ({
               {chip.label}
             </button>
           ))}
-        </div>
+        </div>,
+        quickReplySlot,
       ) : null}
 
       <form

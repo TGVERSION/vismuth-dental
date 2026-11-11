@@ -478,6 +478,7 @@ it('collects stool frequency, form and changes as separate chat questions', () =
   expect(step.step_key).toBe('stool_frequency');
   expect(step.step_type).toBe('text');
   expect(step.choices?.some((choice) => choice.value === 'daily')).toBe(true);
+  expect(step.choices?.map((choice) => choice.label)).not.toContain('Не знаю');
   const completed = run(
     questionnaire,
     [
@@ -485,10 +486,25 @@ it('collects stool frequency, form and changes as separate chat questions', () =
       { step_key: 'stool_form', choice: 'watery' },
       { step_key: 'stool_recent_changes', choice: 'yes' },
       { step_key: 'stool_change_onset', value: 'Неделю назад' },
+      { step_key: 'stool_impurities', value: 'Иногда замечаю слизь' },
       { step_key: 'weight_changes', choice: 'unknown' },
       { step_key: 'family_history', value: 'У сестры целиакия' },
     ],
     env,
   );
   expect(completed.step.step_key).toBe('patient_info');
+
+  const missingReaction = run(
+    q,
+    [{ step_key: 'allergy', value: 'Аллергия на йод' }],
+    env,
+  );
+  expect(missingReaction.step.step_key).toBe('allergy_reaction');
+  expect(missingReaction.step.text).toContain('Как проявилась аллергия?');
+  const afterReaction = run(
+    missingReaction.questionnaire,
+    [{ step_key: 'allergy_reaction', value: 'Был отёк' }],
+    env,
+  );
+  expect(afterReaction.step.step_key).toBe('stool_frequency');
 });

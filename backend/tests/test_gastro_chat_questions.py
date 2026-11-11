@@ -26,7 +26,7 @@ def test_three_answers_are_saved_in_order_and_return_to_patient_details(monkeypa
     saved=AsyncMock();monkeypatch.setattr(flow,'add_answer',saved)
     q=Questionnaire(id=uuid4(),kind='general',status='in_progress',current_step='stool_changes',visit_type='primary',ai_unavailable=False)
     db=AsyncMock()
-    for key,next_key,text in [('stool_changes','weight_changes','Стул стал жидким неделю назад'),('weight_changes','family_history','Потерял 4 кг за два месяца'),('family_history','patient_info','У отца был рак кишечника')]:
+    for key,next_key,text in [('stool_changes','stool_impurities','Стул стал жидким неделю назад'),('stool_impurities','weight_changes','Иногда замечаю слизь'),('weight_changes','family_history','Потерял 4 кг за два месяца'),('family_history','patient_info','У отца был рак кишечника')]:
         descriptor,_,_=asyncio.run(flow.apply_answer(db,q,step_key=key,value=text))
         assert descriptor.step_key==next_key
         assert saved.await_args.kwargs['answer_text']==text

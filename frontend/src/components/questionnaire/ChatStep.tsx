@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { QuestionnaireStep, QuestionnaireStepAnswer } from '@/api';
 import { useQuestionnaireChat } from '@/hooks/useQuestionnaireChat';
 import { useVisualViewport } from '@/hooks/useVisualViewport';
@@ -35,6 +35,7 @@ export const ChatStep = ({
 }: ChatStepProps) => {
   const chat = useQuestionnaireChat({ step, submit, isSubmitting });
   const listRef = useRef<HTMLDivElement | null>(null);
+  const [quickReplySlot, setQuickReplySlot] = useState<HTMLDivElement | null>(null);
   // Сколько ленты осталось ниже видимой части. Запоминается при прокрутке,
   // чтобы после изменения высоты ленты вернуть её в то же положение
   // относительно низа.
@@ -61,6 +62,7 @@ export const ChatStep = ({
     bottomGapRef.current = 0;
     list.scrollTop = list.scrollHeight;
   }, [
+    quickReplySlot,
     chat.entries.length,
     chat.isAwaiting,
     submitError,
@@ -162,6 +164,10 @@ export const ChatStep = ({
             </ChatBubble>
           ))}
 
+          {!chat.isAwaiting && !submitError && chat.prompt.chips.length > 0 ? (
+            <div ref={setQuickReplySlot} />
+          ) : null}
+
           {chat.isAwaiting ? <TypingIndicator hint={chat.waitHint} /> : null}
 
           {submitError ? (
@@ -180,6 +186,7 @@ export const ChatStep = ({
       </div>
 
       <ChatComposer
+        quickReplySlot={quickReplySlot}
         prompt={chat.prompt}
         isAwaiting={chat.isAwaiting}
         onAction={chat.send}

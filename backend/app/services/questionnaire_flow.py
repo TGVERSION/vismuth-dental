@@ -431,7 +431,7 @@ def build_collect_messages(
             messages.append({"role": "assistant", "text": answer.question_text})
         elif answer.kind in {"answer", "fixed", "skip"}:
             parts = []
-            if answer.question_text:
+            if answer.question_text and answer.step_key not in {"complaint", "ai_clarify"}:
                 parts.append(answer.question_text)
             if answer.choice:
                 parts.append(f"Выбор: {answer.choice}")

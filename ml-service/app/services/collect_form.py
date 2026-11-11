@@ -4,8 +4,9 @@
 и возвращает обновлённым, поэтому сам остаётся без состояния.
 """
 
-import logging
 import json
+import logging
+import re
 
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 from langchain_core.runnables import Runnable
@@ -29,6 +30,43 @@ logger = logging.getLogger(__name__)
 
 # Сколько последних сообщений отдаём в модель: защита от мусорной истории.
 _HISTORY_LIMIT = 40
+
+_PAIN_QUESTIONS = (
+    ("has_localization", "Где именно болит?"),
+    ("has_character", "Как вы ощущаете боль? Например, она ноющая, режущая или схваткообразная?"),
+    ("has_onset", "Когда началась боль?"),
+)
+_PAIN_CHARACTER = re.compile(
+    r"\b(?:остр|режущ|ноющ|колющ|тянущ|жгуч|туп|схваткообразн)\w*\s+бол[ьиью]\b",
+    re.IGNORECASE,
+)
+_SHORT_PAIN_LOCATION = re.compile(
+    r"(?:в\s?низу|в\s?верху|справа|слева|по центру)(?: живота)?[.!]?",
+    re.IGNORECASE,
+)
+
+
+def _recognize_explicit_pain_details(progress: FormProgress, request: CollectFormRequest) -> None:
+    """Учитывает явные ответы пациента, пропущенные при извлечении."""
+    complaint = progress.complaints
+    if complaint.status != FieldStatus.FILLED or complaint.symptom_type != "pain":
+        return
+
+    previous_question = ""
+    for message in request.messages[-_HISTORY_LIMIT:]:
+        if message.role == ChatRole.ASSISTANT:
+            previous_question = message.text.casefold()
+            continue
+        if _PAIN_CHARACTER.search(message.text):
+            complaint.has_character = True
+        if (
+            "бол" in previous_question
+            and ("где именно" in previous_question or "локализуется боль" in previous_question)
+            and _SHORT_PAIN_LOCATION.fullmatch(message.text.strip())
+        ):
+            complaint.has_localization = True
+        previous_question = ""
+
 
 # Первый вопрос по полю: формулировка фиксирована, LLM не зовём.
 _FIRST_QUESTIONS: dict[CollectionTarget, str] = {
@@ -118,6 +156,7 @@ class CollectFormService:
 
     async def run(self, request: CollectFormRequest) -> CollectFormAnswer:
         progress = _merge(request.state, await self._extract(request))
+        _recognize_explicit_pain_details(progress, request)
         target = _next_target(progress)
 
         if target is None:
@@ -175,16 +214,16 @@ class CollectFormService:
         goal, source = followup
         if target == CollectionTarget.COMPLAINTS_DETAIL:
             complaint = progress.complaints
+            if complaint.symptom_type == "pain":
+                return next(text for flag, text in _PAIN_QUESTIONS if not getattr(complaint, flag))
             relevant = {
-                "pain": [("has_localization", "где именно болит"), ("has_character", "характер боли"), ("has_onset", "когда началась боль")],
                 "heartburn": [("has_onset", "когда началась изжога"), ("has_frequency", "как часто бывает изжога"), ("has_triggers", "связь изжоги с едой или положением тела")],
                 "stool": [("has_onset", "когда начались нарушения стула"), ("has_frequency", "как часто бывает стул"), ("has_stool_description", "вид и консистенция стула")],
                 "other": [("has_onset", "когда появился симптом"), ("has_character", "как проявляется симптом")],
             }[complaint.symptom_type]
             missing = [label for flag, label in relevant if not getattr(complaint, flag)]
             goal = "детали жалоб; уточни один недостающий факт: " + "; ".join(missing)
-            if complaint.symptom_type != "pain":
-                goal += ". Не спрашивай локализацию или характер боли, если пациент не сообщает о боли"
+            goal += ". Не спрашивай локализацию или характер боли, если пациент не сообщает о боли"
         known = getattr(progress, source.value).value
         system = QUESTION_PROMPT.format(goal=goal)
         history = self._build_messages(request)

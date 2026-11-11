@@ -18,6 +18,26 @@ def row(question,text='',kind='answer',step='ai_clarify'):
     return SimpleNamespace(question_text=question,answer_text=text,kind=kind,step_key=step,choice=None)
 
 
+def test_ml_history_keeps_questions_out_of_patient_answers():
+    initial = 'Что вас беспокоит?'
+    followup = 'Где именно болит?'
+    questionnaire = Questionnaire(kind='general', visit_type='primary')
+    history = flow.build_collect_messages(
+        questionnaire,
+        [
+            row(initial, 'острая боль в животе', step='complaint'),
+            row(followup, kind='ai_question'),
+            row(followup, 'В низу'),
+        ],
+        'Гастроэнтеролог',
+    )
+    assert history[1:] == [
+        {'role': 'user', 'text': 'острая боль в животе'},
+        {'role': 'assistant', 'text': followup},
+        {'role': 'user', 'text': 'В низу'},
+    ]
+
+
 @pytest.mark.parametrize('target',['medications','medications_dose','allergy_anamnesis',None,[]])
 def test_primary_ai_does_not_take_over_fixed_medication_and_allergy_questions(monkeypatch,target):
     monkeypatch.setattr(flow,'load_answers',AsyncMock(return_value=[]))

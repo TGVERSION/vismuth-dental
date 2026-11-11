@@ -1,5 +1,6 @@
 """Полнота и уточнения соответствуют симптому, а не предполагаемой боли."""
 import asyncio
+from unittest.mock import AsyncMock
 
 import pytest
 from langchain_core.messages import AIMessage, SystemMessage
@@ -32,6 +33,35 @@ def test_completeness_depends_on_actual_symptom(kind, facts):
 def test_old_progress_without_symptom_type_keeps_pain_criteria():
     old = Complaints(status='filled', has_localization=True, has_character=True, has_onset=True)
     assert old.detailed
+
+
+@pytest.mark.parametrize('location_question', [
+    'Где именно болит?',
+    'Где именно в животе локализуется боль и как вы её ощущаете?',
+])
+def test_acute_pain_then_short_location_only_asks_for_missing_details(location_question):
+    class Client:
+        ainvoke = AsyncMock(side_effect=AssertionError('Pain questions use fixed wording'))
+
+        def with_structured_output(self, _):
+            return AsyncMock(ainvoke=AsyncMock(
+                side_effect=[progress(symptom_type='pain'), progress(symptom_type='pain')],
+            ))
+
+    service = CollectFormService(Client(), 6)
+    history = [{'role': 'user', 'text': 'острая боль в животе'}]
+    first = asyncio.run(service.run(CollectFormRequest(messages=history)))
+    assert first.messages.text == 'Где именно болит?'
+    assert first.state.complaints.has_character
+
+    history.extend([
+        {'role': 'assistant', 'text': location_question},
+        {'role': 'user', 'text': 'В низу'},
+    ])
+    second = asyncio.run(service.run(CollectFormRequest(messages=history, state=first.state)))
+    assert second.messages.text == 'Когда началась боль?'
+    assert second.state.complaints.has_localization
+    assert second.state.complaints.has_character
 
 
 @pytest.mark.parametrize('kind, missing', [('heartburn', 'как часто бывает изжога'), ('stool', 'как часто бывает стул')])

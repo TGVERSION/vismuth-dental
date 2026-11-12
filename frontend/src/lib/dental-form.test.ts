@@ -57,6 +57,51 @@ it('opens free text for choices only after Other and omits hidden text from the 
   );
 });
 
+it('requires every visible clarification field and ignores hidden Other text', () => {
+  const groups = parseGroups(
+    dentalFormStep({
+      step_key: 'dental_details_smoking',
+      groups: [
+        {
+          key: 'smoking',
+          question: 'Стаж курения?',
+          options: [],
+          text: { show: 'always', input_kind: 'text' },
+        },
+        {
+          key: 'details',
+          question: 'Уточнение',
+          options: [
+            { value: 'yes', label: 'Да' },
+            { value: 'other', label: 'Другое' },
+          ],
+          text: { show: 'on_other', input_kind: 'text' },
+        },
+      ],
+    } as unknown as QuestionnaireStep),
+  );
+  const texts = { smoking: '5 месяцев' };
+  expect(canSubmitGroups(groups, { selections: {}, texts })).toBe(false);
+  expect(
+    canSubmitGroups(groups, {
+      selections: { details: ['yes'] },
+      texts: { smoking: ' ' },
+    }),
+  ).toBe(false);
+  expect(
+    canSubmitGroups(groups, { selections: { details: ['yes'] }, texts }),
+  ).toBe(true);
+  expect(
+    canSubmitGroups(groups, { selections: { details: ['other'] }, texts }),
+  ).toBe(false);
+  expect(
+    canSubmitGroups(groups, {
+      selections: { details: ['other'] },
+      texts: { ...texts, details: 'Описание' },
+    }),
+  ).toBe(true);
+});
+
 it('does not render the removed extra-health field', () => {
   const step = dentalFormStep({
     step_key: 'dental_about',

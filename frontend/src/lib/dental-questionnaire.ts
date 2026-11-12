@@ -180,6 +180,9 @@ export const parseGroups = (step: QuestionnaireStep): DentalGroup[] =>
     .map(parseGroup)
     .filter((group): group is DentalGroup => group !== null);
 
+export const isDentalDetailsStep = (key: string): boolean =>
+  key === 'dental_details' || key.startsWith('dental_details_');
+
 /** Форма использует все поля серверного раздела, включая старые текстовые ответы. */
 export const dentalFormStep = (step: QuestionnaireStep): QuestionnaireStep => ({
   ...step,
@@ -193,11 +196,15 @@ export const dentalFormStep = (step: QuestionnaireStep): QuestionnaireStep => ({
           : group.key === 'allergy.reaction'
             ? 'Как проявлялась аллергия?'
             : group.question,
-      required: group.required || group.key === 'medications',
+      required:
+        group.required ||
+        group.key === 'medications' ||
+        isDentalDetailsStep(step.step_key),
       free_text: group.options.length === 0,
       text: group.text
         ? {
             ...group.text,
+            required: group.text.required || isDentalDetailsStep(step.step_key),
             optional_reveal: false,
             show:
               group.options.length &&
@@ -222,7 +229,7 @@ export const dentalFormStage = (step: QuestionnaireStep) => {
           ? `Здоровье · раздел ${step.dental.page.current} из ${step.dental.page.total}`
           : 'Этап 2 из 4',
     };
-  if (key.startsWith('dental_details') || key === AI_STEP)
+  if (isDentalDetailsStep(key) || key === AI_STEP)
     return {
       current: 3,
       title: 'Уточнения',

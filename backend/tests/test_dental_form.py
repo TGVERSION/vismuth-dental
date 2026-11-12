@@ -130,6 +130,21 @@ def test_in_progress_form_returns_to_previously_skipped_allergy_reaction():
     assert q.current_step == 'dental_about'
 
 
+@pytest.mark.parametrize('duration', ['5 месяцев', '5 лет'])
+def test_smoking_duration_accepts_text_with_units(duration):
+    q = questionnaire()
+    submit(q, {'reason': ['checkup']})
+    for _ in range(5):
+        submit(q, none=True)
+    submit(q, {'health': ['smoking']})
+    group = dq.build_dental_descriptor(q).groups[0]
+    assert group['key'] == 'smoking'
+    assert group['text']['input_kind'] == 'text'
+    assert group['text']['input_mode'] == 'text'
+    submit(q, texts={'smoking': duration})
+    assert q.dental_answers['groups']['smoking']['text'] == duration
+
+
 def test_form_comment_does_not_turn_unspecified_conditions_into_negative_answers():
     q = questionnaire()
     submit(q, texts={'reason': 'Осмотр перед лечением'})

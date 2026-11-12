@@ -6,6 +6,7 @@ import {
   buildGroupsAnswer,
   canSubmitGroups,
   groupProblem,
+  isDentalDetailsStep,
   isTextVisible,
   parseGroups,
   setGroupText,
@@ -49,10 +50,13 @@ export const ChipGroupsStep = ({
     (group) =>
       group.options.length > 0 && groupProblem(group, draft) === 'choose',
   );
+  const canSubmit = canSubmitGroups(groups, draft);
+  const nextDisabled =
+    needsChoice || (isDentalDetailsStep(step.step_key) && !canSubmit);
 
   const handleNext = () => {
-    if (!restored || needsChoice) return;
-    if (!canSubmitGroups(groups, draft)) {
+    if (!restored || nextDisabled) return;
+    if (!canSubmit) {
       setShowProblems(true);
       const first = groups.find((group) => groupProblem(group, draft) !== null);
       const problem = first ? groupProblem(first, draft) : null;
@@ -121,7 +125,7 @@ export const ChipGroupsStep = ({
       <DentalButton
         onClick={handleNext}
         isBusy={isSubmitting || !restored}
-        disabled={needsChoice}
+        disabled={nextDisabled}
       >
         {step.step_key === 'dental_about' ? 'Отправить анкету' : 'Далее'}
       </DentalButton>

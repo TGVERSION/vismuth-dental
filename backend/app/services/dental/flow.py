@@ -228,7 +228,7 @@ def input_metadata(key: str) -> dict[str, Any]:
     kind = {
         "about.birth_date": "date", "about.visit_year": "year",
         "heart_attack": "year", "hepatitis": "year", "pressure": "pressure",
-        "smoking": "duration", "pregnancy": "duration",
+        "pregnancy": "duration",
     }.get(key, "text")
     quick = {
         "about.visit_year": [str(datetime.now(timezone.utc).year), "Не помню"],

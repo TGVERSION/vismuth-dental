@@ -13,6 +13,7 @@ import { QuestionnaireFilters } from '@/components/doctor-questionnaires/Questio
 import { useQuestionnaireDates } from '@/hooks/useQuestionnaireDates';
 import { NewLinkModal } from './NewLinkModal';
 import { RegistryDetail } from './RegistryDetail';
+import { TestLinksModal } from './TestLinksModal';
 import { CompletedQuestionnaireList } from '@/components/doctor-questionnaires/CompletedQuestionnaireList';
 
 /** Поиск по ФИО уходит на сервер после паузы в наборе, а не на каждую букву. */
@@ -90,6 +91,15 @@ export const RegistryScreen = () => {
   const [utcOffset] = useState(() => -new Date().getTimezoneOffset());
   const [calendarVersion, setCalendarVersion] = useState(0);
   const [isCreating, setIsCreating] = useState(false);
+  const [isCreatingTestLinks, setIsCreatingTestLinks] = useState(false);
+  const testClinic = superAdmin
+    ? clinics.find(
+        (item) =>
+          item.id === clinicId &&
+          (item.questionnaire_kind === 'dental' ||
+            item.questionnaire_kind === 'mixed'),
+      )
+    : undefined;
 
   const searchName = useDebounced(name.trim(), SEARCH_DEBOUNCE_MS);
   const query = useMemo(
@@ -235,6 +245,7 @@ export const RegistryScreen = () => {
               options={clinics.map((c) => ({ value: c.id, label: c.name }))}
               onChange={(value) => {
                 setIsCreating(false);
+                setIsCreatingTestLinks(false);
                 router.replace(
                   '/registry?clinic_id=' + encodeURIComponent(value),
                 );
@@ -253,6 +264,17 @@ export const RegistryScreen = () => {
         >
           Новая ссылка для пациента
         </button>
+
+        {testClinic && (
+          <button
+            type="button"
+            aria-haspopup="dialog"
+            onClick={() => setIsCreatingTestLinks(true)}
+            className="vismuth-button vismuth-button--secondary mt-2 w-full shrink-0"
+          >
+            Тестовые ссылки
+          </button>
+        )}
 
         <div className="mt-6 shrink-0">
           <QuestionnaireFilters
@@ -276,6 +298,15 @@ export const RegistryScreen = () => {
         {renderDetail()}
       </div>
 
+      {testClinic && isCreatingTestLinks ? (
+        <TestLinksModal
+          key={testClinic.id}
+          clinicId={testClinic.id}
+          clinicName={testClinic.name}
+          onClose={() => setIsCreatingTestLinks(false)}
+          onCreated={refreshAll}
+        />
+      ) : null}
       {isCreating ? (
         <NewLinkModal
           clinicId={clinicId}

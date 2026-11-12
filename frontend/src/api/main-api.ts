@@ -621,6 +621,11 @@ export const mainApi = {
         data,
       ),
 
+    createTestLinks: (clinicId: string) =>
+      mutationApiClient.post<RegistryQuestionnaireCreated[]>(
+        `/clinics/${encodeURIComponent(clinicId)}/questionnaires/test-links`,
+      ),
+
     /** Новая ссылка взамен прежней: старая перестаёт работать. */
     regenerateLink: (clinicId: string, id: string) =>
       mutationApiClient.post<{ url: string }>(

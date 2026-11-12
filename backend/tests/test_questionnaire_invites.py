@@ -3,16 +3,20 @@
 import asyncio
 from datetime import date, datetime, timezone
 from types import SimpleNamespace
+from unittest.mock import AsyncMock, Mock
+from uuid import uuid4
 
 import pytest
 
 from app.services.questionnaire_invites import (
     InviteInputError,
     clean_patient_name,
+    create_test_invites,
     invite_expires_at,
     is_invite_expired,
     registry_status,
 )
+from app.services.questionnaire_limits import hash_session_token
 
 def _q(**fields):
     base = dict(status="invited", printed_at=None, signed_at=None, invite_expires_at=None)
@@ -23,6 +27,29 @@ def test_link_works_for_a_week_after_creation():
     created = datetime(2026, 10, 28, 15, 30, tzinfo=timezone.utc)
 
     assert invite_expires_at(created) == datetime(2026, 11, 4, 15, 30, tzinfo=timezone.utc)
+
+
+def test_test_invites_are_independent_and_created_in_one_transaction(monkeypatch):
+    monkeypatch.setattr(
+        'app.services.questionnaire_invites.ensure_clinic_subscription_active',
+        lambda clinic: None,
+    )
+    clinic = SimpleNamespace(id=uuid4(), questionnaire_kind='mixed')
+    db = SimpleNamespace(add_all=Mock(), commit=AsyncMock())
+
+    invites = asyncio.run(create_test_invites(db, clinic))
+
+    assert len(invites) == len({token for _, token in invites}) == 5
+    db.add_all.assert_called_once_with([q for q, _ in invites])
+    db.commit.assert_awaited_once()
+    for number, (questionnaire, token) in enumerate(invites, start=1):
+        assert questionnaire.clinic_id == clinic.id
+        assert questionnaire.kind == 'dental'
+        assert questionnaire.status == 'invited'
+        assert questionnaire.patient_last_name == 'Тестовая'
+        assert questionnaire.patient_first_name == f'Анкета {number}'
+        assert questionnaire.session_token_hash == hash_session_token(token)
+        assert questionnaire.created_by_membership_id is None
 
 
 def test_expired_only_after_deadline():

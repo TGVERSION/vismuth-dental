@@ -76,8 +76,7 @@ def _bad_request(exc: InviteInputError) -> HTTPException:
     return HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc))
 
 
-async def create_invite(
-    db: AsyncSession,
+def _build_invite(
     clinic: Clinic,
     *,
     last_name: str,
@@ -86,7 +85,6 @@ async def create_invite(
     created_by_membership_id: Optional[UUID],
     birth_date: Optional[date] = None,
 ) -> tuple[Questionnaire, str]:
-    """Создаёт анкету по персональной ссылке; возвращает её и токен ссылки."""
     if clinic.questionnaire_kind not in {"dental", "mixed"}:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
@@ -118,10 +116,42 @@ async def create_invite(
             "about.birth_date": GroupAnswer(text=birth_date.isoformat())
         } if birth_date else {}).model_dump(),
     )
+    return questionnaire, raw_token
+
+
+async def create_invite(
+    db: AsyncSession,
+    clinic: Clinic,
+    *,
+    last_name: str,
+    first_name: str,
+    middle_name: Optional[str],
+    created_by_membership_id: Optional[UUID],
+    birth_date: Optional[date] = None,
+) -> tuple[Questionnaire, str]:
+    """Создаёт анкету по персональной ссылке; возвращает её и токен ссылки."""
+    questionnaire, raw_token = _build_invite(
+        clinic, last_name=last_name, first_name=first_name, middle_name=middle_name,
+        created_by_membership_id=created_by_membership_id, birth_date=birth_date,
+    )
     db.add(questionnaire)
     await db.commit()
     await db.refresh(questionnaire)
     return questionnaire, raw_token
+
+
+async def create_test_invites(db: AsyncSession, clinic: Clinic) -> list[tuple[Questionnaire, str]]:
+    """Создаёт пять тестовых приглашений в одной транзакции."""
+    invites = [
+        _build_invite(
+            clinic, last_name="Тестовая", first_name=f"Анкета {number}",
+            middle_name=None, created_by_membership_id=None,
+        )
+        for number in range(1, 6)
+    ]
+    db.add_all([questionnaire for questionnaire, _ in invites])
+    await db.commit()
+    return invites
 
 
 async def regenerate_invite_token(db: AsyncSession, questionnaire: Questionnaire) -> str:

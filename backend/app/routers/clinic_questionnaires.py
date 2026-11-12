@@ -10,7 +10,7 @@ from sqlalchemy import Date, and_, cast, delete, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..db import get_db
-from ..deps import require_clinic_registry
+from ..deps import require_clinic_registry, require_roles
 from ..models.clinic_membership import ClinicMembership
 from ..models.questionnaire import Questionnaire
 from ..models.service_user import ServiceUser
@@ -25,6 +25,7 @@ from ..schemas.clinic_questionnaires import (
 from ..services.clinic_members import get_clinic_or_404
 from ..services.questionnaire_invites import (
     create_invite,
+    create_test_invites,
     invite_url,
     regenerate_invite_token,
     registry_status,
@@ -177,6 +178,25 @@ async def create_registry_questionnaire(
         **_item_fields(questionnaire),
         url=invite_url(token),
     )
+
+
+@router.post(
+    "/clinics/{clinic_id}/questionnaires/test-links",
+    response_model=list[RegistryQuestionnaireCreated],
+    status_code=status.HTTP_201_CREATED,
+    summary="Создать пять тестовых ссылок на стоматологическую анкету",
+)
+async def create_registry_test_links(
+    clinic_id: UUID,
+    _: ServiceUser = Depends(require_roles("super_admin")),
+    db: AsyncSession = Depends(get_db),
+) -> list[RegistryQuestionnaireCreated]:
+    clinic = await get_clinic_or_404(db, clinic_id)
+    invites = await create_test_invites(db, clinic)
+    return [
+        RegistryQuestionnaireCreated(**_item_fields(questionnaire), url=invite_url(token))
+        for questionnaire, token in invites
+    ]
 
 
 @router.get(

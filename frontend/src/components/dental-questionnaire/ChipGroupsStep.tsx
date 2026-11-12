@@ -63,7 +63,7 @@ export const ChipGroupsStep = ({
           const main = field?.closest('main');
           if (!field || !main) return;
           const input =
-            problem === 'text'
+            problem === 'text' || first.options.length === 0
               ? field.querySelector<HTMLElement>(
                   'textarea, input:not([type="checkbox"])',
                 )
@@ -88,30 +88,25 @@ export const ChipGroupsStep = ({
   const body = (
     <>
       {intro}
-      {groups.map((group) => {
-        const problem = groupProblem(group, draft);
-        const showChoiceHint =
-          restored && group.options.length > 0 && problem === 'choose';
-        return (
-          <DentalGroupField
-            key={group.key}
-            group={group}
-            selected={draft.selections[group.key] ?? []}
-            text={draft.texts[group.key] ?? ''}
-            showText={isTextVisible(group, draft)}
-            problem={showProblems || showChoiceHint ? problem : null}
-            disabled={isSubmitting || !restored}
-            onToggle={(value) =>
-              setDraft((current) => toggleOption(current, group, value))
-            }
-            onText={(text) =>
-              setDraft((current) =>
-                setGroupText(current, group.key, text, group.text?.max_length),
-              )
-            }
-          />
-        );
-      })}
+      {groups.map((group) => (
+        <DentalGroupField
+          key={group.key}
+          group={group}
+          selected={draft.selections[group.key] ?? []}
+          text={draft.texts[group.key] ?? ''}
+          showText={isTextVisible(group, draft)}
+          problem={showProblems ? groupProblem(group, draft) : null}
+          disabled={isSubmitting || !restored}
+          onToggle={(value) =>
+            setDraft((current) => toggleOption(current, group, value))
+          }
+          onText={(text) =>
+            setDraft((current) =>
+              setGroupText(current, group.key, text, group.text?.max_length),
+            )
+          }
+        />
+      ))}
     </>
   );
 

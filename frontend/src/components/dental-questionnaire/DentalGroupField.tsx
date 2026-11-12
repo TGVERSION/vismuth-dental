@@ -6,11 +6,6 @@ import { PatientVoiceInput } from '@/components/questionnaire/PatientVoiceInput'
 import { DentalCheckbox } from './DentalCheckbox';
 import { DentalVisitYearField } from './DentalVisitYearField';
 
-const PROBLEMS: Record<GroupProblem, string> = {
-  choose: 'Выберите хотя бы один вариант',
-  text: 'Заполните поле «Другое»',
-};
-
 interface Props {
   group: DentalGroup;
   selected: readonly string[];
@@ -39,6 +34,12 @@ export const DentalGroupField = ({
     input.style.height = 'auto';
     input.style.height = `${Math.min(input.scrollHeight + 2, 144)}px`;
   }, [text, showText]);
+  const message =
+    problem === 'text' || (problem === 'choose' && group.options.length === 0)
+      ? group.options.length === 0
+        ? 'Заполните поле'
+        : 'Заполните поле «Другое»'
+      : null;
   if (group.key === 'about.visit_year')
     return (
       <DentalVisitYearField
@@ -46,7 +47,7 @@ export const DentalGroupField = ({
         value={text}
         onChange={onText}
         disabled={disabled}
-        problem={problem ? PROBLEMS[problem] : null}
+        problem={message}
       />
     );
   const titleId = `q-${group.key}`,
@@ -59,7 +60,6 @@ export const DentalGroupField = ({
       id={`group-${group.key}`}
       disabled={disabled}
       aria-labelledby={titleId}
-      aria-describedby={problem === 'choose' ? errorId : undefined}
       className="flex min-w-0 flex-col gap-3"
     >
       <h2
@@ -69,11 +69,6 @@ export const DentalGroupField = ({
         {group.title && !allergy ? `${group.title}: ` : ''}
         {group.question}
       </h2>
-      {problem === 'choose' ? (
-        <p id={errorId} className="text-sm text-[var(--q-muted)]">
-          {PROBLEMS.choose}
-        </p>
-      ) : null}
       {group.options.length ? (
         allergy || reason ? (
           <div className="overflow-hidden rounded-2xl bg-white">
@@ -121,8 +116,8 @@ export const DentalGroupField = ({
               disabled={disabled}
               value={text}
               aria-labelledby={titleId}
-              aria-invalid={Boolean(problem)}
-              aria-describedby={problem ? errorId : undefined}
+              aria-invalid={Boolean(message)}
+              aria-describedby={message ? errorId : undefined}
               placeholder={group.text.placeholder}
               maxLength={group.text.max_length ?? 20000}
               onChange={(event) => onText(event.target.value)}
@@ -136,8 +131,8 @@ export const DentalGroupField = ({
                 disabled={disabled}
                 value={text}
                 aria-labelledby={titleId}
-                aria-invalid={Boolean(problem)}
-                aria-describedby={problem ? errorId : undefined}
+                aria-invalid={Boolean(message)}
+                aria-describedby={message ? errorId : undefined}
                 placeholder={group.text.placeholder}
                 maxLength={group.text.max_length ?? 20000}
                 onChange={(event) => onText(event.target.value)}
@@ -162,13 +157,13 @@ export const DentalGroupField = ({
           {text}
         </p>
       ) : null}
-      {problem === 'text' ? (
+      {message ? (
         <p
           id={errorId}
           role="alert"
           className="text-sm text-[var(--ui-color-red-700)]"
         >
-          {PROBLEMS[problem]}
+          {message}
         </p>
       ) : null}
     </fieldset>

@@ -333,6 +333,7 @@ export const isTextVisible = (
 ): boolean => {
   if (!group.text) return false;
   const selected = selectedIn(draft, group.key);
+  if (group.key === 'pregnancy') return selected.includes('pregnant');
   switch (group.text.show) {
     case 'always':
       return true;

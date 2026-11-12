@@ -149,7 +149,7 @@ export const DentalGroupField = ({
           )}
         </div>
       ) : null}
-      {!showText && text ? (
+      {!showText && text && group.key !== 'pregnancy' ? (
         <p
           aria-label="Ранее сохранённый ответ"
           className="whitespace-pre-wrap text-base text-[var(--q-muted)]"

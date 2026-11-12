@@ -102,6 +102,46 @@ it('requires every visible clarification field and ignores hidden Other text', (
   ).toBe(true);
 });
 
+it('does not require or submit a pregnancy duration when only breastfeeding is selected', () => {
+  const step = dentalFormStep({
+    step_key: 'dental_details_pregnancy',
+    groups: [
+      {
+        key: 'pregnancy',
+        question: 'Что именно?',
+        required: true,
+        options: [
+          { value: 'pregnant', label: 'Беременность' },
+          { value: 'breastfeeding', label: 'Кормлю грудью' },
+        ],
+        text: { show: 'always', input_kind: 'duration' },
+      },
+    ],
+  } as unknown as QuestionnaireStep);
+  const groups = parseGroups(step);
+  const breastfeeding = {
+    selections: { pregnancy: ['breastfeeding'] },
+    texts: {},
+  };
+  expect(isTextVisible(groups[0], breastfeeding)).toBe(false);
+  expect(canSubmitGroups(groups, breastfeeding)).toBe(true);
+  expect(
+    buildGroupsAnswer(step.step_key, groups, {
+      ...breastfeeding,
+      texts: { pregnancy: '12 недель' },
+    }).texts,
+  ).not.toHaveProperty('pregnancy');
+  const both = {
+    selections: { pregnancy: ['pregnant', 'breastfeeding'] },
+    texts: {},
+  };
+  expect(isTextVisible(groups[0], both)).toBe(true);
+  expect(canSubmitGroups(groups, both)).toBe(false);
+  expect(
+    canSubmitGroups(groups, { ...both, texts: { pregnancy: '12 недель' } }),
+  ).toBe(true);
+});
+
 it('does not render the removed extra-health field', () => {
   const step = dentalFormStep({
     step_key: 'dental_about',

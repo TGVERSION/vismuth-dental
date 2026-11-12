@@ -15,6 +15,7 @@ from dataclasses import dataclass
 from typing import Literal
 
 OTHER = "other"
+ALLERGY_REACTION = "allergy.reaction"
 
 
 def is_uncertain_choice(label: str) -> bool:
@@ -336,14 +337,14 @@ HEALTH_ITEMS = (
               ("painkillers", "Обезболивающие (анальгин, аспирин)"),
               (OTHER, "Другое"),
           ), text_placeholder="Название препарата или вещества", selection_required=True),
-          Group(key="allergy.reaction", question="Как проявлялась?", options=_opts(
+          Group(key=ALLERGY_REACTION, question="Как проявлялась?", options=_opts(
               ("dizziness", "Головокружение или потеря сознания"),
               ("suffocation", "Удушье"),
               ("urticaria", "Крапивница"),
               ("quincke", "Отёк Квинке"),
               ("itch", "Зуд и покраснение кожи"),
               (OTHER, "Другое"),
-          ), text_placeholder="Опишите реакцию", text_show="on_other"),
+          ), text_placeholder="Опишите реакцию", text_show="on_other", selection_required=True),
           hint="лекарства, обезболивание, еда, пыльца, металлы"),
     _item("pregnancy", "Беременность, кормление грудью",
           FormRow(42, "Для женщин:", has_answer=False, sub_group="pregnancy", subs=(

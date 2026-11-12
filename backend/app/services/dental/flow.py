@@ -14,6 +14,7 @@ from typing import Any
 from pydantic import BaseModel, ConfigDict, Field
 
 from .questions import (
+    ALLERGY_REACTION,
     ABOUT_GROUPS,
     HEALTH_BY_VALUE,
     HEALTH_ITEMS,
@@ -300,7 +301,8 @@ def _parse_group(
     unique = list(dict.fromkeys(selected))
     if not group.multiple and len(unique) > 1:
         raise DentalAnswerError(f"Only one value allowed for {group.key}")
-    if group.selection_required and not unique and not (allow_free_text and text):
+    text_can_replace_selection = allow_free_text and group.key != ALLERGY_REACTION
+    if group.selection_required and not unique and not (text_can_replace_selection and text):
         raise DentalAnswerError(f"Choose at least one value for {group.key}")
     if text and group.text_placeholder is None and not allow_free_text:
         raise DentalAnswerError(f"Text is not allowed for {group.key}")

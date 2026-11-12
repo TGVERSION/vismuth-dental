@@ -126,7 +126,7 @@ def test_health_edit_keeps_other_pages_dob_valid_details_but_invalidates_complet
     start(q)
     health(q, positive=["medications", "allergy"])
     answer(q, selections={"medications": ["eliquis"]}, texts={"medications.dose": "5 мг"})
-    answer(q, selections={"allergy.substance": ["antibiotics"]})
+    answer(q, selections={"allergy.substance": ["antibiotics"], "allergy.reaction": ["urticaria"]})
     assert q.current_step == "dental_about"
     answer(q, choice="edit:dental_health_6")
     answer(q, selections={"health": ["medications", "pregnancy"], "health_unknown": ["oncology"]})
@@ -154,7 +154,7 @@ def test_editing_earlier_no_page_preserves_later_positive_unknown_and_incomplete
     q = questionnaire()
     start(q)
     health(q, positive=["fever", "allergy"], uncertain=["hepatitis"])
-    answer(q, selections={"allergy.substance": ["antibiotics"]})
+    answer(q, selections={"allergy.substance": ["antibiotics"], "allergy.reaction": ["urticaria"]})
     answer(q, choice="edit:dental_health_1")
     answer(q, none=True)
     assert q.dental_answers["health"] == ["allergy"]
@@ -164,7 +164,7 @@ def test_editing_earlier_no_page_preserves_later_positive_unknown_and_incomplete
     descriptor = dq.build_dental_descriptor(q)
     assert [entry["step_key"] for entry in descriptor.dental["navigation"]] == descriptor.dental["editable_steps"]
     assert "dental_about" not in descriptor.dental["editable_steps"]
-    answer(q, selections={"allergy.substance": ["antibiotics"]})
+    answer(q, selections={"allergy.substance": ["antibiotics"], "allergy.reaction": ["urticaria"]})
     assert q.current_step == "dental_about"
 
 

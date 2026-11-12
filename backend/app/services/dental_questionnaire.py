@@ -37,7 +37,7 @@ from .dental.flow import (
 from .dental.summary import build_dental_summary
 from .dental.history import dental_history
 from .dental.conversation import active_group, prepare_question_answer
-from .dental.questions import HEALTH_ITEMS
+from .dental.questions import ALLERGY_REACTION, HEALTH_ITEMS
 from .ml_proxy import proxy_post_to_ml
 from .questionnaire_step import StepDescriptor
 
@@ -51,12 +51,24 @@ def _dental_answers(questionnaire: Questionnaire) -> DentalAnswers:
     if answers.form_mode and answers.flow_version == 2 and "dental_details_allergy" in answers.completed_steps:
         # Старый общий экран аллергии уже сохранял обе группы ответов.
         completed = list(answers.completed_steps)
-        if "allergy.reaction" in answers.groups and "dental_details_allergy_reaction" not in completed:
-            completed.append("dental_details_allergy_reaction")
+        reaction_step = "dental_details_allergy_reaction"
+        reaction = answers.groups.get(ALLERGY_REACTION)
+        if reaction and reaction.selected and reaction_step not in completed:
+            completed.append(reaction_step)
+        elif (not reaction or not reaction.selected) and reaction_step in completed:
+            completed.remove(reaction_step)
+        if completed != answers.completed_steps:
             answers = answers.model_copy(update={"completed_steps": completed})
         if questionnaire.status != "completed" and questionnaire.current_step == STEP_ABOUT:
             missing = next((key for key in dental_route(answers) if key not in completed), STEP_ABOUT)
             questionnaire.current_step = missing
+        elif (
+            questionnaire.status != "completed"
+            and questionnaire.current_step in (AI_STEP, STEP_REVIEW)
+            and reaction_step in dental_route(answers)
+            and reaction_step not in completed
+        ):
+            questionnaire.current_step = reaction_step
     if questionnaire.status != "completed" and questionnaire.current_step == STEP_PAIN:
         # Одинаково восстанавливаем старый шаг при чтении и отправке ответа.
         questionnaire.current_step = next(

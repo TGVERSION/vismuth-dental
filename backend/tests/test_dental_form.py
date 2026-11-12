@@ -98,13 +98,36 @@ def test_other_reaction_needs_its_text_and_stays_on_its_own_page():
     health(q, allergy=True)
     assert [g['key'] for g in dq.build_dental_descriptor(q).groups] == ['allergy.substance']
     submit(q, {'allergy.substance': ['antibiotics']})
-    assert [g['key'] for g in dq.build_dental_descriptor(q).groups] == ['allergy.reaction']
+    descriptor = dq.build_dental_descriptor(q)
+    assert [g['key'] for g in descriptor.groups] == ['allergy.reaction']
+    assert descriptor.groups[0]['required'] is True
+    assert descriptor.allow_skip is False
+    for texts in ({}, {'allergy.reaction': 'Сыпь'}):
+        with pytest.raises(HTTPException) as error:
+            submit(q, texts=texts)
+        assert error.value.status_code == 400
+        assert q.current_step == 'dental_details_allergy_reaction'
     with pytest.raises(HTTPException):
         submit(q, {'allergy.reaction': ['other']})
     submit(q, {'allergy.reaction': ['other']}, {'allergy.reaction': 'Необычная реакция'})
     assert q.current_step == 'dental_about'
     submit(q)
     assert 'Необычная реакция' in q.structured['paper_form']['more']
+
+
+def test_in_progress_form_returns_to_previously_skipped_allergy_reaction():
+    q = questionnaire()
+    submit(q, {'reason': ['checkup']})
+    health(q, allergy=True)
+    submit(q, {'allergy.substance': ['antibiotics']})
+    q.current_step = 'dental_about'
+    q.dental_answers = {
+        **q.dental_answers,
+        'completed_steps': [*q.dental_answers['completed_steps'], 'dental_details_allergy_reaction'],
+    }
+    assert dq.build_dental_descriptor(q).step_key == 'dental_details_allergy_reaction'
+    submit(q, {'allergy.reaction': ['urticaria']})
+    assert q.current_step == 'dental_about'
 
 
 def test_form_comment_does_not_turn_unspecified_conditions_into_negative_answers():

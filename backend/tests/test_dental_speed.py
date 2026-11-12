@@ -126,7 +126,7 @@ def test_edit_from_review_asks_new_required_details_before_returning():
     submit(choice='edit:dental_health')
     submit(selections={'health': ['allergy']})
     assert q.current_step == 'dental_details'
-    submit(selections={'allergy.substance': ['antibiotics']})
+    submit(selections={'allergy.substance': ['antibiotics'], 'allergy.reaction': ['urticaria']})
     assert q.current_step == 'dental_review'
 
 

@@ -1,4 +1,6 @@
 from fastapi import FastAPI
+from fastapi.openapi.docs import get_swagger_ui_html
+from fastapi.responses import HTMLResponse
 
 from . import models  # noqa: F401
 from .routers.auth import router as auth_router
@@ -35,6 +37,8 @@ from .routers.voice_input_test import router as voice_input_test_router
 
 app = FastAPI(
     title="Vismuth Clinical Decision Support",
+    docs_url=None,
+    servers=[{"url": "./"}],
     description=(
         ""
     ),
@@ -137,6 +141,16 @@ app = FastAPI(
         },
     ],
 )
+
+
+@app.get("/docs", include_in_schema=False)
+async def swagger_docs() -> HTMLResponse:
+    # Относительный путь работает и напрямую, и через префикс /api/main.
+    return get_swagger_ui_html(
+        openapi_url="./openapi.json",
+        title=f"{app.title} - Swagger UI",
+    )
+
 
 app.include_router(auth_router)
 app.include_router(dictionaries_router)

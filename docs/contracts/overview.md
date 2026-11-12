@@ -1,6 +1,7 @@
 # Обзор API-контракта
 
-Точные схемы: Swagger `http://localhost:8000/docs`.  
+Точные схемы доступны в Swagger по адресу [развёрнутого сервиса](https://anketa.vismuth.ru/api/main/docs) или локально по `http://localhost:8000/docs`.
+
 Internals backend: [`../../backend/docs/`](../../backend/docs/).  
 Роли подробно: [`../domains/roles-and-permissions.md`](../domains/roles-and-permissions.md).
 

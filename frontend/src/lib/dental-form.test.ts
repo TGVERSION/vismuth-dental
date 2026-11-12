@@ -130,7 +130,7 @@ it('does not require or submit a pregnancy duration when only breastfeeding is s
       ...breastfeeding,
       texts: { pregnancy: '12 недель' },
     }).texts,
-  ).not.toHaveProperty('pregnancy');
+  ).toBeUndefined();
   const both = {
     selections: { pregnancy: ['pregnant', 'breastfeeding'] },
     texts: {},

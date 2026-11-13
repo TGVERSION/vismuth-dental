@@ -37,7 +37,7 @@ export function PatientLinkGenerator({ clinicId, onPrint, compact }: Props) {
 
 function ClinicPatientLinkGenerator({ clinicId, onPrint, compact }: Props) {
   const [links, setLinks] = useState<PatientLinks | null>(null);
-  const [doctorId, setDoctorId] = useState('');
+  const [selectedDoctorId, setSelectedDoctorId] = useState<string | null>(null);
   const [date, setDate] = useState('');
   const [time, setTime] = useState('');
   const [url, setUrl] = useState('');
@@ -50,6 +50,9 @@ function ClinicPatientLinkGenerator({ clinicId, onPrint, compact }: Props) {
   const inFlight = useRef(false);
   const dateId = useId();
   const timeId = useId();
+  const doctorId =
+    selectedDoctorId ??
+    (links?.doctors.length === 1 ? links.doctors[0].membership_id : '');
   const today = toDateInputValue(new Date());
   const horizon = new Date();
   horizon.setDate(horizon.getDate() + APPOINTMENT_DAYS_AHEAD);
@@ -167,7 +170,7 @@ function ClinicPatientLinkGenerator({ clinicId, onPrint, compact }: Props) {
     <CustomDropdown
       options={doctorOptions}
       value={doctorId}
-      onChange={(value) => update(setDoctorId, value)}
+      onChange={(value) => update(setSelectedDoctorId, value)}
       disabled={busy}
       aria-label="Врач для ссылки"
       triggerClassName={compact ? fieldFillClass(doctorId) : undefined}

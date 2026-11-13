@@ -40,7 +40,7 @@ URL собираются так:
 | `SMTP_USER` / `SMTP_PASSWORD` / `SMTP_FROM` | `""` | Учётные данные отправителя |
 | `REGISTRATION_CODE_EXPIRE_MINUTES` | `15` | TTL кода из письма |
 | `REGISTRATION_CODE_MAX_ATTEMPTS` | `5` | Лимит попыток ввода кода |
-| `FRONTEND_PUBLIC_URL` | `http://localhost:3000` | База ссылок invite и публичных анкет (`/invite/accept?token=…`, `/q/{slug}`) |
+| `FRONTEND_PUBLIC_URL` | `http://localhost:3000` | База ссылок invite и публичных анкет (`/invite/accept?token=…`, `/q/{slug}`). Должна совпадать с `FRONTEND_PORT` или доменом |
 | `INVITE_EXPIRE_DAYS` | `7` | TTL приглашения в клинику |
 
 На рабочем сервере с 06.11.2026 `FRONTEND_PUBLIC_URL=https://anketa.vismuth.ru`: пациентские ссылки, QR, персональные приглашения и общие ссылки сотрудников собираются с этим доменом независимо от адреса, по которому открыт интерфейс. При смене переменной пересоздаются backend и его workers; простой рестарт контейнера не перечитывает `env_file` Compose. Пути и токены ранее созданных ссылок сохраняются.
@@ -107,11 +107,29 @@ Invite создаётся даже при сбое SMTP: в ответе `invite
 
 Переезд в облачный S3: те же бакет и ключи объектов; меняются endpoint’ы, ключи доступа и при необходимости `S3_ADDRESSING_STYLE`.
 
+## Порты публикации на хост
+
+Левую часть порта compose берёт из `.env`, порт внутри сети фиксирован. Занятый на машине порт меняется одной строкой в `.env`, без правок compose, override и команд.
+
+| Переменная | Default | Порт в контейнере |
+|------------|---------|-------------------|
+| `FRONTEND_PORT` | `3000` | 3000 |
+| `BACKEND_PORT` | `8000` | 8000 |
+| `ML_SERVICE_PORT` | `8001` | 8000 |
+| `POSTGRES_PUBLISH_PORT` | `5432` | 5432 |
+| `REDIS_PUBLISH_PORT` | `6379` | 6379 |
+| `MINIO_API_PORT` | `9000` | 9000 |
+| `MINIO_CONSOLE_PORT` | `9001` | 9001 |
+
+`POSTGRES_PORT` и `REDIS_PORT` — это порты внутри сети: по ним backend подключается к БД и Redis. Для обхода занятого порта на хосте они не подходят, для этого есть `*_PUBLISH_PORT`.
+
+Если в старом `.env` был, например, `POSTGRES_PORT=5433`, чтобы подключаться к базе с хоста, перенесите это значение в `POSTGRES_PUBLISH_PORT`, а `POSTGRES_PORT` верните в `5432`; иначе backend в контейнере пойдёт на несуществующий порт.
+
 ## Локальный запуск vs docker
 
 | Контекст | `POSTGRES_HOST` | `ML_SERVICE_URL` | `S3_ENDPOINT_URL` / `S3_PRESIGN_ENDPOINT_URL` |
 |----------|-----------------|------------------|-----------------------------------------------|
 | Контейнеры compose | `db` | `http://ml-service:8000` | `http://minio:9000` |
-| Процессы на хосте | `localhost` | `http://localhost:8001` (порт publish ml-service) | `http://localhost:9000` (и оба URL, если presign для процесса на хосте) |
+| Процессы на хосте | `localhost` | `http://localhost:8001` (порт publish ml-service, `ML_SERVICE_PORT`) | `http://localhost:9000` (и оба URL, если presign для процесса на хосте) |
 
 `API_MAIN_URL` / `API_ML_URL` в `.env` относятся к **frontend** (Next.js rewrites), backend их не читает.

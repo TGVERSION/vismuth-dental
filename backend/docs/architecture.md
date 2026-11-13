@@ -77,8 +77,7 @@ flowchart LR
 
 - `env_file: .env` из корня `vismuth/`.
 - Внутри сети контейнеров: `POSTGRES_HOST=db`, `REDIS_HOST=redis`, `S3_ENDPOINT_URL=http://minio:9000`, не IP хоста.
-- Порт API на хост: `BACKEND_PORT` (по умолчанию 8000).
-- MinIO на хост: `MINIO_API_PORT` (9000), консоль `MINIO_CONSOLE_PORT` (9001).
+- Порты на хост задаются в `.env` и подставляются в compose: `FRONTEND_PORT` (3000), `BACKEND_PORT` (8000), `ML_SERVICE_PORT` (8001), `POSTGRES_PUBLISH_PORT` (5432), `REDIS_PUBLISH_PORT` (6379); MinIO — `MINIO_API_PORT` (9000) и `MINIO_CONSOLE_PORT` (9001). Порты внутри сети фиксированы, поэтому смена публикуемого порта не требует правок команд.
 
 ## Подключение сотрудников (0018_clinic_join)
 

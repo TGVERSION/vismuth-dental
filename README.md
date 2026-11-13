@@ -10,10 +10,13 @@
 docker compose up -d --build
 ```
 
-- Frontend: http://localhost:3000 (порт из compose)
-- Backend API: http://localhost:8000
+- Frontend: http://localhost:3000 (порт из `.env`: `FRONTEND_PORT`)
+- Backend API: http://localhost:8000 (`BACKEND_PORT`)
 - Swagger: http://localhost:8000/docs
-- MinIO/Silo (PDF клинреков): API http://localhost:9000, консоль http://localhost:9001
+- ml-service: http://localhost:8001 (`ML_SERVICE_PORT`)
+- MinIO/Silo (PDF клинреков): API http://localhost:9000 (`MINIO_API_PORT`), консоль http://localhost:9001 (`MINIO_CONSOLE_PORT`)
+
+Порты на хосте задаются в `.env`; внутри docker-сети они фиксированы, поэтому при занятом порте достаточно поменять переменную и перезапустить `docker compose up -d`.
 
 Опционально — наполнить бакет клиническими рекомендациями с Минздрава (идемпотентно):
 

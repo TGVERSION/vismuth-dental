@@ -1,3 +1,9 @@
+# Порты на хосте (левая часть publish) берутся из .env:
+#   FRONTEND_PORT, BACKEND_PORT, ML_SERVICE_PORT, POSTGRES_PUBLISH_PORT,
+#   REDIS_PUBLISH_PORT, MINIO_API_PORT, MINIO_CONSOLE_PORT.
+# Внутри docker-сети порты фиксированы (frontend 3000, backend 8000,
+# ml-service 8000, postgres 5432, redis 6379) и от этих переменных не зависят.
+# Значения после `:-` — умолчания, поэтому стек поднимется и без .env.
 services:
   db:
     image: postgres:16
@@ -10,7 +16,7 @@ services:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     ports:
-      - "${POSTGRES_PORT:-5432}:5432"
+      - "${POSTGRES_PUBLISH_PORT:-5432}:5432"
     volumes:
       - vismuth_pg_data:/var/lib/postgresql/data
     networks:
@@ -78,7 +84,7 @@ services:
     container_name: vismuth-frontend
     restart: unless-stopped
     ports:
-      - "3000:3000"
+      - "${FRONTEND_PORT:-3000}:3000"
     networks:
       - vismuth-net
 
@@ -91,7 +97,7 @@ services:
     env_file:
       - .env
     ports:
-      - "8001:8000"
+      - "${ML_SERVICE_PORT:-8001}:8000"
     volumes:
       - "./ml-service/autocomplete_model:/app/autocomplete_model"
       - "./ml-service/rosberta_chromadb:/app/rosberta_chromadb"
@@ -107,7 +113,7 @@ services:
     container_name: vismuth-redis
     restart: unless-stopped
     ports:
-      - "${REDIS_PORT:-6379}:6379"
+      - "${REDIS_PUBLISH_PORT:-6379}:6379"
     command: ["redis-server", "--appendonly", "yes"]
     volumes:
       - vismuth_redis_data:/data

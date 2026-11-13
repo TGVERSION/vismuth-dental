@@ -94,6 +94,8 @@ export const QuestionnaireListColumn = ({
           items={items}
           selectedId={selectedId}
           utcOffsetMinutes={utcOffsetMinutes}
+          showAppointmentTime
+          groupByAppointment
           hrefFor={(id) => `/questionnaires?id=${encodeURIComponent(id)}`}
         />
       </div>
@@ -115,7 +117,7 @@ export const QuestionnaireListColumn = ({
           date={date}
           onDateChange={onDateChange}
           markedDates={markedDates}
-          dateLabel="Дата заполнения"
+          dateLabel="Дата приёма"
           searchLabel="ФИО пациента или код"
           onClearDate={() => onDateChange('')}
         />

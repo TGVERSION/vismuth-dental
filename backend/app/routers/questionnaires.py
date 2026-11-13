@@ -210,6 +210,7 @@ async def list_questionnaires(
     by_completion: bool = False,
     utc_offset_minutes: int = Query(default=0, ge=-840, le=840),
     exclude_dental: bool = False,
+    by_appointment: bool = False,
 ) -> List[DoctorQuestionnaireListItem]:
     membership = await get_active_doctor_membership(current_user, db)
 
@@ -235,6 +236,10 @@ async def list_questionnaires(
             local_zone = timezone(timedelta(minutes=utc_offset_minutes))
             start = datetime.combine(date_filter, time.min, tzinfo=local_zone).astimezone(timezone.utc)
             stmt = stmt.where(Questionnaire.completed_at >= start, Questionnaire.completed_at < start + timedelta(days=1))
+    elif by_appointment:
+        stmt = stmt.where(Questionnaire.appointment_date.is_not(None))
+        if date_filter is not None:
+            stmt = stmt.where(Questionnaire.appointment_date == date_filter)
     elif date_filter is not None or not code:
         stmt = stmt.where(_on_day(date_filter or date.today()))
 
@@ -243,11 +248,16 @@ async def list_questionnaires(
     if name and name.strip():
         stmt = stmt.where(_name_matches(name))
 
-    stmt = (
-        stmt.order_by(Questionnaire.completed_at.desc(), Questionnaire.id.desc()).limit(300)
-        if by_completion
-        else stmt.order_by(Questionnaire.appointment_time.asc().nulls_last(), Questionnaire.completed_at.desc())
-    )
+    if by_completion:
+        stmt = stmt.order_by(Questionnaire.completed_at.desc(), Questionnaire.id.desc()).limit(300)
+    elif by_appointment:
+        stmt = stmt.order_by(
+            Questionnaire.appointment_date.asc().nulls_last(),
+            Questionnaire.appointment_time.asc().nulls_last(),
+            Questionnaire.id.asc(),
+        )
+    else:
+        stmt = stmt.order_by(Questionnaire.appointment_time.asc().nulls_last(), Questionnaire.completed_at.desc())
     result = await db.execute(stmt)
     rows = result.all()
     return [

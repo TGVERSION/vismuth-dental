@@ -23,16 +23,13 @@ export const QuestionnairesScreen = () => {
   const [utcOffsetMinutes] = useState(() => -new Date().getTimezoneOffset());
   const markedDates = useQuestionnaireDates('/questionnaires', {
     ...parseSearchQuery(search),
-    by_completion: 'true',
     exclude_dental: 'true',
-    utc_offset_minutes: String(utcOffsetMinutes),
   });
 
   const list = useDoctorQuestionnaireList({
     search,
     date,
     visitType: '',
-    utcOffsetMinutes,
   });
   const questionnaire = useDoctorQuestionnaire(selectedId);
 

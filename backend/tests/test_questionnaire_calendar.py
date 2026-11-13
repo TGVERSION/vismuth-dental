@@ -102,6 +102,36 @@ def test_doctor_completion_mode_keeps_scope_and_orders_by_completion(monkeypatch
     )) == []
 
 
+@pytest.mark.parametrize('day', [None, date(2026, 11, 13)])
+def test_doctor_appointment_mode_sorts_by_date_and_time(monkeypatch, day):
+    from app.routers import questionnaires
+
+    member = SimpleNamespace(id=uuid4(), clinic_id=uuid4())
+
+    async def membership(*args):
+        return member
+
+    monkeypatch.setattr(questionnaires, 'get_active_doctor_membership', membership)
+
+    class DB:
+        async def execute(self, stmt):
+            compiled = stmt.compile(dialect=postgresql.dialect())
+            sql = str(compiled)
+            assert member.id in compiled.params.values()
+            assert member.clinic_id in compiled.params.values()
+            assert 'dental' in compiled.params.values()
+            assert ('questionnaire.appointment_date =' in sql) == (day is not None)
+            assert 'questionnaire.appointment_date IS NOT NULL' in sql
+            assert 'ORDER BY questionnaire.appointment_date ASC NULLS LAST' in sql
+            assert 'questionnaire.appointment_time ASC NULLS LAST' in sql
+            return SimpleNamespace(all=lambda: [])
+
+    assert asyncio.run(questionnaires.list_questionnaires(
+        name=None, date_filter=day, visit_type=None, code=None,
+        current_user=None, db=DB(), by_appointment=True, exclude_dental=True,
+    )) == []
+
+
 def test_admin_completion_range_uses_local_days():
     day = date(2026, 11, 11)
     query = completed_query(

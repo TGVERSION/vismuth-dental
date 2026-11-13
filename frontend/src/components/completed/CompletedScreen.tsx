@@ -292,6 +292,7 @@ export function CompletedScreen() {
               selectedId={selected}
               onSelect={select}
               utcOffsetMinutes={utcOffsetMinutes}
+                showAppointmentTime
             />
           ) : (
             <>

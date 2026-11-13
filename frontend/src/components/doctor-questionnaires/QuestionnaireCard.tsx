@@ -89,10 +89,12 @@ export const QuestionnaireCard = ({
               <GastroPatientQuestions structured={questionnaire.structured} />
             </>
           ) : null}
-          <ProtocolActionButton
-            questionnaireId={questionnaire.id}
-            protocolId={questionnaire.protocol_id}
-          />
+          {questionnaire.protocol_id && (
+            <ProtocolActionButton
+              questionnaireId={questionnaire.id}
+              protocolId={questionnaire.protocol_id}
+            />
+          )}
         </>
       ) : (
         <p className="py-10 text-center text-[#8B8B8B]">

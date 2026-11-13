@@ -34,8 +34,7 @@ export const useDoctorQuestionnaireList = ({
   search,
   date,
   visitType,
-  utcOffsetMinutes,
-}: QuestionnaireListFilters & { utcOffsetMinutes: number }) => {
+}: QuestionnaireListFilters) => {
   const [debouncedSearch, setDebouncedSearch] = useState(search);
   const [reloadKey, setReloadKey] = useState(0);
   const [result, setResult] = useState<ListResult | null>(null);
@@ -51,11 +50,10 @@ export const useDoctorQuestionnaireList = ({
   const query = useMemo(
     () => ({
       ...buildListQuery({ search: debouncedSearch, date, visitType }),
-      by_completion: true,
+      by_appointment: true,
       exclude_dental: true,
-      utc_offset_minutes: utcOffsetMinutes,
     }),
-    [debouncedSearch, date, visitType, utcOffsetMinutes],
+    [debouncedSearch, date, visitType],
   );
   const filterKey = JSON.stringify(query);
   const requestKey = `${filterKey}#${reloadKey}`;

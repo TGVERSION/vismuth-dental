@@ -10,6 +10,7 @@ import { PASSWORD_MIN_LENGTH } from '@/lib/clinics';
 import { CustomDropdown } from '@/components/CustomDropdown';
 import { Checkbox } from '@/components/Checkbox';
 const input = 'vismuth-input mt-1 w-full';
+const registrationSpecializationCodes = new Set(['gastroenterologist', 'dentist']);
 export function ClinicJoinForm({ token }: { token: string }) {
   const router = useRouter();
   const auth = useAuthStore();
@@ -36,9 +37,16 @@ export function ClinicJoinForm({ token }: { token: string }) {
       .preview(token)
       .then((p) => {
         if (current) {
-          setPreview(p);
+          setPreview({
+            ...p,
+            specializations: p.specializations.filter((specialization) =>
+              specialization.code !== null &&
+              registrationSpecializationCodes.has(specialization.code),
+            ),
+          });
           setError('');
           setRole(p.roles[0]?.value ?? 'operator');
+          setSpecializations([]);
         }
       })
       .catch(() => {

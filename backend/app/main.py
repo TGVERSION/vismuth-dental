@@ -8,7 +8,7 @@ from .routers.dictionaries import router as dictionaries_router
 from .routers.mkb10 import router as mkb10_router
 from .routers.ml_autocomplete import router as ml_autocomplete_router
 from .routers.ml_clinrec_check import router as ml_clinrec_check_router
-from .routers.ml_mkb_code import router as ml_mkb_code_router
+from .routers.ml_mkb_code import MKB_NO_MATCH_EXAMPLE, router as ml_mkb_code_router
 from .routers.ml_fullness import router as ml_fullness_router
 from .routers.protocol_fields_main import router as protocol_fields_main_router
 from .routers.protocols import router as protocols_router
@@ -158,6 +158,19 @@ app.include_router(mkb10_router)
 app.include_router(ml_autocomplete_router)
 app.include_router(ml_clinrec_check_router)
 app.include_router(ml_mkb_code_router)
+
+# FastAPI drops null values from OpenAPI examples while serializing the schema.
+_generate_openapi = app.openapi
+
+
+def openapi_with_mkb_example():
+    schema = _generate_openapi()
+    response = schema["paths"]["/ml_mkb_code"]["post"]["responses"]["200"]
+    response["content"]["application/json"]["examples"]["no_match"]["value"] = MKB_NO_MATCH_EXAMPLE
+    return schema
+
+
+app.openapi = openapi_with_mkb_example
 app.include_router(ml_fullness_router)
 app.include_router(service_user_router)
 app.include_router(roles_router)

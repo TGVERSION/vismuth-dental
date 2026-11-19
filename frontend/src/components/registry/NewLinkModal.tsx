@@ -5,6 +5,7 @@ import { mainApi } from '@/api';
 import { ApiError } from '@/api/base-client';
 import { completedApi } from '@/api/completed-api';
 import { ModalShell } from '@/components/settings/clinics/ModalShell';
+import { DateField } from '@/components/DateField';
 import { INPUT_CLASS } from '@/components/settings/clinics/fields';
 import { PatientLinkResult } from '@/components/doctor-questionnaires/PatientLinkResult';
 import { LinkQrCard } from '@/components/doctor-questionnaires/LinkQrCard';
@@ -131,25 +132,15 @@ export const NewLinkModal = ({ clinicId, onClose }: NewLinkModalProps) => {
               </p>
             )}
           </div>
-          <div className="group relative">
-            <input
-              type="date"
-              className={`${INPUT_CLASS} ${fieldFillClass(birthDate)} ${birthDate ? '' : 'text-transparent! focus:text-[var(--ui-color-alabaster-dark-800)]!'}`}
-              aria-label="Дата рождения"
-              value={birthDate}
-              onChange={(event) => setBirthDate(event.target.value)}
-              max={toDateInputValue(new Date())}
-              disabled={isSaving}
-            />
-            {!birthDate && (
-              <span
-                aria-hidden="true"
-                className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-[var(--ui-color-alabaster-800)] group-focus-within:hidden"
-              >
-                Дата рождения
-              </span>
-            )}
-          </div>
+          <DateField
+            birthDate={{ autoComplete: 'off' }}
+            aria-label="Дата рождения"
+            placeholder="Дата рождения"
+            value={birthDate}
+            onChange={setBirthDate}
+            max={toDateInputValue(new Date())}
+            disabled={isSaving}
+          />
           <button
             type="submit"
             className="vismuth-button whitespace-nowrap"

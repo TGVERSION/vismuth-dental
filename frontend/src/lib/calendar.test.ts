@@ -4,7 +4,22 @@ import {
   formatDateLabel,
   formatDateNumeric,
   formatDayMonth,
+  parseDateNumeric,
 } from './calendar';
+
+describe('parseDateNumeric', () => {
+  it('принимает дату с точками и ввод с цифровой клавиатуры', () => {
+    expect(parseDateNumeric('29.02.2000')).toBe('2000-02-29');
+    expect(parseDateNumeric('29022000')).toBe('2000-02-29');
+    expect(parseDateNumeric('2000-02-29')).toBe('2000-02-29');
+  });
+
+  it('отклоняет неполные и несуществующие даты', () => {
+    for (const value of ['29.02', '29.02.1900', '31.04.2000', '01.01.0000']) {
+      expect(parseDateNumeric(value)).toBe('');
+    }
+  });
+});
 
 describe('buildCalendarMonths', () => {
   it('покрывает все месяцы диапазона', () => {

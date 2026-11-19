@@ -15,6 +15,7 @@ import {
   buildCalendarMonths,
   formatDateLabel,
   formatDateNumeric,
+  parseDateNumeric,
 } from '@/lib/calendar';
 import { fieldFillClass } from '@/lib/field-fill';
 import { toDateInputValue } from '@/lib/questionnaire';
@@ -39,6 +40,11 @@ export interface DateFieldProps {
   /** С какого края поля раскрывается календарь. */
   popoverAlign?: 'left' | 'right';
   markedDates?: readonly string[];
+  /** Ввод даты рождения с клавиатуры и быстрый переход к месяцу и году. */
+  birthDate?: {
+    required?: boolean;
+    autoComplete?: 'bday' | 'off';
+  };
   'aria-label'?: string;
 }
 
@@ -52,6 +58,11 @@ const TIME_SLOTS = Array.from(
   (_, index) =>
     `${String(Math.floor(index / 4)).padStart(2, '0')}:${String((index % 4) * 15).padStart(2, '0')}`,
 );
+
+const BIRTH_CALENDAR_START = '1900-01-01';
+
+const getMonthKey = (month: ReturnType<typeof buildCalendarMonths>[number]) =>
+  month.days.find(Boolean)?.date.slice(0, 7) ?? '';
 
 /**
  * Поле даты с выпадающим календарём в стиле зоны врача. Фон — по правилу
@@ -70,31 +81,59 @@ export const DateField = ({
   formatValue = formatDateLabel,
   popoverAlign = 'right',
   markedDates = [],
+  birthDate,
   'aria-label': ariaLabel,
 }: DateFieldProps) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
   const panelId = useId();
+  const errorId = useId();
   const [isOpen, setIsOpen] = useState(false);
   const [showTime, setShowTime] = useState(false);
   const [draftDate, setDraftDate] = useState('');
   const [draftTime, setDraftTime] = useState('');
+  const [manualDraft, setManualDraft] = useState<{
+    text: string;
+    date: string;
+  }>();
+  const [showInputError, setShowInputError] = useState(false);
+  const [inputFocused, setInputFocused] = useState(false);
+  const isBirthDate = Boolean(birthDate);
+  const todayIso = toDateInputValue(new Date());
+  const firstBirthDate = min ?? BIRTH_CALENDAR_START;
+  const lastBirthDate = max ?? todayIso;
 
   const months = useMemo(() => {
     const fallback = defaultRange();
-    return buildCalendarMonths(min ?? fallback.min, max ?? fallback.max);
-  }, [min, max]);
+    return buildCalendarMonths(
+      isBirthDate ? firstBirthDate : (min ?? fallback.min),
+      isBirthDate ? lastBirthDate : (max ?? fallback.max),
+    );
+  }, [min, max, isBirthDate, firstBirthDate, lastBirthDate]);
 
   const monthIndexOf = (date: string): number => {
     const prefix = date.slice(0, 7);
-    const index = months.findIndex((month) =>
-      month.days.some((day) => day?.date.startsWith(prefix)),
-    );
+    const index = months.findIndex((month) => getMonthKey(month) === prefix);
     return index === -1 ? 0 : index;
   };
 
-  const todayIso = toDateInputValue(new Date());
+  const raw =
+    manualDraft?.date === value ? manualDraft.text : formatDateNumeric(value);
+  const parsed = isBirthDate ? parseDateNumeric(raw) : '';
+  let inputError = '';
+  if (isBirthDate && raw.trim()) {
+    if (!parsed) inputError = 'Укажите корректную дату в формате ДД.ММ.ГГГГ';
+    else if (parsed > lastBirthDate)
+      inputError = 'Дата рождения не может быть в будущем';
+    else if (min && parsed < min)
+      inputError = 'Дата рождения вне доступного диапазона';
+  }
+
+  useLayoutEffect(() => {
+    inputRef.current?.setCustomValidity(inputError);
+  }, [inputError]);
 
   const [monthIndex, setMonthIndex] = useState(() =>
     monthIndexOf(value || todayIso),
@@ -129,7 +168,7 @@ export const DateField = ({
 
   useLayoutEffect(() => {
     const panel = panelRef.current;
-    const trigger = triggerRef.current;
+    const trigger = isBirthDate ? containerRef.current : triggerRef.current;
     if (!isOpen || !panel || !trigger) return;
 
     const place = () => {
@@ -168,14 +207,19 @@ export const DateField = ({
       window.visualViewport?.removeEventListener('resize', place);
       window.visualViewport?.removeEventListener('scroll', place);
     };
-  }, [isOpen, popoverAlign, monthIndex, showTime]);
+  }, [isOpen, popoverAlign, monthIndex, showTime, isBirthDate]);
 
   useEffect(() => {
     if (isOpen) panelRef.current?.focus({ preventScroll: true });
   }, [isOpen, showTime]);
 
   const open = () => {
-    setMonthIndex(monthIndexOf(value || todayIso));
+    const date = value || todayIso;
+    const calendarDate =
+      isBirthDate && (date < firstBirthDate || date > lastBirthDate)
+        ? lastBirthDate
+        : date;
+    setMonthIndex(monthIndexOf(calendarDate));
     setDraftDate(value);
     setDraftTime(timePicker?.value ?? '');
     setShowTime(false);
@@ -183,6 +227,8 @@ export const DateField = ({
   };
 
   const finish = (date: string, time = '') => {
+    setManualDraft(undefined);
+    setShowInputError(false);
     if (timePicker) timePicker.onChange(date, time);
     else onChange(date);
     setIsOpen(false);
@@ -200,38 +246,106 @@ export const DateField = ({
   const title = month.title.includes(' ')
     ? month.title
     : `${month.title} ${month.days.find(Boolean)?.date.slice(0, 4)}`;
+  const monthKey = getMonthKey(month);
+  const year = monthKey.slice(0, 4);
+  const yearMonths =
+    isBirthDate && isOpen
+      ? months.filter((item) => getMonthKey(item).startsWith(year))
+      : [];
+  const firstYear = Number(firstBirthDate.slice(0, 4));
+  const lastYear = Number(lastBirthDate.slice(0, 4));
 
   return (
     <div ref={containerRef} className="relative">
-      <button
-        ref={triggerRef}
-        id={id}
-        type="button"
-        onClick={open}
-        aria-haspopup="dialog"
-        aria-expanded={isOpen}
-        aria-controls={isOpen ? panelId : undefined}
-        disabled={disabled}
-        aria-label={ariaLabel}
-        data-filled={Boolean(display) || undefined}
-        className={`vismuth-input flex w-full cursor-pointer items-center justify-between gap-2 ${fieldFillClass(display)} text-left`}
-      >
-        <span
-          className={
-            display
-              ? 'text-[var(--ui-color-alabaster-dark-800)]'
-              : 'text-[var(--ui-color-alabaster-800)]'
-          }
+      {birthDate ? (
+        <>
+          <div className="relative">
+            <input
+              ref={inputRef}
+              id={id}
+              type="text"
+              inputMode="numeric"
+              autoComplete={birthDate.autoComplete}
+              aria-label={ariaLabel ?? 'Дата рождения'}
+              aria-invalid={Boolean(showInputError && inputError) || undefined}
+              aria-describedby={
+                showInputError && inputError ? errorId : undefined
+              }
+              placeholder={inputFocused ? 'ДД.ММ.ГГГГ' : placeholder}
+              value={raw}
+              required={birthDate.required}
+              disabled={disabled}
+              onChange={(event) => {
+                const text = event.target.value;
+                const iso = parseDateNumeric(text);
+                const date =
+                  iso <= lastBirthDate && (!min || iso >= min) ? iso : '';
+                setManualDraft({ text, date });
+                onChange(date);
+              }}
+              onFocus={() => setInputFocused(true)}
+              onBlur={() => {
+                setInputFocused(false);
+                setShowInputError(true);
+                if (value) setManualDraft(undefined);
+              }}
+              onInvalid={() => setShowInputError(true)}
+              className={`vismuth-input pr-12! ${fieldFillClass(raw)}`}
+            />
+            <button
+              ref={triggerRef}
+              type="button"
+              onClick={open}
+              aria-label="Открыть календарь даты рождения"
+              aria-haspopup="dialog"
+              aria-expanded={isOpen}
+              aria-controls={isOpen ? panelId : undefined}
+              disabled={disabled}
+              className="vismuth-icon-button absolute top-1/2 right-2 -translate-y-1/2"
+            >
+              <Image src="/calendar.svg" alt="" width={18} height={18} />
+            </button>
+          </div>
+          {showInputError && inputError && (
+            <p
+              id={errorId}
+              className="mt-1 text-xs text-[var(--ui-color-red-600)]"
+            >
+              {inputError}
+            </p>
+          )}
+        </>
+      ) : (
+        <button
+          ref={triggerRef}
+          id={id}
+          type="button"
+          onClick={open}
+          aria-haspopup="dialog"
+          aria-expanded={isOpen}
+          aria-controls={isOpen ? panelId : undefined}
+          disabled={disabled}
+          aria-label={ariaLabel}
+          data-filled={Boolean(display) || undefined}
+          className={`vismuth-input flex w-full cursor-pointer items-center justify-between gap-2 ${fieldFillClass(display)} text-left`}
         >
-          {display || placeholder}
-        </span>
-        <Image
-          src={timePicker ? '/timeColor.svg' : '/calendar.svg'}
-          alt=""
-          width={18}
-          height={18}
-        />
-      </button>
+          <span
+            className={
+              display
+                ? 'text-[var(--ui-color-alabaster-dark-800)]'
+                : 'text-[var(--ui-color-alabaster-800)]'
+            }
+          >
+            {display || placeholder}
+          </span>
+          <Image
+            src={timePicker ? '/timeColor.svg' : '/calendar.svg'}
+            alt=""
+            width={18}
+            height={18}
+          />
+        </button>
+      )}
 
       {isOpen &&
         createPortal(
@@ -241,6 +355,7 @@ export const DateField = ({
             role="dialog"
             aria-label={timePicker ? 'Выбор даты и времени' : 'Выбор даты'}
             tabIndex={-1}
+            onClick={(event) => event.stopPropagation()}
             className="fixed z-[var(--ui-z-popover)] flex flex-col overflow-hidden rounded-[var(--ui-radius-lg)] bg-[var(--ui-color-alabaster-50)] p-3 shadow-[var(--ui-shadow)] outline-none"
           >
             <div className="min-h-0 overflow-y-auto">
@@ -291,9 +406,57 @@ export const DateField = ({
                     >
                       ‹
                     </button>
-                    <span className="text-sm font-medium text-[var(--ui-color-alabaster-dark-800)]">
-                      {title}
-                    </span>
+                    {birthDate ? (
+                      <div className="flex min-w-0 gap-1">
+                        <select
+                          aria-label="Месяц рождения"
+                          className="vismuth-input min-w-0 px-2! text-sm!"
+                          value={monthKey}
+                          onChange={(event) =>
+                            setMonthIndex(monthIndexOf(event.target.value))
+                          }
+                        >
+                          {yearMonths.map((item) => (
+                            <option
+                              key={getMonthKey(item)}
+                              value={getMonthKey(item)}
+                            >
+                              {item.title.split(' ')[0]}
+                            </option>
+                          ))}
+                        </select>
+                        <select
+                          aria-label="Год рождения"
+                          className="vismuth-input w-auto! px-2! text-sm!"
+                          value={year}
+                          onChange={(event) => {
+                            const target =
+                              event.target.value + monthKey.slice(4);
+                            const firstMonth = firstBirthDate.slice(0, 7);
+                            const lastMonth = lastBirthDate.slice(0, 7);
+                            const nextMonth = [
+                              firstMonth,
+                              target,
+                              lastMonth,
+                            ].sort()[1];
+                            setMonthIndex(monthIndexOf(nextMonth));
+                          }}
+                        >
+                          {Array.from(
+                            { length: lastYear - firstYear + 1 },
+                            (_, index) => lastYear - index,
+                          ).map((option) => (
+                            <option key={option} value={option}>
+                              {option}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    ) : (
+                      <span className="text-sm font-medium text-[var(--ui-color-alabaster-dark-800)]">
+                        {title}
+                      </span>
+                    )}
                     <button
                       type="button"
                       onClick={() =>

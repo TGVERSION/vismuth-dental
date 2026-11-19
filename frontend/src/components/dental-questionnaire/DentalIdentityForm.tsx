@@ -1,7 +1,8 @@
 'use client';
 
-import { useRef, type FormEvent } from 'react';
+import { useId, useRef, useState, type FormEvent } from 'react';
 import type { QuestionnaireStep, QuestionnaireStepAnswer } from '@/api';
+import { DateField } from '@/components/DateField';
 import { toDateInputValue } from '@/lib/questionnaire';
 import { DentalButton, DentalError } from './DentalShell';
 
@@ -32,16 +33,18 @@ export function DentalIdentityForm({
   ) => React.ReactNode;
 }) {
   const formRef = useRef<HTMLFormElement>(null);
+  const birthDateId = useId();
+  const [birthDate, setBirthDate] = useState('');
   const submit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const values = new FormData(event.currentTarget);
     const texts = Object.fromEntries(
-      [...fields.map(({ key }) => key), 'about.birth_date'].map((key) => [
-        key,
-        String(values.get(key) ?? '').trim(),
-      ]),
+      fields.map(({ key }) => [key, String(values.get(key) ?? '').trim()]),
     );
-    onSubmit({ step_key: step.step_key, texts });
+    onSubmit({
+      step_key: step.step_key,
+      texts: { ...texts, 'about.birth_date': birthDate },
+    });
   };
 
   return renderShell(
@@ -59,18 +62,20 @@ export function DentalIdentityForm({
           />
         </label>
       ))}
-      <label className="block space-y-2">
-        <span>Дата рождения</span>
-        <input
-          className="q-field w-full"
-          type="date"
-          name="about.birth_date"
-          autoComplete="bday"
+      <div className="space-y-2">
+        <label className="block" htmlFor={birthDateId}>
+          Дата рождения
+        </label>
+        <DateField
+          id={birthDateId}
+          birthDate={{ required: true, autoComplete: 'bday' }}
+          placeholder="ДД.ММ.ГГГГ"
+          value={birthDate}
+          onChange={setBirthDate}
           max={toDateInputValue(new Date())}
-          required
           disabled={busy}
         />
-      </label>
+      </div>
     </form>,
     <>
       <DentalError message={error} />

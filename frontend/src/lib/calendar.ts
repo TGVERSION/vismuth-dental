@@ -156,5 +156,20 @@ export const formatDateNumeric = (value: string): string => {
   const [year, month, day] = value.split('-').map(Number);
   if (!year || !month || !day) return '';
 
-  return `${pad(day)}.${pad(month)}.${year}`;
+  return `${pad(day)}.${pad(month)}.${String(year).padStart(4, '0')}`;
+};
+
+/** Ручной ввод с точками или без них, а также ISO-значение из автозаполнения. */
+export const parseDateNumeric = (value: string): string => {
+  const text = value.trim();
+  const match =
+    /^(\d{2})\.(\d{2})\.(\d{4})$/.exec(text) ??
+    /^(\d{2})(\d{2})(\d{4})$/.exec(text);
+  const iso = match ? `${match[3]}-${match[2]}-${match[1]}` : text;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(iso) || iso.startsWith('0000-')) return '';
+  const date = new Date(`${iso}T00:00:00Z`);
+  return Number.isFinite(date.getTime()) &&
+    date.toISOString().slice(0, 10) === iso
+    ? iso
+    : '';
 };

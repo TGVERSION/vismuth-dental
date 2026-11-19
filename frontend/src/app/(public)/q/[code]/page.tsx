@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { ClinicDentalQuestionnaireApp } from '@/components/dental-questionnaire/ClinicDentalQuestionnaireApp';
 import { getQuestionnaireLink } from '@/api/server-api';
 import { QuestionnaireApp } from '@/components/questionnaire/QuestionnaireApp';
 
@@ -25,6 +26,9 @@ export async function generateMetadata({
 export default async function QuestionnairePage({ params }: PageProps) {
   const { code } = await params;
   const link = await getQuestionnaireLink(code);
+
+  if (code.startsWith('d.'))
+    return <ClinicDentalQuestionnaireApp slug={code} link={link} />;
 
   return <QuestionnaireApp slug={code} link={link} />;
 }

@@ -125,4 +125,5 @@ class ClinicPatientLinks(BaseModel):
     clinic_id: UUID
     clinic_name: str
     clinic_public_url: Optional[str] = None
+    dental_public_url: Optional[str] = None
     doctors: list[PatientLinkDoctor] = Field(default_factory=list)

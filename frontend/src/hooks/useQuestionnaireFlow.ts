@@ -47,6 +47,7 @@ const SUBMIT_ERROR = 'Не удалось отправить ответ. Поп�
 export type StartOutcome = 'started' | 'blocked' | 'failed' | 'skipped';
 
 export interface UseQuestionnaireFlowResult {
+  questionnaire: StoredQuestionnaire | null;
   /** Текущий шаг сервера. `null` — анкета не начата. */
   step: QuestionnaireStep | null;
   /** Идентификатор активной анкеты — ключ ленты чата. */
@@ -494,6 +495,7 @@ export const useQuestionnaireFlow = (
 
   return {
     step,
+    questionnaire,
     questionnaireId: questionnaire?.id ?? null,
     block: startBlock ?? linkBlock(link),
     isStarting,

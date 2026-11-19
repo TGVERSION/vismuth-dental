@@ -22,7 +22,8 @@ from ..schemas.questionnaire import (
     StepDescriptorResponse,
 )
 from ..services.clinic_access import compute_access_status
-from ..services.patient_link_context import load_appointment, validate_appointment_date
+from ..services.dental.flow import DentalAnswers, FIRST_STEP as DENTAL_FIRST_STEP
+from ..services.patient_link_context import DENTAL_CLINIC_PREFIX, load_appointment, validate_appointment_date
 from ..services.clinic_members import load_specializations_map
 from ..services.questionnaire_flow import (
     apply_answer,
@@ -99,6 +100,15 @@ async def _resolve_slug(
     db: AsyncSession,
     slug: str,
 ) -> tuple[Clinic, ClinicMembership | None]:
+    if slug.startswith(DENTAL_CLINIC_PREFIX):
+        clinic = (await db.execute(select(Clinic).where(
+            Clinic.public_slug == slug.removeprefix(DENTAL_CLINIC_PREFIX),
+            Clinic.deleted_at.is_(None),
+            Clinic.questionnaire_kind.in_(("dental", "mixed")),
+        ))).scalar_one_or_none()
+        if clinic is None:
+            raise HTTPException(404, "Link not found")
+        return clinic, None
     context = await load_appointment(db, slug)
     if context:
         clinic = (await db.execute(select(Clinic).where(Clinic.id == context.clinic_id, Clinic.deleted_at.is_(None)))).scalar_one_or_none()
@@ -173,8 +183,7 @@ async def _doctor_payload(
     description=(
         "Без JWT. Ищет slug в clinic.public_slug или membership.public_slug. "
         "При блокировке: blocked + block_code (subscription_expired | clinic_daily_limit | "
-        "doctor_inactive | invite_only — у стоматологической клиники анкета только по "
-        "персональной ссылке)."
+        "doctor_inactive | invite_only — прежний адрес стоматологической клиники)."
     ),
 )
 async def get_public_link(
@@ -183,8 +192,9 @@ async def get_public_link(
 ) -> PublicLinkResponse:
     clinic, membership = await _resolve_slug(db, slug)
     status_code, _ = compute_access_status(clinic.access_until, clinic.access_type)
+    dental = slug.startswith(DENTAL_CLINIC_PREFIX)
 
-    doctors_raw = await list_active_doctors(db, clinic.id)
+    doctors_raw = [] if dental else await list_active_doctors(db, clinic.id)
     doctors = [
         PublicLinkDoctor(
             membership_id=UUID(d["membership_id"]),
@@ -198,7 +208,7 @@ async def get_public_link(
         for d in doctors_raw
     ]
 
-    if clinic.questionnaire_kind == "dental":
+    if clinic.questionnaire_kind == "dental" and not dental:
         return PublicLinkResponse(
             link_type="doctor" if membership else "clinic",
             clinic_id=clinic.id,
@@ -321,16 +331,19 @@ async def create_questionnaire(
         )
 
     clinic, membership = await _resolve_slug(db, payload.slug)
+    dental = payload.slug.startswith(DENTAL_CLINIC_PREFIX)
     context = await load_appointment(db, payload.slug)
     if context:
         validate_appointment_date(context.appointment_date)
         if context.doctor_membership_id and payload.doctor_membership_id not in {None, context.doctor_membership_id}:
             raise HTTPException(409, 'Врач задан в ссылке')
-    if clinic.questionnaire_kind == "dental":
+    if clinic.questionnaire_kind == "dental" and not dental:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail={"code": INVITE_ONLY, "message": _invite_only_message(clinic)},
         )
+    if dental and payload.doctor_membership_id is not None:
+        raise HTTPException(400, "Стоматологическая анкета не привязана к врачу")
     ensure_clinic_subscription_active(clinic)
     await check_clinic_daily_limit(db, clinic)
     await check_device_limit(x_device_id)
@@ -368,11 +381,17 @@ async def create_questionnaire(
     raw_token = secrets.token_urlsafe(32)
     questionnaire = Questionnaire(
         clinic_id=clinic.id,
+        kind="dental" if dental else "general",
+        visit_type="primary" if dental else None,
         doctor_membership_id=doctor_membership.id if doctor_membership else None,
         session_token_hash=hash_session_token(raw_token),
         device_id_hash=hash_device_id(x_device_id),
         ip_hash=hash_ip(_client_ip(request)),
-        current_step="choose_doctor",
+        current_step=DENTAL_FIRST_STEP if dental else "choose_doctor",
+        dental_answers=(
+            DentalAnswers(flow_version=2, form_mode=True, clinic_link=True).model_dump()
+            if dental else None
+        ),
         appointment_date=context.appointment_date if context else None,
         appointment_time=context.appointment_time if context else None,
         gastro_answers={'appointment_context': context.model_dump(mode='json')} if context else None,
@@ -380,12 +399,10 @@ async def create_questionnaire(
     db.add(questionnaire)
     await db.flush()
 
-    doctor_preselected = doctor_membership is not None
-    questionnaire.current_step = await resolve_initial_step(
-        db,
-        questionnaire,
-        doctor_preselected=doctor_preselected,
-    )
+    if not dental:
+        questionnaire.current_step = await resolve_initial_step(
+            db, questionnaire, doctor_preselected=doctor_membership is not None,
+        )
     await db.commit()
     await db.refresh(questionnaire)
 

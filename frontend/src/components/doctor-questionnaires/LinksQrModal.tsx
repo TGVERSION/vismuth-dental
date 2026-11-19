@@ -1,18 +1,11 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
-import { flushSync } from 'react-dom';
+import { useEffect, useRef } from 'react';
 import { ModalShell } from '@/components/settings/clinics/ModalShell';
 import { useMyClinic } from '@/hooks/useMyClinic';
-import type { QuestionnaireLinkItem } from '@/lib/questionnaire-links';
+import { useQuestionnaireQrPrint } from '@/hooks/useQuestionnaireQrPrint';
 import { PatientLinkGenerator } from './PatientLinkGenerator';
 import { QrPrintSheet } from './QrPrintSheet';
-
-/**
- * Режим печати «только QR». Правила в globals.css действуют только под этим
- * атрибутом на `<html>`, поэтому печать протокола их не видит.
- */
-const PRINT_MODE_ATTR = 'data-print-mode';
 
 interface LinksQrModalProps {
   onClose: () => void;
@@ -29,9 +22,7 @@ interface LinksQrModalProps {
  */
 export const LinksQrModal = ({ onClose }: LinksQrModalProps) => {
   const { clinic, isLoading, error } = useMyClinic();
-  const [printItem, setPrintItem] = useState<QuestionnaireLinkItem | null>(
-    null,
-  );
+  const { print, printText } = useQuestionnaireQrPrint();
   const contentRef = useRef<HTMLDivElement>(null);
 
   // ModalShell фокус в окно не переносит: без этого клавиатура осталась бы
@@ -39,27 +30,6 @@ export const LinksQrModal = ({ onClose }: LinksQrModalProps) => {
   useEffect(() => {
     contentRef.current?.focus();
   }, []);
-
-  useEffect(() => {
-    const root = document.documentElement;
-    const endPrint = () => {
-      root.removeAttribute(PRINT_MODE_ATTR);
-      setPrintItem(null);
-    };
-
-    window.addEventListener('afterprint', endPrint);
-    return () => {
-      window.removeEventListener('afterprint', endPrint);
-      root.removeAttribute(PRINT_MODE_ATTR);
-    };
-  }, []);
-
-  const handlePrint = (item: QuestionnaireLinkItem) => {
-    // Лист должен оказаться в DOM до вызова print().
-    flushSync(() => setPrintItem(item));
-    document.documentElement.setAttribute(PRINT_MODE_ATTR, 'qr');
-    window.print();
-  };
 
   const content = () => {
     if (isLoading) {
@@ -98,7 +68,7 @@ export const LinksQrModal = ({ onClose }: LinksQrModalProps) => {
     return (
       <PatientLinkGenerator
         clinicId={clinic.clinic_id}
-        onPrint={handlePrint}
+        onPrint={print}
         compact
       />
     );
@@ -120,7 +90,7 @@ export const LinksQrModal = ({ onClose }: LinksQrModalProps) => {
         {content()}
       </div>
 
-      {printItem?.qrText ? <QrPrintSheet text={printItem.qrText} /> : null}
+      {printText ? <QrPrintSheet text={printText} /> : null}
     </ModalShell>
   );
 };

@@ -9,7 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from ..config import settings
 from ..db import get_db
 from ..deps import get_current_user, require_clinic_admin, require_clinic_registry
-from ..services.patient_link_context import PatientLinkSelection, validate_appointment_date
+from ..services.patient_link_context import DENTAL_CLINIC_PREFIX, PatientLinkSelection, validate_appointment_date
 from ..models.clinic import Clinic
 from ..models.clinic_invitation import ClinicInvitation
 from ..models.clinic_membership import ClinicMembership
@@ -699,8 +699,14 @@ async def clinic_patient_links(
     db: AsyncSession = Depends(get_db),
 ) -> ClinicPatientLinks:
     clinic = await get_clinic_or_404(db, clinic_id)
+    dental_url = (
+        _public_url(DENTAL_CLINIC_PREFIX + clinic.public_slug)
+        if clinic.questionnaire_kind in {'dental', 'mixed'} else None
+    )
     if clinic.questionnaire_kind not in {'general', 'mixed'}:
-        return ClinicPatientLinks(clinic_id=clinic.id, clinic_name=clinic.name)
+        return ClinicPatientLinks(
+            clinic_id=clinic.id, clinic_name=clinic.name, dental_public_url=dental_url,
+        )
     rows = (await db.execute(
         select(ClinicMembership, ServiceUser)
         .join(ServiceUser, ServiceUser.id == ClinicMembership.user_id)
@@ -713,6 +719,7 @@ async def clinic_patient_links(
     specs, _ = await load_specializations_map(db, membership_ids=[m.id for m, _ in rows])
     return ClinicPatientLinks(clinic_id=clinic.id, clinic_name=clinic.name,
         clinic_public_url=_public_url(clinic.public_slug),
+        dental_public_url=dental_url,
         doctors=[PatientLinkDoctor(membership_id=m.id, first_name=u.first_name,
             last_name=u.last_name, middle_name=u.middle_name, public_url=_public_url(m.public_slug),
             specializations=[SpecializationRead(**s) for s in specs.get(m.id, [])])

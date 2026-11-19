@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect } from 'react';
 import type { PublicInvite } from '@/api';
 import type { InviteLoadResult } from '@/api/server-api';
 import { brandStyle } from '@/lib/branding';
@@ -17,6 +18,7 @@ import { ChecklistStep } from './ChecklistStep';
 import { ChipGroupsStep } from './ChipGroupsStep';
 import { DentalDoneScreen } from './DentalDoneScreen';
 import { DentalFormShell } from './DentalFormShell';
+import { DentalIdentityForm } from './DentalIdentityForm';
 import { DentalReviewStep } from './DentalReviewStep';
 
 const inviteBranding = (invite: PublicInvite): ClinicBranding => ({
@@ -48,16 +50,24 @@ const AiBadge = () => (
   </p>
 );
 
-const InviteFlow = ({
+export const DentalFlow = ({
   invite,
   token,
+  clinic,
+  onComplete,
 }: {
-  invite: PublicInvite;
+  invite: Parameters<typeof useDentalQuestionnaire>[0];
   token: string;
+  clinic: ClinicBranding;
+  onComplete?: () => void;
 }) => {
-  const clinic = inviteBranding(invite);
   const flow = useDentalQuestionnaire(invite, token);
   const step = flow.step ? dentalFormStep(flow.step) : null;
+  const completed = step?.completed || step?.step_type === 'done';
+
+  useEffect(() => {
+    if (completed) onComplete?.();
+  }, [completed, onComplete]);
 
   if (flow.block)
     return <QuestionnaireStub state={flow.block} clinic={clinic} />;
@@ -80,6 +90,18 @@ const InviteFlow = ({
     </DentalFormShell>
   );
 
+  if (step.step_key === 'dental_identity') {
+    return (
+      <DentalIdentityForm
+        step={step}
+        busy={flow.isSubmitting}
+        error={flow.error}
+        onSubmit={(answer) => void flow.submit(answer)}
+        renderShell={renderShell}
+      />
+    );
+  }
+
   switch (dentalScreenFor(step)) {
     case 'done':
       return <DentalDoneScreen clinic={clinic} />;
@@ -99,6 +121,7 @@ const InviteFlow = ({
             })
           }
           intro={step.step_key === AI_STEP ? <AiBadge /> : undefined}
+          submitLabel={onComplete ? 'Далее' : undefined}
           onSkip={() => void flow.submit(buildSkipAnswer(step.step_key))}
           renderShell={renderShell}
         />
@@ -158,7 +181,7 @@ export const DentalQuestionnaireApp = ({
       <div data-questionnaire className="q-page" style={theme}>
         <div className="q-shell">
           {invite ? (
-            <InviteFlow invite={invite} token={token} />
+            <DentalFlow invite={invite} token={token} clinic={inviteBranding(invite)} />
           ) : (
             <QuestionnaireStub
               state={LOAD_BLOCK[result.status as 'not_found' | 'error']}

@@ -79,7 +79,10 @@ def _base_query(clinic_id: UUID):
     return select(Questionnaire).where(
         Questionnaire.clinic_id == clinic_id,
         Questionnaire.kind == "dental",
-        Questionnaire.invite_expires_at.is_not(None),
+        or_(
+            Questionnaire.invite_expires_at.is_not(None),
+            Questionnaire.status == "completed",
+        ),
         Questionnaire.status.in_(_VISIBLE_STATUSES),
     )
 
@@ -265,21 +268,7 @@ async def get_registry_questionnaire(
     _: ServiceUser = Depends(require_clinic_registry),
     db: AsyncSession = Depends(get_db),
 ) -> RegistryQuestionnaireDetail:
-    result = await db.execute(
-        select(Questionnaire).where(
-            Questionnaire.id == questionnaire_id,
-            Questionnaire.clinic_id == clinic_id,
-            Questionnaire.kind == "dental",
-            Questionnaire.status.in_(_VISIBLE_STATUSES),
-            or_(
-                Questionnaire.status == "completed",
-                Questionnaire.invite_expires_at.is_not(None),
-            ),
-        ),
-    )
-    questionnaire = result.scalar_one_or_none()
-    if questionnaire is None:
-        raise HTTPException(status_code=404, detail="Questionnaire not found")
+    questionnaire = await _load(db, clinic_id, questionnaire_id)
     return RegistryQuestionnaireDetail(
         **_item_fields(questionnaire),
         structured=questionnaire.structured,

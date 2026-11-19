@@ -75,3 +75,41 @@ def test_name_only_finishes_when_both_appointment_parts_prefilled(monkeypatch):
     monkeypatch.setattr(flow,'allocate_code',AsyncMock(return_value='1234'))
     descriptor,_,process=asyncio.run(flow.apply_answer(AsyncMock(),q,step_key='patient_info',first_name='Тест'))
     assert descriptor.completed and process and q.appointment_date==today and q.appointment_time=='12:30'
+
+
+@pytest.mark.parametrize("kind", ["dental", "mixed"])
+def test_clinic_dental_link_starts_separate_sessions(kind, monkeypatch):
+    from app.routers import public_questionnaire as public
+    from app.schemas.questionnaire import QuestionnaireCreateRequest
+
+    clinic = SimpleNamespace(id=uuid4(), questionnaire_kind=kind)
+    result = SimpleNamespace(scalar_one_or_none=lambda: clinic)
+    db = SimpleNamespace(
+        execute=AsyncMock(return_value=result), flush=AsyncMock(),
+        commit=AsyncMock(), refresh=AsyncMock(),
+    )
+    created = []
+
+    def add(questionnaire):
+        questionnaire.id = uuid4()
+        questionnaire.status = "in_progress"
+        created.append(questionnaire)
+
+    db.add = add
+    monkeypatch.setattr(public, "ensure_clinic_subscription_active", lambda clinic: None)
+    for check in ("check_clinic_daily_limit", "check_device_limit", "check_ip_limit"):
+        monkeypatch.setattr(public, check, AsyncMock())
+    monkeypatch.setattr(public, "_client_ip", lambda request: "192.0.2.1")
+
+    async def start():
+        return await public.create_questionnaire(
+            QuestionnaireCreateRequest(slug="d.example"), None, db, "test-device",
+        )
+
+    first, second = asyncio.run(start()), asyncio.run(start())
+    assert first.id != second.id
+    assert first.token != second.token
+    assert first.step.step_key == second.step.step_key == "dental_reason"
+    assert all(q.kind == "dental" and q.invite_expires_at is None for q in created)
+    assert all(q.dental_answers["clinic_link"] for q in created)
+    assert all(q.doctor_membership_id is None for q in created)

@@ -34,7 +34,9 @@ const BLOCKS: Partial<Record<DentalErrorKind, QuestionnaireBlock>> = {
   subscription: 'subscription_expired',
 };
 
-const inviteBlock = (invite: PublicInvite): QuestionnaireBlock | null => {
+type DentalSession = Pick<PublicInvite, 'questionnaire_id' | 'step' | 'blocked' | 'block_code'>;
+
+const inviteBlock = (invite: DentalSession): QuestionnaireBlock | null => {
   if (!invite.blocked) return null;
   return invite.block_code === 'invite_expired'
     ? 'invite_expired'
@@ -53,7 +55,7 @@ const inviteBlock = (invite: PublicInvite): QuestionnaireBlock | null => {
  *   попадает на следующий шаг. Шаг прежний — текст под кнопкой;
  * - сеть, таймаут, 5xx — текст под кнопкой, черновик ответа сохраняется.
  */
-export const useDentalQuestionnaire = (invite: PublicInvite, token: string) => {
+export const useDentalQuestionnaire = (invite: DentalSession, token: string) => {
   const [step, setStep] = useState<QuestionnaireStep | null>(invite.step);
   const [block, setBlock] = useState<QuestionnaireBlock | null>(
     inviteBlock(invite),

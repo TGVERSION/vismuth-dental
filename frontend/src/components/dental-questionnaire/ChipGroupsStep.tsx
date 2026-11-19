@@ -26,6 +26,7 @@ interface ChipGroupsStepProps {
   onSkip?: () => void;
   /** Над первым вопросом: приветствие и время приёма. */
   intro?: React.ReactNode;
+  submitLabel?: string;
   renderShell: (
     body: React.ReactNode,
     footer: React.ReactNode,
@@ -41,6 +42,7 @@ export const ChipGroupsStep = ({
   onSubmit,
   onSkip,
   intro,
+  submitLabel,
   renderShell,
 }: ChipGroupsStepProps) => {
   const groups = parseGroups(step);
@@ -127,7 +129,7 @@ export const ChipGroupsStep = ({
         isBusy={isSubmitting || !restored}
         disabled={nextDisabled}
       >
-        {step.step_key === 'dental_about' ? 'Отправить анкету' : 'Далее'}
+        {submitLabel ?? (step.step_key === 'dental_about' ? 'Отправить анкету' : 'Далее')}
       </DentalButton>
     </>
   );

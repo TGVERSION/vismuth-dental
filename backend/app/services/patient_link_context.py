@@ -14,6 +14,8 @@ from sqlalchemy import select
 from ..config import settings
 from ..models.patient_link import PatientLink
 
+DENTAL_CLINIC_PREFIX = 'd.'
+
 
 class PatientLinkSelection(BaseModel):
     model_config = ConfigDict(extra='forbid')

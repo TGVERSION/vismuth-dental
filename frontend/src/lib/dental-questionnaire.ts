@@ -218,6 +218,8 @@ export const dentalFormStep = (step: QuestionnaireStep): QuestionnaireStep => ({
 
 export const dentalFormStage = (step: QuestionnaireStep) => {
   const key = step.step_key;
+  if (key === 'dental_identity')
+    return { current: 4, title: 'Ваши данные', label: 'Этап 4 из 4' };
   if (key === 'dental_reason')
     return { current: 1, title: 'Повод обращения', label: 'Этап 1 из 4' };
   if (key.startsWith('dental_health'))

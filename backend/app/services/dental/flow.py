@@ -9,6 +9,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from datetime import date
 from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -30,6 +31,7 @@ STEP_PAIN = "dental_pain"
 STEP_HEALTH = "dental_health"
 STEP_DETAILS = "dental_details"
 STEP_ABOUT = "dental_about"
+STEP_IDENTITY = "dental_identity"
 STEP_REVIEW = "dental_review"
 STEP_DONE = "done"
 FIRST_STEP = STEP_REASON
@@ -54,8 +56,22 @@ _STEP_TITLES = {
     STEP_HEALTH: "Здоровье сейчас и раньше",
     STEP_DETAILS: "Уточните, пожалуйста",
     STEP_ABOUT: "Несколько слов о вас",
+    STEP_IDENTITY: "Ваши данные",
     STEP_REVIEW: "Проверьте ответы перед отправкой",
 }
+
+IDENTITY_NAME_KEYS = ("patient.last_name", "patient.first_name", "patient.middle_name")
+IDENTITY_BIRTH_DATE = "about.birth_date"
+_IDENTITY_GROUPS = tuple(
+    Group(key=key, question=label, text_placeholder=label,
+          text_show="always", text_required=required)
+    for key, label, required in (
+        (IDENTITY_NAME_KEYS[0], "Фамилия", True),
+        (IDENTITY_NAME_KEYS[1], "Имя", True),
+        (IDENTITY_NAME_KEYS[2], "Отчество (необязательно)", False),
+        (IDENTITY_BIRTH_DATE, "Дата рождения", True),
+    )
+)
 
 
 class DentalAnswerError(ValueError):
@@ -95,6 +111,7 @@ class DentalAnswers(BaseModel):
     # JSON без версии относится к существующему одностраничному сценарию.
     flow_version: int = 1
     form_mode: bool = False
+    clinic_link: bool = False
     health: list[str] | None = None
     health_unknown: list[str] = Field(default_factory=list)
     health_answered: list[str] = Field(default_factory=list)
@@ -132,6 +149,8 @@ def _groups_for(step: str, answers: DentalAnswers) -> tuple[Group, ...]:
         return PAIN_GROUPS
     if step == STEP_ABOUT:
         return ABOUT_GROUPS
+    if step == STEP_IDENTITY and answers.clinic_link:
+        return _IDENTITY_GROUPS
     if step == STEP_DETAILS:
         return _detail_groups(answers)
     if answers.flow_version == 2 and step in detail_pages(answers):
@@ -184,7 +203,10 @@ def detail_pages(answers: DentalAnswers) -> dict[str, tuple[Group, ...]]:
 def dental_route(answers: DentalAnswers) -> list[str]:
     route = [STEP_REASON]
     if answers.flow_version == 2:
-        return [*route, *HEALTH_PAGE_KEYS, *detail_pages(answers), STEP_ABOUT]
+        route.extend([*HEALTH_PAGE_KEYS, *detail_pages(answers), STEP_ABOUT])
+        if answers.clinic_link:
+            route.append(STEP_IDENTITY)
+        return route
     return [*route, STEP_HEALTH, *([STEP_DETAILS] if _detail_groups(answers) else []), STEP_ABOUT]
 
 
@@ -313,6 +335,15 @@ def _parse_group(
         raise DentalAnswerError("Выберите препарат или напишите его название")
     if needs_text and not text:
         raise DentalAnswerError(f"Text required for {group.key}")
+    if group.key in IDENTITY_NAME_KEYS and len(text) > 255:
+        raise DentalAnswerError("Укажите не более 255 символов в каждом поле имени")
+    if group.key == IDENTITY_BIRTH_DATE:
+        try:
+            birth_date = date.fromisoformat(text)
+        except ValueError:
+            raise DentalAnswerError("Укажите корректную дату рождения") from None
+        if birth_date.isoformat() != text or birth_date > date.today():
+            raise DentalAnswerError("Укажите корректную дату рождения")
     return GroupAnswer(selected=unique, text=text)
 
 

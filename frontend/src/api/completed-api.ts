@@ -24,6 +24,7 @@ export interface PatientLinks {
   clinic_id: string;
   clinic_name: string;
   clinic_public_url: string | null;
+  dental_public_url: string | null;
   doctors: {
     membership_id: string;
     first_name: string | null;

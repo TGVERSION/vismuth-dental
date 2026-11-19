@@ -31,6 +31,41 @@ def health(q, allergy=False):
             none=not (allergy and number == 6))
 
 
+def test_clinic_link_collects_identity_only_after_medical_answers():
+    q = questionnaire()
+    q.dental_answers = {"flow_version": 2, "form_mode": True, "clinic_link": True}
+    submit(q, {"reason": ["checkup"]})
+    health(q, allergy=True)
+    submit(q, selections={"allergy.substance": ["antibiotics"]})
+    submit(q, selections={"allergy.reaction": ["urticaria"]})
+    assert q.current_step == "dental_about"
+    with pytest.raises(HTTPException):
+        submit(q, texts={"patient.last_name": "Иванов"})
+    submit(q)
+    assert q.current_step == "dental_identity"
+    assert q.status == "in_progress"
+    assert q.invite_expires_at is None
+    assert dq.build_dental_descriptor(q).title == "Ваши данные"
+    submit(q, choice="form:back")
+    assert dq.build_dental_descriptor(q).step_key == "dental_about"
+    submit(q)
+    assert q.current_step == "dental_identity"
+
+    names = {"patient.last_name": " Иванов ", "patient.first_name": "Иван"}
+    for birth_date in ("", "2099-01-01", "2000-02-30"):
+        with pytest.raises(HTTPException) as error:
+            submit(q, texts={**names, "about.birth_date": birth_date}, choice=None)
+        assert error.value.status_code == 400
+        assert q.patient_last_name is None
+        assert q.current_step == "dental_identity"
+
+    submit(q, texts={**names, "about.birth_date": "2000-02-29"}, choice=None)
+    assert q.status == "completed"
+    assert (q.patient_last_name, q.patient_first_name, q.patient_middle_name) == ("Иванов", "Иван", None)
+    assert q.structured["paper_form"]["birth_date"] == "2000-02-29"
+    assert "patient.last_name" not in q.dental_answers["groups"]
+
+
 def test_form_back_and_next_visit_adjacent_sections_without_losing_answers():
     q = questionnaire()
     submit(q, {'reason': ['pain']})

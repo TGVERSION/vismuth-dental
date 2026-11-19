@@ -30,6 +30,7 @@ from .dental.flow import (
     apply_dental_answer,
     dental_step,
     STEP_REASON, STEP_PAIN, STEP_HEALTH, STEP_DETAILS, STEP_ABOUT, STEP_REVIEW,
+    IDENTITY_NAME_KEYS,
     DEFAULT_MAX_TEXT_LEN,
     _groups_for, _parse_group,
     dental_route, detail_pages, HEALTH_PAGE_KEYS, step_title,
@@ -60,8 +61,9 @@ def _dental_answers(questionnaire: Questionnaire) -> DentalAnswers:
         if completed != answers.completed_steps:
             answers = answers.model_copy(update={"completed_steps": completed})
         if questionnaire.status != "completed" and questionnaire.current_step == STEP_ABOUT:
-            missing = next((key for key in dental_route(answers) if key not in completed), STEP_ABOUT)
-            questionnaire.current_step = missing
+            route = dental_route(answers)
+            earlier_steps = route[:route.index(STEP_ABOUT)]
+            questionnaire.current_step = next((key for key in earlier_steps if key not in completed), STEP_ABOUT)
         elif (
             questionnaire.status != "completed"
             and questionnaire.current_step in (AI_STEP, STEP_REVIEW)
@@ -219,6 +221,12 @@ async def _ask_model(questionnaire: Questionnaire, answers: DentalAnswers) -> tu
 
 
 def _complete(questionnaire: Questionnaire, answers: DentalAnswers, now: datetime) -> None:
+    if answers.clinic_link:
+        groups = answers.groups.copy()
+        for key in IDENTITY_NAME_KEYS:
+            name = groups.pop(key, None)
+            setattr(questionnaire, key.replace(".", "_"), name.text if name else None)
+        answers = answers.model_copy(update={"groups": groups})
     structured, gaps = build_dental_summary(answers)
     questionnaire.dental_answers = answers.model_dump()
     questionnaire.structured = structured

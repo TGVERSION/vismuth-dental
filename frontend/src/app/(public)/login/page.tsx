@@ -1,5 +1,7 @@
 'use client';
 
+import { ManualLink } from '@/components/ManualLink';
+
 import { useState, useEffect, useRef } from 'react';
 import Image from 'next/image';
 import { LoginRequest, mainApi } from '@/api';
@@ -210,7 +212,7 @@ export default function AuthForms() {
   return (
     <div className="min-h-screen bg-[var(--ui-color-slate-100)] mx-auto my-auto flex items-center justify-center">
       <div className="bg-white rounded-2xl w-full max-w-130 p-6 sm:p-12">
-        <div className="mx-auto mb-[var(--ui-space-24)]">
+        <header className="mx-auto mb-[var(--ui-space-24)] flex flex-col items-center gap-3">
           <Image
             alt="logo"
             className="logo mx-auto"
@@ -218,7 +220,8 @@ export default function AuthForms() {
             width={299}
             height={38}
           />
-        </div>
+          <ManualLink />
+        </header>
         {mode === 'login' && (
           <>
             <h2 className="text-center text-[var(--ui-color-alabaster-950)] mb-[var(--ui-space-32)]">

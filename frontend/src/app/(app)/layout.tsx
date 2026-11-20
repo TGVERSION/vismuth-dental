@@ -1,5 +1,7 @@
 'use client';
 
+import { ManualLink } from '@/components/ManualLink';
+
 import { useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
 import { useRouter, usePathname } from 'next/navigation';
@@ -94,6 +96,7 @@ function WorkingLayout({ children }: { children: React.ReactNode }) {
               <AppNav />
             </div>
             <div className="header__actions">
+              <ManualLink />
               {!hideTools && (
                 <button
                   type="button"

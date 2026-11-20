@@ -1,4 +1,6 @@
 'use client';
+
+import { ManualLink } from '@/components/ManualLink';
 import { useCallback, useEffect, useState } from 'react';
 import { clinicJoinApi, type JoinState } from '@/api/clinic-join-api';
 import { joinStatusLabel } from '@/lib/clinic-access';
@@ -31,7 +33,10 @@ export function JoinStatus({ onAllowed }: { onAllowed?: () => void }) {
   }, [reload]);
   return (
     <section className="mx-auto my-24 w-full max-w-xl space-y-5 rounded-2xl bg-white p-8">
-      <h1 className="text-2xl font-medium">Заявка на подключение</h1>
+      <header className="flex flex-wrap items-center justify-between gap-3">
+        <h1 className="text-2xl font-medium">Заявка на подключение</h1>
+        <ManualLink />
+      </header>
       <p>
         {!state
           ? 'Проверяем состояние заявки…'

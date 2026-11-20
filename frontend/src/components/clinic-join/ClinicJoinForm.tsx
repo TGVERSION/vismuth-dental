@@ -1,4 +1,6 @@
 'use client';
+
+import { ManualLink } from '@/components/ManualLink';
 import type { MembershipRole } from '@/api/user-membership-api';
 
 import { useEffect, useState, type FormEvent } from 'react';
@@ -152,7 +154,10 @@ export function ClinicJoinForm({ token }: { token: string }) {
   return (
     <main className="flex min-h-screen items-center justify-center bg-[var(--ui-color-slate-100)] p-4">
       <section className="w-full max-w-lg space-y-6 rounded-2xl bg-white p-8">
-        <h1 className="text-2xl font-medium">Подключение к клинике</h1>
+        <header className="flex flex-wrap items-center justify-between gap-3">
+          <h1 className="text-2xl font-medium">Подключение к клинике</h1>
+          <ManualLink />
+        </header>
         {preview ? (
           <>
             <p className="text-xl text-[var(--ui-color-blue-600)]">

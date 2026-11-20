@@ -173,3 +173,28 @@ export const parseDateNumeric = (value: string): string => {
     ? iso
     : '';
 };
+
+/** Маска ручного ввода даты и позиция курсора после вставки разделителей. */
+export const maskDateNumericInput = (
+  value: string,
+  cursor: number,
+  deletingForward = false,
+): { text: string; cursor: number } => {
+  const iso = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value.trim());
+  if (iso) return { text: `${iso[3]}.${iso[2]}.${iso[1]}`, cursor: 10 };
+
+  const digits = value.replace(/\D/g, '').slice(0, 8);
+  const text = [digits.slice(0, 2), digits.slice(2, 4), digits.slice(4)]
+    .filter(Boolean)
+    .join('.');
+  const digitsBefore = Math.min(
+    digits.length,
+    value.slice(0, cursor).replace(/\D/g, '').length,
+  );
+  const position =
+    digitsBefore + Number(digitsBefore > 2) + Number(digitsBefore > 4);
+  return {
+    text,
+    cursor: deletingForward && text[position] === '.' ? position + 1 : position,
+  };
+};

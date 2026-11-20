@@ -4,6 +4,7 @@ import {
   formatDateLabel,
   formatDateNumeric,
   formatDayMonth,
+  maskDateNumericInput,
   parseDateNumeric,
 } from './calendar';
 
@@ -103,5 +104,46 @@ describe('formatDateNumeric', () => {
   it('на пустом и битом значении возвращает пустую строку', () => {
     expect(formatDateNumeric('')).toBe('');
     expect(formatDateNumeric('не дата')).toBe('');
+  });
+});
+
+describe('maskDateNumericInput', () => {
+  it('вставляет точки по мере ввода и ограничивает дату восемью цифрами', () => {
+    expect(maskDateNumericInput('290', 3)).toEqual({ text: '29.0', cursor: 4 });
+    expect(maskDateNumericInput('29.022', 6)).toEqual({
+      text: '29.02.2',
+      cursor: 7,
+    });
+    expect(maskDateNumericInput('290220001', 9)).toEqual({
+      text: '29.02.2000',
+      cursor: 10,
+    });
+    expect(parseDateNumeric(maskDateNumericInput('29022000', 8).text)).toBe(
+      '2000-02-29',
+    );
+    expect(parseDateNumeric(maskDateNumericInput('29022001', 8).text)).toBe('');
+  });
+
+  it('поддерживает вставку ISO и очистку', () => {
+    expect(maskDateNumericInput('2000-02-29', 10)).toEqual({
+      text: '29.02.2000',
+      cursor: 10,
+    });
+    expect(maskDateNumericInput('', 0)).toEqual({ text: '', cursor: 0 });
+  });
+
+  it('оставляет курсор рядом с правкой внутри даты', () => {
+    expect(maskDateNumericInput('291.02.200', 3)).toEqual({
+      text: '29.10.2200',
+      cursor: 4,
+    });
+    expect(maskDateNumericInput('2902.2000', 2)).toEqual({
+      text: '29.02.2000',
+      cursor: 2,
+    });
+    expect(maskDateNumericInput('2902.2000', 2, true)).toEqual({
+      text: '29.02.2000',
+      cursor: 3,
+    });
   });
 });

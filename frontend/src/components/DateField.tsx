@@ -15,6 +15,7 @@ import {
   buildCalendarMonths,
   formatDateLabel,
   formatDateNumeric,
+  maskDateNumericInput,
   parseDateNumeric,
 } from '@/lib/calendar';
 import { fieldFillClass } from '@/lib/field-fill';
@@ -276,7 +277,17 @@ export const DateField = ({
               required={birthDate.required}
               disabled={disabled}
               onChange={(event) => {
-                const text = event.target.value;
+                const input = event.currentTarget;
+                const { text, cursor } = maskDateNumericInput(
+                  input.value,
+                  input.selectionStart ?? input.value.length,
+                  (event.nativeEvent as InputEvent).inputType ===
+                    'deleteContentForward',
+                );
+                if (input.value !== text) {
+                  input.value = text;
+                  input.setSelectionRange(cursor, cursor);
+                }
                 const iso = parseDateNumeric(text);
                 const date =
                   iso <= lastBirthDate && (!min || iso >= min) ? iso : '';

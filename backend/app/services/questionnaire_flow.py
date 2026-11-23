@@ -179,7 +179,10 @@ async def resolve_initial_step(
 ) -> str:
     questionnaire.visit_type = "primary"
     if not doctor_preselected or questionnaire.doctor_membership_id is None:
-        return "choose_doctor"
+        doctors = await list_active_doctors(db, questionnaire.clinic_id)
+        if len(doctors) != 1:
+            return "choose_doctor"
+        questionnaire.doctor_membership_id = UUID(doctors[0]["membership_id"])
     membership_map, _ = await load_specializations_map(
         db,
         membership_ids=[questionnaire.doctor_membership_id],

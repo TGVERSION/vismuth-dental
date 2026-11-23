@@ -1,6 +1,7 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { NewLinkModal } from '@/components/registry/NewLinkModal';
 import { ModalShell } from '@/components/settings/clinics/ModalShell';
 import { useMyClinic } from '@/hooks/useMyClinic';
 import { useQuestionnaireQrPrint } from '@/hooks/useQuestionnaireQrPrint';
@@ -24,6 +25,7 @@ export const LinksQrModal = ({ onClose }: LinksQrModalProps) => {
   const { clinic, isLoading, error } = useMyClinic();
   const { print, printText } = useQuestionnaireQrPrint();
   const contentRef = useRef<HTMLDivElement>(null);
+  const [dental, setDental] = useState(false);
 
   // ModalShell фокус в окно не переносит: без этого клавиатура осталась бы
   // на странице под оверлеем.
@@ -74,6 +76,10 @@ export const LinksQrModal = ({ onClose }: LinksQrModalProps) => {
     );
   };
 
+  if (clinic && (clinic.questionnaire_kind === 'dental' || dental)) {
+    return <NewLinkModal clinicId={clinic.clinic_id} onClose={onClose} />;
+  }
+
   return (
     <ModalShell
       title="Создание ссылки пациенту"
@@ -87,6 +93,15 @@ export const LinksQrModal = ({ onClose }: LinksQrModalProps) => {
         tabIndex={-1}
         className="custom-scrollbar -mx-2 max-h-[70vh] overflow-y-auto px-2 outline-none"
       >
+        {clinic?.questionnaire_kind === 'mixed' && (
+          <button
+            type="button"
+            className="vismuth-function-button mb-4"
+            onClick={() => setDental(true)}
+          >
+            Ссылка на стоматологическую анкету
+          </button>
+        )}
         {content()}
       </div>
 

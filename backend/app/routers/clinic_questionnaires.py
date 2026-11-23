@@ -10,7 +10,7 @@ from sqlalchemy import Date, and_, cast, delete, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..db import get_db
-from ..deps import require_clinic_registry, require_roles
+from ..deps import require_clinic_patient_links, require_clinic_registry, require_roles
 from ..models.clinic_membership import ClinicMembership
 from ..models.questionnaire import Questionnaire
 from ..models.service_user import ServiceUser
@@ -163,7 +163,7 @@ def _require_completed(questionnaire: Questionnaire) -> None:
 async def create_registry_questionnaire(
     clinic_id: UUID,
     payload: RegistryQuestionnaireCreate,
-    current_user: ServiceUser = Depends(require_clinic_registry),
+    current_user: ServiceUser = Depends(require_clinic_patient_links),
     db: AsyncSession = Depends(get_db),
 ) -> RegistryQuestionnaireCreated:
     clinic = await get_clinic_or_404(db, clinic_id)

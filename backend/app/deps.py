@@ -74,14 +74,35 @@ async def require_clinic_registry(
     current_user: ServiceUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> ServiceUser:
+    return await _require_clinic_staff(clinic_id, current_user, db, include_doctors=False)
+
+
+async def require_clinic_patient_links(
+    clinic_id: UUID,
+    current_user: ServiceUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> ServiceUser:
+    return await _require_clinic_staff(clinic_id, current_user, db, include_doctors=True)
+
+
+async def _require_clinic_staff(
+    clinic_id: UUID,
+    current_user: ServiceUser,
+    db: AsyncSession,
+    *,
+    include_doctors: bool,
+) -> ServiceUser:
     if user_has_any_role(current_user, 'super_admin'):
         return current_user
     from .models.clinic import Clinic
+    permitted_role = ClinicMembership.is_clinic_admin.is_(True) | ClinicMembership.is_operator.is_(True)
+    if include_doctors:
+        permitted_role = permitted_role | ClinicMembership.is_doctor.is_(True)
     result = await db.execute(
         select(ClinicMembership).join(Clinic, Clinic.id == ClinicMembership.clinic_id).where(
             ClinicMembership.clinic_id == clinic_id,
             ClinicMembership.user_id == current_user.id,
-            (ClinicMembership.is_clinic_admin.is_(True) | ClinicMembership.is_operator.is_(True)),
+            permitted_role,
             ClinicMembership.status == 'active',
             ClinicMembership.deleted_at.is_(None),
             Clinic.deleted_at.is_(None),

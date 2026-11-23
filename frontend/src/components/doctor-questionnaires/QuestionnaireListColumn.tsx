@@ -108,9 +108,9 @@ export const QuestionnaireListColumn = ({
       aria-label="Анкеты для врачей"
       className="fixed top-[120px] bottom-5 left-0 ml-3 mr-5 flex min-h-0 w-85.75 flex-col bg-[var(--ui-color-slate-100)] min-[1200px]:top-20"
     >
-      {clinic?.is_clinic_admin && <LinksQrButton />}
+      {(clinic?.is_clinic_admin || clinic?.is_doctor) && <LinksQrButton />}
 
-      <div className={clinic?.is_clinic_admin ? 'mt-6 shrink-0' : 'shrink-0'}>
+      <div className={clinic?.is_clinic_admin || clinic?.is_doctor ? 'mt-6 shrink-0' : 'shrink-0'}>
         <QuestionnaireFilters
           search={search}
           onSearchChange={onSearchChange}

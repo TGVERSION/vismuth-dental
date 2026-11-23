@@ -463,6 +463,15 @@ async def get_step(
         questionnaire_id,
         x_questionnaire_token,
     )
+    if (questionnaire.kind == "general" and questionnaire.status == "in_progress"
+            and questionnaire.current_step == "choose_doctor"):
+        await db.refresh(questionnaire, with_for_update=True)
+        if (questionnaire.kind == "general" and questionnaire.status == "in_progress"
+                and questionnaire.current_step == "choose_doctor"):
+            questionnaire.current_step = await resolve_initial_step(
+                db, questionnaire, doctor_preselected=False,
+            )
+            await db.commit()
     # Existing sessions waiting on the removed selector resume as primary visits.
     # Recheck after a row lock, so a concurrently accepted answer is never reset.
     if questionnaire.kind == "general" and questionnaire.current_step == "visit_type":
